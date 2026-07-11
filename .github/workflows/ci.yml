@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: lifeos
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Run Auth Tests
+        run: cd services/auth && mvn clean test
+
+      - name: Run Vault Tests
+        run: cd services/vault && mvn clean test
+
+      - name: Run Job Tracker Tests
+        run: cd services/job-tracker && mvn clean test
+
+      - name: Run Core Tests
+        run: cd services/core && mvn clean test
+
+  lint-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install pnpm
+        run: npm i -g pnpm
+
+      - name: Install dependencies
+        run: pnpm i
+
+      - name: Lint web app
+        run: cd apps/web && pnpm run lint
+        continue-on-error: false
+
+      - name: Lint mobile app
+        run: cd apps/mobile && pnpm run lint
+        continue-on-error: false
+
+      - name: Build web app
+        run: cd apps/web && pnpm run build
+
+      - name: Typecheck mobile app
+        run: cd apps/mobile && npx tsc --noEmit
