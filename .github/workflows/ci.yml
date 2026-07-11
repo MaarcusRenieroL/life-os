@@ -56,14 +56,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install pnpm
+        run: npm i -g pnpm
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "20"
           cache: "pnpm"
-
-      - name: Install pnpm
-        run: npm i -g pnpm
 
       - name: Install dependencies
         run: pnpm i
