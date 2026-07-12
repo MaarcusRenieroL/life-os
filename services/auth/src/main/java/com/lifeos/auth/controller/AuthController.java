@@ -9,11 +9,13 @@ import com.lifeos.auth.domains.dto.response.AuthResponse;
 import com.lifeos.auth.domains.entity.DeviceSession;
 import com.lifeos.auth.service.AuthService;
 import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -67,5 +69,13 @@ public class AuthController {
     return ResponseEntity.ok(
         ApiResponse.success(
             authService.listSessions(authentication), "Sessions listed successfully"));
+  }
+
+  @PostMapping("/sessions/{sessionId}/revoke")
+  public ResponseEntity<ApiResponse<Void>> revokeSession(
+      @PathVariable UUID sessionId, Authentication authentication) {
+    authService.logout(sessionId, (UUID) authentication.getPrincipal());
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Session revoked successfully"));
   }
 }
