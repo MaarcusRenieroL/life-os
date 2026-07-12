@@ -28,4 +28,11 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.NOT_FOUND)
         .body(ApiResponse.error(exception.getMessage()));
   }
+
+  @ExceptionHandler(BiometricAlreadyEnrolledException.class)
+  public ResponseEntity<ApiResponse<Void>> handleBiometricAlreadyEnrolled(
+      BiometricAlreadyEnrolledException exception) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
 }

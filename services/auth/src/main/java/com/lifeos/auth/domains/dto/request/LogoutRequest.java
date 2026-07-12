@@ -10,6 +10,4 @@ import lombok.experimental.FieldDefaults;
 public class LogoutRequest {
 
   UUID deviceSessionId;
-
-  UUID authenticatedUserId;
 }
