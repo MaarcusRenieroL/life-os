@@ -1,5 +1,6 @@
 package com.lifeos.auth.controller;
 
+import com.lifeos.auth.domains.dto.request.CreateChallengeRequest;
 import com.lifeos.auth.domains.dto.request.EnrollBiometricRequest;
 import com.lifeos.auth.domains.dto.request.LogoutRequest;
 import com.lifeos.auth.domains.dto.request.RefreshRequest;
@@ -7,6 +8,7 @@ import com.lifeos.auth.domains.dto.request.UserLoginRequest;
 import com.lifeos.auth.domains.dto.request.UserRegisterRequest;
 import com.lifeos.auth.domains.dto.response.ApiResponse;
 import com.lifeos.auth.domains.dto.response.AuthResponse;
+import com.lifeos.auth.domains.dto.response.ChallengeResponse;
 import com.lifeos.auth.domains.entity.DeviceSession;
 import com.lifeos.auth.service.AuthService;
 import java.util.List;
@@ -82,7 +84,7 @@ public class AuthController {
     return ResponseEntity.ok(ApiResponse.success(null, "Session revoked successfully"));
   }
 
-  @PostMapping("/enroll-biometric")
+  @PostMapping("/biometric/enroll")
   public ResponseEntity<ApiResponse<Void>> enrollBiometric(
       Authentication authentication, @RequestBody EnrollBiometricRequest enrollBiometricRequest) {
 
@@ -95,5 +97,14 @@ public class AuthController {
         enrollBiometricRequest.getType());
 
     return ResponseEntity.ok(ApiResponse.success(null, "Biometric added successfully"));
+  }
+
+  @PostMapping("/biometric/challenge")
+  public ResponseEntity<ApiResponse<ChallengeResponse>> createChallenge(
+      @RequestBody CreateChallengeRequest createChallengeRequest) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            authService.createChallenge(createChallengeRequest.getDeviceId()),
+            "Challenge created successfully"));
   }
 }

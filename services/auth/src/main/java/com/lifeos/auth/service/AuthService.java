@@ -1,18 +1,22 @@
 package com.lifeos.auth.service;
 
 import com.lifeos.auth.domains.dto.response.AuthResponse;
+import com.lifeos.auth.domains.dto.response.ChallengeResponse;
 import com.lifeos.auth.domains.entity.BiometricEnrollment;
 import com.lifeos.auth.domains.entity.DeviceSession;
 import com.lifeos.auth.domains.entity.RefreshToken;
 import com.lifeos.auth.domains.entity.User;
+import com.lifeos.auth.domains.record.ChallengeRecord;
 import com.lifeos.auth.exception.EmailAlreadyExistsException;
 import com.lifeos.auth.exception.InvalidCredentialsException;
 import com.lifeos.auth.repository.BiometricEnrollmentRepository;
 import com.lifeos.auth.repository.DeviceSessionRepository;
 import com.lifeos.auth.repository.RefreshTokenRepository;
+import com.lifeos.auth.store.ChallengeStore;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
@@ -34,6 +38,8 @@ public class AuthService {
 
   private final JwtService jwtService;
   private final UserService userService;
+
+  private final ChallengeStore challengeStore;
 
   private final DeviceSessionRepository deviceSessionRepository;
   private final RefreshTokenRepository refreshTokenRepository;
@@ -149,6 +155,23 @@ public class AuthService {
             .deviceId(deviceId)
             .type(type)
             .build());
+  }
+
+  public ChallengeResponse createChallenge(String deviceId) {
+    SecureRandom secureRandom = new SecureRandom();
+
+    byte[] challengeBytes = new byte[32];
+
+    secureRandom.nextBytes(challengeBytes);
+
+    String challenge = Base64.getUrlEncoder().withoutPadding().encodeToString(challengeBytes);
+
+    ChallengeRecord challengeRecord =
+        new ChallengeRecord(challenge, Instant.now().plusSeconds(120));
+
+    challengeStore.save(deviceId, challengeRecord);
+
+    return ChallengeResponse.builder().challenge(challenge).build();
   }
 
   private String hashToken(String rawToken) {
