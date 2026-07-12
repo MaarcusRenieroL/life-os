@@ -1,5 +1,6 @@
 package com.lifeos.auth.controller;
 
+import com.lifeos.auth.domains.dto.request.EnrollBiometricRequest;
 import com.lifeos.auth.domains.dto.request.LogoutRequest;
 import com.lifeos.auth.domains.dto.request.RefreshRequest;
 import com.lifeos.auth.domains.dto.request.UserLoginRequest;
@@ -66,9 +67,11 @@ public class AuthController {
   @GetMapping("/sessions")
   public ResponseEntity<ApiResponse<List<DeviceSession>>> listSessions(
       Authentication authentication) {
+
+    UUID userId = (UUID) authentication.getPrincipal();
+
     return ResponseEntity.ok(
-        ApiResponse.success(
-            authService.listSessions(authentication), "Sessions listed successfully"));
+        ApiResponse.success(authService.listSessions(userId), "Sessions listed successfully"));
   }
 
   @PostMapping("/sessions/{sessionId}/revoke")
@@ -77,5 +80,20 @@ public class AuthController {
     authService.logout(sessionId, (UUID) authentication.getPrincipal());
 
     return ResponseEntity.ok(ApiResponse.success(null, "Session revoked successfully"));
+  }
+
+  @PostMapping("/enroll-biometric")
+  public ResponseEntity<ApiResponse<Void>> enrollBiometric(
+      Authentication authentication, @RequestBody EnrollBiometricRequest enrollBiometricRequest) {
+
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    authService.enrollBiometric(
+        userId,
+        enrollBiometricRequest.getPublicKey(),
+        enrollBiometricRequest.getDeviceId(),
+        enrollBiometricRequest.getType());
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Biometric added successfully"));
   }
 }

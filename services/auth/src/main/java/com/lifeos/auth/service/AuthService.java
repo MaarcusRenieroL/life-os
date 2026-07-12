@@ -1,11 +1,13 @@
 package com.lifeos.auth.service;
 
 import com.lifeos.auth.domains.dto.response.AuthResponse;
+import com.lifeos.auth.domains.entity.BiometricEnrollment;
 import com.lifeos.auth.domains.entity.DeviceSession;
 import com.lifeos.auth.domains.entity.RefreshToken;
 import com.lifeos.auth.domains.entity.User;
 import com.lifeos.auth.exception.EmailAlreadyExistsException;
 import com.lifeos.auth.exception.InvalidCredentialsException;
+import com.lifeos.auth.repository.BiometricEnrollmentRepository;
 import com.lifeos.auth.repository.DeviceSessionRepository;
 import com.lifeos.auth.repository.RefreshTokenRepository;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +19,6 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,7 @@ public class AuthService {
 
   private final DeviceSessionRepository deviceSessionRepository;
   private final RefreshTokenRepository refreshTokenRepository;
+  private final BiometricEnrollmentRepository biometricEnrollmentRepository;
 
   public void register(String email, String rawPassword) {
     boolean isExistingUser = userService.existsByEmail(email);
@@ -109,10 +111,7 @@ public class AuthService {
     return issueTokens(deviceSession);
   }
 
-  public List<DeviceSession> listSessions(Authentication authentication) {
-
-    UUID userId = (UUID) authentication.getPrincipal();
-
+  public List<DeviceSession> listSessions(UUID userId) {
     return deviceSessionRepository.findByUserIdAndRevokedAtIsNull(userId);
   }
 
@@ -132,6 +131,24 @@ public class AuthService {
     deviceSessionRepository.save(deviceSession);
 
     refreshTokenRepository.revokeAllBySessionId(deviceSessionId);
+  }
+
+  public void enrollBiometric(UUID userId, String publicKey, String deviceId, String type) {
+
+    boolean isExistingBiometric =
+        biometricEnrollmentRepository.existsByUserIdAndDeviceId(userId, deviceId);
+
+    if (isExistingBiometric) {
+      throw new IllegalArgumentException("Biometric already enrolled");
+    }
+
+    biometricEnrollmentRepository.save(
+        BiometricEnrollment.builder()
+            .userId(userId)
+            .publicKey(publicKey)
+            .deviceId(deviceId)
+            .type(type)
+            .build());
   }
 
   private String hashToken(String rawToken) {
