@@ -30,7 +30,8 @@ public class SecurityConfig {
             // are not
             request ->
                 request
-                    .requestMatchers("/v1/auth/register", "/v1/auth/login", "/error")
+                    .requestMatchers(
+                        "/v1/auth/register", "/v1/auth/login", "/error", "/v1/auth/refresh")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

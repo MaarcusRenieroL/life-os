@@ -1,13 +1,19 @@
 package com.lifeos.auth.controller;
 
+import com.lifeos.auth.domains.dto.request.LogoutRequest;
+import com.lifeos.auth.domains.dto.request.RefreshRequest;
 import com.lifeos.auth.domains.dto.request.UserLoginRequest;
 import com.lifeos.auth.domains.dto.request.UserRegisterRequest;
 import com.lifeos.auth.domains.dto.response.ApiResponse;
 import com.lifeos.auth.domains.dto.response.AuthResponse;
+import com.lifeos.auth.domains.entity.DeviceSession;
 import com.lifeos.auth.service.AuthService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,5 +44,28 @@ public class AuthController {
             userLoginRequest.getDeviceName(),
             userLoginRequest.getDeviceType());
     return ResponseEntity.ok(ApiResponse.success(authResponse, "Login successful"));
+  }
+
+  @PostMapping("/refresh")
+  public ResponseEntity<ApiResponse<AuthResponse>> refresh(
+      @RequestBody RefreshRequest refreshRequest) {
+    AuthResponse authResponse = authService.refresh(refreshRequest.getRefreshToken());
+
+    return ResponseEntity.ok(ApiResponse.success(authResponse, "Token refreshed successfully"));
+  }
+
+  @PostMapping("/logout")
+  public ResponseEntity<ApiResponse<Void>> logout(@RequestBody LogoutRequest logoutRequest) {
+    authService.logout(logoutRequest.getDeviceSessionId(), logoutRequest.getAuthenticatedUserId());
+
+    return ResponseEntity.ok(ApiResponse.success(null, "User logged out successfully"));
+  }
+
+  @GetMapping("/sessions")
+  public ResponseEntity<ApiResponse<List<DeviceSession>>> listSessions(
+      Authentication authentication) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            authService.listSessions(authentication), "Sessions listed successfully"));
   }
 }

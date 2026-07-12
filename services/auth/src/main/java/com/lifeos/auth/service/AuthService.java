@@ -13,12 +13,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -47,17 +49,16 @@ public class AuthService {
 
   public AuthResponse login(
       String email, String rawPassword, String deviceName, String deviceType) {
-    Optional<User> optionalUser = userService.findByEmail(email);
 
-    if (optionalUser.isEmpty()) {
-      throw new InvalidCredentialsException("Invalid credentials");
-    }
-
-    User existingUser = optionalUser.get();
+    User existingUser =
+        userService
+            .findByEmail(email)
+            .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
 
     if (!passwordEncoder.matches(rawPassword, existingUser.getPasswordHash())) {
       throw new InvalidCredentialsException("Invalid credentials");
     }
+
     DeviceSession deviceSession =
         DeviceSession.builder()
             .deviceName(deviceName)
@@ -67,19 +68,70 @@ public class AuthService {
 
     deviceSessionRepository.save(deviceSession);
 
-    String accessToken = jwtService.generateAccessToken(existingUser.getId());
-    String randomRefreshToken = UUID.randomUUID().toString();
+    return issueTokens(deviceSession);
+  }
 
-    RefreshToken refreshToken =
-        RefreshToken.builder()
-            .deviceSessionId(deviceSession.getId())
-            .tokenHash(hashToken(randomRefreshToken))
-            .expiresAt(Instant.now().plusMillis(refreshTokenExpiration))
-            .build();
+  @Transactional(noRollbackFor = InvalidCredentialsException.class)
+  public AuthResponse refresh(String rawRefreshToken) {
+    Instant now = Instant.now();
 
-    refreshTokenRepository.save(refreshToken);
+    String hashedToken = hashToken(rawRefreshToken);
 
-    return AuthResponse.builder().accessToken(accessToken).refreshToken(randomRefreshToken).build();
+    RefreshToken existingRefreshToken =
+        refreshTokenRepository
+            .findByTokenHash(hashedToken)
+            .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
+
+    DeviceSession deviceSession =
+        deviceSessionRepository
+            .findById(existingRefreshToken.getDeviceSessionId())
+            .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
+
+    if (deviceSession.getRevokedAt() != null) {
+      throw new InvalidCredentialsException("Invalid credentials");
+    }
+
+    if (existingRefreshToken.getExpiresAt().isBefore(now)) {
+      throw new InvalidCredentialsException("Invalid credentials");
+    }
+
+    if (existingRefreshToken.getRevokedAt() != null) {
+      deviceSession.setRevokedAt(now);
+      deviceSessionRepository.save(deviceSession);
+
+      refreshTokenRepository.revokeAllBySessionId(existingRefreshToken.getDeviceSessionId());
+      throw new InvalidCredentialsException("Invalid credentials");
+    }
+
+    existingRefreshToken.setRevokedAt(now);
+    refreshTokenRepository.save(existingRefreshToken);
+
+    return issueTokens(deviceSession);
+  }
+
+  public List<DeviceSession> listSessions(Authentication authentication) {
+
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return deviceSessionRepository.findByUserIdAndRevokedAtIsNull(userId);
+  }
+
+  @Transactional
+  public void logout(UUID deviceSessionId, UUID authenticatedUserId) {
+    DeviceSession deviceSession =
+        deviceSessionRepository
+            .findById(deviceSessionId)
+            .orElseThrow(() -> new InvalidCredentialsException("Invalid session"));
+
+    if (!deviceSession.getUserId().equals(authenticatedUserId)) {
+      throw new InvalidCredentialsException("Invalid session");
+    }
+
+    deviceSession.setRevokedAt(Instant.now());
+
+    deviceSessionRepository.save(deviceSession);
+
+    refreshTokenRepository.revokeAllBySessionId(deviceSessionId);
   }
 
   private String hashToken(String rawToken) {
@@ -92,5 +144,22 @@ public class AuthService {
     } catch (NoSuchAlgorithmException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private AuthResponse issueTokens(DeviceSession deviceSession) {
+    String accessToken = jwtService.generateAccessToken(deviceSession.getUserId());
+
+    String rawRefreshToken = UUID.randomUUID().toString();
+
+    RefreshToken refreshToken =
+        RefreshToken.builder()
+            .deviceSessionId(deviceSession.getId())
+            .tokenHash(hashToken(rawRefreshToken))
+            .expiresAt(Instant.now().plusMillis(refreshTokenExpiration))
+            .build();
+
+    refreshTokenRepository.save(refreshToken);
+
+    return AuthResponse.builder().accessToken(accessToken).refreshToken(rawRefreshToken).build();
   }
 }
