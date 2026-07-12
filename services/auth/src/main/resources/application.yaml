@@ -7,6 +7,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  flyway:
+    schemas: auth_schema
+    default-schema: auth_schema
 
 jwt:
   secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}

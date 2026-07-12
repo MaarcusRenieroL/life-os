@@ -4,3 +4,12 @@ server:
 spring:
   application:
     name: vault
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    schemas: vault_schema
+    default-schema: vault_schema
+
+jwt:
+  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
