@@ -1,5 +1,6 @@
 package com.lifeos.auth.controller;
 
+import com.lifeos.auth.domains.dto.request.BiometricLoginRequest;
 import com.lifeos.auth.domains.dto.request.CreateChallengeRequest;
 import com.lifeos.auth.domains.dto.request.EnrollBiometricRequest;
 import com.lifeos.auth.domains.dto.request.LogoutRequest;
@@ -60,8 +61,9 @@ public class AuthController {
   }
 
   @PostMapping("/logout")
-  public ResponseEntity<ApiResponse<Void>> logout(@RequestBody LogoutRequest logoutRequest) {
-    authService.logout(logoutRequest.getDeviceSessionId(), logoutRequest.getAuthenticatedUserId());
+  public ResponseEntity<ApiResponse<Void>> logout(
+      @RequestBody LogoutRequest logoutRequest, Authentication authentication) {
+    authService.logout(logoutRequest.getDeviceSessionId(), (UUID) authentication.getPrincipal());
 
     return ResponseEntity.ok(ApiResponse.success(null, "User logged out successfully"));
   }
@@ -106,5 +108,18 @@ public class AuthController {
         ApiResponse.success(
             authService.createChallenge(createChallengeRequest.getDeviceId()),
             "Challenge created successfully"));
+  }
+
+  @PostMapping("/biometric/login")
+  public ResponseEntity<ApiResponse<AuthResponse>> biometricLogin(
+      @RequestBody BiometricLoginRequest biometricLoginRequest) {
+    AuthResponse authResponse =
+        authService.biometricLogin(
+            biometricLoginRequest.getDeviceId(),
+            biometricLoginRequest.getSignature(),
+            biometricLoginRequest.getDeviceName(),
+            biometricLoginRequest.getDeviceType());
+
+    return ResponseEntity.ok(ApiResponse.success(authResponse, "Biometric login successful"));
   }
 }

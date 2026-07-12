@@ -34,7 +34,8 @@ public class SecurityConfig {
                     .requestMatchers(
                         "/v1/auth/register", "/v1/auth/login", "/error", "/v1/auth/refresh")
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/v1/auth/biometric/challenge")
+                    .requestMatchers(
+                        HttpMethod.POST, "/v1/auth/biometric/challenge", "/v1/auth/biometric/login")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

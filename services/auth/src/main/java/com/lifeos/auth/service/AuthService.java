@@ -12,11 +12,16 @@ import com.lifeos.auth.exception.InvalidCredentialsException;
 import com.lifeos.auth.repository.BiometricEnrollmentRepository;
 import com.lifeos.auth.repository.DeviceSessionRepository;
 import com.lifeos.auth.repository.RefreshTokenRepository;
+import com.lifeos.auth.exception.BiometricAlreadyEnrolledException;
 import com.lifeos.auth.store.ChallengeStore;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Signature;
+import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
@@ -145,7 +150,7 @@ public class AuthService {
         biometricEnrollmentRepository.existsByUserIdAndDeviceId(userId, deviceId);
 
     if (isExistingBiometric) {
-      throw new IllegalArgumentException("Biometric already enrolled");
+      throw new BiometricAlreadyEnrolledException(deviceId);
     }
 
     biometricEnrollmentRepository.save(
@@ -172,6 +177,58 @@ public class AuthService {
     challengeStore.save(deviceId, challengeRecord);
 
     return ChallengeResponse.builder().challenge(challenge).build();
+  }
+
+  public AuthResponse biometricLogin(
+      String deviceId, String signature, String deviceName, String deviceType) {
+
+    ChallengeRecord challengeRecord = challengeStore.get(deviceId);
+    // Single-use: consume the challenge now regardless of outcome, so a captured
+    // signature can never be replayed against the same challenge twice.
+    challengeStore.remove(deviceId);
+
+    if (challengeRecord == null || challengeRecord.expiresAt().isBefore(Instant.now())) {
+      throw new InvalidCredentialsException("Invalid credentials");
+    }
+
+    BiometricEnrollment enrollment =
+        biometricEnrollmentRepository
+            .findByDeviceId(deviceId)
+            .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
+
+    if (!verifySignature(enrollment.getPublicKey(), challengeRecord.challenge(), signature)) {
+      throw new InvalidCredentialsException("Invalid credentials");
+    }
+
+    DeviceSession deviceSession =
+        DeviceSession.builder()
+            .deviceName(deviceName)
+            .deviceType(deviceType)
+            .userId(enrollment.getUserId())
+            .build();
+
+    deviceSessionRepository.save(deviceSession);
+
+    return issueTokens(deviceSession);
+  }
+
+  private boolean verifySignature(String publicKeyBase64, String challenge, String signatureBase64) {
+    try {
+      byte[] publicKeyBytes = Base64.getDecoder().decode(publicKeyBase64);
+      X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
+      PublicKey publicKey = KeyFactory.getInstance("EC").generatePublic(keySpec);
+
+      Signature verifier = Signature.getInstance("SHA256withECDSA");
+      verifier.initVerify(publicKey);
+      verifier.update(challenge.getBytes(StandardCharsets.UTF_8));
+
+      byte[] signatureBytes = Base64.getDecoder().decode(signatureBase64);
+      return verifier.verify(signatureBytes);
+    } catch (Exception e) {
+      // Any malformed key/signature/algorithm mismatch means verification failed -
+      // treat identically to "signature didn't match", not a server error.
+      return false;
+    }
   }
 
   private String hashToken(String rawToken) {
