@@ -1,0 +1,106 @@
+<main class="min-h-dvh px-4 py-10 font-mono text-foreground">
+  <div class="surface-panel mx-auto flex max-w-lg flex-col gap-6 p-8">
+    <div>
+      <p class="text-xs uppercase tracking-widest text-muted-foreground">life-os</p>
+      <h1 class="mt-1 text-2xl font-semibold text-foreground">
+        {{ isEdit() ? 'Edit entry' : 'New entry' }}
+      </h1>
+    </div>
+
+    @if (loading()) {
+      <p class="text-sm text-muted-foreground">Loading…</p>
+    } @else {
+      <form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="flex flex-col gap-1.5">
+          <label for="type" class="text-xs text-muted-foreground">Type</label>
+          <p-select
+            inputId="type"
+            formControlName="type"
+            [options]="typeOptions"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="title" class="text-xs text-muted-foreground">Title</label>
+          <input pInputText id="title" formControlName="title" class="w-full" />
+          @if (form.controls.title.invalid && form.controls.title.touched) {
+            <span class="text-xs text-destructive">Title is required.</span>
+          }
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="email" class="text-xs text-muted-foreground">Email</label>
+          <input pInputText id="email" formControlName="email" class="w-full" />
+          @if (form.controls.email.invalid && form.controls.email.touched) {
+            <span class="text-xs text-destructive">Must be a valid email.</span>
+          }
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="username" class="text-xs text-muted-foreground">Username</label>
+          <input pInputText id="username" formControlName="username" class="w-full" />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="url" class="text-xs text-muted-foreground">URL</label>
+          <input pInputText id="url" formControlName="url" class="w-full" placeholder="https://example.com" />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="password" class="text-xs text-muted-foreground">Password</label>
+          <p-password
+            inputId="password"
+            formControlName="password"
+            [toggleMask]="true"
+            [feedback]="false"
+            styleClass="w-full"
+            inputStyleClass="w-full"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="notes" class="text-xs text-muted-foreground">Notes</label>
+          <textarea pTextarea id="notes" formControlName="notes" rows="3" class="w-full"></textarea>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <p-checkbox inputId="favorite" formControlName="favorite" [binary]="true" />
+          <label for="favorite" class="text-sm text-muted-foreground">Mark as favorite</label>
+        </div>
+
+        @if (errorMessage()) {
+          <p class="text-sm text-destructive">{{ errorMessage() }}</p>
+        }
+
+        <div class="mt-2 flex gap-2">
+          <p-button
+            type="submit"
+            [label]="isEdit() ? 'Save changes' : 'Create entry'"
+            styleClass="flex-1"
+            [loading]="submitting()"
+          />
+          <p-button
+            type="button"
+            label="Cancel"
+            severity="secondary"
+            routerLink="/vault/entries"
+          />
+        </div>
+
+        @if (isEdit()) {
+          <p-button
+            type="button"
+            label="Delete entry"
+            severity="danger"
+            [text]="true"
+            styleClass="w-full"
+            (onClick)="deleteEntry()"
+          />
+        }
+      </form>
+    }
+  </div>
+</main>
