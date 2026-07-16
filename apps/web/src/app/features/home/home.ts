@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { finalize } from 'rxjs';
 
@@ -9,7 +9,7 @@ import { TokenService } from '../../core/services/token.service';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [ButtonModule],
+  imports: [ButtonModule, RouterLink],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
