@@ -257,6 +257,10 @@ public class AuthService {
 
     refreshTokenRepository.save(refreshToken);
 
-    return AuthResponse.builder().accessToken(accessToken).refreshToken(rawRefreshToken).build();
+    return AuthResponse.builder()
+        .accessToken(accessToken)
+        .refreshToken(rawRefreshToken)
+        .deviceSessionId(deviceSession.getId())
+        .build();
   }
 }
