@@ -1,5 +1,6 @@
 package com.lifeos.auth.domains.dto.response;
 
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,4 +18,6 @@ public class AuthResponse {
   String accessToken;
 
   String refreshToken;
+
+  UUID deviceSessionId;
 }

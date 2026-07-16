@@ -1,0 +1,12 @@
+{
+  "/v1/auth": {
+    "target": "http://localhost:8001",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/v1/vault": {
+    "target": "http://localhost:8002",
+    "secure": false,
+    "changeOrigin": true
+  }
+}
