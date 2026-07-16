@@ -1,5 +1,6 @@
 package com.lifeos.vault.service;
 
+import com.lifeos.vault.domains.dto.response.VaultStatusResponse;
 import com.lifeos.vault.domains.entity.VaultMasterPassword;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
 import com.lifeos.vault.exception.InvalidMasterPasswordException;
@@ -53,5 +54,12 @@ public class VaultMasterPasswordService {
 
     vaultKeyStore.save(
         userId, new VaultKeyRecord(key, Instant.now().plusSeconds(VAULT_UNLOCK_DURATION_SECONDS)));
+  }
+
+  public VaultStatusResponse getStatus(UUID userId) {
+    return VaultStatusResponse.builder()
+        .hasMasterPassword(vaultMasterPasswordRepository.existsByUserId(userId))
+        .unlocked(vaultKeyStore.get(userId) != null)
+        .build();
   }
 }
