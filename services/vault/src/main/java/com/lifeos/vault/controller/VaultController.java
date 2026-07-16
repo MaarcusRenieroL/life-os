@@ -4,9 +4,11 @@ import com.lifeos.vault.domains.dto.request.CreateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.request.MasterPasswordRequest;
 import com.lifeos.vault.domains.dto.request.UpdateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.response.ApiResponse;
-import com.lifeos.vault.domains.entity.VaultEntry;
+import com.lifeos.vault.domains.dto.response.VaultEntryResponse;
+import com.lifeos.vault.domains.dto.response.VaultEntrySummaryResponse;
 import com.lifeos.vault.service.VaultEntryService;
 import com.lifeos.vault.service.VaultMasterPasswordService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +50,8 @@ public class VaultController {
   }
 
   @GetMapping("/entries")
-  public ResponseEntity<ApiResponse<List<VaultEntry>>> getEntries(Authentication authentication) {
+  public ResponseEntity<ApiResponse<List<VaultEntrySummaryResponse>>> getEntries(
+      Authentication authentication) {
     return ResponseEntity.ok(
         ApiResponse.success(
             vaultEntryService.getEntries(authentication), "Vault entries fetched successfully"));
@@ -56,14 +59,15 @@ public class VaultController {
 
   @PostMapping("/entry")
   public ResponseEntity<ApiResponse<Void>> saveEntry(
-      Authentication authentication, @RequestBody CreateVaultEntryRequest createVaultEntryRequest) {
+      Authentication authentication,
+      @Valid @RequestBody CreateVaultEntryRequest createVaultEntryRequest) {
     vaultEntryService.saveEntry(authentication, createVaultEntryRequest);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Entry saved successfully"));
   }
 
   @GetMapping("/entry/{id}")
-  public ResponseEntity<ApiResponse<VaultEntry>> getEntry(
+  public ResponseEntity<ApiResponse<VaultEntryResponse>> getEntry(
       Authentication authentication, @PathVariable UUID id) {
     return ResponseEntity.ok(
         ApiResponse.success(
@@ -74,7 +78,7 @@ public class VaultController {
   public ResponseEntity<ApiResponse<Void>> updateEntry(
       Authentication authentication,
       @PathVariable UUID id,
-      @RequestBody UpdateVaultEntryRequest updateVaultEntryRequest) {
+      @Valid @RequestBody UpdateVaultEntryRequest updateVaultEntryRequest) {
     vaultEntryService.updateEntry(authentication, id, updateVaultEntryRequest);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Vault Entry updated successfully"));
