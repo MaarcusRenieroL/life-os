@@ -48,7 +48,7 @@ export class Login {
       .subscribe({
         next: () => {
           this.loading.set(false);
-          this.router.navigateByUrl('/');
+          this.router.navigateByUrl('/home');
         },
         error: (err) => {
           this.loading.set(false);
