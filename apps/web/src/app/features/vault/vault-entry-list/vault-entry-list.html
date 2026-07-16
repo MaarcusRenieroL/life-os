@@ -1,0 +1,48 @@
+<main class="min-h-dvh px-4 py-10 font-mono text-foreground">
+  <div class="mx-auto flex max-w-2xl flex-col gap-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-xs uppercase tracking-widest text-muted-foreground">life-os</p>
+        <h1 class="mt-1 text-2xl font-semibold text-foreground">Vault</h1>
+      </div>
+      @if (!vaultState.unlocked()) {
+        <a routerLink="/vault" class="surface-panel px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
+          🔒 Unlock to reveal passwords
+        </a>
+      }
+      <p-button label="Add entry" icon="pi pi-plus" routerLink="/vault/entry/new" />
+    </div>
+
+    @if (loading()) {
+      <p class="text-sm text-muted-foreground">Loading entries…</p>
+    } @else if (entries().length === 0) {
+      <div class="surface-panel p-8 text-center text-sm text-muted-foreground">
+        No entries yet. Add your first one.
+      </div>
+    } @else {
+      <ul class="flex flex-col gap-2">
+        @for (entry of entries(); track entry.id) {
+          <li>
+            <button
+              type="button"
+              (click)="openEntry(entry.id)"
+              class="surface-panel flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-accent/40"
+            >
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-foreground">{{ entry.title }}</span>
+                  @if (entry.favorite) {
+                    <span class="text-primary">★</span>
+                  }
+                </div>
+                <p class="text-xs text-muted-foreground">
+                  {{ entry.username || entry.email || entry.url || '—' }}
+                </p>
+              </div>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</main>
