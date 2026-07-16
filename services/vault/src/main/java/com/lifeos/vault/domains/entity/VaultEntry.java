@@ -1,7 +1,10 @@
 package com.lifeos.vault.domains.entity;
 
+import com.lifeos.vault.domains.enums.VaultEntryType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -34,14 +37,45 @@ public class VaultEntry {
   @Column(name = "user_id")
   UUID userId;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "type")
+  VaultEntryType type;
+
   @Column(name = "title")
   String title;
 
-  @Column(name = "content_encrypted")
-  String contentEncrypted;
+  @Column(name = "email")
+  String email;
 
-  @Column(name = "iv")
-  String iv;
+  @Column(name = "username")
+  String username;
+
+  @Column(name = "url")
+  String url;
+
+  @Column(name = "icon")
+  String icon;
+
+  @Column(name = "password_encrypted")
+  String passwordEncrypted;
+
+  @Column(name = "password_iv")
+  String passwordIv;
+
+  @Column(name = "notes_encrypted")
+  String notesEncrypted;
+
+  @Column(name = "notes_iv")
+  String notesIv;
+
+  @Column(name = "category_id")
+  UUID categoryId;
+
+  @Column(name = "is_favorite")
+  boolean favorite;
+
+  @Column(name = "expires_at")
+  Instant expiresAt;
 
   @CreationTimestamp
   @Column(name = "created_at")
