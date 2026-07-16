@@ -1,0 +1,21 @@
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, map, tap } from 'rxjs';
+
+import { ApiResponse, AuthResponse, LoginRequest } from '../models/auth.model';
+import { TokenService } from './token.service';
+
+@Injectable({ providedIn: 'root' })
+export class AuthApiService {
+  private readonly http = inject(HttpClient);
+  private readonly tokenService = inject(TokenService);
+
+  private readonly baseUrl = '/v1/auth';
+
+  login(request: LoginRequest): Observable<AuthResponse> {
+    return this.http.post<ApiResponse<AuthResponse>>(`${this.baseUrl}/login`, request).pipe(
+      map((response) => response.data),
+      tap((auth) => this.tokenService.setTokens(auth.accessToken, auth.refreshToken)),
+    );
+  }
+}
