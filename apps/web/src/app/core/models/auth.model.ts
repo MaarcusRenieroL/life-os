@@ -8,6 +8,7 @@ export interface ApiResponse<T> {
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
+  deviceSessionId: string;
 }
 
 export interface LoginRequest {
@@ -15,4 +16,8 @@ export interface LoginRequest {
   rawPassword: string;
   deviceName: string;
   deviceType: string;
+}
+
+export interface LogoutRequest {
+  deviceSessionId: string;
 }

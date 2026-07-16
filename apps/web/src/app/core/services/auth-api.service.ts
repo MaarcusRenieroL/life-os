@@ -15,7 +15,21 @@ export class AuthApiService {
   login(request: LoginRequest): Observable<AuthResponse> {
     return this.http.post<ApiResponse<AuthResponse>>(`${this.baseUrl}/login`, request).pipe(
       map((response) => response.data),
-      tap((auth) => this.tokenService.setTokens(auth.accessToken, auth.refreshToken)),
+      tap((auth) =>
+        this.tokenService.setTokens(auth.accessToken, auth.refreshToken, auth.deviceSessionId),
+      ),
     );
+  }
+
+  logout(): Observable<void> {
+    const deviceSessionId = this.tokenService.getDeviceSessionId();
+
+    if (!deviceSessionId) {
+      return new Observable((subscriber) => subscriber.complete());
+    }
+
+    return this.http
+      .post<ApiResponse<void>>(`${this.baseUrl}/logout`, { deviceSessionId })
+      .pipe(map(() => undefined));
   }
 }
