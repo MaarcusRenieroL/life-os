@@ -59,6 +59,7 @@
             styleClass="w-full"
             inputStyleClass="w-full"
           />
+          <app-password-strength-meter [password]="passwordValue() ?? ''" />
         </div>
 
         <div class="flex flex-col gap-1.5">

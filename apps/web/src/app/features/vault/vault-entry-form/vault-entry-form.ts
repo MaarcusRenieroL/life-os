@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -10,6 +11,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 
 import { VaultApiService } from '../../../core/services/vault-api.service';
 import { VaultEntryType } from '../../../core/models/vault.model';
+import { PasswordStrengthMeter } from '../../../shared/password-strength-meter/password-strength-meter';
 
 @Component({
   selector: 'app-vault-entry-form',
@@ -23,6 +25,7 @@ import { VaultEntryType } from '../../../core/models/vault.model';
     SelectModule,
     TextareaModule,
     CheckboxModule,
+    PasswordStrengthMeter,
   ],
   templateUrl: './vault-entry-form.html',
   styleUrl: './vault-entry-form.scss',
@@ -55,6 +58,12 @@ export class VaultEntryForm implements OnInit {
     password: ['', [Validators.maxLength(1000)]],
     notes: ['', [Validators.maxLength(5000)]],
     favorite: [false],
+  });
+
+  // FormControl values aren't signals on their own — this bridges
+  // `password.valueChanges` into a signal so the strength meter can react to it.
+  protected readonly passwordValue = toSignal(this.form.controls.password.valueChanges, {
+    initialValue: this.form.controls.password.value,
   });
 
   ngOnInit(): void {
