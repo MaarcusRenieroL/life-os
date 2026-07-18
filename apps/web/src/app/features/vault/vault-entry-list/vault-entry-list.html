@@ -10,8 +10,18 @@
           🔒 Unlock to reveal passwords
         </a>
       }
-      <p-button label="Add entry" icon="pi pi-plus" routerLink="/vault/entry/new" />
+      <div class="flex gap-2">
+        <p-button
+          label="Categories"
+          icon="pi pi-tag"
+          severity="secondary"
+          (onClick)="openCategoryManager()"
+        />
+        <p-button label="Add entry" icon="pi pi-plus" routerLink="/vault/entry/new" />
+      </div>
     </div>
+
+    <app-vault-category-manager [(visible)]="categoryManagerVisible" />
 
     @if (loading()) {
       <p class="text-sm text-muted-foreground">Loading entries…</p>
