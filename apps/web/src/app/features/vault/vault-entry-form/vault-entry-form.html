@@ -129,6 +129,18 @@
           <textarea pTextarea id="notes" formControlName="notes" rows="3" class="w-full"></textarea>
         </div>
 
+        <div class="flex flex-col gap-1.5">
+          <label for="categoryId" class="text-xs text-muted-foreground">Category</label>
+          <p-select
+            inputId="categoryId"
+            formControlName="categoryId"
+            [options]="categoryOptions()"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+          />
+        </div>
+
         <div class="flex items-center gap-2">
           <p-checkbox inputId="favorite" formControlName="favorite" [binary]="true" />
           <label for="favorite" class="text-sm text-muted-foreground">Mark as favorite</label>

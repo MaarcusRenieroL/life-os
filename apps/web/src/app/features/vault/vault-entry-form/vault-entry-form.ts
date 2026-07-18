@@ -11,7 +11,8 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { VaultApiService } from '../../../core/services/vault-api.service';
-import { VaultEntryType } from '../../../core/models/vault.model';
+import { VaultCategoryApiService } from '../../../core/services/vault-category-api.service';
+import { VaultCategory, VaultEntryType } from '../../../core/models/vault.model';
 import { PasswordStrengthMeter } from '../../../shared/password-strength-meter/password-strength-meter';
 import { PasswordGeneratorDialog } from '../password-generator-dialog/password-generator-dialog';
 import { ClipboardService } from '../../../core/services/clipboard.service';
@@ -38,6 +39,7 @@ import { ClipboardService } from '../../../core/services/clipboard.service';
 export class VaultEntryForm implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly vaultApi = inject(VaultApiService);
+  private readonly vaultCategoryApi = inject(VaultCategoryApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly clipboardService = inject(ClipboardService);
@@ -48,6 +50,10 @@ export class VaultEntryForm implements OnInit {
     { label: 'Card', value: 'CARD' },
     { label: 'Note', value: 'NOTE' },
   ];
+
+  protected readonly categoryOptions = signal<{ label: string; value: string | null }[]>([
+    { label: 'No category', value: null },
+  ]);
 
   protected readonly isEdit = signal(false);
   protected readonly entryId = signal<string | null>(null);
@@ -64,6 +70,7 @@ export class VaultEntryForm implements OnInit {
     icon: ['', [Validators.maxLength(2048)]],
     password: ['', [Validators.maxLength(1000)]],
     notes: ['', [Validators.maxLength(5000)]],
+    categoryId: [null as string | null],
     favorite: [false],
   });
 
@@ -74,6 +81,8 @@ export class VaultEntryForm implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadCategories();
+
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id && id !== 'new') {
@@ -92,6 +101,7 @@ export class VaultEntryForm implements OnInit {
             icon: entry.icon ?? '',
             password: entry.password ?? '',
             notes: entry.notes ?? '',
+            categoryId: entry.categoryId,
             favorite: entry.favorite,
           });
           this.loading.set(false);
@@ -102,6 +112,18 @@ export class VaultEntryForm implements OnInit {
         },
       });
     }
+  }
+
+  private loadCategories(): void {
+    this.vaultCategoryApi.getCategories().subscribe({
+      next: (categories: VaultCategory[]) => {
+        this.categoryOptions.set([
+          { label: 'No category', value: null },
+          ...categories.map((category) => ({ label: category.name, value: category.id })),
+        ]);
+      },
+      error: () => undefined,
+    });
   }
 
   submit(): void {
