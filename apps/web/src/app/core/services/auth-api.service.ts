@@ -32,4 +32,17 @@ export class AuthApiService {
       .post<ApiResponse<void>>(`${this.baseUrl}/logout`, { deviceSessionId })
       .pipe(map(() => undefined));
   }
+
+  refresh(): Observable<AuthResponse> {
+    return this.http
+      .post<ApiResponse<AuthResponse>>(`${this.baseUrl}/refresh`, {
+        refreshToken: this.tokenService.getRefreshToken(),
+      })
+      .pipe(
+        map((response) => response.data),
+        tap((auth) =>
+          this.tokenService.setTokens(auth.accessToken, auth.refreshToken, auth.deviceSessionId),
+        ),
+      );
+  }
 }
