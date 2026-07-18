@@ -38,6 +38,20 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(VaultCategoryNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleVaultCategoryNotFound(
+      VaultCategoryNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(VaultCategoryAlreadyExistsException.class)
+  public ResponseEntity<ApiResponse<Void>> handleVaultCategoryAlreadyExists(
+      VaultCategoryAlreadyExistsException exception) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
     String message =
