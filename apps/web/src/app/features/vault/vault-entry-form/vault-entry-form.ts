@@ -8,10 +8,12 @@ import { PasswordModule } from 'primeng/password';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 import { CheckboxModule } from 'primeng/checkbox';
+import { TooltipModule } from 'primeng/tooltip';
 
 import { VaultApiService } from '../../../core/services/vault-api.service';
 import { VaultEntryType } from '../../../core/models/vault.model';
 import { PasswordStrengthMeter } from '../../../shared/password-strength-meter/password-strength-meter';
+import { PasswordGeneratorDialog } from '../password-generator-dialog/password-generator-dialog';
 
 @Component({
   selector: 'app-vault-entry-form',
@@ -25,7 +27,9 @@ import { PasswordStrengthMeter } from '../../../shared/password-strength-meter/p
     SelectModule,
     TextareaModule,
     CheckboxModule,
+    TooltipModule,
     PasswordStrengthMeter,
+    PasswordGeneratorDialog,
   ],
   templateUrl: './vault-entry-form.html',
   styleUrl: './vault-entry-form.scss',
@@ -35,6 +39,7 @@ export class VaultEntryForm implements OnInit {
   private readonly vaultApi = inject(VaultApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  protected readonly generatorDialogvisible = signal(false);
 
   protected readonly typeOptions: { label: string; value: VaultEntryType }[] = [
     { label: 'Login', value: 'LOGIN' },
@@ -109,9 +114,10 @@ export class VaultEntryForm implements OnInit {
     const request = this.form.getRawValue();
     const id = this.entryId();
 
-    const request$ = this.isEdit() && id
-      ? this.vaultApi.updateEntry(id, request)
-      : this.vaultApi.createEntry(request);
+    const request$ =
+      this.isEdit() && id
+        ? this.vaultApi.updateEntry(id, request)
+        : this.vaultApi.createEntry(request);
 
     request$.subscribe({
       next: () => {
@@ -143,5 +149,13 @@ export class VaultEntryForm implements OnInit {
         this.errorMessage.set(err?.error?.message ?? 'Unable to delete this entry.');
       },
     });
+  }
+
+  openGenerator(): void {
+    this.generatorDialogvisible.set(true);
+  }
+
+  onPasswordGenerated(password: string): void {
+    this.form.controls.password.setValue(password);
   }
 }

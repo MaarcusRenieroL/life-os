@@ -49,18 +49,34 @@
           <input pInputText id="url" formControlName="url" class="w-full" placeholder="https://example.com" />
         </div>
 
-        <div class="flex flex-col gap-1.5">
+        <div class="flex flex-col gap-2">
           <label for="password" class="text-xs text-muted-foreground">Password</label>
-          <p-password
-            inputId="password"
-            formControlName="password"
-            [toggleMask]="true"
-            [feedback]="false"
-            styleClass="w-full"
-            inputStyleClass="w-full"
-          />
+          <div class="flex gap-2">
+            <p-password
+              inputId="password"
+              formControlName="password"
+              [toggleMask]="true"
+              [feedback]="false"
+              styleClass="flex-1"
+              inputStyleClass="w-full"
+            />
+            <p-button
+              icon="pi pi-refresh"
+              severity="secondary"
+              [text]="true"
+              [rounded]="true"
+              pTooltip="Generate password"
+              tooltipPosition="top"
+              (onClick)="openGenerator()"
+            />
+          </div>
           <app-password-strength-meter [password]="passwordValue() ?? ''" />
         </div>
+
+        <app-password-generator-dialog
+          [(visible)]="generatorDialogvisible"
+          (passwordSelected)="onPasswordGenerated($event)"
+        />
 
         <div class="flex flex-col gap-1.5">
           <label for="notes" class="text-xs text-muted-foreground">Notes</label>
