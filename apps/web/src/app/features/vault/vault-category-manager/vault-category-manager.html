@@ -1,0 +1,93 @@
+<p-dialog
+  [(visible)]="visible"
+  header="Manage categories"
+  [modal]="true"
+  [style]="{ width: '26rem' }"
+  styleClass="font-mono"
+>
+  <div class="flex flex-col gap-4">
+    @if (loading()) {
+      <p class="text-sm text-muted-foreground">Loading…</p>
+    } @else {
+      @if (categories().length === 0) {
+        <p class="text-sm text-muted-foreground">No categories yet.</p>
+      } @else {
+        <ul class="flex flex-col gap-2">
+          @for (category of categories(); track category.id) {
+            <li class="surface-panel flex items-center gap-2 p-2.5">
+              <span
+                class="h-3 w-3 shrink-0 rounded-full"
+                [style.background-color]="category.color"
+              ></span>
+              <span class="flex-1 truncate text-sm text-foreground">{{ category.name }}</span>
+              <p-button
+                icon="pi pi-pencil"
+                severity="secondary"
+                [text]="true"
+                [rounded]="true"
+                (onClick)="startEdit(category)"
+              />
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [text]="true"
+                [rounded]="true"
+                (onClick)="deleteCategory(category.id)"
+              />
+            </li>
+          }
+        </ul>
+      }
+    }
+
+    <form class="surface-panel flex flex-col gap-3 p-3" [formGroup]="form" (ngSubmit)="submit()">
+      <p class="text-xs uppercase tracking-widest text-muted-foreground">
+        {{ editingId() ? 'Edit category' : 'New category' }}
+      </p>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="categoryName" class="text-xs text-muted-foreground">Name</label>
+        <input pInputText id="categoryName" formControlName="name" class="w-full" />
+        @if (form.controls.name.invalid && form.controls.name.touched) {
+          <span class="text-xs text-destructive">Name is required.</span>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <span class="text-xs text-muted-foreground">Color</span>
+        <div class="flex gap-2">
+          @for (color of presetColors; track color) {
+            <button
+              type="button"
+              [attr.aria-label]="'Select color ' + color"
+              class="h-6 w-6 rounded-full transition-transform"
+              [class.scale-125]="form.controls.color.value === color"
+              [style.background-color]="color"
+              [style.outline]="
+                form.controls.color.value === color ? '2px solid var(--foreground)' : 'none'
+              "
+              [style.outline-offset]="'2px'"
+              (click)="selectColor(color)"
+            ></button>
+          }
+        </div>
+      </div>
+
+      @if (errorMessage()) {
+        <p class="text-sm text-destructive">{{ errorMessage() }}</p>
+      }
+
+      <div class="flex gap-2">
+        <p-button
+          type="submit"
+          [label]="editingId() ? 'Save changes' : 'Create category'"
+          styleClass="flex-1"
+          [loading]="submitting()"
+        />
+        @if (editingId()) {
+          <p-button type="button" label="Cancel" severity="secondary" (onClick)="startCreate()" />
+        }
+      </div>
+    </form>
+  </div>
+</p-dialog>
