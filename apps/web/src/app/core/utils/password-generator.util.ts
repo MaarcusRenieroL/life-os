@@ -1,4 +1,4 @@
-interface PasswordGeneratorOptions {
+export interface PasswordGeneratorOptions {
   length: number;
   includeUppercase: boolean;
   includeLowercase: boolean;
