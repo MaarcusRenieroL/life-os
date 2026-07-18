@@ -14,6 +14,7 @@ import { VaultApiService } from '../../../core/services/vault-api.service';
 import { VaultEntryType } from '../../../core/models/vault.model';
 import { PasswordStrengthMeter } from '../../../shared/password-strength-meter/password-strength-meter';
 import { PasswordGeneratorDialog } from '../password-generator-dialog/password-generator-dialog';
+import { ClipboardService } from '../../../core/services/clipboard.service';
 
 @Component({
   selector: 'app-vault-entry-form',
@@ -39,6 +40,7 @@ export class VaultEntryForm implements OnInit {
   private readonly vaultApi = inject(VaultApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  protected readonly clipboardService = inject(ClipboardService);
   protected readonly generatorDialogvisible = signal(false);
 
   protected readonly typeOptions: { label: string; value: VaultEntryType }[] = [
@@ -157,5 +159,13 @@ export class VaultEntryForm implements OnInit {
 
   onPasswordGenerated(password: string): void {
     this.form.controls.password.setValue(password);
+  }
+
+  copyField(value: string, key: string) {
+    if (!value) {
+      return;
+    }
+
+    this.clipboardService.copyWithAutoClear(value, key);
   }
 }

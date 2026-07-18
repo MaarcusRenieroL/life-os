@@ -33,15 +33,47 @@
 
         <div class="flex flex-col gap-1.5">
           <label for="email" class="text-xs text-muted-foreground">Email</label>
-          <input pInputText id="email" formControlName="email" class="w-full" />
+          <div class="flex gap-2">
+            <input pInputText id="email" formControlName="email" class="flex-1" />
+            @if (isEdit()) {
+              <p-button
+                icon="pi pi-copy"
+                severity="secondary"
+                [text]="true"
+                [rounded]="true"
+                pTooltip="Copy email"
+                tooltipPosition="top"
+                (onClick)="copyField(form.controls.email.value, 'email')"
+              />
+            }
+          </div>
           @if (form.controls.email.invalid && form.controls.email.touched) {
             <span class="text-xs text-destructive">Must be a valid email.</span>
+          }
+          @if (isEdit() && clipboardService.copiedField() === 'email') {
+            <span class="text-xs text-primary">Copied!</span>
           }
         </div>
 
         <div class="flex flex-col gap-1.5">
           <label for="username" class="text-xs text-muted-foreground">Username</label>
-          <input pInputText id="username" formControlName="username" class="w-full" />
+          <div class="flex gap-2">
+            <input pInputText id="username" formControlName="username" class="flex-1" />
+            @if (isEdit()) {
+              <p-button
+                icon="pi pi-copy"
+                severity="secondary"
+                [text]="true"
+                [rounded]="true"
+                pTooltip="Copy username"
+                tooltipPosition="top"
+                (onClick)="copyField(form.controls.username.value, 'username')"
+              />
+            }
+          </div>
+          @if (isEdit() && clipboardService.copiedField() === 'username') {
+            <span class="text-xs text-primary">Copied!</span>
+          }
         </div>
 
         <div class="flex flex-col gap-1.5">
@@ -60,6 +92,17 @@
               styleClass="flex-1"
               inputStyleClass="w-full"
             />
+            @if (isEdit()) {
+              <p-button
+                icon="pi pi-copy"
+                severity="secondary"
+                [text]="true"
+                [rounded]="true"
+                pTooltip="Copy password"
+                tooltipPosition="top"
+                (onClick)="copyField(passwordValue() ?? '', 'password')"
+              />
+            }
             <p-button
               icon="pi pi-refresh"
               severity="secondary"
@@ -70,6 +113,9 @@
               (onClick)="openGenerator()"
             />
           </div>
+          @if (isEdit() && clipboardService.copiedField() === 'password') {
+            <span class="text-xs text-primary">Copied!</span>
+          }
           <app-password-strength-meter [password]="passwordValue() ?? ''" />
         </div>
 
