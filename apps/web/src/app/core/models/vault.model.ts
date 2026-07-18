@@ -42,3 +42,16 @@ export interface VaultEntryWriteRequest {
   favorite?: boolean;
   expiresAt?: string | null;
 }
+
+export interface VaultCategory {
+  id: string;
+  name: string;
+  color: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VaultCategoryWriteRequest {
+  name: string;
+  color?: string | null;
+}
