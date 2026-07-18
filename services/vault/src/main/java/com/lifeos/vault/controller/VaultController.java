@@ -6,6 +6,7 @@ import com.lifeos.vault.domains.dto.request.UpdateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.response.ApiResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntryResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntrySummaryResponse;
+import com.lifeos.vault.domains.dto.response.VaultStatusResponse;
 import com.lifeos.vault.service.VaultEntryService;
 import com.lifeos.vault.service.VaultMasterPasswordService;
 import jakarta.validation.Valid;
@@ -30,6 +31,15 @@ public class VaultController {
 
   private final VaultEntryService vaultEntryService;
   private final VaultMasterPasswordService vaultMasterPasswordService;
+
+  @GetMapping("/status")
+  public ResponseEntity<ApiResponse<VaultStatusResponse>> status(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            vaultMasterPasswordService.getStatus(userId), "Vault status fetched successfully"));
+  }
 
   @PostMapping("/setup")
   public ResponseEntity<ApiResponse<Void>> setup(
