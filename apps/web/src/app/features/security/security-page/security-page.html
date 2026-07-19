@@ -60,13 +60,13 @@
     <div class="mb-3.5 flex items-center justify-between">
       <div class="text-[13px] font-semibold">Devices &amp; sessions</div>
       @if (otherDevices().length > 0) {
-        <button
-          type="button"
-          class="cursor-pointer bg-transparent text-[11.5px] text-primary"
-          (click)="signOutAllOtherSessions()"
-        >
-          Sign out all other sessions
-        </button>
+        <p-button
+          label="Sign out all other sessions"
+          icon="pi pi-sign-out"
+          [text]="true"
+          severity="secondary"
+          (onClick)="signOutAllOtherSessions()"
+        />
       }
     </div>
 
@@ -81,13 +81,15 @@
         @if (device.isCurrentDevice) {
           <span class="text-[11px] text-primary">active now</span>
         } @else {
-          <button
-            type="button"
-            class="cursor-pointer bg-transparent text-[11px] text-primary"
-            (click)="signOutDevice(device.id)"
-          >
-            sign out
-          </button>
+          <p-button
+            icon="pi pi-sign-out"
+            severity="secondary"
+            [text]="true"
+            [rounded]="true"
+            pTooltip="Sign out this device"
+            tooltipPosition="top"
+            (onClick)="signOutDevice(device.id)"
+          />
         }
       </div>
     }

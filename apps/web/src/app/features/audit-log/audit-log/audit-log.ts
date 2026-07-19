@@ -1,5 +1,7 @@
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
 
 type AuditEventType = 'login' | 'change' | 'alert' | 'add';
 type AuditDotTone = 'primary' | 'destructive' | 'muted';
@@ -51,7 +53,7 @@ const EVENTS: AuditEvent[] = [
 @Component({
   selector: 'app-audit-log',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, ButtonModule, SelectModule],
   templateUrl: './audit-log.html',
   styleUrl: './audit-log.scss',
 })
@@ -81,10 +83,6 @@ export class AuditLogPage {
 
   protected selectType(id: TypeChip['id']): void {
     this.selectedType.set(id);
-  }
-
-  protected setRange(value: string): void {
-    this.range.set(parseInt(value, 10));
   }
 
   protected exportCsv(): void {

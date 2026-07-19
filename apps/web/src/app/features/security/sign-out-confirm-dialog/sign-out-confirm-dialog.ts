@@ -27,6 +27,10 @@ export class SignOutConfirmDialog {
       : `This will immediately end access for ${this.deviceName()}. Anyone using that session will be logged out.`,
   );
 
+  protected readonly confirmLabel = computed(() =>
+    this.isAllSessions() ? 'Sign out other sessions' : 'Sign out this device',
+  );
+
   protected cancel(): void {
     this.visible.set(false);
   }

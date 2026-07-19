@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
@@ -40,6 +41,7 @@ const THEME_OPTIONS: { label: string; value: ThemePreference }[] = [
     RouterLink,
     FormsModule,
     ButtonModule,
+    InputTextModule,
     SelectModule,
     ToggleSwitchModule,
     DeleteAccountConfirmDialog,

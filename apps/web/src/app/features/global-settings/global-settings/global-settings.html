@@ -36,32 +36,36 @@
           >
             {{ user().initials }}
           </div>
-          <button
-            type="button"
-            class="cursor-pointer bg-transparent text-[11.5px] text-primary"
-            (click)="changeAvatar()"
-          >
-            Change avatar
-          </button>
+          <p-button
+            label="Change avatar"
+            icon="pi pi-camera"
+            [text]="true"
+            severity="secondary"
+            (onClick)="changeAvatar()"
+          />
         </div>
 
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label class="mb-1.5 block text-[11px] text-foreground/55">NAME</label>
+            <label for="settingsName" class="mb-1.5 block text-[11px] text-foreground/55">NAME</label>
             <input
+              pInputText
+              id="settingsName"
               type="text"
               [ngModel]="name()"
               (ngModelChange)="name.set($event)"
-              class="w-full rounded-[0.45rem] border border-border bg-background px-3 py-2 font-mono text-[13px] text-foreground outline-none"
+              class="w-full"
             />
           </div>
           <div>
-            <label class="mb-1.5 block text-[11px] text-foreground/55">EMAIL</label>
+            <label for="settingsEmail" class="mb-1.5 block text-[11px] text-foreground/55">EMAIL</label>
             <input
+              pInputText
+              id="settingsEmail"
               type="email"
               [ngModel]="email()"
               (ngModelChange)="email.set($event)"
-              class="w-full rounded-[0.45rem] border border-border bg-background px-3 py-2 font-mono text-[13px] text-foreground outline-none"
+              class="w-full"
             />
           </div>
         </div>
@@ -78,13 +82,13 @@
               @if (module.enabled) {
                 <p-toggleswitch [ngModel]="true" (ngModelChange)="toggleModule(module.code)" />
               } @else {
-                <button
-                  type="button"
-                  class="cursor-pointer bg-transparent text-[11.5px] text-primary"
-                  (click)="setUpModule(module.code)"
-                >
-                  Set up
-                </button>
+                <p-button
+                  label="Set up"
+                  icon="pi pi-plus"
+                  [text]="true"
+                  severity="secondary"
+                  (onClick)="setUpModule(module.code)"
+                />
               }
             </div>
           }

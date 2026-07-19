@@ -2,6 +2,7 @@ import { Component, computed, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { TooltipModule } from 'primeng/tooltip';
 import { FormsModule } from '@angular/forms';
 
 import { ChangeMasterPasswordDialog } from '../change-master-password-dialog/change-master-password-dialog';
@@ -35,6 +36,7 @@ const SEED_DEVICES: DeviceSession[] = [
     ButtonModule,
     SelectModule,
     ToggleSwitchModule,
+    TooltipModule,
     FormsModule,
     ChangeMasterPasswordDialog,
     RecoveryCodesDialog,

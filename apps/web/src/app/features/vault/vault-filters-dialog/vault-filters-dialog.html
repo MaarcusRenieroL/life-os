@@ -72,14 +72,13 @@
 
     <div>
       <div class="mb-2 text-[11px] text-foreground/55">LAST UPDATED</div>
-      <select
-        class="w-full rounded-[0.45rem] border border-border bg-background px-3 py-[9px] text-[13px] text-foreground outline-none"
+      <p-select
+        [options]="lastUpdatedOptions"
         [(ngModel)]="draft.lastUpdated"
-      >
-        @for (option of lastUpdatedOptions; track option.value) {
-          <option [value]="option.value">{{ option.label }}</option>
-        }
-      </select>
+        optionLabel="label"
+        optionValue="value"
+        styleClass="w-full"
+      />
     </div>
 
     <div class="flex items-center justify-between">

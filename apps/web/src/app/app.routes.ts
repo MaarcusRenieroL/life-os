@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth.guard';
+import { vaultUnlockGuard } from './core/guards/vault-unlock.guard';
 import { AppShell } from './core/layout/app-shell/app-shell';
 import { Login } from './features/auth/login/login';
 import { Home } from './features/home/home';
@@ -27,31 +28,37 @@ export const routes: Routes = [
       {
         path: 'vault/entries',
         component: VaultEntryList,
+        canActivate: [vaultUnlockGuard],
         data: { module: 'password-manager', tab: 'vault' },
       },
       {
         path: 'vault/health',
         component: VaultHealth,
+        canActivate: [vaultUnlockGuard],
         data: { module: 'password-manager', tab: 'vault' },
       },
       {
         path: 'vault/cards',
         component: CardList,
+        canActivate: [vaultUnlockGuard],
         data: { module: 'password-manager', tab: 'vault' },
       },
       {
         path: 'vault/security',
         component: SecurityPage,
+        canActivate: [vaultUnlockGuard],
         data: { module: 'password-manager', tab: 'vault' },
       },
       {
         path: 'vault/audit-log',
         component: AuditLogPage,
+        canActivate: [vaultUnlockGuard],
         data: { module: 'password-manager', tab: 'vault' },
       },
       {
         path: 'vault/data',
         component: DataManagementPage,
+        canActivate: [vaultUnlockGuard],
         data: { module: 'password-manager', tab: 'vault' },
       },
     ],

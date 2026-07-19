@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, model, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, model, output, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -80,6 +80,17 @@ export class VaultEntryForm {
   protected readonly passwordValue = toSignal(this.form.controls.password.valueChanges, {
     initialValue: this.form.controls.password.value,
   });
+
+  // Same bridge for `type`, so the template can show different fields per entry type
+  // (this flat entity has no dedicated card-number/expiry columns, so CARD/NOTE reuse
+  // the same username/password/notes fields with different labels and visibility).
+  protected readonly typeValue = toSignal(this.form.controls.type.valueChanges, {
+    initialValue: this.form.controls.type.value,
+  });
+
+  protected readonly isLogin = computed(() => this.typeValue() === 'LOGIN');
+  protected readonly isCard = computed(() => this.typeValue() === 'CARD');
+  protected readonly isNote = computed(() => this.typeValue() === 'NOTE');
 
   constructor() {
     // Re-init the form each time the dialog opens, for whichever entry (or none) it opened with.

@@ -60,15 +60,13 @@
         <div class="text-[12.5px]">Auto-backup frequency</div>
         <div class="text-[11px] text-foreground/50">Encrypted snapshots stored separately from the vault</div>
       </div>
-      <select
+      <p-select
+        [options]="backupFrequencyOptions"
         [ngModel]="backupFrequency()"
         (ngModelChange)="backupFrequency.set($event)"
-        class="rounded-[0.45rem] border border-border bg-background px-2.5 py-[7px] text-xs text-foreground outline-none"
-      >
-        @for (option of backupFrequencyOptions; track option.value) {
-          <option [value]="option.value">{{ option.label }}</option>
-        }
-      </select>
+        optionLabel="label"
+        optionValue="value"
+      />
     </div>
   </div>
 

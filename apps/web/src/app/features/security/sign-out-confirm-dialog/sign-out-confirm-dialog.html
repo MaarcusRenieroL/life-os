@@ -18,7 +18,7 @@
 
     <div class="flex justify-end gap-2.5">
       <p-button label="Cancel" severity="secondary" (onClick)="cancel()" />
-      <p-button label="Sign out other sessions" severity="danger" (onClick)="confirm()" />
+      <p-button [label]="confirmLabel()" severity="danger" (onClick)="confirm()" />
     </div>
   </div>
 </p-dialog>

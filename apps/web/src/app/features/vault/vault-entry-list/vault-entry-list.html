@@ -122,30 +122,44 @@
     </div>
 
     @if (selected().size > 0) {
-      <div class="mb-3 flex flex-wrap items-center gap-4 rounded-[0.45rem] border border-primary/30 bg-primary/10 px-4 py-2.5">
-        <span class="text-[12.5px] font-semibold text-primary">{{ selected().size }} selected</span>
+      <div class="mb-3 flex flex-wrap items-center gap-1.5 rounded-[0.45rem] border border-primary/30 bg-primary/10 px-3 py-2">
+        <span class="mr-1 text-[12.5px] font-semibold text-primary">{{ selected().size }} selected</span>
         <div class="flex-1"></div>
-        <details class="relative">
-          <summary class="cursor-pointer list-none text-xs text-foreground/80 [&::-webkit-details-marker]:hidden">
-            Move to folder
-          </summary>
-          <div class="absolute right-0 top-[22px] z-30 w-[180px] rounded-[0.45rem] border border-border bg-card p-1.5 shadow-[0_12px_24px_oklch(0_0_0_/_45%)]">
-            @for (category of categories(); track category.id) {
-              <button
-                type="button"
-                (click)="moveSelectedToFolder(category.id)"
-                class="block w-full rounded-[0.35rem] px-2 py-[7px] text-left text-[11.5px] text-foreground hover:bg-foreground/6"
-              >
-                {{ category.name }}
-              </button>
-            }
-          </div>
-        </details>
-        <button type="button" (click)="exportSelected()" class="cursor-pointer text-xs text-foreground/80">
-          Export selected
-        </button>
-        <button type="button" (click)="deleteSelected()" class="cursor-pointer text-xs text-destructive">Delete</button>
-        <button type="button" (click)="clearSelection()" class="cursor-pointer text-xs text-foreground/55">Clear</button>
+        <p-button
+          label="Move to folder"
+          icon="pi pi-folder"
+          [text]="true"
+          severity="secondary"
+          size="small"
+          (onClick)="folderMenu.toggle($event)"
+        />
+        <p-menu #folderMenu [popup]="true" [model]="bulkFolderMenuItems()" />
+        <p-button
+          label="Export"
+          icon="pi pi-download"
+          [text]="true"
+          severity="secondary"
+          size="small"
+          (onClick)="exportSelected()"
+        />
+        <p-button
+          label="Delete"
+          icon="pi pi-trash"
+          [text]="true"
+          severity="danger"
+          size="small"
+          (onClick)="deleteSelected()"
+        />
+        <p-button
+          icon="pi pi-times"
+          [text]="true"
+          [rounded]="true"
+          severity="secondary"
+          size="small"
+          pTooltip="Clear selection"
+          tooltipPosition="top"
+          (onClick)="clearSelection()"
+        />
       </div>
     }
 
@@ -159,7 +173,7 @@
           <div
             class="grid grid-cols-[28px_2.2fr_1fr_1fr_0.7fr_1fr_90px] items-center gap-2 border-b border-border bg-card px-4 py-2.5 text-[11px] text-foreground/45"
           >
-            <input type="checkbox" [checked]="allChecked()" (change)="toggleSelectAll()" class="m-0 cursor-pointer" />
+            <p-checkbox [ngModel]="allChecked()" (onChange)="toggleSelectAll()" [binary]="true" />
             <div>NAME</div>
             <div>CATEGORY</div>
             <div>STRENGTH</div>
@@ -173,12 +187,13 @@
               (click)="openEntry(entry.id)"
               class="grid cursor-pointer grid-cols-[28px_2.2fr_1fr_1fr_0.7fr_1fr_90px] items-center gap-2 border-b border-border px-4 py-3 last:border-b-0 hover:bg-accent/20"
             >
-              <input
-                type="checkbox"
-                [checked]="selected().has(entry.id)"
-                (click)="toggleSelect(entry.id, $event)"
-                class="m-0 cursor-pointer"
-              />
+              <div (click)="$event.stopPropagation()">
+                <p-checkbox
+                  [ngModel]="selected().has(entry.id)"
+                  (onChange)="toggleSelect(entry.id)"
+                  [binary]="true"
+                />
+              </div>
               <div class="flex min-w-0 items-center gap-2.5">
                 <div class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[0.45rem] border border-border bg-background text-[10px] text-primary">
                   {{ entry.icon || entry.title.slice(0, 2).toUpperCase() }}
@@ -209,19 +224,26 @@
                 {{ security(entry).twoFactor === 'enabled' ? 'on' : 'off' }}
               </div>
               <div class="text-[11.5px] text-foreground/50">{{ entry.updatedAt | date: 'MMM d' }}</div>
-              <div class="flex items-center justify-end gap-2.5 text-[11px] text-foreground/55" (click)="$event.stopPropagation()">
-                <button type="button" (click)="copy(entry.username || entry.email, 'row-' + entry.id)" class="cursor-pointer">copy</button>
-                <details class="relative">
-                  <summary class="cursor-pointer list-none text-[13px] [&::-webkit-details-marker]:hidden">...</summary>
-                  <div class="absolute right-0 top-[22px] z-30 w-[150px] rounded-[0.45rem] border border-border bg-card p-1.5 shadow-[0_12px_24px_oklch(0_0_0_/_45%)]">
-                    <div (click)="openEditEntry(entry.id)" class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Edit</div>
-                    <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Duplicate</div>
-                    <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Move to folder</div>
-                    <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Share</div>
-                    <div class="my-1 h-px bg-border"></div>
-                    <div (click)="deleteEntry(entry.id)" class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-destructive hover:bg-foreground/6">Delete</div>
-                  </div>
-                </details>
+              <div class="flex items-center justify-end gap-0.5" (click)="$event.stopPropagation()">
+                <p-button
+                  icon="pi pi-copy"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  pTooltip="Copy username"
+                  tooltipPosition="top"
+                  (onClick)="copy(entry.username || entry.email, 'row-' + entry.id)"
+                />
+                <p-button
+                  icon="pi pi-ellipsis-v"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  pTooltip="More actions"
+                  tooltipPosition="top"
+                  (onClick)="rowMenu.toggle($event)"
+                />
+                <p-menu #rowMenu [popup]="true" [model]="rowMenuItems(entry)" />
               </div>
             </div>
           }
@@ -244,7 +266,13 @@
               </div>
               <div class="text-[15px] font-semibold">{{ entry.title }}</div>
             </div>
-            <button type="button" (click)="closeEntry()" class="cursor-pointer text-sm text-foreground/50">x</button>
+            <p-button
+              icon="pi pi-times"
+              severity="secondary"
+              [text]="true"
+              [rounded]="true"
+              (onClick)="closeEntry()"
+            />
           </div>
           <div class="flex flex-col gap-3.5">
             <div>
@@ -253,7 +281,15 @@
                 <div class="flex-1 truncate rounded-[0.45rem] border border-border bg-background px-3 py-2.5 text-[13px]">
                   {{ entry.username || entry.email || '—' }}
                 </div>
-                <button type="button" (click)="copy(entry.username || entry.email, 'modal-user')" class="cursor-pointer text-[11px] text-foreground/55">copy</button>
+                <p-button
+                  icon="pi pi-copy"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  pTooltip="Copy"
+                  tooltipPosition="top"
+                  (onClick)="copy(entry.username || entry.email, 'modal-user')"
+                />
               </div>
             </div>
             <div>
@@ -262,10 +298,24 @@
                 <div class="flex-1 truncate rounded-[0.45rem] border border-border bg-background px-3 py-2.5 text-[13px] tracking-[0.03em]">
                   {{ showPassword() ? entry.password : '•'.repeat(entry.password?.length || 8) }}
                 </div>
-                <button type="button" (click)="togglePasswordVisibility()" class="cursor-pointer text-[11px] text-foreground/55">
-                  {{ showPassword() ? 'hide' : 'show' }}
-                </button>
-                <button type="button" (click)="copy(entry.password, 'modal-pw')" class="cursor-pointer text-[11px] text-foreground/55">copy</button>
+                <p-button
+                  [icon]="showPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  [pTooltip]="showPassword() ? 'Hide' : 'Show'"
+                  tooltipPosition="top"
+                  (onClick)="togglePasswordVisibility()"
+                />
+                <p-button
+                  icon="pi pi-copy"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  pTooltip="Copy"
+                  tooltipPosition="top"
+                  (onClick)="copy(entry.password, 'modal-pw')"
+                />
               </div>
             </div>
             @if (entry.url) {
@@ -289,12 +339,8 @@
             </div>
           </div>
           <div class="mt-[22px] flex justify-end gap-2.5">
-            <button type="button" (click)="editOpenEntry()" class="cursor-pointer rounded-[0.45rem] border border-border bg-background px-3.5 py-2 text-[12.5px]">
-              Edit
-            </button>
-            <button type="button" (click)="closeEntry()" class="cursor-pointer rounded-[0.45rem] bg-primary px-4 py-2 text-[12.5px] font-semibold text-primary-foreground">
-              Done
-            </button>
+            <p-button label="Edit" icon="pi pi-pencil" severity="secondary" (onClick)="editOpenEntry()" />
+            <p-button label="Done" (onClick)="closeEntry()" />
           </div>
         } @else {
           <p class="text-sm text-muted-foreground">Loading…</p>

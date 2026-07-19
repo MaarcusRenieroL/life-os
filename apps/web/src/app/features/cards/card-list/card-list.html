@@ -38,9 +38,13 @@
   <div class="mt-7">
     <div class="mb-3 flex items-center justify-between">
       <div class="text-[13px] font-semibold">Linked services / subscriptions</div>
-      <button type="button" (click)="openAddSubscription()" class="cursor-pointer text-[11.5px] text-primary">
-        + add service or subscription
-      </button>
+      <p-button
+        label="Add service or subscription"
+        icon="pi pi-plus"
+        [text]="true"
+        severity="secondary"
+        (onClick)="openAddSubscription()"
+      />
     </div>
 
     @if (subscriptions().length === 0) {

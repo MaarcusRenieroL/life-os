@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
+import { SelectModule } from 'primeng/select';
 
 import { VaultApiService } from '../../../core/services/vault-api.service';
 import { DeleteAccountConfirmDialog } from '../delete-account-confirm-dialog/delete-account-confirm-dialog';
@@ -17,7 +18,7 @@ const BACKUP_FREQUENCY_OPTIONS: { label: string; value: BackupFrequency }[] = [
 @Component({
   selector: 'app-data-management',
   standalone: true,
-  imports: [FormsModule, ButtonModule, DialogModule, DeleteAccountConfirmDialog],
+  imports: [FormsModule, ButtonModule, DialogModule, SelectModule, DeleteAccountConfirmDialog],
   templateUrl: './data-management.html',
   styleUrl: './data-management.scss',
 })

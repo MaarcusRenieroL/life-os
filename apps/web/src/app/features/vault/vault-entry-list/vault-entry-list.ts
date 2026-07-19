@@ -2,8 +2,12 @@ import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
+import { MenuModule } from 'primeng/menu';
+import { TooltipModule } from 'primeng/tooltip';
 import { concatMap, from, switchMap, toArray } from 'rxjs';
 
 import { ClipboardService } from '../../../core/services/clipboard.service';
@@ -26,7 +30,10 @@ type QuickChip = 'all' | 'favorites' | string;
   imports: [
     RouterLink,
     ButtonModule,
+    CheckboxModule,
     DialogModule,
+    MenuModule,
+    TooltipModule,
     FormsModule,
     DatePipe,
     VaultCategoryManager,
@@ -241,8 +248,7 @@ export class VaultEntryList implements OnInit {
     }
   }
 
-  toggleSelect(id: string, event: Event): void {
-    event.stopPropagation();
+  toggleSelect(id: string): void {
     this.selected.update((current) => {
       const next = new Set(current);
       if (next.has(id)) {
@@ -273,6 +279,81 @@ export class VaultEntryList implements OnInit {
 
   applyFilters(filters: VaultFilters): void {
     this.filters.set(filters);
+  }
+
+  duplicateEntry(id: string): void {
+    this.vaultApi.getEntry(id).subscribe((entry) => {
+      this.vaultApi
+        .createEntry({
+          type: entry.type,
+          title: `${entry.title} (copy)`,
+          email: entry.email,
+          username: entry.username,
+          url: entry.url,
+          icon: entry.icon,
+          password: entry.password,
+          notes: entry.notes,
+          categoryId: entry.categoryId,
+          favorite: false,
+          expiresAt: entry.expiresAt,
+        })
+        .subscribe(() => this.loadEntries());
+    });
+  }
+
+  rowMenuItems(entry: VaultEntrySummary): MenuItem[] {
+    return [
+      { label: 'Edit', icon: 'pi pi-pencil', command: () => this.openEditEntry(entry.id) },
+      { label: 'Duplicate', icon: 'pi pi-copy', command: () => this.duplicateEntry(entry.id) },
+      {
+        label: 'Move to folder',
+        icon: 'pi pi-folder',
+        items: this.folderMenuItemsFor((categoryId) => this.moveEntryToFolder(entry.id, categoryId)),
+      },
+      { label: 'Share', icon: 'pi pi-share-alt', disabled: true },
+      { separator: true },
+      {
+        label: 'Delete',
+        icon: 'pi pi-trash',
+        styleClass: 'text-destructive',
+        command: () => this.deleteEntry(entry.id),
+      },
+    ];
+  }
+
+  bulkFolderMenuItems(): MenuItem[] {
+    return this.folderMenuItemsFor((categoryId) => this.moveSelectedToFolder(categoryId));
+  }
+
+  private folderMenuItemsFor(onSelect: (categoryId: string) => void): MenuItem[] {
+    if (this.categories().length === 0) {
+      return [{ label: 'No categories yet', disabled: true }];
+    }
+
+    return this.categories().map((category) => ({
+      label: category.name,
+      command: () => onSelect(category.id),
+    }));
+  }
+
+  private moveEntryToFolder(id: string, categoryId: string): void {
+    this.vaultApi.getEntry(id).subscribe((detail) => {
+      this.vaultApi
+        .updateEntry(id, {
+          type: detail.type,
+          title: detail.title,
+          email: detail.email,
+          username: detail.username,
+          url: detail.url,
+          icon: detail.icon,
+          password: detail.password,
+          notes: detail.notes,
+          categoryId,
+          favorite: detail.favorite,
+          expiresAt: detail.expiresAt,
+        })
+        .subscribe(() => this.loadEntries());
+    });
   }
 
   deleteEntry(id: string): void {

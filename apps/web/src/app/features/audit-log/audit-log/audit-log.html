@@ -4,13 +4,7 @@
       <h1 class="text-[22px] font-semibold tracking-tight">Audit Log</h1>
       <p class="mt-1 text-[12.5px] text-foreground/55">Password changes, logins and account activity</p>
     </div>
-    <button
-      type="button"
-      (click)="exportCsv()"
-      class="rounded-[0.45rem] border border-border bg-card px-3.5 py-2 text-xs text-foreground"
-    >
-      Export log (CSV)
-    </button>
+    <p-button label="Export log (CSV)" icon="pi pi-download" severity="secondary" (onClick)="exportCsv()" />
   </div>
 
   <div class="mb-[18px] flex flex-wrap items-center gap-2.5">
@@ -36,15 +30,13 @@
       </button>
     }
 
-    <select
+    <p-select
+      [options]="rangeOptions"
       [ngModel]="range()"
-      (ngModelChange)="setRange($event)"
-      class="rounded-[0.45rem] border border-border bg-card px-2.5 py-[7px] text-xs text-foreground outline-none"
-    >
-      @for (option of rangeOptions; track option.value) {
-        <option [value]="option.value">{{ option.label }}</option>
-      }
-    </select>
+      (ngModelChange)="range.set($event)"
+      optionLabel="label"
+      optionValue="value"
+    />
 
     <div class="ml-auto text-[11.5px] text-foreground/45">{{ resultCount() }} events</div>
   </div>
