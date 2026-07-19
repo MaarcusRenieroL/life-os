@@ -1,0 +1,82 @@
+<main class="mx-auto max-w-[1400px] px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10">
+  <div class="mb-[22px] flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-[22px] font-semibold tracking-tight">Cards</h1>
+      <p class="mt-1 text-[12.5px] text-foreground/55">
+        Separate vault section — not shown in default password search
+      </p>
+    </div>
+    <p-button label="+ Add card" (onClick)="openAddCard()" />
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    @for (card of cards(); track card.id) {
+      <div
+        class="flex h-[150px] flex-col justify-between rounded-[0.45rem] border border-border bg-gradient-to-br from-card to-[oklch(0.2_0.02_255)] p-5"
+      >
+        <div class="flex justify-between">
+          <span class="text-[11px] text-foreground/55">{{ card.nickname.toUpperCase() }}</span>
+          <span class="text-[11px] text-primary">{{ card.network.toUpperCase() }}</span>
+        </div>
+        <div class="text-base tracking-[0.12em]">{{ card.maskedNumber }}</div>
+        <div class="flex justify-between text-[11px] text-foreground/55">
+          <span>{{ card.cardholderName }}</span>
+          <span>EXP {{ card.expiry }}</span>
+        </div>
+      </div>
+    }
+
+    <button
+      type="button"
+      (click)="openAddCard()"
+      class="flex h-[150px] cursor-pointer items-center justify-center rounded-[0.45rem] border border-dashed border-border p-5 text-xs text-foreground/40"
+    >
+      + add credit or debit card
+    </button>
+  </div>
+
+  <div class="mt-7">
+    <div class="mb-3 flex items-center justify-between">
+      <div class="text-[13px] font-semibold">Linked services / subscriptions</div>
+      <button type="button" (click)="openAddSubscription()" class="cursor-pointer text-[11.5px] text-primary">
+        + add service or subscription
+      </button>
+    </div>
+
+    @if (subscriptions().length === 0) {
+      <div class="rounded-[0.45rem] border border-border bg-card p-8 text-center text-[12px] text-foreground/50">
+        No linked services yet.
+      </div>
+    } @else {
+      <div class="overflow-hidden overflow-x-auto rounded-[0.45rem] border border-border">
+        <div class="min-w-[560px]">
+          <div
+            class="grid grid-cols-[2fr_1fr_1fr_1fr] bg-card px-4 py-2.5 text-[11px] text-foreground/45"
+          >
+            <div>SERVICE</div>
+            <div>CARD USED</div>
+            <div>BILLING</div>
+            <div>AMOUNT</div>
+          </div>
+          @for (subscription of subscriptions(); track subscription.id) {
+            <div
+              class="grid grid-cols-[2fr_1fr_1fr_1fr] border-t border-border px-4 py-3 text-[12.5px]"
+            >
+              <div>{{ subscription.serviceName }}</div>
+              <div class="text-foreground/60">{{ cardLabelFor(subscription.cardId) }}</div>
+              <div class="text-foreground/60">{{ subscription.billingCycle }}</div>
+              <div>{{ formatAmount(subscription.amount) }}</div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <app-add-card-dialog [(visible)]="addCardVisible" (saved)="addCard($event)" />
+  <app-add-subscription-dialog
+    [(visible)]="addSubscriptionVisible"
+    [cards]="cards()"
+    (saved)="addSubscription($event)"
+  />
+</main>
