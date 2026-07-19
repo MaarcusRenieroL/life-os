@@ -1,0 +1,103 @@
+<main class="mx-auto max-w-[1000px] px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10">
+  <div class="mb-[22px]">
+    <h1 class="text-[22px] font-semibold tracking-tight">Security</h1>
+    <p class="mt-1 text-[12.5px] text-foreground/55">Master password, biometrics, sessions and devices</p>
+  </div>
+
+  <!-- Master password -->
+  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+    <div class="mb-3.5 text-[13px] font-semibold">Master password</div>
+
+    <div class="mb-3 flex items-center justify-between">
+      <div>
+        <div class="text-[12.5px]">Strength</div>
+        <div class="text-[11px] text-foreground/50">{{ lastChangedLabel }}</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="h-1.5 w-[120px] overflow-hidden rounded-full bg-foreground/10">
+          <div class="h-full bg-primary" [style.width.%]="masterPasswordStrengthPct"></div>
+        </div>
+        <span class="text-[11.5px] text-primary">Strong</span>
+      </div>
+    </div>
+
+    <div class="flex gap-2.5">
+      <p-button label="Change master password" severity="secondary" (onClick)="openChangeMasterPassword()" />
+      <p-button label="View recovery codes" severity="secondary" (onClick)="openRecoveryCodes()" />
+    </div>
+  </div>
+
+  <!-- Authentication -->
+  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+    <div class="mb-3.5 text-[13px] font-semibold">Authentication</div>
+
+    <div class="flex items-center justify-between border-b border-border py-2.5">
+      <div>
+        <div class="text-[12.5px]">Biometric unlock</div>
+        <div class="text-[11px] text-foreground/50">Face ID / Touch ID on this device</div>
+      </div>
+      <p-toggleswitch [ngModel]="biometricUnlock()" (ngModelChange)="biometricUnlock.set($event)" />
+    </div>
+
+    <div class="flex items-center justify-between py-2.5">
+      <div>
+        <div class="text-[12.5px]">Session timeout</div>
+        <div class="text-[11px] text-foreground/50">Auto-lock after inactivity</div>
+      </div>
+      <p-select
+        [ngModel]="sessionTimeoutMinutes()"
+        (ngModelChange)="sessionTimeoutMinutes.set($event)"
+        [options]="sessionTimeoutOptions"
+        optionLabel="label"
+        optionValue="value"
+        styleClass="w-40"
+      />
+    </div>
+  </div>
+
+  <!-- Devices & sessions -->
+  <div class="rounded-[0.45rem] border border-border bg-card p-5">
+    <div class="mb-3.5 flex items-center justify-between">
+      <div class="text-[13px] font-semibold">Devices &amp; sessions</div>
+      @if (otherDevices().length > 0) {
+        <button
+          type="button"
+          class="cursor-pointer bg-transparent text-[11.5px] text-primary"
+          (click)="signOutAllOtherSessions()"
+        >
+          Sign out all other sessions
+        </button>
+      }
+    </div>
+
+    @for (device of devices(); track device.id) {
+      <div class="flex items-center justify-between border-b border-border py-2.5 last:border-b-0">
+        <div>
+          <div class="text-[12.5px]">{{ device.name }}</div>
+          <div class="text-[11px] text-foreground/50">
+            {{ device.location }}{{ device.isCurrentDevice ? ' - this device' : '' }}
+          </div>
+        </div>
+        @if (device.isCurrentDevice) {
+          <span class="text-[11px] text-primary">active now</span>
+        } @else {
+          <button
+            type="button"
+            class="cursor-pointer bg-transparent text-[11px] text-primary"
+            (click)="signOutDevice(device.id)"
+          >
+            sign out
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  <app-change-master-password-dialog [(visible)]="changeMasterPasswordVisible" />
+  <app-recovery-codes-dialog [(visible)]="recoveryCodesVisible" />
+  <app-sign-out-confirm-dialog
+    [(visible)]="signOutConfirmVisible"
+    [deviceName]="signOutTargetDeviceName()"
+    (confirmed)="confirmSignOut()"
+  />
+</main>
