@@ -168,6 +168,11 @@ export class VaultEntryList implements OnInit {
     return this.categories().find((c) => c.id === id)?.name ?? '—';
   }
 
+  categoryColor(id: string | null): string | null {
+    if (!id) return null;
+    return this.categories().find((c) => c.id === id)?.color ?? null;
+  }
+
   security(entry: VaultEntrySummary): MockEntrySecurity {
     return this.mockSecurity().get(entry.id) ?? { strength: 'Strong', twoFactor: 'not-supported' };
   }

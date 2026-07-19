@@ -195,7 +195,12 @@
                   </div>
                 </div>
               </div>
-              <div class="truncate text-[11.5px] text-foreground/60">{{ categoryName(entry.categoryId) }}</div>
+              <div class="flex min-w-0 items-center gap-1.5 text-[11.5px] text-foreground/60">
+                @if (categoryColor(entry.categoryId); as color) {
+                  <span class="h-1.5 w-1.5 shrink-0 rounded-full" [style.background-color]="color"></span>
+                }
+                <span class="truncate">{{ categoryName(entry.categoryId) }}</span>
+              </div>
               <div class="flex items-center gap-1.5">
                 <span class="h-1.5 w-1.5 rounded-full" [class]="strengthDotClass(security(entry).strength)"></span>
                 <span class="text-[11.5px]" [class]="strengthColorClass(security(entry).strength)">{{ security(entry).strength }}</span>
