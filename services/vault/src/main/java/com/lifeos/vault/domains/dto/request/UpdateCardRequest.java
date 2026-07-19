@@ -30,6 +30,10 @@ public class UpdateCardRequest {
   @Pattern(regexp = "^$|^\\d{3,4}$")
   String cvv;
 
+  // Optional same as cardNumber/cvv above - only re-encrypted when present.
+  @Pattern(regexp = "^$|^(0[1-9]|1[0-2])/\\d{2}$")
+  String expiry;
+
   @Size(max = 255)
   String cardHolderName;
 

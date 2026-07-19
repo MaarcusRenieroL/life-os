@@ -32,6 +32,12 @@ public class CreateCardRequest {
   @Pattern(regexp = "^\\d{3,4}$")
   String cvv;
 
+  // MM/YY, matching the AddCard form's input mask. Encrypted at rest same as
+  // cardNumber/cvv, but decrypted back out on every read (see CardResponse).
+  @NotBlank
+  @Pattern(regexp = "^(0[1-9]|1[0-2])/\\d{2}$")
+  String expiry;
+
   // NOTE: the entity also has a passwordEncrypted/passwordIvv pair whose purpose
   // isn't clear (an online-banking password tied to this card?). Left out of this
   // request for now - add a `cardPassword` field here (and to UpdateCardRequest)

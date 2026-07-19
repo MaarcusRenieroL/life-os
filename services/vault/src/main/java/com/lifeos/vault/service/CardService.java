@@ -29,16 +29,24 @@ public class CardService {
 
   public List<CardResponse> getCards(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
+    // Needed now even for the list view - expiry is decrypted on every read
+    // (see CardResponse's class-level note), unlike cardNumber/cvv.
+    SecretKey key = requireUnlockedKey(userId);
 
-    return paymentCardRepository.findAllByUserId(userId).stream().map(this::toResponse).toList();
+    return paymentCardRepository.findAllByUserId(userId).stream()
+        .map((card) -> toResponse(card, key))
+        .toList();
   }
 
   public CardResponse getCard(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
+    SecretKey key = requireUnlockedKey(userId);
+
     return toResponse(
         paymentCardRepository
             .findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new PaymentCardNotFoundException(id)));
+            .orElseThrow(() -> new PaymentCardNotFoundException(id)),
+        key);
   }
 
   public CardResponse createCard(Authentication authentication, CreateCardRequest request) {
@@ -49,6 +57,7 @@ public class CardService {
 
     var numberEnc = encryptionService.encrypt(request.getCardNumber(), key);
     var cvvEnc = encryptionService.encrypt(request.getCvv(), key);
+    var expiryEnc = encryptionService.encrypt(request.getExpiry(), key);
 
     PaymentCard paymentCard =
         PaymentCard.builder()
@@ -60,11 +69,13 @@ public class CardService {
             .cardNumberIvv(numberEnc.iv())
             .cvvEncrypted(cvvEnc.ciphertext())
             .cvvIvv(cvvEnc.iv())
+            .expiryEncrypted(expiryEnc.ciphertext())
+            .expiryIvv(expiryEnc.iv())
             .cardHolderName(request.getCardHolderName())
             .billingZip(request.getBillingZip())
             .build();
 
-    return toResponse(paymentCardRepository.save(paymentCard));
+    return toResponse(paymentCardRepository.save(paymentCard), key);
   }
 
   public CardResponse updateCard(
@@ -97,7 +108,14 @@ public class CardService {
       card.setCvvIvv(cvvEnc.iv());
     }
 
-    return toResponse(paymentCardRepository.save(card));
+    if (StringUtils.hasText(request.getExpiry())) {
+      var expiryEnc = encryptionService.encrypt(request.getExpiry(), key);
+
+      card.setExpiryEncrypted(expiryEnc.ciphertext());
+      card.setExpiryIvv(expiryEnc.iv());
+    }
+
+    return toResponse(paymentCardRepository.save(card), key);
   }
 
   private int extractLastFourDigits(String cardNumber) {
@@ -121,12 +139,18 @@ public class CardService {
     return record.key();
   }
 
-  private CardResponse toResponse(PaymentCard card) {
+  private CardResponse toResponse(PaymentCard card, SecretKey key) {
+    String expiry =
+        card.getExpiryEncrypted() == null
+            ? null
+            : encryptionService.decrypt(card.getExpiryEncrypted(), card.getExpiryIvv(), key);
+
     return CardResponse.builder()
         .id(card.getId())
         .nickname(card.getNickname())
         .network(card.getNetwork())
         .lastFourDigits(card.getLastFourDigits())
+        .expiry(expiry)
         .cardHolderName(card.getCardHolderName())
         .billingZip(card.getBillingZip())
         .createdAt(card.getCreatedAt())

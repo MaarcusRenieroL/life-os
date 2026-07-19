@@ -53,6 +53,13 @@ public class PaymentCard {
 
   String cvvIvv;
 
+  // Encrypted at rest like cardNumber/cvv, but unlike those two, expiry IS
+  // shown directly on the masked card face in the UI (design shows "EXP 09/28"
+  // unmasked) - so CardService decrypts it on every read, not just on demand.
+  String expiryEncrypted;
+
+  String expiryIvv;
+
   String cardHolderName;
 
   String billingZip;
