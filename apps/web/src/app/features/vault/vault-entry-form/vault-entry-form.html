@@ -148,14 +148,13 @@
         <p class="text-sm text-destructive">{{ errorMessage() }}</p>
       }
 
-      <div class="mt-2 flex gap-2">
+      <div class="mt-2 flex justify-end gap-2.5">
+        <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
         <p-button
           type="submit"
           [label]="isEdit() ? 'Save changes' : 'Create entry'"
-          styleClass="flex-1"
           [loading]="submitting()"
         />
-        <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
       </div>
 
       @if (isEdit()) {

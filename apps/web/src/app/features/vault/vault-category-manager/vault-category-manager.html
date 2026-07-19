@@ -93,16 +93,15 @@
         <p class="text-xs text-destructive">{{ errorMessage() }}</p>
       }
 
-      <div class="mt-1 flex gap-2">
-        <p-button
-          type="submit"
-          [label]="editingId() ? 'Save changes' : 'Create category'"
-          styleClass="flex-1"
-          [loading]="submitting()"
-        />
+      <div class="mt-1 flex justify-end gap-2.5">
         @if (editingId()) {
           <p-button type="button" label="Cancel" severity="secondary" (onClick)="startCreate()" />
         }
+        <p-button
+          type="submit"
+          [label]="editingId() ? 'Save changes' : 'Create category'"
+          [loading]="submitting()"
+        />
       </div>
     </form>
   </div>
