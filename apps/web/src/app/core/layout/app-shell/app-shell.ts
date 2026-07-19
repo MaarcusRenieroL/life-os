@@ -43,6 +43,7 @@ export class AppShell {
 
   protected readonly switcherOpen = signal(false);
   protected readonly searchFocused = signal(false);
+  protected readonly mobileMenuOpen = signal(false);
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
@@ -55,5 +56,13 @@ export class AppShell {
 
   closeSwitcher(): void {
     this.switcherOpen.set(false);
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen.update((open) => !open);
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen.set(false);
   }
 }

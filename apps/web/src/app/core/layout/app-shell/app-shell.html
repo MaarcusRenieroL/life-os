@@ -62,13 +62,17 @@
 
     <div class="flex shrink-0 items-center gap-2 sm:gap-3.5">
       <div
-        class="hidden items-center gap-2 rounded-[0.45rem] border border-border bg-card px-2.5 py-[5px] sm:flex sm:w-[190px] lg:w-[220px]"
+        class="hidden items-center gap-2 rounded-[0.45rem] border bg-card px-2.5 py-[5px] sm:flex sm:w-[190px] lg:w-[220px]"
+        [class.border-primary/50]="searchFocused()"
+        [class.border-border]="!searchFocused()"
       >
         <input
           id="app-shell-search"
           type="text"
           placeholder="search everything"
           class="w-full bg-transparent text-[11.5px] text-foreground placeholder:text-foreground/40 outline-none"
+          (focus)="searchFocused.set(true)"
+          (blur)="searchFocused.set(false)"
         />
         <span class="rounded-[4px] border border-border px-[5px] py-px text-[10px] text-foreground/35">^K</span>
       </div>
@@ -81,18 +85,70 @@
       @if (isHome()) {
         <a
           routerLink="/settings"
-          class="text-[11.5px] text-foreground/60 no-underline hover:text-foreground"
+          class="hidden text-[11.5px] text-foreground/60 no-underline hover:text-foreground sm:inline"
           >Settings</a
         >
       }
 
       <div
-        class="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-[9.5px] text-primary"
+        class="hidden h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-[9.5px] text-primary sm:flex"
       >
         {{ currentUser().initials }}
       </div>
+
+      <button
+        type="button"
+        class="flex h-7 w-7 items-center justify-center rounded-[0.45rem] border border-border bg-card md:hidden"
+        aria-label="Toggle menu"
+        (click)="toggleMobileMenu()"
+      >
+        <i class="pi text-xs" [class.pi-bars]="!mobileMenuOpen()" [class.pi-times]="mobileMenuOpen()"></i>
+      </button>
     </div>
   </header>
+
+  @if (mobileMenuOpen()) {
+    <div class="flex flex-col gap-3 border-b border-border bg-background px-4 py-4 md:hidden">
+      <div class="flex items-center gap-2 rounded-[0.45rem] border border-border bg-card px-2.5 py-2">
+        <i class="pi pi-search text-xs text-foreground/40"></i>
+        <input
+          type="text"
+          placeholder="search everything"
+          class="w-full bg-transparent text-[12.5px] text-foreground placeholder:text-foreground/40 outline-none"
+        />
+      </div>
+
+      @if (isHome()) {
+        <a
+          routerLink="/settings"
+          (click)="closeMobileMenu()"
+          class="rounded-[0.45rem] px-3 py-2 text-[12.5px] text-foreground/70 no-underline hover:bg-foreground/6 hover:text-foreground"
+          >Settings</a
+        >
+      } @else if (activeModule()?.tabs; as tabs) {
+        <nav class="flex flex-col gap-0.5">
+          @for (tab of tabs; track tab.path) {
+            <a
+              [routerLink]="tab.path"
+              routerLinkActive="bg-foreground/6 text-foreground"
+              (click)="closeMobileMenu()"
+              class="rounded-[0.45rem] px-3 py-2 text-[12.5px] text-foreground/70 no-underline hover:bg-foreground/6 hover:text-foreground"
+              >{{ tab.label }}</a
+            >
+          }
+        </nav>
+      }
+
+      <div class="flex items-center gap-2 border-t border-border pt-3">
+        <div
+          class="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-[9.5px] text-primary"
+        >
+          {{ currentUser().initials }}
+        </div>
+        <span class="text-[12.5px] text-foreground/70">{{ currentUser().name }}</span>
+      </div>
+    </div>
+  }
 
   <div class="flex-1">
     <router-outlet />
