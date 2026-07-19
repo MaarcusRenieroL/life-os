@@ -55,3 +55,24 @@ export interface VaultCategoryWriteRequest {
   name: string;
   color?: string | null;
 }
+
+export interface PasswordAgeBucket {
+  label: string;
+  count: number;
+}
+
+export interface ActionRequiredEntry {
+  id: string;
+  title: string;
+  issue: string;
+}
+
+export interface HealthSummary {
+  score: number;
+  totalCount: number;
+  weakCount: number;
+  duplicateCount: number;
+  compromisedCount: number;
+  ageBuckets: PasswordAgeBucket[];
+  actionRequired: ActionRequiredEntry[];
+}

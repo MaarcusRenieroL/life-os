@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { ApiResponse } from '../models/auth.model';
 import {
+  HealthSummary,
   MasterPasswordRequest,
   VaultEntryDetail,
   VaultEntrySummary,
@@ -63,5 +64,11 @@ export class VaultApiService {
     return this.http
       .delete<ApiResponse<void>>(`${this.baseUrl}/entry/${id}`)
       .pipe(map(() => undefined));
+  }
+
+  getHealthSummary(): Observable<HealthSummary> {
+    return this.http
+      .get<ApiResponse<HealthSummary>>(`${this.baseUrl}/health/summary`)
+      .pipe(map((response) => response.data));
   }
 }
