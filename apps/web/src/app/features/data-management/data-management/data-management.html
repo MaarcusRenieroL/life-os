@@ -1,0 +1,127 @@
+<main class="mx-auto max-w-[1000px] px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10">
+  <div class="mb-[22px]">
+    <h1 class="text-[22px] font-semibold tracking-tight">Data Management</h1>
+    <p class="mt-1 text-[12.5px] text-foreground/55">Export, backup and account controls</p>
+  </div>
+
+  <!-- Export / import -->
+  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+    <div class="mb-3.5 text-[13px] font-semibold">Export / import</div>
+
+    <div class="flex items-center justify-between border-b border-border py-2.5">
+      <div>
+        <div class="text-[12.5px]">Export vault</div>
+        <div class="text-[11px] text-foreground/50">CSV, encrypted JSON</div>
+      </div>
+      <p-button
+        label="Export"
+        severity="secondary"
+        [loading]="exportingVault()"
+        (onClick)="exportVault()"
+      />
+    </div>
+
+    <div class="flex items-center justify-between py-2.5">
+      <div>
+        <div class="text-[12.5px]">Import from another manager</div>
+        <div class="text-[11px] text-foreground/50">1Password, Bitwarden, LastPass CSV</div>
+      </div>
+      <p-button label="Import" severity="secondary" [disabled]="true" (onClick)="importFromAnotherManager()" />
+    </div>
+  </div>
+
+  <!-- Backup & recovery -->
+  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+    <div class="mb-3.5 text-[13px] font-semibold">Backup &amp; recovery</div>
+
+    <div class="flex items-center justify-between py-2.5">
+      <div>
+        <div class="text-[12.5px]">Last automatic backup</div>
+        <div class="text-[11px] text-foreground/50">{{ lastBackupLabel }}</div>
+      </div>
+      <p-button label="Restore from backup" severity="secondary" (onClick)="openRestoreDialog()" />
+    </div>
+  </div>
+
+  <!-- Encryption -->
+  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+    <div class="mb-3.5 text-[13px] font-semibold">Encryption</div>
+
+    <div class="flex items-center justify-between border-b border-border py-2.5">
+      <div>
+        <div class="text-[12.5px]">Vault encryption</div>
+        <div class="text-[11px] text-foreground/50">AES-256, zero-knowledge - only you hold the key</div>
+      </div>
+      <span class="text-[11.5px] text-primary">active</span>
+    </div>
+
+    <div class="flex items-center justify-between py-2.5">
+      <div>
+        <div class="text-[12.5px]">Auto-backup frequency</div>
+        <div class="text-[11px] text-foreground/50">Encrypted snapshots stored separately from the vault</div>
+      </div>
+      <select
+        [ngModel]="backupFrequency()"
+        (ngModelChange)="backupFrequency.set($event)"
+        class="rounded-[0.45rem] border border-border bg-background px-2.5 py-[7px] text-xs text-foreground outline-none"
+      >
+        @for (option of backupFrequencyOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Your data -->
+  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+    <div class="mb-3.5 text-[13px] font-semibold">Your data</div>
+
+    <div class="flex items-center justify-between py-2.5">
+      <div>
+        <div class="text-[12.5px]">Download everything</div>
+        <div class="text-[11px] text-foreground/50">Full copy of vault, cards, audit log and settings</div>
+      </div>
+      <p-button
+        label="Download"
+        severity="secondary"
+        [loading]="downloadingEverything()"
+        (onClick)="downloadEverything()"
+      />
+    </div>
+  </div>
+
+  <!-- Danger zone -->
+  <div class="rounded-[0.45rem] border border-danger-alt/35 bg-card p-5">
+    <div class="mb-1.5 text-[13px] font-semibold text-danger-alt">Danger zone</div>
+    <p class="mb-3.5 text-[11.5px] text-foreground/55">
+      Deleting your account starts a 30-day recovery window before data is permanently erased.
+    </p>
+    <p-button
+      label="Delete account"
+      severity="danger"
+      [outlined]="true"
+      (onClick)="openDeleteAccountDialog()"
+    />
+  </div>
+
+  <p-dialog
+    [(visible)]="restoreDialogVisible"
+    [modal]="true"
+    [dismissableMask]="true"
+    [showHeader]="false"
+    [style]="{ width: '25rem' }"
+    styleClass="font-mono border border-border"
+  >
+    <div class="pt-2">
+      <div class="mb-2 text-[15px] font-semibold">Restore from backup</div>
+      <p class="mb-4 text-[12.5px] leading-relaxed text-foreground/65">
+        Restoring from a backup is not available yet - there is no backup/restore API for this action yet.
+      </p>
+      <div class="flex justify-end">
+        <p-button label="Close" severity="secondary" (onClick)="restoreDialogVisible.set(false)" />
+      </div>
+    </div>
+  </p-dialog>
+
+  <app-delete-account-confirm-dialog [(visible)]="deleteAccountDialogVisible" />
+</main>

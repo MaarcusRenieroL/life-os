@@ -1,0 +1,28 @@
+<p-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [dismissableMask]="true"
+  [showHeader]="false"
+  [style]="{ width: '25rem' }"
+  styleClass="font-mono border border-danger-alt/35"
+>
+  <div class="pt-2">
+    <div class="mb-2 text-[15px] font-semibold text-danger-alt">Delete account?</div>
+    <p class="mb-5 text-[12.5px] leading-relaxed text-foreground/65">
+      Deleting your account starts a 30-day recovery window before your data is permanently erased. During
+      that window you can sign back in to cancel the deletion.
+    </p>
+
+    <div class="mb-5 rounded-[0.45rem] border border-border bg-background p-3.5">
+      <div class="text-xs text-foreground/60">
+        Account deletion is not available yet - there is no backend endpoint for this action, so it cannot be
+        completed from here.
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2.5">
+      <p-button label="Cancel" severity="secondary" (onClick)="cancel()" />
+      <p-button label="Delete account" severity="danger" [disabled]="true" />
+    </div>
+  </div>
+</p-dialog>
