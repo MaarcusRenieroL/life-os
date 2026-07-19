@@ -13,6 +13,7 @@ import { CardList } from './features/cards/card-list/card-list';
 import { SecurityPage } from './features/security/security-page/security-page';
 import { AuditLogPage } from './features/audit-log/audit-log/audit-log';
 import { DataManagementPage } from './features/data-management/data-management/data-management';
+import { GlobalSettings } from './features/global-settings/global-settings/global-settings';
 
 export const routes: Routes = [
   { path: 'login', component: Login },
@@ -23,6 +24,7 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'home', pathMatch: 'full' },
       { path: 'home', component: Home, data: { module: 'home' } },
+      { path: 'settings', component: GlobalSettings, data: { module: 'home' } },
       { path: 'vault', component: VaultUnlock, data: { module: 'password-manager' } },
       {
         path: 'vault/entries',
