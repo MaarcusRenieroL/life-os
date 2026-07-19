@@ -135,6 +135,10 @@ export class VaultEntryList implements OnInit {
     });
   }
 
+  refreshCategories(): void {
+    this.categoryApi.getCategories().subscribe((categories) => this.categories.set(categories));
+  }
+
   categoryName(id: string | null): string {
     if (!id) return '—';
     return this.categories().find((c) => c.id === id)?.name ?? '—';
@@ -221,6 +225,17 @@ export class VaultEntryList implements OnInit {
 
   applyFilters(filters: VaultFilters): void {
     this.filters.set(filters);
+  }
+
+  deleteEntry(id: string): void {
+    this.vaultApi.deleteEntry(id).subscribe(() => {
+      this.selected.update((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      this.loadEntries();
+    });
   }
 
   deleteSelected(): void {

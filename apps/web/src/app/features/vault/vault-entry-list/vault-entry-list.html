@@ -16,7 +16,7 @@
     </div>
   </div>
 
-  <app-vault-category-manager [(visible)]="categoryManagerVisible" (categoriesChanged)="categoryApi.getCategories().subscribe(c => categories.set(c))" />
+  <app-vault-category-manager [(visible)]="categoryManagerVisible" (categoriesChanged)="refreshCategories()" />
   <app-vault-filters-dialog
     [(visible)]="filtersVisible"
     [categories]="categories()"
@@ -208,7 +208,7 @@
                     <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Move to folder</div>
                     <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Share</div>
                     <div class="my-1 h-px bg-border"></div>
-                    <div (click)="selected.set(new Set([entry.id])); deleteSelected()" class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-destructive hover:bg-foreground/6">Delete</div>
+                    <div (click)="deleteEntry(entry.id)" class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-destructive hover:bg-foreground/6">Delete</div>
                   </div>
                 </details>
               </div>
