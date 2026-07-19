@@ -11,38 +11,36 @@
     </a>
 
     @if (!isHome()) {
-      <details class="relative shrink-0" [open]="switcherOpen()" (toggle)="switcherOpen.set($any($event.target).open)">
-        <summary
-          class="flex cursor-pointer list-none items-center gap-2 rounded-[0.45rem] border border-border bg-card py-1.5 pl-2 pr-2.5 [&::-webkit-details-marker]:hidden"
-        >
-          <span class="text-[9px] font-bold text-primary">{{ activeModule()?.code }}</span>
-          <span class="whitespace-nowrap text-[12.5px]">{{ activeModule()?.name }}</span>
-          <span class="text-[9px] text-foreground/45">v</span>
-        </summary>
-        <div
-          class="absolute top-[calc(100%+8px)] left-0 z-20 w-[220px] rounded-[0.45rem] border border-border bg-card p-1.5 shadow-[0_12px_32px_oklch(0_0_0_/_40%)]"
-        >
+      <p-select
+        class="shrink-0"
+        [options]="moduleOptions"
+        [ngModel]="selectedModulePath()"
+        (ngModelChange)="navigateToModule($event)"
+        optionLabel="name"
+        optionValue="path"
+        optionDisabled="unavailable"
+        appendTo="body"
+        styleClass="w-[190px]"
+      >
+        <ng-template #dropdownicon>
+          <i class="pi pi-chevron-down text-[9px] text-foreground/45"></i>
+        </ng-template>
+        <ng-template #header>
           <div class="px-2 pt-1.5 pb-1 text-[10px] text-foreground/45">SWITCH MODULE</div>
-          @for (module of modules; track module.code) {
-            @if (module.enabled) {
-              <a
-                [routerLink]="module.path"
-                (click)="closeSwitcher()"
-                class="flex items-center gap-2 rounded-[0.45rem] px-2 py-[7px] no-underline"
-                [class.bg-primary/12]="module.code === activeModule()?.code"
-              >
-                <span class="w-5 text-[9px] font-bold text-primary">{{ module.code }}</span>
-                <span class="text-xs text-foreground">{{ module.name }}</span>
-              </a>
-            } @else {
-              <div class="flex items-center gap-2 rounded-[0.45rem] px-2 py-1.5 opacity-40">
-                <span class="w-5 text-[9px] font-bold">{{ module.code }}</span>
-                <span class="text-xs">{{ module.name }}</span>
-              </div>
-            }
-          }
-        </div>
-      </details>
+        </ng-template>
+        <ng-template #selectedItem let-selectedModule>
+          <div class="flex items-center gap-2">
+            <span class="text-[9px] font-bold text-primary">{{ selectedModule.code }}</span>
+            <span class="whitespace-nowrap text-[12.5px]">{{ selectedModule.name }}</span>
+          </div>
+        </ng-template>
+        <ng-template #item let-module>
+          <div class="flex items-center gap-2" [class.opacity-40]="module.unavailable">
+            <span class="w-5 text-[9px] font-bold text-primary">{{ module.code }}</span>
+            <span class="text-xs">{{ module.name }}</span>
+          </div>
+        </ng-template>
+      </p-select>
 
       @if (activeModule()?.tabs; as tabs) {
         <nav class="hidden items-center gap-0.5 overflow-x-auto md:flex">
