@@ -11,8 +11,8 @@
     </div>
     <div class="flex flex-wrap gap-2.5">
       <p-button label="Categories" icon="pi pi-tag" severity="secondary" (onClick)="openCategoryManager()" />
-      <p-button label="Generate password" severity="secondary" routerLink="/vault/entry/new" />
-      <p-button label="+ Add entry" routerLink="/vault/entry/new" />
+      <p-button label="Generate password" severity="secondary" (onClick)="openGenerator()" />
+      <p-button label="+ Add entry" (onClick)="openAddEntry()" />
     </div>
   </div>
 
@@ -23,6 +23,12 @@
     [filters]="filters()"
     (applied)="applyFilters($event)"
   />
+  <app-vault-entry-form
+    [(visible)]="entryFormVisible"
+    [entryId]="editingEntryId()"
+    (saved)="onEntrySaved()"
+  />
+  <app-password-generator-dialog [(visible)]="generatorVisible" />
 
   @if (!vaultState.unlocked()) {
     <a routerLink="/vault" class="mb-4 block surface-panel px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
@@ -203,7 +209,7 @@
                 <details class="relative">
                   <summary class="cursor-pointer list-none text-[13px] [&::-webkit-details-marker]:hidden">...</summary>
                   <div class="absolute right-0 top-[22px] z-30 w-[150px] rounded-[0.45rem] border border-border bg-card p-1.5 shadow-[0_12px_24px_oklch(0_0_0_/_45%)]">
-                    <a [routerLink]="['/vault/entry', entry.id]" class="block rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground no-underline hover:bg-foreground/6">Edit</a>
+                    <div (click)="openEditEntry(entry.id)" class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Edit</div>
                     <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Duplicate</div>
                     <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Move to folder</div>
                     <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Share</div>

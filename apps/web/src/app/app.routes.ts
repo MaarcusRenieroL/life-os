@@ -1,13 +1,11 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/guards/auth.guard';
-import { vaultUnlockGuard } from './core/guards/vault-unlock.guard';
 import { AppShell } from './core/layout/app-shell/app-shell';
 import { Login } from './features/auth/login/login';
 import { Home } from './features/home/home';
 import { VaultUnlock } from './features/vault/vault-unlock/vault-unlock';
 import { VaultEntryList } from './features/vault/vault-entry-list/vault-entry-list';
-import { VaultEntryForm } from './features/vault/vault-entry-form/vault-entry-form';
 import { VaultHealth } from './features/vault/vault-health/vault-health';
 import { CardList } from './features/cards/card-list/card-list';
 import { SecurityPage } from './features/security/security-page/security-page';
@@ -29,12 +27,6 @@ export const routes: Routes = [
       {
         path: 'vault/entries',
         component: VaultEntryList,
-        data: { module: 'password-manager', tab: 'vault' },
-      },
-      {
-        path: 'vault/entry/:id',
-        component: VaultEntryForm,
-        canActivate: [vaultUnlockGuard],
         data: { module: 'password-manager', tab: 'vault' },
       },
       {

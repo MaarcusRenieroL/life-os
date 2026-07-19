@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { concatMap, from, switchMap, toArray } from 'rxjs';
@@ -15,13 +15,25 @@ import { deriveMockSecurity, MockEntrySecurity } from '../../../core/utils/vault
 import { VaultCategoryManager } from '../vault-category-manager/vault-category-manager';
 import { VaultFiltersDialog } from '../vault-filters-dialog/vault-filters-dialog';
 import { emptyVaultFilters, isVaultFiltersEmpty, VaultFilters } from '../vault-filters-dialog/vault-filters-dialog.model';
+import { VaultEntryForm } from '../vault-entry-form/vault-entry-form';
+import { PasswordGeneratorDialog } from '../password-generator-dialog/password-generator-dialog';
 
 type QuickChip = 'all' | 'favorites' | string;
 
 @Component({
   selector: 'app-vault-entry-list',
   standalone: true,
-  imports: [RouterLink, ButtonModule, DialogModule, FormsModule, DatePipe, VaultCategoryManager, VaultFiltersDialog],
+  imports: [
+    RouterLink,
+    ButtonModule,
+    DialogModule,
+    FormsModule,
+    DatePipe,
+    VaultCategoryManager,
+    VaultFiltersDialog,
+    VaultEntryForm,
+    PasswordGeneratorDialog,
+  ],
   templateUrl: './vault-entry-list.html',
   styleUrl: './vault-entry-list.scss',
 })
@@ -29,6 +41,7 @@ export class VaultEntryList implements OnInit {
   private readonly vaultApi = inject(VaultApiService);
   private readonly categoryApi = inject(VaultCategoryApiService);
   protected readonly vaultState = inject(VaultStateService);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly clipboard = inject(ClipboardService);
 
@@ -37,6 +50,9 @@ export class VaultEntryList implements OnInit {
   protected readonly loading = signal(true);
   protected readonly categoryManagerVisible = signal(false);
   protected readonly filtersVisible = signal(false);
+  protected readonly entryFormVisible = signal(false);
+  protected readonly editingEntryId = signal<string | null>(null);
+  protected readonly generatorVisible = signal(false);
 
   protected readonly search = signal('');
   protected readonly quickChip = signal<QuickChip>('all');
@@ -123,6 +139,14 @@ export class VaultEntryList implements OnInit {
     this.vaultApi.getStatus().subscribe((status) => this.vaultState.setUnlocked(status.unlocked));
     this.categoryApi.getCategories().subscribe((categories) => this.categories.set(categories));
     this.loadEntries();
+
+    // Deep link from other screens (e.g. Health's "Change now" links) that want
+    // this list to land with a specific entry's edit modal already open.
+    const editId = this.route.snapshot.queryParamMap.get('edit');
+    if (editId) {
+      this.openEditEntry(editId);
+      this.router.navigate([], { relativeTo: this.route, queryParams: {} });
+    }
   }
 
   private loadEntries(): void {
@@ -183,8 +207,27 @@ export class VaultEntryList implements OnInit {
   editOpenEntry(): void {
     const id = this.openEntryId();
     if (id) {
-      this.router.navigateByUrl(`/vault/entry/${id}`);
+      this.closeEntry();
+      this.openEditEntry(id);
     }
+  }
+
+  openAddEntry(): void {
+    this.editingEntryId.set(null);
+    this.entryFormVisible.set(true);
+  }
+
+  openEditEntry(id: string): void {
+    this.editingEntryId.set(id);
+    this.entryFormVisible.set(true);
+  }
+
+  onEntrySaved(): void {
+    this.loadEntries();
+  }
+
+  openGenerator(): void {
+    this.generatorVisible.set(true);
   }
 
   copy(value: string | null | undefined, key: string): void {

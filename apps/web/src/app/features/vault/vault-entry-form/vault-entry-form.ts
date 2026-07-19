@@ -1,8 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, effect, inject, input, model, output, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { SelectModule } from 'primeng/select';
@@ -22,7 +22,7 @@ import { ClipboardService } from '../../../core/services/clipboard.service';
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    RouterLink,
+    DialogModule,
     ButtonModule,
     InputTextModule,
     PasswordModule,
@@ -36,14 +36,16 @@ import { ClipboardService } from '../../../core/services/clipboard.service';
   templateUrl: './vault-entry-form.html',
   styleUrl: './vault-entry-form.scss',
 })
-export class VaultEntryForm implements OnInit {
+export class VaultEntryForm {
   private readonly fb = inject(FormBuilder);
   private readonly vaultApi = inject(VaultApiService);
   private readonly vaultCategoryApi = inject(VaultCategoryApiService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   protected readonly clipboardService = inject(ClipboardService);
   protected readonly generatorDialogvisible = signal(false);
+
+  visible = model<boolean>(false);
+  entryId = input<string | null>(null);
+  saved = output<void>();
 
   protected readonly typeOptions: { label: string; value: VaultEntryType }[] = [
     { label: 'Login', value: 'LOGIN' },
@@ -56,7 +58,6 @@ export class VaultEntryForm implements OnInit {
   ]);
 
   protected readonly isEdit = signal(false);
-  protected readonly entryId = signal<string | null>(null);
   protected readonly loading = signal(false);
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -80,38 +81,59 @@ export class VaultEntryForm implements OnInit {
     initialValue: this.form.controls.password.value,
   });
 
-  ngOnInit(): void {
-    this.loadCategories();
+  constructor() {
+    // Re-init the form each time the dialog opens, for whichever entry (or none) it opened with.
+    effect(() => {
+      if (!this.visible()) {
+        return;
+      }
 
-    const id = this.route.snapshot.paramMap.get('id');
+      this.errorMessage.set(null);
+      this.loadCategories();
 
-    if (id && id !== 'new') {
-      this.isEdit.set(true);
-      this.entryId.set(id);
-      this.loading.set(true);
+      const id = this.entryId();
 
-      this.vaultApi.getEntry(id).subscribe({
-        next: (entry) => {
-          this.form.patchValue({
-            type: entry.type,
-            title: entry.title,
-            email: entry.email ?? '',
-            username: entry.username ?? '',
-            url: entry.url ?? '',
-            icon: entry.icon ?? '',
-            password: entry.password ?? '',
-            notes: entry.notes ?? '',
-            categoryId: entry.categoryId,
-            favorite: entry.favorite,
-          });
-          this.loading.set(false);
-        },
-        error: (err) => {
-          this.loading.set(false);
-          this.errorMessage.set(err?.error?.message ?? 'Unable to load this entry.');
-        },
-      });
-    }
+      if (id) {
+        this.isEdit.set(true);
+        this.loading.set(true);
+
+        this.vaultApi.getEntry(id).subscribe({
+          next: (entry) => {
+            this.form.reset({
+              type: entry.type,
+              title: entry.title,
+              email: entry.email ?? '',
+              username: entry.username ?? '',
+              url: entry.url ?? '',
+              icon: entry.icon ?? '',
+              password: entry.password ?? '',
+              notes: entry.notes ?? '',
+              categoryId: entry.categoryId,
+              favorite: entry.favorite,
+            });
+            this.loading.set(false);
+          },
+          error: (err) => {
+            this.loading.set(false);
+            this.errorMessage.set(err?.error?.message ?? 'Unable to load this entry.');
+          },
+        });
+      } else {
+        this.isEdit.set(false);
+        this.form.reset({
+          type: 'LOGIN',
+          title: '',
+          email: '',
+          username: '',
+          url: '',
+          icon: '',
+          password: '',
+          notes: '',
+          categoryId: null,
+          favorite: false,
+        });
+      }
+    });
   }
 
   private loadCategories(): void {
@@ -146,7 +168,8 @@ export class VaultEntryForm implements OnInit {
     request$.subscribe({
       next: () => {
         this.submitting.set(false);
-        this.router.navigateByUrl('/vault/entries');
+        this.visible.set(false);
+        this.saved.emit();
       },
       error: (err) => {
         this.submitting.set(false);
@@ -166,13 +189,18 @@ export class VaultEntryForm implements OnInit {
     this.vaultApi.deleteEntry(id).subscribe({
       next: () => {
         this.submitting.set(false);
-        this.router.navigateByUrl('/vault/entries');
+        this.visible.set(false);
+        this.saved.emit();
       },
       error: (err) => {
         this.submitting.set(false);
         this.errorMessage.set(err?.error?.message ?? 'Unable to delete this entry.');
       },
     });
+  }
+
+  cancel(): void {
+    this.visible.set(false);
   }
 
   openGenerator(): void {

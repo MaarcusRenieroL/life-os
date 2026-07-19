@@ -52,7 +52,11 @@
                 <div class="truncate text-[12.5px]">{{ item.title }}</div>
                 <div class="truncate text-[11px]" [class]="item.issueClass">{{ item.issue }}</div>
               </div>
-              <a [routerLink]="['/vault/entry', item.id]" class="shrink-0 text-[11.5px] text-primary no-underline">
+              <a
+                routerLink="/vault/entries"
+                [queryParams]="{ edit: item.id }"
+                class="shrink-0 text-[11.5px] text-primary no-underline"
+              >
                 {{ item.linkLabel }} &gt;
               </a>
             </div>
