@@ -9,31 +9,45 @@
     <p-button label="+ Add card" (onClick)="openAddCard()" />
   </div>
 
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    @for (card of cards(); track card.id) {
-      <div
-        class="flex h-[150px] flex-col justify-between rounded-[0.45rem] border border-border bg-gradient-to-br from-card to-[oklch(0.2_0.02_255)] p-5"
-      >
-        <div class="flex justify-between">
-          <span class="text-[11px] text-foreground/55">{{ card.nickname.toUpperCase() }}</span>
-          <span class="text-[11px] text-primary">{{ card.network.toUpperCase() }}</span>
+  @if (loading()) {
+    <p class="text-sm text-muted-foreground">Loading cards…</p>
+  } @else {
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      @for (card of cards(); track card.id) {
+        <div
+          class="group relative flex h-[150px] flex-col justify-between rounded-[0.45rem] border border-border bg-gradient-to-br from-card to-[oklch(0.2_0.02_255)] p-5"
+        >
+          <p-button
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            [rounded]="true"
+            pTooltip="Delete card"
+            tooltipPosition="top"
+            styleClass="!absolute !top-1.5 !right-1.5 opacity-0 group-hover:opacity-100"
+            (onClick)="deleteCard(card.id)"
+          />
+          <div class="flex justify-between">
+            <span class="text-[11px] text-foreground/55">{{ card.nickname.toUpperCase() }}</span>
+            <span class="text-[11px] text-primary">{{ card.network.toUpperCase() }}</span>
+          </div>
+          <div class="text-base tracking-[0.12em]">{{ card.maskedNumber }}</div>
+          <div class="flex justify-between text-[11px] text-foreground/55">
+            <span>{{ card.cardholderName }}</span>
+            <span>EXP {{ card.expiry }}</span>
+          </div>
         </div>
-        <div class="text-base tracking-[0.12em]">{{ card.maskedNumber }}</div>
-        <div class="flex justify-between text-[11px] text-foreground/55">
-          <span>{{ card.cardholderName }}</span>
-          <span>EXP {{ card.expiry }}</span>
-        </div>
-      </div>
-    }
+      }
 
-    <button
-      type="button"
-      (click)="openAddCard()"
-      class="flex h-[150px] cursor-pointer items-center justify-center rounded-[0.45rem] border border-dashed border-border p-5 text-xs text-foreground/40"
-    >
-      + add credit or debit card
-    </button>
-  </div>
+      <button
+        type="button"
+        (click)="openAddCard()"
+        class="flex h-[150px] cursor-pointer items-center justify-center rounded-[0.45rem] border border-dashed border-border p-5 text-xs text-foreground/40"
+      >
+        + add credit or debit card
+      </button>
+    </div>
+  }
 
   <div class="mt-7">
     <div class="mb-3 flex items-center justify-between">

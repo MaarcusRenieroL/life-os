@@ -1,37 +1,20 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
 
+import { CardApiService } from '../../../core/services/card-api.service';
 import {
   AddCardFormValue,
   AddSubscriptionFormValue,
   CardSummary,
   SubscriptionSummary,
   cardShortLabel,
-  maskCardNumber,
 } from '../card.model';
 import { AddCardDialog } from '../add-card-dialog/add-card-dialog';
 import { AddSubscriptionDialog } from '../add-subscription-dialog/add-subscription-dialog';
 
-// TODO(backend): no payment-cards/subscriptions API yet, state is in-memory only
-const SEED_CARDS: CardSummary[] = [
-  {
-    id: 'card-1',
-    nickname: 'Chase Sapphire',
-    network: 'Visa',
-    maskedNumber: '**** **** **** 4471',
-    cardholderName: 'Marcus X.',
-    expiry: '09/28',
-  },
-  {
-    id: 'card-2',
-    nickname: 'Amex Platinum',
-    network: 'Amex',
-    maskedNumber: '**** ****** *1009',
-    cardholderName: 'Marcus X.',
-    expiry: '03/27',
-  },
-];
-
+// TODO(backend): subscriptions are intentionally staying mock/in-memory - that's
+// Finance's territory, not Cards'. Only payment cards are wired to a real API.
 const SEED_SUBSCRIPTIONS: SubscriptionSummary[] = [
   {
     id: 'sub-1',
@@ -58,18 +41,35 @@ const SEED_SUBSCRIPTIONS: SubscriptionSummary[] = [
 @Component({
   selector: 'app-card-list',
   standalone: true,
-  imports: [ButtonModule, AddCardDialog, AddSubscriptionDialog],
+  imports: [ButtonModule, TooltipModule, AddCardDialog, AddSubscriptionDialog],
   templateUrl: './card-list.html',
   styleUrl: './card-list.scss',
 })
-export class CardList {
-  protected readonly cards = signal<CardSummary[]>(SEED_CARDS);
+export class CardList implements OnInit {
+  private readonly cardApi = inject(CardApiService);
+
+  protected readonly cards = signal<CardSummary[]>([]);
+  protected readonly loading = signal(true);
   protected readonly subscriptions = signal<SubscriptionSummary[]>(SEED_SUBSCRIPTIONS);
 
   protected readonly addCardVisible = signal(false);
   protected readonly addSubscriptionVisible = signal(false);
 
   protected readonly cardsById = computed(() => new Map(this.cards().map((card) => [card.id, card])));
+
+  ngOnInit(): void {
+    this.loadCards();
+  }
+
+  private loadCards(): void {
+    this.cardApi.getCards().subscribe({
+      next: (cards) => {
+        this.cards.set(cards);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
+  }
 
   protected openAddCard(): void {
     this.addCardVisible.set(true);
@@ -80,16 +80,19 @@ export class CardList {
   }
 
   protected addCard(value: AddCardFormValue): void {
-    const card: CardSummary = {
-      id: crypto.randomUUID(),
-      nickname: value.nickname,
-      network: value.network,
-      maskedNumber: maskCardNumber(value.cardNumber),
-      cardholderName: value.cardholderName,
-      expiry: value.expiry,
-    };
+    this.cardApi.createCard(value).subscribe({
+      next: (card) => this.cards.update((current) => [...current, card]),
+      // TODO: surface a real error to the user (e.g. vault locked) instead of
+      // silently doing nothing - AddCardDialog has no errorMessage plumbing yet,
+      // same gap VaultEntryForm/AddCategoryDialog already solved, copy that.
+      error: () => undefined,
+    });
+  }
 
-    this.cards.update((current) => [...current, card]);
+  protected deleteCard(id: string): void {
+    this.cardApi.deleteCard(id).subscribe(() => {
+      this.cards.update((current) => current.filter((c) => c.id !== id));
+    });
   }
 
   protected addSubscription(value: AddSubscriptionFormValue): void {
