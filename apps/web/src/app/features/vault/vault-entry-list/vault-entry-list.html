@@ -1,58 +1,294 @@
-<main class="min-h-dvh px-4 py-10 font-mono text-foreground">
-  <div class="mx-auto flex max-w-2xl flex-col gap-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <p class="text-xs uppercase tracking-widest text-muted-foreground">life-os</p>
-        <h1 class="mt-1 text-2xl font-semibold text-foreground">Vault</h1>
+<main class="mx-auto max-w-[1400px] px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10">
+  <div class="mb-[22px] flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-[22px] font-semibold tracking-tight">Vault</h1>
+      <p class="mt-1 text-[12.5px] text-foreground/55">
+        {{ stats().total }} items
+        @if (stats().actionRequired > 0) {
+          &middot; {{ stats().actionRequired }} need attention
+        }
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2.5">
+      <p-button label="Categories" icon="pi pi-tag" severity="secondary" (onClick)="openCategoryManager()" />
+      <p-button label="Generate password" severity="secondary" routerLink="/vault/entry/new" />
+      <p-button label="+ Add entry" routerLink="/vault/entry/new" />
+    </div>
+  </div>
+
+  <app-vault-category-manager [(visible)]="categoryManagerVisible" (categoriesChanged)="categoryApi.getCategories().subscribe(c => categories.set(c))" />
+  <app-vault-filters-dialog
+    [(visible)]="filtersVisible"
+    [categories]="categories()"
+    [filters]="filters()"
+    (applied)="applyFilters($event)"
+  />
+
+  @if (!vaultState.unlocked()) {
+    <a routerLink="/vault" class="mb-4 block surface-panel px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
+      🔒 Unlock to reveal passwords
+    </a>
+  }
+
+  @if (loading()) {
+    <p class="text-sm text-muted-foreground">Loading entries…</p>
+  } @else {
+    <div class="mb-[22px] grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
+        <div class="text-xl font-semibold">{{ stats().total }}</div>
+        <div class="mt-0.5 text-[11.5px] text-foreground/55">total items</div>
       </div>
-      @if (!vaultState.unlocked()) {
-        <a routerLink="/vault" class="surface-panel px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
-          🔒 Unlock to reveal passwords
-        </a>
-      }
-      <div class="flex gap-2">
-        <p-button
-          label="Categories"
-          icon="pi pi-tag"
-          severity="secondary"
-          (onClick)="openCategoryManager()"
-        />
-        <p-button label="Add entry" icon="pi pi-plus" routerLink="/vault/entry/new" />
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
+        <div class="text-xl font-semibold text-warning">{{ stats().weak }}</div>
+        <div class="mt-0.5 text-[11.5px] text-foreground/55">weak</div>
+      </div>
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
+        <div class="text-xl font-semibold text-danger-alt">{{ stats().duplicate }}</div>
+        <div class="mt-0.5 text-[11.5px] text-foreground/55">duplicate</div>
+      </div>
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
+        <div class="text-xl font-semibold text-destructive">{{ stats().actionRequired }}</div>
+        <div class="mt-0.5 text-[11.5px] text-foreground/55">action required</div>
       </div>
     </div>
 
-    <app-vault-category-manager [(visible)]="categoryManagerVisible" />
+    <div class="mb-3.5 flex flex-wrap items-center gap-2.5">
+      <input
+        [(ngModel)]="search"
+        placeholder="filter by name, username, url..."
+        class="w-full rounded-[0.45rem] border border-border bg-card px-3 py-2 text-[12.5px] text-foreground outline-none sm:w-[260px]"
+      />
+      <button
+        type="button"
+        (click)="setQuickChip('all')"
+        class="rounded-[0.45rem] border px-3 py-[7px] text-xs"
+        [class.border-primary/40]="quickChip() === 'all'"
+        [class.bg-primary/15]="quickChip() === 'all'"
+        [class.text-primary]="quickChip() === 'all'"
+        [class.border-border]="quickChip() !== 'all'"
+        [class.bg-card]="quickChip() !== 'all'"
+        [class.text-foreground/65]="quickChip() !== 'all'"
+      >
+        All
+      </button>
+      <button
+        type="button"
+        (click)="setQuickChip('favorites')"
+        class="rounded-[0.45rem] border px-3 py-[7px] text-xs"
+        [class.border-primary/40]="quickChip() === 'favorites'"
+        [class.bg-primary/15]="quickChip() === 'favorites'"
+        [class.text-primary]="quickChip() === 'favorites'"
+        [class.border-border]="quickChip() !== 'favorites'"
+        [class.bg-card]="quickChip() !== 'favorites'"
+        [class.text-foreground/65]="quickChip() !== 'favorites'"
+      >
+        Favorites
+      </button>
+      @for (category of categories(); track category.id) {
+        <button
+          type="button"
+          (click)="setQuickChip(category.id)"
+          class="rounded-[0.45rem] border px-3 py-[7px] text-xs"
+          [class.border-primary/40]="quickChip() === category.id"
+          [class.bg-primary/15]="quickChip() === category.id"
+          [class.text-primary]="quickChip() === category.id"
+          [class.border-border]="quickChip() !== category.id"
+          [class.bg-card]="quickChip() !== category.id"
+          [class.text-foreground/65]="quickChip() !== category.id"
+        >
+          {{ category.name }}
+        </button>
+      }
+      <button
+        type="button"
+        (click)="openFilters()"
+        class="rounded-[0.45rem] border px-3 py-[7px] text-xs"
+        [class.border-primary/40]="filtersActive()"
+        [class.bg-primary/15]="filtersActive()"
+        [class.text-primary]="filtersActive()"
+        [class.border-border]="!filtersActive()"
+        [class.bg-card]="!filtersActive()"
+        [class.text-foreground/65]="!filtersActive()"
+      >
+        + Filters
+      </button>
+      <div class="ml-auto text-[11.5px] text-foreground/45">{{ filteredEntries().length }} shown</div>
+    </div>
 
-    @if (loading()) {
-      <p class="text-sm text-muted-foreground">Loading entries…</p>
-    } @else if (entries().length === 0) {
+    @if (selected().size > 0) {
+      <div class="mb-3 flex flex-wrap items-center gap-4 rounded-[0.45rem] border border-primary/30 bg-primary/10 px-4 py-2.5">
+        <span class="text-[12.5px] font-semibold text-primary">{{ selected().size }} selected</span>
+        <div class="flex-1"></div>
+        <details class="relative">
+          <summary class="cursor-pointer list-none text-xs text-foreground/80 [&::-webkit-details-marker]:hidden">
+            Move to folder
+          </summary>
+          <div class="absolute right-0 top-[22px] z-30 w-[180px] rounded-[0.45rem] border border-border bg-card p-1.5 shadow-[0_12px_24px_oklch(0_0_0_/_45%)]">
+            @for (category of categories(); track category.id) {
+              <button
+                type="button"
+                (click)="moveSelectedToFolder(category.id)"
+                class="block w-full rounded-[0.35rem] px-2 py-[7px] text-left text-[11.5px] text-foreground hover:bg-foreground/6"
+              >
+                {{ category.name }}
+              </button>
+            }
+          </div>
+        </details>
+        <button type="button" (click)="exportSelected()" class="cursor-pointer text-xs text-foreground/80">
+          Export selected
+        </button>
+        <button type="button" (click)="deleteSelected()" class="cursor-pointer text-xs text-destructive">Delete</button>
+        <button type="button" (click)="clearSelection()" class="cursor-pointer text-xs text-foreground/55">Clear</button>
+      </div>
+    }
+
+    @if (filteredEntries().length === 0) {
       <div class="surface-panel p-8 text-center text-sm text-muted-foreground">
-        No entries yet. Add your first one.
+        No entries match your filters.
       </div>
     } @else {
-      <ul class="flex flex-col gap-2">
-        @for (entry of entries(); track entry.id) {
-          <li>
-            <button
-              type="button"
+      <div class="overflow-hidden overflow-x-auto rounded-[0.5rem] border border-border">
+        <div class="min-w-[720px]">
+          <div
+            class="grid grid-cols-[28px_2.2fr_1fr_1fr_0.7fr_1fr_90px] items-center gap-2 border-b border-border bg-card px-4 py-2.5 text-[11px] text-foreground/45"
+          >
+            <input type="checkbox" [checked]="allChecked()" (change)="toggleSelectAll()" class="m-0 cursor-pointer" />
+            <div>NAME</div>
+            <div>CATEGORY</div>
+            <div>STRENGTH</div>
+            <div>2FA</div>
+            <div>UPDATED</div>
+            <div></div>
+          </div>
+
+          @for (entry of filteredEntries(); track entry.id) {
+            <div
               (click)="openEntry(entry.id)"
-              class="surface-panel flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-accent/40"
+              class="grid cursor-pointer grid-cols-[28px_2.2fr_1fr_1fr_0.7fr_1fr_90px] items-center gap-2 border-b border-border px-4 py-3 last:border-b-0 hover:bg-accent/20"
             >
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <span class="font-medium text-foreground">{{ entry.title }}</span>
-                  @if (entry.favorite) {
-                    <span class="text-primary">★</span>
-                  }
+              <input
+                type="checkbox"
+                [checked]="selected().has(entry.id)"
+                (click)="toggleSelect(entry.id, $event)"
+                class="m-0 cursor-pointer"
+              />
+              <div class="flex min-w-0 items-center gap-2.5">
+                <div class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[0.45rem] border border-border bg-background text-[10px] text-primary">
+                  {{ entry.icon || entry.title.slice(0, 2).toUpperCase() }}
                 </div>
-                <p class="text-xs text-muted-foreground">
-                  {{ entry.username || entry.email || entry.url || '—' }}
-                </p>
+                <div class="min-w-0">
+                  <div class="truncate text-[12.5px]">
+                    {{ entry.title }}
+                    @if (entry.favorite) {
+                      <span class="text-primary">★</span>
+                    }
+                  </div>
+                  <div class="truncate text-[11px] text-foreground/50">
+                    {{ entry.username || entry.email || entry.url || '—' }}
+                  </div>
+                </div>
               </div>
-            </button>
-          </li>
-        }
-      </ul>
+              <div class="truncate text-[11.5px] text-foreground/60">{{ categoryName(entry.categoryId) }}</div>
+              <div class="flex items-center gap-1.5">
+                <span class="h-1.5 w-1.5 rounded-full" [class]="strengthDotClass(security(entry).strength)"></span>
+                <span class="text-[11.5px]" [class]="strengthColorClass(security(entry).strength)">{{ security(entry).strength }}</span>
+              </div>
+              <div class="text-[11px]" [class.text-primary]="security(entry).twoFactor === 'enabled'" [class.text-foreground/30]="security(entry).twoFactor !== 'enabled'">
+                {{ security(entry).twoFactor === 'enabled' ? 'on' : 'off' }}
+              </div>
+              <div class="text-[11.5px] text-foreground/50">{{ entry.updatedAt | date: 'MMM d' }}</div>
+              <div class="flex items-center justify-end gap-2.5 text-[11px] text-foreground/55" (click)="$event.stopPropagation()">
+                <button type="button" (click)="copy(entry.username || entry.email, 'row-' + entry.id)" class="cursor-pointer">copy</button>
+                <details class="relative">
+                  <summary class="cursor-pointer list-none text-[13px] [&::-webkit-details-marker]:hidden">...</summary>
+                  <div class="absolute right-0 top-[22px] z-30 w-[150px] rounded-[0.45rem] border border-border bg-card p-1.5 shadow-[0_12px_24px_oklch(0_0_0_/_45%)]">
+                    <a [routerLink]="['/vault/entry', entry.id]" class="block rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground no-underline hover:bg-foreground/6">Edit</a>
+                    <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Duplicate</div>
+                    <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Move to folder</div>
+                    <div class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-foreground hover:bg-foreground/6">Share</div>
+                    <div class="my-1 h-px bg-border"></div>
+                    <div (click)="selected.set(new Set([entry.id])); deleteSelected()" class="cursor-pointer rounded-[0.35rem] px-2 py-[7px] text-[11.5px] text-destructive hover:bg-foreground/6">Delete</div>
+                  </div>
+                </details>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
     }
-  </div>
+  }
+
+  @if (openEntryId(); as id) {
+    <div
+      (click)="closeEntry()"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-background/75 p-4"
+    >
+      <div (click)="$event.stopPropagation()" class="w-full max-w-[480px] rounded-[0.45rem] border border-border bg-card p-6 shadow-[0_24px_64px_oklch(0_0_0_/_50%)]">
+        @if (openEntryDetail(); as entry) {
+          <div class="mb-[18px] flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="flex h-8 w-8 items-center justify-center rounded-[0.45rem] border border-border bg-background text-[11px] text-primary">
+                {{ entry.icon || entry.title.slice(0, 2).toUpperCase() }}
+              </div>
+              <div class="text-[15px] font-semibold">{{ entry.title }}</div>
+            </div>
+            <button type="button" (click)="closeEntry()" class="cursor-pointer text-sm text-foreground/50">x</button>
+          </div>
+          <div class="flex flex-col gap-3.5">
+            <div>
+              <label class="mb-1.5 block text-[11px] text-foreground/55">USERNAME / EMAIL</label>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 truncate rounded-[0.45rem] border border-border bg-background px-3 py-2.5 text-[13px]">
+                  {{ entry.username || entry.email || '—' }}
+                </div>
+                <button type="button" (click)="copy(entry.username || entry.email, 'modal-user')" class="cursor-pointer text-[11px] text-foreground/55">copy</button>
+              </div>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[11px] text-foreground/55">PASSWORD</label>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 truncate rounded-[0.45rem] border border-border bg-background px-3 py-2.5 text-[13px] tracking-[0.03em]">
+                  {{ showPassword() ? entry.password : '•'.repeat(entry.password?.length || 8) }}
+                </div>
+                <button type="button" (click)="togglePasswordVisibility()" class="cursor-pointer text-[11px] text-foreground/55">
+                  {{ showPassword() ? 'hide' : 'show' }}
+                </button>
+                <button type="button" (click)="copy(entry.password, 'modal-pw')" class="cursor-pointer text-[11px] text-foreground/55">copy</button>
+              </div>
+            </div>
+            @if (entry.url) {
+              <div>
+                <label class="mb-1.5 block text-[11px] text-foreground/55">URL</label>
+                <a [href]="entry.url" target="_blank" rel="noopener" class="text-[12.5px] text-primary">{{ entry.url }}</a>
+              </div>
+            }
+            <div class="flex flex-wrap justify-between gap-2 border-t border-border pt-3 text-[11.5px] text-foreground/55">
+              <span>
+                Strength:
+                <span [class]="strengthColorClass(security(entry).strength)">{{ security(entry).strength }}</span>
+              </span>
+              <span>
+                2FA:
+                <span [class.text-primary]="security(entry).twoFactor === 'enabled'" [class.text-foreground/30]="security(entry).twoFactor !== 'enabled'">
+                  {{ security(entry).twoFactor === 'enabled' ? 'on' : 'off' }}
+                </span>
+              </span>
+              <span>Updated {{ entry.updatedAt | date: 'MMM d, y' }}</span>
+            </div>
+          </div>
+          <div class="mt-[22px] flex justify-end gap-2.5">
+            <button type="button" (click)="editOpenEntry()" class="cursor-pointer rounded-[0.45rem] border border-border bg-background px-3.5 py-2 text-[12.5px]">
+              Edit
+            </button>
+            <button type="button" (click)="closeEntry()" class="cursor-pointer rounded-[0.45rem] bg-primary px-4 py-2 text-[12.5px] font-semibold text-primary-foreground">
+              Done
+            </button>
+          </div>
+        } @else {
+          <p class="text-sm text-muted-foreground">Loading…</p>
+        }
+      </div>
+    </div>
+  }
 </main>

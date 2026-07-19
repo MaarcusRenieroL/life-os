@@ -1,0 +1,93 @@
+<p-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '420px' }"
+  header="Advanced filters"
+  (onShow)="onShow()"
+>
+  <div class="flex flex-col gap-[18px] font-mono">
+    <div>
+      <div class="mb-2 text-[11px] text-foreground/55">STRENGTH</div>
+      <div class="flex flex-wrap gap-2">
+        @for (option of strengthOptions; track option) {
+          <button
+            type="button"
+            (click)="toggleStrength(option)"
+            class="rounded-[0.45rem] border px-3 py-1.5 text-xs"
+            [class.border-primary/40]="draft.strengths.includes(option)"
+            [class.bg-primary/15]="draft.strengths.includes(option)"
+            [class.text-primary]="draft.strengths.includes(option)"
+            [class.border-border]="!draft.strengths.includes(option)"
+            [class.bg-background]="!draft.strengths.includes(option)"
+            [class.text-foreground/65]="!draft.strengths.includes(option)"
+          >
+            {{ option }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div>
+      <div class="mb-2 text-[11px] text-foreground/55">2FA STATUS</div>
+      <div class="flex flex-wrap gap-2">
+        @for (option of twoFaOptions; track option.value) {
+          <button
+            type="button"
+            (click)="toggleTwoFa(option.value)"
+            class="rounded-[0.45rem] border px-3 py-1.5 text-xs"
+            [class.border-primary/40]="draft.twoFactor.includes(option.value)"
+            [class.bg-primary/15]="draft.twoFactor.includes(option.value)"
+            [class.text-primary]="draft.twoFactor.includes(option.value)"
+            [class.border-border]="!draft.twoFactor.includes(option.value)"
+            [class.bg-background]="!draft.twoFactor.includes(option.value)"
+            [class.text-foreground/65]="!draft.twoFactor.includes(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div>
+      <div class="mb-2 text-[11px] text-foreground/55">CATEGORY</div>
+      <div class="flex flex-wrap gap-2">
+        @for (category of categories(); track category.id) {
+          <button
+            type="button"
+            (click)="toggleCategory(category.id)"
+            class="rounded-[0.45rem] border px-3 py-1.5 text-xs"
+            [class.border-primary/40]="draft.categoryIds.includes(category.id)"
+            [class.bg-primary/15]="draft.categoryIds.includes(category.id)"
+            [class.text-primary]="draft.categoryIds.includes(category.id)"
+            [class.border-border]="!draft.categoryIds.includes(category.id)"
+            [class.bg-background]="!draft.categoryIds.includes(category.id)"
+            [class.text-foreground/65]="!draft.categoryIds.includes(category.id)"
+          >
+            {{ category.name }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div>
+      <div class="mb-2 text-[11px] text-foreground/55">LAST UPDATED</div>
+      <select
+        class="w-full rounded-[0.45rem] border border-border bg-background px-3 py-[9px] text-[13px] text-foreground outline-none"
+        [(ngModel)]="draft.lastUpdated"
+      >
+        @for (option of lastUpdatedOptions; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <button type="button" (click)="clearAll()" class="text-xs text-foreground/55">Clear all</button>
+      <div class="flex gap-2.5">
+        <p-button label="Cancel" severity="secondary" (onClick)="cancel()" />
+        <p-button label="Apply filters" (onClick)="apply()" />
+      </div>
+    </div>
+  </div>
+</p-dialog>
