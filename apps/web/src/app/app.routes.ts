@@ -11,6 +11,7 @@ import { VaultEntryForm } from './features/vault/vault-entry-form/vault-entry-fo
 import { VaultHealth } from './features/vault/vault-health/vault-health';
 import { CardList } from './features/cards/card-list/card-list';
 import { SecurityPage } from './features/security/security-page/security-page';
+import { AuditLogPage } from './features/audit-log/audit-log/audit-log';
 
 export const routes: Routes = [
   { path: 'login', component: Login },
@@ -46,6 +47,11 @@ export const routes: Routes = [
       {
         path: 'vault/security',
         component: SecurityPage,
+        data: { module: 'password-manager', tab: 'vault' },
+      },
+      {
+        path: 'vault/audit-log',
+        component: AuditLogPage,
         data: { module: 'password-manager', tab: 'vault' },
       },
     ],
