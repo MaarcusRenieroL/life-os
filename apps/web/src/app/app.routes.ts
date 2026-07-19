@@ -8,6 +8,7 @@ import { Home } from './features/home/home';
 import { VaultUnlock } from './features/vault/vault-unlock/vault-unlock';
 import { VaultEntryList } from './features/vault/vault-entry-list/vault-entry-list';
 import { VaultEntryForm } from './features/vault/vault-entry-form/vault-entry-form';
+import { VaultHealth } from './features/vault/vault-health/vault-health';
 
 export const routes: Routes = [
   { path: 'login', component: Login },
@@ -28,6 +29,11 @@ export const routes: Routes = [
         path: 'vault/entry/:id',
         component: VaultEntryForm,
         canActivate: [vaultUnlockGuard],
+        data: { module: 'password-manager', tab: 'vault' },
+      },
+      {
+        path: 'vault/health',
+        component: VaultHealth,
         data: { module: 'password-manager', tab: 'vault' },
       },
     ],
