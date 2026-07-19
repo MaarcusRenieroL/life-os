@@ -1,12 +1,16 @@
 import { HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { BehaviorSubject, catchError, switchMap, take, throwError, filter } from 'rxjs';
+import { Subject, catchError, switchMap, take, throwError } from 'rxjs';
 import { AuthApiService } from '../services/auth-api.service';
 import { TokenService } from '../services/token.service';
 import { Router } from '@angular/router';
 
 let isRefreshing = false;
-const refreshedToken$ = new BehaviorSubject<string | null>(null);
+// A fresh Subject per refresh cycle (recreated below) — unlike a BehaviorSubject,
+// this can propagate BOTH the new token (next) and a failed refresh (error) to
+// every request that's waiting on it, so a failed refresh doesn't leave other
+// concurrent requests hanging forever with no response.
+let refreshSubject = new Subject<string>();
 
 function attachToken(request: HttpRequest<unknown>, token: string): HttpRequest<unknown> {
   return request.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
@@ -29,20 +33,23 @@ export const tokenRefreshInterceptor: HttpInterceptorFn = (request, next) => {
 
       if (!isRefreshing) {
         isRefreshing = true;
-
-        refreshedToken$.next(null);
+        refreshSubject = new Subject<string>();
 
         return authApi.refresh().pipe(
           switchMap((newAuth) => {
             isRefreshing = false;
-
-            refreshedToken$.next(newAuth.accessToken);
+            refreshSubject.next(newAuth.accessToken);
+            refreshSubject.complete();
 
             return next(attachToken(request, newAuth.accessToken));
           }),
           catchError((refreshError) => {
             isRefreshing = false;
             tokenService.clear();
+            // Propagate the failure to every request currently waiting below,
+            // instead of leaving them subscribed to an observable that never
+            // emits again — without this they'd hang indefinitely.
+            refreshSubject.error(refreshError);
 
             router.navigateByUrl('/login');
 
@@ -50,8 +57,7 @@ export const tokenRefreshInterceptor: HttpInterceptorFn = (request, next) => {
           }),
         );
       } else {
-        return refreshedToken$.pipe(
-          filter((token) => token !== null),
+        return refreshSubject.pipe(
           take(1),
           switchMap((token) => next(attachToken(request, token))),
         );
