@@ -21,3 +21,13 @@ export interface LoginRequest {
 export interface LogoutRequest {
   deviceSessionId: string;
 }
+
+export interface DeviceSession {
+  id: string;
+  userId: string;
+  deviceName: string;
+  deviceType: string;
+  createdAt: string;
+  lastActiveAt: string;
+  revokedAt: string | null;
+}

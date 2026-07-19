@@ -73,12 +73,15 @@
     @for (device of devices(); track device.id) {
       <div class="flex items-center justify-between border-b border-border py-2.5 last:border-b-0">
         <div>
-          <div class="text-[12.5px]">{{ device.name }}</div>
+          <div class="text-[12.5px]">{{ device.deviceName }}</div>
           <div class="text-[11px] text-foreground/50">
-            {{ device.location }}{{ device.isCurrentDevice ? ' - this device' : '' }}
+            <!-- DeviceSession has no location field - showing deviceType as a stand-in
+                 for now (e.g. "web"). Swap for something better once/if the backend
+                 ever captures real location. -->
+            {{ device.deviceType }}{{ isCurrentDevice(device) ? ' - this device' : '' }}
           </div>
         </div>
-        @if (device.isCurrentDevice) {
+        @if (isCurrentDevice(device)) {
           <span class="text-[11px] text-primary">active now</span>
         } @else {
           <p-button

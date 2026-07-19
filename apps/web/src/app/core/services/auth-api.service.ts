@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 
-import { ApiResponse, AuthResponse, LoginRequest } from '../models/auth.model';
+import { ApiResponse, AuthResponse, DeviceSession, LoginRequest } from '../models/auth.model';
 import { TokenService } from './token.service';
 
 @Injectable({ providedIn: 'root' })
@@ -44,5 +44,17 @@ export class AuthApiService {
           this.tokenService.setTokens(auth.accessToken, auth.refreshToken, auth.deviceSessionId),
         ),
       );
+  }
+
+  listSessions(): Observable<DeviceSession[]> {
+    return this.http
+      .get<ApiResponse<DeviceSession[]>>(`${this.baseUrl}/sessions`)
+      .pipe(map((response) => response.data));
+  }
+
+  revokeSession(sessionId: string): Observable<void> {
+    return this.http
+      .post<ApiResponse<void>>(`${this.baseUrl}/sessions/${sessionId}/revoke`, {})
+      .pipe(map(() => undefined));
   }
 }
