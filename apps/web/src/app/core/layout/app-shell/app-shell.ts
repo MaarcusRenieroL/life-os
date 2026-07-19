@@ -29,7 +29,7 @@ export class AppShell {
         while (child?.firstChild) {
           child = child.firstChild;
         }
-        return child?.snapshot.data ?? {};
+        return child?.snapshot?.data ?? {};
       }),
     ),
     { initialValue: {} as Record<string, unknown> },
