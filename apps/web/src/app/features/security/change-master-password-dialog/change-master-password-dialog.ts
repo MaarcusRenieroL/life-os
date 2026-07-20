@@ -1,4 +1,4 @@
-import { Component, inject, model } from '@angular/core';
+import { Component, inject, model, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -6,13 +6,24 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { PasswordModule } from 'primeng/password';
 
-import { PasswordStrengthMeter } from '../../../shared/password-strength-meter/password-strength-meter';
+import { concatMap, from, toArray } from 'rxjs';
 
-// TODO(backend): no change-master-password API yet while a master password is already set.
+import { PasswordStrengthMeter } from '../../../shared/password-strength-meter/password-strength-meter';
+import { AuthApiService } from '../../../core/services/auth-api.service';
+import { TokenService } from '../../../core/services/token.service';
+import { VaultApiService } from '../../../core/services/vault-api.service';
+
 @Component({
   selector: 'app-change-master-password-dialog',
   standalone: true,
-  imports: [ReactiveFormsModule, DialogModule, ButtonModule, PasswordModule, CheckboxModule, PasswordStrengthMeter],
+  imports: [
+    ReactiveFormsModule,
+    DialogModule,
+    ButtonModule,
+    PasswordModule,
+    CheckboxModule,
+    PasswordStrengthMeter,
+  ],
   templateUrl: './change-master-password-dialog.html',
   styleUrl: './change-master-password-dialog.scss',
 })
@@ -20,6 +31,12 @@ export class ChangeMasterPasswordDialog {
   visible = model<boolean>(false);
 
   private readonly fb = inject(FormBuilder);
+  private readonly vaultApi = inject(VaultApiService);
+  private readonly authApi = inject(AuthApiService);
+  private readonly tokenService = inject(TokenService);
+
+  protected readonly errorMessage = signal<string | null>(null);
+  protected readonly submitting = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
     currentPassword: ['', [Validators.required]],
@@ -28,8 +45,6 @@ export class ChangeMasterPasswordDialog {
     recoveryKitSaved: [false, [Validators.requiredTrue]],
   });
 
-  // FormControl values aren't signals on their own — bridge into a signal
-  // so the strength meter can react to the new-password field live.
   protected readonly newPasswordValue = toSignal(this.form.controls.newPassword.valueChanges, {
     initialValue: this.form.controls.newPassword.value,
   });
@@ -57,18 +72,55 @@ export class ChangeMasterPasswordDialog {
   }
 
   protected submit(): void {
-    if (!this.canSubmit) {
+    if (!this.canSubmit || this.submitting()) {
       this.form.markAllAsTouched();
       return;
     }
 
-    // No real backend endpoint to persist this yet — just close and reset.
-    this.visible.set(false);
-    this.form.reset({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-      recoveryKitSaved: false,
+    this.submitting.set(true);
+    this.errorMessage.set(null);
+
+    this.vaultApi
+      .changeMasterPassword(
+        this.form.controls.currentPassword.value,
+        this.form.controls.newPassword.value,
+      )
+      .subscribe({
+        next: () => {
+          this.submitting.set(false);
+          this.visible.set(false);
+          this.form.reset({
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: '',
+            recoveryKitSaved: false,
+          });
+          // Dialog's own copy promises this ("All other sessions will be
+          // signed out.") - the backend only re-encrypts/rotates the vault
+          // key, it has no way to reach into auth-service's sessions table.
+          // Best-effort: if this fails, the password change itself already
+          // succeeded, so don't surface an error for it.
+          this.signOutOtherSessions();
+        },
+        error: (error) => {
+          this.submitting.set(false);
+          this.errorMessage.set(error?.error?.message ?? 'Unable to update master password.');
+        },
+      });
+  }
+
+  private signOutOtherSessions(): void {
+    const currentSessionId = this.tokenService.getDeviceSessionId();
+
+    this.authApi.listSessions().subscribe((sessions) => {
+      const otherIds = sessions.map((s) => s.id).filter((id) => id !== currentSessionId);
+
+      from(otherIds)
+        .pipe(
+          concatMap((id) => this.authApi.revokeSession(id)),
+          toArray(),
+        )
+        .subscribe();
     });
   }
 }

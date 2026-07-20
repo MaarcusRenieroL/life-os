@@ -71,4 +71,13 @@ export class VaultApiService {
       .get<ApiResponse<HealthSummary>>(`${this.baseUrl}/health/summary`)
       .pipe(map((response) => response.data));
   }
+
+  changeMasterPassword(currentPassword: string, newPassword: string): Observable<void> {
+    return this.http
+      .post<ApiResponse<void>>(`${this.baseUrl}/master-password/change`, {
+        currentPassword,
+        newPassword,
+      })
+      .pipe(map(() => undefined));
+  }
 }
