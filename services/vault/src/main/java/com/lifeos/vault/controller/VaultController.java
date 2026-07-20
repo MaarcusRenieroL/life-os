@@ -2,6 +2,7 @@ package com.lifeos.vault.controller;
 
 import com.lifeos.vault.domains.dto.request.CreateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.request.MasterPasswordRequest;
+import com.lifeos.vault.domains.dto.request.UpdateMasterPasswordRequest;
 import com.lifeos.vault.domains.dto.request.UpdateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.response.ApiResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntryResponse;
@@ -100,5 +101,15 @@ public class VaultController {
     vaultEntryService.deleteEntry(authentication, id);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Vault Entry deleted successfully"));
+  }
+
+  @PostMapping("/master-password/change")
+  public ResponseEntity<ApiResponse<Void>> changeMasterPassword(
+      Authentication authentication, @Valid @RequestBody UpdateMasterPasswordRequest request) {
+    vaultMasterPasswordService.changePassword(
+        (UUID) authentication.getPrincipal(),
+        request.getCurrentPassword(),
+        request.getNewPassword());
+    return ResponseEntity.ok(ApiResponse.success(null, "Master password changed successfully"));
   }
 }
