@@ -13,4 +13,6 @@ public interface PaymentCardRepository extends JpaRepository<PaymentCard, UUID> 
   Optional<PaymentCard> findByIdAndUserId(UUID cardId, UUID userId);
 
   void deleteByIdAndUserId(UUID cardId, UUID userId);
+
+  void deleteAllByUserId(UUID userId);
 }

@@ -1,14 +1,17 @@
 package com.lifeos.vault.controller;
 
+import com.lifeos.vault.domains.dto.request.BulkCreateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.request.CreateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.request.MasterPasswordRequest;
 import com.lifeos.vault.domains.dto.request.UpdateMasterPasswordRequest;
 import com.lifeos.vault.domains.dto.request.UpdateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.response.ApiResponse;
+import com.lifeos.vault.domains.dto.response.BulkImportResultResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntryResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntrySummaryResponse;
 import com.lifeos.vault.domains.dto.response.VaultExportResponse;
 import com.lifeos.vault.domains.dto.response.VaultStatusResponse;
+import com.lifeos.vault.service.VaultAccountService;
 import com.lifeos.vault.service.VaultEntryService;
 import com.lifeos.vault.service.VaultExportService;
 import com.lifeos.vault.service.VaultMasterPasswordService;
@@ -35,6 +38,7 @@ public class VaultController {
   private final VaultEntryService vaultEntryService;
   private final VaultMasterPasswordService vaultMasterPasswordService;
   private final VaultExportService vaultExportService;
+  private final VaultAccountService vaultAccountService;
 
   @GetMapping("/status")
   public ResponseEntity<ApiResponse<VaultStatusResponse>> status(Authentication authentication) {
@@ -106,10 +110,26 @@ public class VaultController {
     return ResponseEntity.ok(ApiResponse.success(null, "Vault Entry deleted successfully"));
   }
 
+  @PostMapping("/entries/bulk")
+  public ResponseEntity<ApiResponse<BulkImportResultResponse>> bulkCreateEntries(
+      Authentication authentication, @RequestBody BulkCreateVaultEntryRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            vaultEntryService.saveEntries(authentication, request.getEntries()),
+            "Import finished"));
+  }
+
   @GetMapping("/export")
   public ResponseEntity<ApiResponse<VaultExportResponse>> export(Authentication authentication) {
     return ResponseEntity.ok(
         ApiResponse.success(vaultExportService.export(authentication), "Vault exported successfully"));
+  }
+
+  @DeleteMapping("/account")
+  public ResponseEntity<ApiResponse<Void>> deleteAccount(Authentication authentication) {
+    vaultAccountService.deleteAllData(authentication);
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Vault data deleted successfully"));
   }
 
   @PostMapping("/master-password/change")

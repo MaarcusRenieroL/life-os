@@ -10,4 +10,6 @@ public interface VaultMasterPasswordRepository extends JpaRepository<VaultMaster
   Optional<VaultMasterPassword> findByUserId(UUID userId);
 
   boolean existsByUserId(UUID userId);
+
+  void deleteByUserId(UUID userId);
 }

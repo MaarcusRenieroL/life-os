@@ -15,4 +15,6 @@ public interface VaultCategoryRepository extends JpaRepository<VaultCategory, UU
   void deleteByIdAndUserId(UUID categoryId, UUID userId);
 
   boolean existsByUserIdAndName(UUID userId, String name);
+
+  void deleteAllByUserId(UUID userId);
 }

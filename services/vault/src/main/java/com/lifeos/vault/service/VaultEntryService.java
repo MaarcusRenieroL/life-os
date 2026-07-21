@@ -2,6 +2,8 @@ package com.lifeos.vault.service;
 
 import com.lifeos.vault.domains.dto.request.CreateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.request.UpdateVaultEntryRequest;
+import com.lifeos.vault.domains.dto.response.BulkImportResultResponse;
+import com.lifeos.vault.domains.dto.response.BulkImportRowError;
 import com.lifeos.vault.domains.dto.response.VaultEntryResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntrySummaryResponse;
 import com.lifeos.vault.domains.entity.VaultEntry;
@@ -10,6 +12,7 @@ import com.lifeos.vault.exception.VaultEntryNotFoundException;
 import com.lifeos.vault.exception.VaultLockedException;
 import com.lifeos.vault.repository.VaultEntryRepository;
 import com.lifeos.vault.store.VaultKeyStore;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.crypto.SecretKey;
@@ -46,36 +49,10 @@ public class VaultEntryService {
   }
 
   public void saveEntry(Authentication authentication, CreateVaultEntryRequest request) {
-
     UUID userId = (UUID) authentication.getPrincipal();
     SecretKey key = requireUnlockedKey(userId);
 
-    VaultEntry.VaultEntryBuilder builder =
-        VaultEntry.builder()
-            .userId(userId)
-            .type(request.getType())
-            .email(request.getEmail())
-            .title(request.getTitle())
-            .username(request.getUsername())
-            .url(request.getUrl())
-            .icon(request.getIcon())
-            .categoryId(request.getCategoryId())
-            .favorite(request.isFavorite())
-            .expiresAt(request.getExpiresAt());
-
-    if (StringUtils.hasText(request.getPassword())) {
-      var enc = encryptionService.encrypt(request.getPassword(), key);
-
-      builder.passwordEncrypted(enc.ciphertext()).passwordIv(enc.iv());
-    }
-
-    if (StringUtils.hasText(request.getNotes())) {
-      var enc = encryptionService.encrypt(request.getNotes(), key);
-
-      builder.notesEncrypted(enc.ciphertext()).notesIv(enc.iv());
-    }
-
-    vaultEntryRepository.save(builder.build());
+    vaultEntryRepository.save(buildEntry(userId, request, key));
   }
 
   public void updateEntry(Authentication authentication, UUID id, UpdateVaultEntryRequest request) {
@@ -112,6 +89,74 @@ public class VaultEntryService {
     }
 
     vaultEntryRepository.save(entry);
+  }
+
+  /**
+   * Bulk-import entry point for CSV import - saves as many rows as it can and reports which ones
+   * failed, instead of the normal single-entry saveEntry() flow where a bad request just gets
+   * rejected wholesale by @Valid at the controller.
+   *
+   * <p>Deliberately NOT @Transactional: if it were, one bad row throwing partway through would roll
+   * back every row already saved in this same call, defeating the whole point of per-row error
+   * handling. Each save below commits independently.
+   */
+  public BulkImportResultResponse saveEntries(
+      Authentication authentication, List<CreateVaultEntryRequest> requests) {
+    UUID userId = (UUID) authentication.getPrincipal();
+    SecretKey key = requireUnlockedKey(userId);
+
+    int imported = 0;
+    List<BulkImportRowError> errors = new ArrayList<>();
+
+    for (int i = 0; i < requests.size(); i++) {
+      try {
+        CreateVaultEntryRequest request = requests.get(i);
+
+        if (!StringUtils.hasText(request.getTitle())) {
+          throw new IllegalArgumentException("Title is required");
+        }
+
+        vaultEntryRepository.save(buildEntry(userId, request, key));
+        imported++;
+      } catch (Exception e) {
+        errors.add(BulkImportRowError.builder().rowIndex(i).message(e.getMessage()).build());
+      }
+    }
+
+    return BulkImportResultResponse.builder()
+        .importedCount(imported)
+        .failedCount(errors.size())
+        .errors(errors)
+        .build();
+  }
+
+  private VaultEntry buildEntry(UUID userId, CreateVaultEntryRequest request, SecretKey key) {
+    VaultEntry.VaultEntryBuilder builder =
+        VaultEntry.builder()
+            .userId(userId)
+            .type(request.getType())
+            .email(request.getEmail())
+            .title(request.getTitle())
+            .username(request.getUsername())
+            .url(request.getUrl())
+            .icon(request.getIcon())
+            .categoryId(request.getCategoryId())
+            .favorite(request.isFavorite())
+            .expiresAt(request.getExpiresAt());
+
+    if (StringUtils.hasText(request.getPassword())) {
+      var enc = encryptionService.encrypt(request.getPassword(), key);
+
+      builder.passwordEncrypted(enc.ciphertext()).passwordIv(enc.iv());
+    }
+
+    if (StringUtils.hasText(request.getNotes())) {
+      var enc = encryptionService.encrypt(request.getNotes(), key);
+
+      builder.notesEncrypted(enc.ciphertext()).notesIv(enc.iv());
+    }
+
+    return builder.build();
   }
 
   @Transactional
