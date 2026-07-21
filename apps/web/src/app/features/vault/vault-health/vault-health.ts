@@ -70,9 +70,19 @@ export class VaultHealth implements OnInit {
     return 'text-destructive';
   });
 
+  // Matches scoreLabelClass's thresholds - the ring's color should agree with the
+  // status text next to it, not always render green regardless of how bad the score is.
+  protected readonly scoreRingColor = computed(() => {
+    const score = this.score();
+    if (score >= 70) return 'var(--primary)';
+    if (score >= 50) return 'var(--warning)';
+    return 'var(--destructive)';
+  });
+
   protected readonly scoreRingStyle = computed(() => {
     const degrees = Math.round((this.score() / 100) * 360);
-    return `background: conic-gradient(var(--primary) 0deg ${degrees}deg, oklch(1 0 0 / 10%) ${degrees}deg 360deg)`;
+    const color = this.scoreRingColor();
+    return `background: conic-gradient(${color} 0deg ${degrees}deg, oklch(1 0 0 / 10%) ${degrees}deg 360deg); transition: background 0.3s ease`;
   });
 
   protected readonly actionItems = computed<ActionItem[]>(() =>

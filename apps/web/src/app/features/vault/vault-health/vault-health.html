@@ -21,20 +21,20 @@
       </div>
 
       <div class="grid grid-cols-2 gap-3">
-        <div class="rounded-[0.45rem] border border-border bg-card p-4">
-          <div class="text-xl font-semibold">{{ stats().total }}</div>
+        <div class="rounded-[0.45rem] border border-border bg-card p-4 transition-colors hover:border-foreground/25">
+          <div class="text-xl font-semibold tabular-nums">{{ stats().total }}</div>
           <div class="mt-0.5 text-[11.5px] text-foreground/55">total passwords</div>
         </div>
-        <div class="rounded-[0.45rem] border border-warning/40 bg-card p-4">
-          <div class="text-xl font-semibold text-warning">{{ stats().weak }}</div>
+        <div class="rounded-[0.45rem] border border-warning/40 bg-card p-4 transition-colors hover:border-warning/70">
+          <div class="text-xl font-semibold text-warning tabular-nums">{{ stats().weak }}</div>
           <div class="mt-0.5 text-[11.5px] text-foreground/55">weak passwords</div>
         </div>
-        <div class="rounded-[0.45rem] border border-danger-alt/40 bg-card p-4">
-          <div class="text-xl font-semibold text-danger-alt">{{ stats().duplicate }}</div>
+        <div class="rounded-[0.45rem] border border-danger-alt/40 bg-card p-4 transition-colors hover:border-danger-alt/70">
+          <div class="text-xl font-semibold text-danger-alt tabular-nums">{{ stats().duplicate }}</div>
           <div class="mt-0.5 text-[11.5px] text-foreground/55">duplicate / reused</div>
         </div>
-        <div class="rounded-[0.45rem] border border-destructive/40 bg-card p-4">
-          <div class="text-xl font-semibold text-destructive">{{ stats().compromised }}</div>
+        <div class="rounded-[0.45rem] border border-destructive/40 bg-card p-4 transition-colors hover:border-destructive/70">
+          <div class="text-xl font-semibold text-destructive tabular-nums">{{ stats().compromised }}</div>
           <div class="mt-0.5 text-[11.5px] text-foreground/55">compromised (dark web)</div>
         </div>
       </div>
@@ -87,12 +87,22 @@
 
     <div class="mt-4 rounded-[0.45rem] border border-border bg-card p-[18px]">
       <div class="mb-3.5 text-[12.5px] font-semibold">Password age distribution</div>
-      <div class="flex h-[70px] items-end gap-2.5">
+      <div class="flex h-[86px] items-end gap-2.5 border-b border-border/60">
         @for (bucket of ageBuckets(); track bucket.label) {
-          <div class="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-            <div class="w-full rounded-t-[3px]" [class]="bucket.colorClass" [style.height.%]="bucket.heightPct"></div>
-            <span class="text-[10px] text-foreground/45">{{ bucket.label }}</span>
+          <div class="group flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+            <span class="text-[11px] text-foreground/60 opacity-0 transition-opacity group-hover:opacity-100">{{ bucket.count }}</span>
+            <div
+              class="w-full rounded-t-[3px] transition-[filter] duration-150 group-hover:brightness-110"
+              [class]="bucket.colorClass"
+              [style.height.%]="bucket.heightPct"
+              [title]="bucket.count + ' passwords'"
+            ></div>
           </div>
+        }
+      </div>
+      <div class="mt-1.5 flex gap-2.5">
+        @for (bucket of ageBuckets(); track bucket.label) {
+          <span class="flex-1 text-center text-[10px] text-foreground/45">{{ bucket.label }}</span>
         }
       </div>
     </div>
