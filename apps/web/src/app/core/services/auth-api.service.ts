@@ -75,4 +75,8 @@ export class AuthApiService {
       .put<ApiResponse<UserProfileResponse>>(`${this.baseUrl}/me`, { name })
       .pipe(map((response) => response.data));
   }
+
+  deleteAccount(): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/me`).pipe(map(() => undefined));
+  }
 }

@@ -90,6 +90,10 @@
       <section id="modules" class="rounded-[0.45rem] border border-border bg-card p-5">
         <div class="mb-3.5 text-[13px] font-semibold">Modules</div>
 
+        @if (modulesError()) {
+          <p class="mb-3 text-[11.5px] text-destructive">{{ modulesError() }}</p>
+        }
+
         <div class="flex flex-col">
           @for (module of modules(); track module.code) {
             <div class="flex items-center justify-between border-b border-border py-2.5 last:border-b-0">
@@ -159,7 +163,7 @@
       <section id="danger-zone" class="rounded-[0.45rem] border border-danger-alt/35 bg-card p-5">
         <div class="mb-1.5 text-[13px] font-semibold text-danger-alt">Danger zone</div>
         <div class="mb-3.5 text-[11.5px] text-foreground/55">
-          Deleting your account removes data from every module after a 30-day recovery window.
+          Permanently deletes your vault and account. This cannot be undone.
         </div>
         <p-button
           label="Delete account"

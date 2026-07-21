@@ -110,3 +110,14 @@ export interface VaultExport {
   cards: VaultExportCard[];
   exportedAt: string;
 }
+
+export interface BulkImportRowError {
+  rowIndex: number;
+  message: string;
+}
+
+export interface BulkImportResult {
+  importedCount: number;
+  failedCount: number;
+  errors: BulkImportRowError[];
+}

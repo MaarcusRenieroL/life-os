@@ -4,6 +4,7 @@ import { Observable, map } from 'rxjs';
 
 import { ApiResponse } from '../models/auth.model';
 import {
+  BulkImportResult,
   HealthSummary,
   MasterPasswordRequest,
   RecoveryCodeStatus,
@@ -111,5 +112,17 @@ export class VaultApiService {
     return this.http
       .get<ApiResponse<VaultExport>>(`${this.baseUrl}/export`)
       .pipe(map((response) => response.data));
+  }
+
+  bulkCreateEntries(entries: VaultEntryWriteRequest[]): Observable<BulkImportResult> {
+    return this.http
+      .post<ApiResponse<BulkImportResult>>(`${this.baseUrl}/entries/bulk`, { entries })
+      .pipe(map((response) => response.data));
+  }
+
+  deleteAccount(): Observable<void> {
+    return this.http
+      .delete<ApiResponse<void>>(`${this.baseUrl}/account`)
+      .pipe(map(() => undefined));
   }
 }

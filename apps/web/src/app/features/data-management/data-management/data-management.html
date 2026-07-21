@@ -24,9 +24,21 @@
     <div class="flex items-center justify-between py-2.5">
       <div>
         <div class="text-[12.5px]">Import from another manager</div>
-        <div class="text-[11px] text-foreground/50">1Password, Bitwarden, LastPass CSV</div>
+        <div class="text-[11px] text-foreground/50">CSV with Title, Url, Username, Password columns</div>
       </div>
-      <p-button label="Import" severity="secondary" [disabled]="true" (onClick)="importFromAnotherManager()" />
+      <p-button
+        label="Import"
+        severity="secondary"
+        [loading]="importingCsv()"
+        (onClick)="importFromAnotherManager()"
+      />
+      <input
+        #csvFileInput
+        type="file"
+        accept=".csv,text/csv"
+        class="hidden"
+        (change)="onCsvFileSelected($event)"
+      />
     </div>
   </div>
 
@@ -92,7 +104,7 @@
   <div class="rounded-[0.45rem] border border-danger-alt/35 bg-card p-5">
     <div class="mb-1.5 text-[13px] font-semibold text-danger-alt">Danger zone</div>
     <p class="mb-3.5 text-[11.5px] text-foreground/55">
-      Deleting your account starts a 30-day recovery window before data is permanently erased.
+      Permanently deletes your vault and account. This cannot be undone.
     </p>
     <p-button
       label="Delete account"
@@ -118,6 +130,37 @@
       <div class="flex justify-end">
         <p-button label="Close" severity="secondary" (onClick)="restoreDialogVisible.set(false)" />
       </div>
+    </div>
+  </p-dialog>
+
+  <p-dialog
+    [(visible)]="importResultDialogVisible"
+    header="Import result"
+    [modal]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '25rem' }"
+    styleClass="font-mono"
+  >
+    @if (importError()) {
+      <p class="text-[12.5px] text-destructive">{{ importError() }}</p>
+    } @else if (importResult(); as result) {
+      <p class="mb-3 text-[12.5px]">
+        Imported {{ result.importedCount }} of {{ result.importedCount + result.failedCount }} entries.
+      </p>
+
+      @if (result.errors.length > 0) {
+        <div class="max-h-48 overflow-y-auto rounded-[0.45rem] border border-border bg-background p-3">
+          @for (rowError of result.errors; track rowError.rowIndex) {
+            <div class="border-b border-border py-1.5 text-[11.5px] text-destructive last:border-b-0">
+              Row {{ rowError.rowIndex + 1 }}: {{ rowError.message }}
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <div class="mt-4 flex justify-end">
+      <p-button label="Close" severity="secondary" (onClick)="importResultDialogVisible.set(false)" />
     </div>
   </p-dialog>
 
