@@ -6,6 +6,8 @@ import { ApiResponse } from '../models/auth.model';
 import {
   HealthSummary,
   MasterPasswordRequest,
+  RecoveryCodeStatus,
+  RecoveryCodesResponse,
   VaultEntryDetail,
   VaultEntrySummary,
   VaultEntryWriteRequest,
@@ -79,5 +81,19 @@ export class VaultApiService {
         newPassword,
       })
       .pipe(map(() => undefined));
+  }
+
+  generateRecoveryCodes(currentPassword: string): Observable<RecoveryCodesResponse> {
+    return this.http
+      .post<ApiResponse<RecoveryCodesResponse>>(`${this.baseUrl}/recovery-codes/generate`, {
+        currentPassword,
+      })
+      .pipe(map((response) => response.data));
+  }
+
+  listRecoveryCodes(): Observable<RecoveryCodeStatus[]> {
+    return this.http
+      .get<ApiResponse<RecoveryCodeStatus[]>>(`${this.baseUrl}/recovery-codes`)
+      .pipe(map((response) => response.data));
   }
 }

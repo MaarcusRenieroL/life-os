@@ -76,3 +76,14 @@ export interface HealthSummary {
   ageBuckets: PasswordAgeBucket[];
   actionRequired: ActionRequiredEntry[];
 }
+
+export interface RecoveryCodesResponse {
+  codes: string[];
+}
+
+export interface RecoveryCodeStatus {
+  id: string;
+  used: boolean;
+  usedAt: string | null;
+  createdAt: string;
+}
