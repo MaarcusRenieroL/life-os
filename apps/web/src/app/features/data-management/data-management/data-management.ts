@@ -40,17 +40,17 @@ export class DataManagementPage {
   protected readonly deleteAccountDialogVisible = signal(false);
 
   /**
-   * Real export: pulls actual vault entries from the backend and saves them as a JSON file.
-   * NOTE: this is a best-effort export of what the frontend can already read - a true
-   * "encrypted JSON"/CSV export format and zero-knowledge export would need backend work.
+   * Pulls the real, fully-decrypted export (entries + cards) from the backend and
+   * saves it as a JSON file. Cards include the full card number and CVV in plaintext -
+   * this is a personal backup, not the masked view the Cards screen shows.
    */
   protected exportVault(): void {
     if (this.exportingVault()) return;
     this.exportingVault.set(true);
 
-    this.vaultApi.getEntries().subscribe({
-      next: (entries) => {
-        this.downloadJson(entries, 'vault-export.json');
+    this.vaultApi.exportVault().subscribe({
+      next: (data) => {
+        this.downloadJson(data, 'vault-export.json');
         this.exportingVault.set(false);
       },
       error: () => {
@@ -66,20 +66,19 @@ export class DataManagementPage {
   }
 
   /**
-   * Real action: bundles whatever real data is available client-side (vault entries) into a
-   * single JSON download. The "cards", "audit log" and "settings" portions are mock/local-only
-   * placeholders until those areas have real backends to read from.
+   * Bundles the real vault export (entries + cards) into a single JSON download.
+   * "auditLog" and "settings" are still placeholders - those areas have no backend yet.
    */
   protected downloadEverything(): void {
     if (this.downloadingEverything()) return;
     this.downloadingEverything.set(true);
 
-    this.vaultApi.getEntries().subscribe({
-      next: (entries) => {
+    this.vaultApi.exportVault().subscribe({
+      next: (data) => {
         this.downloadJson(
           {
-            vault: entries,
-            cards: [], // TODO(backend): no cards export API yet.
+            vault: data.entries,
+            cards: data.cards,
             auditLog: [], // TODO(backend): no audit log API yet.
             settings: {}, // TODO(backend): no settings API yet.
           },

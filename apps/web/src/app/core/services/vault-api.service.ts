@@ -11,6 +11,7 @@ import {
   VaultEntryDetail,
   VaultEntrySummary,
   VaultEntryWriteRequest,
+  VaultExport,
   VaultStatus,
 } from '../models/vault.model';
 
@@ -104,5 +105,11 @@ export class VaultApiService {
         newMasterPassword,
       })
       .pipe(map(() => undefined));
+  }
+
+  exportVault(): Observable<VaultExport> {
+    return this.http
+      .get<ApiResponse<VaultExport>>(`${this.baseUrl}/export`)
+      .pipe(map((response) => response.data));
   }
 }

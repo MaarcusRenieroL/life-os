@@ -91,3 +91,22 @@ export interface RecoveryCodeStatus {
   usedAt: string | null;
   createdAt: string;
 }
+
+export interface VaultExportCard {
+  id: string;
+  nickname: string | null;
+  network: string;
+  cardNumber: string;
+  cvv: string;
+  expiry: string | null;
+  cardHolderName: string | null;
+  billingZip: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VaultExport {
+  entries: VaultEntryDetail[];
+  cards: VaultExportCard[];
+  exportedAt: string;
+}
