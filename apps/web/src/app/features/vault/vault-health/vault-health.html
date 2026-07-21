@@ -23,19 +23,19 @@
       <div class="grid grid-cols-2 gap-3">
         <div class="rounded-[0.45rem] border border-border bg-card p-4 transition-colors hover:border-foreground/25">
           <div class="text-xl font-semibold tabular-nums">{{ stats().total }}</div>
-          <div class="mt-0.5 text-[11.5px] text-foreground/55">total passwords</div>
+          <div class="mt-0.5 text-[11px] text-foreground/55">total passwords</div>
         </div>
         <div class="rounded-[0.45rem] border border-warning/40 bg-card p-4 transition-colors hover:border-warning/70">
           <div class="text-xl font-semibold text-warning tabular-nums">{{ stats().weak }}</div>
-          <div class="mt-0.5 text-[11.5px] text-foreground/55">weak passwords</div>
+          <div class="mt-0.5 text-[11px] text-foreground/55">weak passwords</div>
         </div>
         <div class="rounded-[0.45rem] border border-danger-alt/40 bg-card p-4 transition-colors hover:border-danger-alt/70">
           <div class="text-xl font-semibold text-danger-alt tabular-nums">{{ stats().duplicate }}</div>
-          <div class="mt-0.5 text-[11.5px] text-foreground/55">duplicate / reused</div>
+          <div class="mt-0.5 text-[11px] text-foreground/55">duplicate / reused</div>
         </div>
         <div class="rounded-[0.45rem] border border-destructive/40 bg-card p-4 transition-colors hover:border-destructive/70">
           <div class="text-xl font-semibold text-destructive tabular-nums">{{ stats().compromised }}</div>
-          <div class="mt-0.5 text-[11.5px] text-foreground/55">compromised (dark web)</div>
+          <div class="mt-0.5 text-[11px] text-foreground/55">compromised (dark web)</div>
         </div>
       </div>
     </div>
@@ -44,7 +44,7 @@
       <div class="overflow-hidden rounded-[0.45rem] border border-border bg-card">
         <div class="border-b border-border px-4 py-3 text-[12.5px] font-semibold">Action required</div>
         @if (actionItems().length === 0) {
-          <div class="px-4 py-6 text-center text-[12px] text-foreground/50">Nothing needs attention right now.</div>
+          <div class="px-4 py-6 text-center text-[12.5px] text-foreground/50">Nothing needs attention right now.</div>
         } @else {
           @for (item of actionItems(); track item.id) {
             <div class="flex items-center justify-between border-b border-border px-4 py-3 last:border-b-0">
@@ -55,7 +55,7 @@
               <a
                 routerLink="/vault/entries"
                 [queryParams]="{ edit: item.id }"
-                class="shrink-0 text-[11.5px] text-primary no-underline"
+                class="shrink-0 text-[11px] text-primary no-underline"
               >
                 {{ item.linkLabel }} &gt;
               </a>

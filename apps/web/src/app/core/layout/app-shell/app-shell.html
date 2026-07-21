@@ -23,20 +23,20 @@
         styleClass="w-[190px]"
       >
         <ng-template #dropdownicon>
-          <i class="pi pi-chevron-down text-[9px] text-foreground/45"></i>
+          <i class="pi pi-chevron-down text-[10px] text-foreground/45"></i>
         </ng-template>
         <ng-template #header>
           <div class="px-2 pt-1.5 pb-1 text-[10px] text-foreground/45">SWITCH MODULE</div>
         </ng-template>
         <ng-template #selectedItem let-selectedModule>
           <div class="flex items-center gap-2">
-            <span class="text-[9px] font-bold text-primary">{{ selectedModule.code }}</span>
+            <span class="text-[10px] font-bold text-primary">{{ selectedModule.code }}</span>
             <span class="whitespace-nowrap text-[12.5px]">{{ selectedModule.name }}</span>
           </div>
         </ng-template>
         <ng-template #item let-module>
           <div class="flex items-center gap-2" [class.opacity-40]="module.unavailable">
-            <span class="w-5 text-[9px] font-bold text-primary">{{ module.code }}</span>
+            <span class="w-5 text-[10px] font-bold text-primary">{{ module.code }}</span>
             <span class="text-xs">{{ module.name }}</span>
           </div>
         </ng-template>
@@ -69,7 +69,7 @@
           id="app-shell-search"
           type="text"
           placeholder="search everything"
-          class="w-full bg-transparent text-[11.5px] text-foreground placeholder:text-foreground/40 outline-none"
+          class="w-full bg-transparent text-[11px] text-foreground placeholder:text-foreground/40 outline-none"
           (focus)="searchFocused.set(true)"
           (blur)="searchFocused.set(false)"
         />
@@ -88,13 +88,13 @@
       @if (isHome()) {
         <a
           routerLink="/settings"
-          class="hidden text-[11.5px] text-foreground/60 no-underline transition-colors hover:text-foreground sm:inline"
+          class="hidden text-[11px] text-foreground/60 no-underline transition-colors hover:text-foreground sm:inline"
           >Settings</a
         >
       }
 
       <div
-        class="hidden h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-[9.5px] text-primary transition-colors duration-150 hover:border-primary/50 sm:flex"
+        class="hidden h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-[10px] text-primary transition-colors duration-150 hover:border-primary/50 sm:flex"
       >
         {{ currentUser().initials }}
       </div>
@@ -144,7 +144,7 @@
 
       <div class="flex items-center gap-2 border-t border-border pt-3">
         <div
-          class="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-[9.5px] text-primary"
+          class="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-[10px] text-primary"
         >
           {{ currentUser().initials }}
         </div>

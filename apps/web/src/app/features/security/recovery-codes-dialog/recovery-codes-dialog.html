@@ -8,7 +8,7 @@
   (onShow)="onShow()"
 >
   @if (revealedCodes(); as codes) {
-    <p class="mb-4 text-[11.5px] text-foreground/55">
+    <p class="mb-4 text-[11px] text-foreground/55">
       Save these somewhere offline. They won't be shown again.
     </p>
 
@@ -26,12 +26,12 @@
       <p-button label="Done" (onClick)="done()" />
     </div>
   } @else {
-    <p class="mb-4 text-[11.5px] text-foreground/55">
+    <p class="mb-4 text-[11px] text-foreground/55">
       Each code can be used once to regain access if you lose your master password.
     </p>
 
     @if (hasExistingCodes()) {
-      <div class="mb-4 flex justify-between text-[11.5px] text-foreground/55">
+      <div class="mb-4 flex justify-between text-[11px] text-foreground/55">
         <span>{{ remainingCount() }} of {{ statusCodes().length }} codes remaining</span>
         <span>{{ generatedLabel() }}</span>
       </div>

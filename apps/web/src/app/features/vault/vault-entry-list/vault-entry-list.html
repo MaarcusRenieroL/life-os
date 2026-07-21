@@ -42,19 +42,19 @@
     <div class="mb-[22px] grid grid-cols-2 gap-3 lg:grid-cols-4">
       <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
         <div class="text-xl font-semibold">{{ stats().total }}</div>
-        <div class="mt-0.5 text-[11.5px] text-foreground/55">total items</div>
+        <div class="mt-0.5 text-[11px] text-foreground/55">total items</div>
       </div>
       <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
         <div class="text-xl font-semibold text-warning">{{ stats().weak }}</div>
-        <div class="mt-0.5 text-[11.5px] text-foreground/55">weak</div>
+        <div class="mt-0.5 text-[11px] text-foreground/55">weak</div>
       </div>
       <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
         <div class="text-xl font-semibold text-danger-alt">{{ stats().duplicate }}</div>
-        <div class="mt-0.5 text-[11.5px] text-foreground/55">duplicate</div>
+        <div class="mt-0.5 text-[11px] text-foreground/55">duplicate</div>
       </div>
       <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
         <div class="text-xl font-semibold text-destructive">{{ stats().actionRequired }}</div>
-        <div class="mt-0.5 text-[11.5px] text-foreground/55">action required</div>
+        <div class="mt-0.5 text-[11px] text-foreground/55">action required</div>
       </div>
     </div>
 
@@ -118,7 +118,7 @@
       >
         + Filters
       </button>
-      <div class="ml-auto text-[11.5px] text-foreground/45">{{ filteredEntries().length }} shown</div>
+      <div class="ml-auto text-[11px] text-foreground/45">{{ filteredEntries().length }} shown</div>
     </div>
 
     @if (selected().size > 0) {
@@ -214,7 +214,7 @@
                   </div>
                 </div>
               </div>
-              <div class="flex min-w-0 items-center gap-1.5 text-[11.5px] text-foreground/60">
+              <div class="flex min-w-0 items-center gap-1.5 text-[11px] text-foreground/60">
                 @if (categoryColor(entry.categoryId); as color) {
                   <span class="h-1.5 w-1.5 shrink-0 rounded-full" [style.background-color]="color"></span>
                 }
@@ -222,12 +222,12 @@
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="h-1.5 w-1.5 rounded-full" [class]="strengthDotClass(security(entry).strength)"></span>
-                <span class="text-[11.5px]" [class]="strengthColorClass(security(entry).strength)">{{ security(entry).strength }}</span>
+                <span class="text-[11px]" [class]="strengthColorClass(security(entry).strength)">{{ security(entry).strength }}</span>
               </div>
               <div class="text-[11px]" [class.text-primary]="security(entry).twoFactor === 'enabled'" [class.text-foreground/30]="security(entry).twoFactor !== 'enabled'">
                 {{ security(entry).twoFactor === 'enabled' ? 'on' : 'off' }}
               </div>
-              <div class="text-[11.5px] text-foreground/50">{{ entry.updatedAt | date: 'MMM d' }}</div>
+              <div class="text-[11px] text-foreground/50">{{ entry.updatedAt | date: 'MMM d' }}</div>
               <div class="flex items-center justify-end gap-0.5" (click)="$event.stopPropagation()">
                 <p-button
                   icon="pi pi-copy"
@@ -332,7 +332,7 @@
                 <a [href]="entry.url" target="_blank" rel="noopener" class="text-[12.5px] text-primary">{{ entry.url }}</a>
               </div>
             }
-            <div class="flex flex-wrap justify-between gap-2 border-t border-border pt-3 text-[11.5px] text-foreground/55">
+            <div class="flex flex-wrap justify-between gap-2 border-t border-border pt-3 text-[11px] text-foreground/55">
               <span>
                 Strength:
                 <span [class]="strengthColorClass(security(entry).strength)">{{ security(entry).strength }}</span>

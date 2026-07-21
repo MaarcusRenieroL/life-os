@@ -21,28 +21,28 @@
         <div class="text-[22px] font-semibold tabular-nums">{{ modulesActiveCount() }}</div>
         <i class="pi pi-th-large text-[13px] text-foreground/30"></i>
       </div>
-      <div class="mt-0.5 text-[11.5px] text-foreground/55">modules active</div>
+      <div class="mt-0.5 text-[11px] text-foreground/55">modules active</div>
     </div>
     <div class="group rounded-[0.5rem] border border-danger-alt/30 bg-card px-[18px] py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-danger-alt/55 hover:shadow-[0_8px_24px_oklch(0_0_0_/_18%)]">
       <div class="flex items-center justify-between">
         <div class="text-[22px] font-semibold text-danger-alt tabular-nums">{{ vaultActionRequiredCount() }}</div>
         <i class="pi pi-exclamation-triangle text-[13px] text-danger-alt/50"></i>
       </div>
-      <div class="mt-0.5 text-[11.5px] text-foreground/55">vault items need attention</div>
+      <div class="mt-0.5 text-[11px] text-foreground/55">vault items need attention</div>
     </div>
     <div class="group rounded-[0.5rem] border border-primary/30 bg-card px-[18px] py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/55 hover:shadow-[0_8px_24px_oklch(0_0_0_/_18%)]">
       <div class="flex items-center justify-between">
         <div class="text-[22px] font-semibold text-primary tabular-nums">{{ interviewsThisWeek ?? '—' }}</div>
         <i class="pi pi-calendar text-[13px] text-primary/50"></i>
       </div>
-      <div class="mt-0.5 text-[11.5px] text-foreground/55">interviews this week</div>
+      <div class="mt-0.5 text-[11px] text-foreground/55">interviews this week</div>
     </div>
     <div class="group rounded-[0.5rem] border border-warning/30 bg-card px-[18px] py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-warning/55 hover:shadow-[0_8px_24px_oklch(0_0_0_/_18%)]">
       <div class="flex items-center justify-between">
         <div class="text-[22px] font-semibold text-warning tabular-nums">{{ offersPending ?? '—' }}</div>
         <i class="pi pi-briefcase text-[13px] text-warning/50"></i>
       </div>
-      <div class="mt-0.5 text-[11.5px] text-foreground/55">offers pending</div>
+      <div class="mt-0.5 text-[11px] text-foreground/55">offers pending</div>
     </div>
   </div>
 
@@ -59,7 +59,7 @@
             >{{ tile.code }}</span
           >
           <span class="text-[13px] font-semibold text-foreground">{{ tile.name }}</span>
-          <span class="text-[11.5px] text-foreground/55">{{ tile.subtitle }}</span>
+          <span class="text-[11px] text-foreground/55">{{ tile.subtitle }}</span>
         </a>
       } @else {
         <div
@@ -69,7 +69,7 @@
             >{{ tile.code }}</span
           >
           <span class="text-[13px] font-semibold text-foreground">{{ tile.name }}</span>
-          <span class="text-[11.5px] text-foreground/50">{{ tile.subtitle }}</span>
+          <span class="text-[11px] text-foreground/50">{{ tile.subtitle }}</span>
         </div>
       }
     }
@@ -124,7 +124,7 @@
   <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
     @for (module of exploreModules(); track module.code) {
       <div
-        class="rounded-[0.45rem] border border-dashed border-border/85 bg-background/40 p-3 text-[11.5px] text-foreground/45 transition-colors hover:border-foreground/25 hover:text-foreground/65"
+        class="rounded-[0.45rem] border border-dashed border-border/85 bg-background/40 p-3 text-[11px] text-foreground/45 transition-colors hover:border-foreground/25 hover:text-foreground/65"
       >
         {{ module.name }}
       </div>

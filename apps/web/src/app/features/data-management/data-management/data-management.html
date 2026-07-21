@@ -62,7 +62,7 @@
         <div class="text-[12.5px]">Vault encryption</div>
         <div class="text-[11px] text-foreground/50">AES-256, zero-knowledge - only you hold the key</div>
       </div>
-      <span class="text-[11.5px] text-primary">active</span>
+      <span class="text-[11px] text-primary">active</span>
     </div>
 
     <div class="flex items-center justify-between py-2.5">
@@ -100,7 +100,7 @@
 
   <div class="mt-4 rounded-[0.45rem] border border-danger-alt/35 bg-card p-5 transition-colors hover:border-danger-alt/55">
     <div class="mb-1.5 text-[13px] font-semibold text-danger-alt">Danger zone</div>
-    <p class="mb-3.5 text-[11.5px] text-foreground/55">
+    <p class="mb-3.5 text-[11px] text-foreground/55">
       Permanently deletes your vault and account. This cannot be undone.
     </p>
     <p-button
@@ -148,7 +148,7 @@
       @if (result.errors.length > 0) {
         <div class="max-h-48 overflow-y-auto rounded-[0.45rem] border border-border bg-background p-3">
           @for (rowError of result.errors; track rowError.rowIndex) {
-            <div class="border-b border-border py-1.5 text-[11.5px] text-destructive last:border-b-0">
+            <div class="border-b border-border py-1.5 text-[11px] text-destructive last:border-b-0">
               Row {{ rowError.rowIndex + 1 }}: {{ rowError.message }}
             </div>
           }

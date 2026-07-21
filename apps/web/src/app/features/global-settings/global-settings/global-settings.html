@@ -74,10 +74,10 @@
             (onClick)="saveProfile()"
           />
           @if (profileSaved()) {
-            <span class="text-[11.5px] text-primary">Saved</span>
+            <span class="text-[11px] text-primary">Saved</span>
           }
           @if (profileError()) {
-            <span class="text-[11.5px] text-destructive">{{ profileError() }}</span>
+            <span class="text-[11px] text-destructive">{{ profileError() }}</span>
           }
         </div>
       </section>
@@ -86,7 +86,7 @@
         <div class="mb-3.5 text-[13px] font-semibold">Modules</div>
 
         @if (modulesError()) {
-          <p class="mb-3 text-[11.5px] text-destructive">{{ modulesError() }}</p>
+          <p class="mb-3 text-[11px] text-destructive">{{ modulesError() }}</p>
         }
 
         <div class="flex flex-col">
@@ -128,21 +128,21 @@
 
         <section id="notifications" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
           <div class="mb-1.5 text-[13px] font-semibold">Notifications</div>
-          <div class="text-[11.5px] text-foreground/55">
+          <div class="text-[11px] text-foreground/55">
             Email and push notification preferences are coming soon — there's no notifications backend yet.
           </div>
         </section>
 
         <section id="integrations" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
           <div class="mb-1.5 text-[13px] font-semibold">Integrations</div>
-          <div class="text-[11.5px] text-foreground/55">
+          <div class="text-[11px] text-foreground/55">
             Connect third-party services (calendars, job boards, banks) once those integrations exist.
           </div>
         </section>
 
         <section id="data-privacy" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
           <div class="mb-1.5 text-[13px] font-semibold">Data &amp; privacy</div>
-          <div class="text-[11.5px] text-foreground/55">
+          <div class="text-[11px] text-foreground/55">
             Export, import and backup live on the
             <a routerLink="/vault/data" class="text-primary no-underline hover:underline"
               >Password Manager's Data Management page</a
@@ -154,7 +154,7 @@
 
       <section id="danger-zone" class="rounded-[0.45rem] border border-danger-alt/35 bg-card p-5 transition-colors hover:border-danger-alt/55">
         <div class="mb-1.5 text-[13px] font-semibold text-danger-alt">Danger zone</div>
-        <div class="mb-3.5 text-[11.5px] text-foreground/55">
+        <div class="mb-3.5 text-[11px] text-foreground/55">
           Permanently deletes your vault and account. This cannot be undone.
         </div>
         <p-button
