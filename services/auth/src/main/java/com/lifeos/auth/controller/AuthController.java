@@ -13,6 +13,7 @@ import com.lifeos.auth.domains.dto.response.AuthResponse;
 import com.lifeos.auth.domains.dto.response.ChallengeResponse;
 import com.lifeos.auth.domains.dto.response.UserProfileResponse;
 import com.lifeos.auth.domains.entity.DeviceSession;
+import com.lifeos.auth.service.AccountService;
 import com.lifeos.auth.service.AuthService;
 import com.lifeos.auth.service.UserService;
 import java.util.List;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +38,7 @@ public class AuthController {
 
   private final AuthService authService;
   private final UserService userService;
+  private final AccountService accountService;
 
   @GetMapping("/me")
   public ResponseEntity<ApiResponse<UserProfileResponse>> me(Authentication authentication) {
@@ -53,6 +56,14 @@ public class AuthController {
     return ResponseEntity.ok(
         ApiResponse.success(
             userService.updateProfile(userId, request.getName()), "Profile updated successfully"));
+  }
+
+  @DeleteMapping("/me")
+  public ResponseEntity<ApiResponse<Void>> deleteAccount(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+    accountService.deleteAccount(userId);
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Account deleted successfully"));
   }
 
   @PostMapping("/register")
