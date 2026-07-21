@@ -18,10 +18,6 @@ export interface LoginRequest {
   deviceType: string;
 }
 
-export interface LogoutRequest {
-  deviceSessionId: string;
-}
-
 export interface DeviceSession {
   id: string;
   userId: string;
