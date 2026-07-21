@@ -1,8 +1,12 @@
 export type VaultEntryType = 'LOGIN' | 'CARD' | 'NOTE';
 
+export type PasswordStrength = 'VERY_WEAK' | 'WEAK' | 'FAIR' | 'STRONG' | 'VERY_STRONG';
+
 export interface VaultStatus {
   hasMasterPassword: boolean;
   unlocked: boolean;
+  masterPasswordStrength: PasswordStrength | null;
+  masterPasswordUpdatedAt: string | null;
 }
 
 export interface MasterPasswordRequest {
