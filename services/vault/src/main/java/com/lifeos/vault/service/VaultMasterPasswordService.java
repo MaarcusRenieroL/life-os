@@ -131,41 +131,41 @@ public class VaultMasterPasswordService {
       // today, so requiring it to be non-null would skip every real card.
       if (card.getCardNumberEncrypted() != null) {
         String plainText =
-            encryptionService.decrypt(card.getCardNumberEncrypted(), card.getCardNumberIvv(), oldKey);
+            encryptionService.decrypt(card.getCardNumberEncrypted(), card.getCardNumberIv(), oldKey);
 
         var newEnc = encryptionService.encrypt(plainText, newKey);
 
         card.setCardNumberEncrypted(newEnc.ciphertext());
-        card.setCardNumberIvv(newEnc.iv());
+        card.setCardNumberIv(newEnc.iv());
       }
 
       if (card.getCvvEncrypted() != null) {
-        String plainText = encryptionService.decrypt(card.getCvvEncrypted(), card.getCvvIvv(), oldKey);
+        String plainText = encryptionService.decrypt(card.getCvvEncrypted(), card.getCvvIv(), oldKey);
 
         var newEnc = encryptionService.encrypt(plainText, newKey);
 
         card.setCvvEncrypted(newEnc.ciphertext());
-        card.setCvvIvv(newEnc.iv());
+        card.setCvvIv(newEnc.iv());
       }
 
       if (card.getExpiryEncrypted() != null) {
         String plainText =
-            encryptionService.decrypt(card.getExpiryEncrypted(), card.getExpiryIvv(), oldKey);
+            encryptionService.decrypt(card.getExpiryEncrypted(), card.getExpiryIv(), oldKey);
 
         var newEnc = encryptionService.encrypt(plainText, newKey);
 
         card.setExpiryEncrypted(newEnc.ciphertext());
-        card.setExpiryIvv(newEnc.iv());
+        card.setExpiryIv(newEnc.iv());
       }
 
       if (card.getPasswordEncrypted() != null) {
         String plainText =
-            encryptionService.decrypt(card.getPasswordEncrypted(), card.getPasswordIvv(), oldKey);
+            encryptionService.decrypt(card.getPasswordEncrypted(), card.getPasswordIv(), oldKey);
 
         var newEnc = encryptionService.encrypt(plainText, newKey);
 
         card.setPasswordEncrypted(newEnc.ciphertext());
-        card.setPasswordIvv(newEnc.iv());
+        card.setPasswordIv(newEnc.iv());
       }
     }
 

@@ -7,8 +7,10 @@ import com.lifeos.vault.domains.dto.request.UpdateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.response.ApiResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntryResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntrySummaryResponse;
+import com.lifeos.vault.domains.dto.response.VaultExportResponse;
 import com.lifeos.vault.domains.dto.response.VaultStatusResponse;
 import com.lifeos.vault.service.VaultEntryService;
+import com.lifeos.vault.service.VaultExportService;
 import com.lifeos.vault.service.VaultMasterPasswordService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -32,6 +34,7 @@ public class VaultController {
 
   private final VaultEntryService vaultEntryService;
   private final VaultMasterPasswordService vaultMasterPasswordService;
+  private final VaultExportService vaultExportService;
 
   @GetMapping("/status")
   public ResponseEntity<ApiResponse<VaultStatusResponse>> status(Authentication authentication) {
@@ -101,6 +104,12 @@ public class VaultController {
     vaultEntryService.deleteEntry(authentication, id);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Vault Entry deleted successfully"));
+  }
+
+  @GetMapping("/export")
+  public ResponseEntity<ApiResponse<VaultExportResponse>> export(Authentication authentication) {
+    return ResponseEntity.ok(
+        ApiResponse.success(vaultExportService.export(authentication), "Vault exported successfully"));
   }
 
   @PostMapping("/master-password/change")

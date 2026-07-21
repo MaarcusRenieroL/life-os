@@ -29,8 +29,6 @@ public class CardService {
 
   public List<CardResponse> getCards(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
-    // Needed now even for the list view - expiry is decrypted on every read
-    // (see CardResponse's class-level note), unlike cardNumber/cvv.
     SecretKey key = requireUnlockedKey(userId);
 
     return paymentCardRepository.findAllByUserId(userId).stream()
@@ -66,11 +64,11 @@ public class CardService {
             .network(request.getNetwork())
             .lastFourDigits(lastFourDigits)
             .cardNumberEncrypted(numberEnc.ciphertext())
-            .cardNumberIvv(numberEnc.iv())
+            .cardNumberIv(numberEnc.iv())
             .cvvEncrypted(cvvEnc.ciphertext())
-            .cvvIvv(cvvEnc.iv())
+            .cvvIv(cvvEnc.iv())
             .expiryEncrypted(expiryEnc.ciphertext())
-            .expiryIvv(expiryEnc.iv())
+            .expiryIv(expiryEnc.iv())
             .cardHolderName(request.getCardHolderName())
             .billingZip(request.getBillingZip())
             .build();
@@ -97,7 +95,7 @@ public class CardService {
       var numberEnc = encryptionService.encrypt(request.getCardNumber(), key);
 
       card.setCardNumberEncrypted(numberEnc.ciphertext());
-      card.setCardNumberIvv(numberEnc.iv());
+      card.setCardNumberIv(numberEnc.iv());
       card.setLastFourDigits(extractLastFourDigits(request.getCardNumber()));
     }
 
@@ -105,14 +103,14 @@ public class CardService {
       var cvvEnc = encryptionService.encrypt(request.getCvv(), key);
 
       card.setCvvEncrypted(cvvEnc.ciphertext());
-      card.setCvvIvv(cvvEnc.iv());
+      card.setCvvIv(cvvEnc.iv());
     }
 
     if (StringUtils.hasText(request.getExpiry())) {
       var expiryEnc = encryptionService.encrypt(request.getExpiry(), key);
 
       card.setExpiryEncrypted(expiryEnc.ciphertext());
-      card.setExpiryIvv(expiryEnc.iv());
+      card.setExpiryIv(expiryEnc.iv());
     }
 
     return toResponse(paymentCardRepository.save(card), key);
@@ -143,7 +141,7 @@ public class CardService {
     String expiry =
         card.getExpiryEncrypted() == null
             ? null
-            : encryptionService.decrypt(card.getExpiryEncrypted(), card.getExpiryIvv(), key);
+            : encryptionService.decrypt(card.getExpiryEncrypted(), card.getExpiryIv(), key);
 
     return CardResponse.builder()
         .id(card.getId())

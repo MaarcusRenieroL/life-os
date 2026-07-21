@@ -175,44 +175,44 @@ public class RecoveryCodeService {
           if (card.getCardNumberEncrypted() != null) {
             String cardNumber =
                 encryptionService.decrypt(
-                    card.getCardNumberEncrypted(), card.getCardNumberIvv(), oldVaultKey);
+                    card.getCardNumberEncrypted(), card.getCardNumberIv(), oldVaultKey);
 
             var encCardNumber = encryptionService.encrypt(cardNumber, newKey);
 
             card.setCardNumberEncrypted(encCardNumber.ciphertext());
-            card.setCardNumberIvv(encCardNumber.iv());
+            card.setCardNumberIv(encCardNumber.iv());
           }
 
           if (card.getCvvEncrypted() != null) {
             String cvv =
-                encryptionService.decrypt(card.getCvvEncrypted(), card.getCvvIvv(), oldVaultKey);
+                encryptionService.decrypt(card.getCvvEncrypted(), card.getCvvIv(), oldVaultKey);
 
             var encCvv = encryptionService.encrypt(cvv, newKey);
 
             card.setCvvEncrypted(encCvv.ciphertext());
-            card.setCvvIvv(encCvv.iv());
+            card.setCvvIv(encCvv.iv());
           }
 
           if (card.getExpiryEncrypted() != null) {
             String expiry =
                 encryptionService.decrypt(
-                    card.getExpiryEncrypted(), card.getExpiryIvv(), oldVaultKey);
+                    card.getExpiryEncrypted(), card.getExpiryIv(), oldVaultKey);
 
             var encExpiry = encryptionService.encrypt(expiry, newKey);
 
             card.setExpiryEncrypted(encExpiry.ciphertext());
-            card.setExpiryIvv(encExpiry.iv());
+            card.setExpiryIv(encExpiry.iv());
           }
 
           if (card.getPasswordEncrypted() != null) {
             String password =
                 encryptionService.decrypt(
-                    card.getPasswordEncrypted(), card.getPasswordIvv(), oldVaultKey);
+                    card.getPasswordEncrypted(), card.getPasswordIv(), oldVaultKey);
 
             var encPassword = encryptionService.encrypt(password, newKey);
 
             card.setPasswordEncrypted(encPassword.ciphertext());
-            card.setPasswordIvv(encPassword.iv());
+            card.setPasswordIv(encPassword.iv());
           }
         }
 
