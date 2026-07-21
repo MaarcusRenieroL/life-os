@@ -40,20 +40,20 @@
     <p class="text-sm text-muted-foreground">Loading entries…</p>
   } @else {
     <div class="mb-[22px] grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
-        <div class="text-xl font-semibold">{{ stats().total }}</div>
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-foreground/25">
+        <div class="text-xl font-semibold tabular-nums">{{ stats().total }}</div>
         <div class="mt-0.5 text-[11px] text-foreground/55">total items</div>
       </div>
-      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
-        <div class="text-xl font-semibold text-warning">{{ stats().weak }}</div>
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-warning/50">
+        <div class="text-xl font-semibold text-warning tabular-nums">{{ stats().weak }}</div>
         <div class="mt-0.5 text-[11px] text-foreground/55">weak</div>
       </div>
-      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
-        <div class="text-xl font-semibold text-danger-alt">{{ stats().duplicate }}</div>
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-danger-alt/50">
+        <div class="text-xl font-semibold text-danger-alt tabular-nums">{{ stats().duplicate }}</div>
         <div class="mt-0.5 text-[11px] text-foreground/55">duplicate</div>
       </div>
-      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5">
-        <div class="text-xl font-semibold text-destructive">{{ stats().actionRequired }}</div>
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-destructive/50">
+        <div class="text-xl font-semibold text-destructive tabular-nums">{{ stats().actionRequired }}</div>
         <div class="mt-0.5 text-[11px] text-foreground/55">action required</div>
       </div>
     </div>
@@ -62,12 +62,12 @@
       <input
         [(ngModel)]="search"
         placeholder="filter by name, username, url..."
-        class="w-full rounded-[0.45rem] border border-border bg-card px-3 py-2 text-[12.5px] text-foreground outline-none sm:w-[260px]"
+        class="w-full rounded-[0.45rem] border border-border bg-card px-3 py-2 text-[12.5px] text-foreground outline-none transition-all duration-150 focus:border-primary/50 focus:shadow-[0_0_0_3px_oklch(0.7_0.19_165_/_12%)] sm:w-[260px]"
       />
       <button
         type="button"
         (click)="setQuickChip('all')"
-        class="rounded-[0.45rem] border px-3 py-[7px] text-xs"
+        class="rounded-[0.45rem] border px-3 py-[7px] text-xs transition-colors duration-150 hover:border-foreground/25"
         [class.border-primary/40]="quickChip() === 'all'"
         [class.bg-primary/15]="quickChip() === 'all'"
         [class.text-primary]="quickChip() === 'all'"
@@ -80,7 +80,7 @@
       <button
         type="button"
         (click)="setQuickChip('favorites')"
-        class="rounded-[0.45rem] border px-3 py-[7px] text-xs"
+        class="rounded-[0.45rem] border px-3 py-[7px] text-xs transition-colors duration-150 hover:border-foreground/25"
         [class.border-primary/40]="quickChip() === 'favorites'"
         [class.bg-primary/15]="quickChip() === 'favorites'"
         [class.text-primary]="quickChip() === 'favorites'"
@@ -94,7 +94,7 @@
         <button
           type="button"
           (click)="setQuickChip(category.id)"
-          class="rounded-[0.45rem] border px-3 py-[7px] text-xs"
+          class="rounded-[0.45rem] border px-3 py-[7px] text-xs transition-colors duration-150 hover:border-foreground/25"
           [class.border-primary/40]="quickChip() === category.id"
           [class.bg-primary/15]="quickChip() === category.id"
           [class.text-primary]="quickChip() === category.id"
@@ -108,7 +108,7 @@
       <button
         type="button"
         (click)="openFilters()"
-        class="rounded-[0.45rem] border px-3 py-[7px] text-xs"
+        class="rounded-[0.45rem] border px-3 py-[7px] text-xs transition-colors duration-150 hover:border-foreground/25"
         [class.border-primary/40]="filtersActive()"
         [class.bg-primary/15]="filtersActive()"
         [class.text-primary]="filtersActive()"
@@ -185,7 +185,7 @@
           @for (entry of filteredEntries(); track entry.id) {
             <div
               (click)="openEntry(entry.id)"
-              class="grid cursor-pointer grid-cols-[28px_2.2fr_1fr_1fr_0.7fr_1fr_90px] items-center gap-2 border-b border-border px-4 py-3 last:border-b-0 hover:bg-accent/20"
+              class="grid cursor-pointer grid-cols-[28px_2.2fr_1fr_1fr_0.7fr_1fr_90px] items-center gap-2 border-b border-border px-4 py-3 transition-colors duration-150 last:border-b-0 hover:bg-accent/20"
             >
               <div (click)="$event.stopPropagation()">
                 <p-checkbox

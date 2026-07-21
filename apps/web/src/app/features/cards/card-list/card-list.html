@@ -15,7 +15,7 @@
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       @for (card of cards(); track card.id) {
         <div
-          class="group relative flex h-[150px] flex-col justify-between rounded-[0.45rem] border border-border bg-gradient-to-br from-card to-[oklch(0.2_0.02_255)] p-5"
+          class="group relative flex h-[150px] flex-col justify-between rounded-[0.45rem] border border-border bg-gradient-to-br from-card to-[oklch(0.2_0.02_255)] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_12px_32px_oklch(0_0_0_/_25%)]"
         >
           <p-button
             icon="pi pi-trash"
@@ -42,7 +42,7 @@
       <button
         type="button"
         (click)="openAddCard()"
-        class="flex h-[150px] cursor-pointer items-center justify-center rounded-[0.45rem] border border-dashed border-border p-5 text-xs text-foreground/40"
+        class="flex h-[150px] cursor-pointer items-center justify-center rounded-[0.45rem] border border-dashed border-border p-5 text-xs text-foreground/40 transition-colors duration-150 hover:border-primary/40 hover:text-foreground/65"
       >
         + add credit or debit card
       </button>

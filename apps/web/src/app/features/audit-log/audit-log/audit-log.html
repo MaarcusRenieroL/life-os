@@ -11,14 +11,14 @@
     <input
       [(ngModel)]="search"
       placeholder="search activity, device, location..."
-      class="w-full rounded-[0.45rem] border border-border bg-card px-3 py-2 text-[12.5px] text-foreground outline-none sm:w-[260px]"
+      class="w-full rounded-[0.45rem] border border-border bg-card px-3 py-2 text-[12.5px] text-foreground outline-none transition-all duration-150 focus:border-primary/50 focus:shadow-[0_0_0_3px_oklch(0.7_0.19_165_/_12%)] sm:w-[260px]"
     />
 
     @for (chip of typeChipDefs; track chip.id) {
       <button
         type="button"
         (click)="selectType(chip.id)"
-        class="rounded-[0.45rem] border px-3 py-[7px] text-xs"
+        class="rounded-[0.45rem] border px-3 py-[7px] text-xs transition-colors duration-150 hover:border-foreground/25"
         [class.border-primary/40]="selectedType() === chip.id"
         [class.bg-primary/15]="selectedType() === chip.id"
         [class.text-primary]="selectedType() === chip.id"
@@ -44,9 +44,9 @@
   @if (hasResults()) {
     <div class="ml-1.5 border-l border-border">
       @for (event of filteredEvents(); track event.text + event.meta) {
-        <div class="relative py-0 pb-5 pl-6">
+        <div class="group relative rounded-[0.4rem] py-1.5 pb-5 pl-6 transition-colors hover:bg-foreground/[0.025]">
           <div
-            class="absolute -left-[5px] top-0.5 h-[9px] w-[9px] rounded-full"
+            class="absolute -left-[5px] top-2 h-[9px] w-[9px] rounded-full ring-4 ring-transparent transition-[box-shadow] duration-150 group-hover:ring-primary/10"
             [class.bg-primary]="event.dot === 'primary'"
             [class.bg-destructive]="event.dot === 'destructive'"
             [class.bg-foreground/40]="event.dot === 'muted'"
