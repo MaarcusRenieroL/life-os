@@ -41,6 +41,7 @@ public class RecoveryCodeService {
   private final PaymentCardRepository paymentCardRepository;
   private final PasswordEncoder passwordEncoder;
   private final EncryptionService encryptionService;
+  private final PasswordStrengthService passwordStrengthService;
 
   @Transactional
   public List<String> generate(UUID userId, String currentPassword) {
@@ -219,6 +220,7 @@ public class RecoveryCodeService {
 
         vaultMasterPassword.setPasswordHash(passwordEncoder.encode(newMasterPassword));
         vaultMasterPassword.setSalt(newSalt);
+        vaultMasterPassword.setStrength(passwordStrengthService.score(newMasterPassword).name());
 
         vaultMasterPasswordRepository.save(vaultMasterPassword);
 

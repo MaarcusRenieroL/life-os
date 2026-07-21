@@ -34,6 +34,7 @@ public class VaultMasterPasswordService {
 
   private final EncryptionService encryptionService;
   private final PasswordEncoder passwordEncoder;
+  private final PasswordStrengthService passwordStrengthService;
   private final VaultKeyStore vaultKeyStore;
 
   public void setup(UUID userId, String masterPassword) {
@@ -48,6 +49,7 @@ public class VaultMasterPasswordService {
             .userId(userId)
             .passwordHash(passwordEncoder.encode(masterPassword))
             .salt(salt)
+            .strength(passwordStrengthService.score(masterPassword).name())
             .build());
   }
 
@@ -68,9 +70,13 @@ public class VaultMasterPasswordService {
   }
 
   public VaultStatusResponse getStatus(UUID userId) {
+    var vaultMasterPassword = vaultMasterPasswordRepository.findByUserId(userId).orElse(null);
+
     return VaultStatusResponse.builder()
-        .hasMasterPassword(vaultMasterPasswordRepository.existsByUserId(userId))
+        .hasMasterPassword(vaultMasterPassword != null)
         .unlocked(vaultKeyStore.get(userId) != null)
+        .masterPasswordStrength(vaultMasterPassword != null ? vaultMasterPassword.getStrength() : null)
+        .masterPasswordUpdatedAt(vaultMasterPassword != null ? vaultMasterPassword.getUpdatedAt() : null)
         .build();
   }
 
@@ -167,6 +173,7 @@ public class VaultMasterPasswordService {
 
     existingMasterPassword.setPasswordHash(passwordEncoder.encode(newPassword));
     existingMasterPassword.setSalt(newSalt);
+    existingMasterPassword.setStrength(passwordStrengthService.score(newPassword).name());
 
     vaultMasterPasswordRepository.save(existingMasterPassword);
 

@@ -40,6 +40,9 @@ public class VaultMasterPassword {
   @Column(name = "salt")
   String salt;
 
+  @Column(name = "strength")
+  String strength;
+
   @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;
