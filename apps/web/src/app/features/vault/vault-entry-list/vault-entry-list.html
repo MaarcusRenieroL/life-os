@@ -195,8 +195,12 @@
                 />
               </div>
               <div class="flex min-w-0 items-center gap-2.5">
-                <div class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[0.45rem] border border-border bg-background text-[10px] text-primary">
-                  {{ entry.icon || entry.title.slice(0, 2).toUpperCase() }}
+                <div class="flex h-[26px] w-[26px] shrink-0 items-center justify-center overflow-hidden rounded-[0.45rem] border border-border bg-background text-[10px] text-primary">
+                  @if (entry.icon?.startsWith('http')) {
+                    <img [src]="entry.icon" alt="" class="h-full w-full object-cover" />
+                  } @else {
+                    {{ entry.title.slice(0, 2).toUpperCase() }}
+                  }
                 </div>
                 <div class="min-w-0">
                   <div class="truncate text-[12.5px]">
@@ -261,8 +265,12 @@
         @if (openEntryDetail(); as entry) {
           <div class="mb-[18px] flex items-center justify-between">
             <div class="flex items-center gap-2.5">
-              <div class="flex h-8 w-8 items-center justify-center rounded-[0.45rem] border border-border bg-background text-[11px] text-primary">
-                {{ entry.icon || entry.title.slice(0, 2).toUpperCase() }}
+              <div class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-[0.45rem] border border-border bg-background text-[11px] text-primary">
+                @if (entry.icon?.startsWith('http')) {
+                  <img [src]="entry.icon" alt="" class="h-full w-full object-cover" />
+                } @else {
+                  {{ entry.title.slice(0, 2).toUpperCase() }}
+                }
               </div>
               <div class="text-[15px] font-semibold">{{ entry.title }}</div>
             </div>

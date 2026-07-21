@@ -92,6 +92,14 @@ export class VaultEntryForm {
   protected readonly isCard = computed(() => this.typeValue() === 'CARD');
   protected readonly isNote = computed(() => this.typeValue() === 'NOTE');
 
+  // Bridges `url.valueChanges` so the template can show a live favicon preview
+  // next to the URL field as the user types.
+  protected readonly urlValue = toSignal(this.form.controls.url.valueChanges, {
+    initialValue: this.form.controls.url.value,
+  });
+
+  protected readonly faviconUrl = computed(() => faviconUrlFor(this.urlValue()));
+
   constructor() {
     // Re-init the form each time the dialog opens, for whichever entry (or none) it opened with.
     effect(() => {
@@ -168,6 +176,14 @@ export class VaultEntryForm {
     this.submitting.set(true);
     this.errorMessage.set(null);
 
+    // Derive the icon from the URL at submit time rather than wiring it as a
+    // form control side-effect - keeps the favicon always in sync with whatever
+    // URL was actually saved, without a separate effect to manage.
+    const favicon = this.faviconUrl();
+    if (favicon) {
+      this.form.controls.icon.setValue(favicon);
+    }
+
     const request = this.form.getRawValue();
     const id = this.entryId();
 
@@ -228,5 +244,22 @@ export class VaultEntryForm {
     }
 
     this.clipboardService.copyWithAutoClear(value, key);
+  }
+}
+
+// Google's public favicon endpoint - just an image URL, no fetch()/CORS involved,
+// so a bad or incomplete URL just renders a blank/broken image rather than an error.
+function faviconUrlFor(rawUrl: string): string | null {
+  if (!rawUrl.trim()) return null;
+
+  try {
+    const withProtocol = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+    const hostname = new URL(withProtocol).hostname;
+
+    if (!hostname.includes('.')) return null;
+
+    return `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(hostname)}`;
+  } catch {
+    return null;
   }
 }
