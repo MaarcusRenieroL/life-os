@@ -124,6 +124,18 @@ const buttonColorScheme = {
   text: { secondary: buttonTextSecondary, danger: buttonTextDanger },
 };
 
+// Same issue as Button: the unchecked track reads Aura's literal surface.600/700
+// gray instead of this app's tokens. The checked state already resolves correctly
+// through primary.color above, so only the off-state needs remapping.
+const toggleSwitchColorScheme = {
+  root: {
+    background: 'var(--muted)',
+    hoverBackground: 'var(--border)',
+    checkedBackground: 'var(--primary)',
+    checkedHoverBackground: 'color-mix(in oklch, var(--primary) 88%, black)',
+  },
+};
+
 export const LifeOsPreset = definePreset(Aura, {
   semantic: {
     colorScheme: {
@@ -136,6 +148,12 @@ export const LifeOsPreset = definePreset(Aura, {
       colorScheme: {
         light: buttonColorScheme,
         dark: buttonColorScheme,
+      },
+    },
+    toggleswitch: {
+      colorScheme: {
+        light: toggleSwitchColorScheme,
+        dark: toggleSwitchColorScheme,
       },
     },
   },
