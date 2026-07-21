@@ -8,6 +8,7 @@ import com.lifeos.vault.domains.record.VaultKeyRecord;
 import com.lifeos.vault.exception.InvalidMasterPasswordException;
 import com.lifeos.vault.exception.MasterPasswordAlreadySetException;
 import com.lifeos.vault.repository.PaymentCardRepository;
+import com.lifeos.vault.repository.RecoveryCodeRepository;
 import com.lifeos.vault.repository.VaultEntryRepository;
 import com.lifeos.vault.repository.VaultMasterPasswordRepository;
 import com.lifeos.vault.store.VaultKeyStore;
@@ -29,6 +30,7 @@ public class VaultMasterPasswordService {
   private final VaultEntryRepository vaultEntryRepository;
   private final VaultMasterPasswordRepository vaultMasterPasswordRepository;
   private final PaymentCardRepository paymentCardRepository;
+  private final RecoveryCodeRepository recoveryCodeRepository;
 
   private final EncryptionService encryptionService;
   private final PasswordEncoder passwordEncoder;
@@ -167,6 +169,11 @@ public class VaultMasterPasswordService {
     existingMasterPassword.setSalt(newSalt);
 
     vaultMasterPasswordRepository.save(existingMasterPassword);
+
+    // Every outstanding recovery code wraps the now-stale old vault key - redeeming one
+    // after this point would silently recover a key that can't decrypt current data, so
+    // they're invalidated rather than left to fail confusingly later.
+    recoveryCodeRepository.deleteAllByUserId(userId);
 
     // Re-unlock with the new key so the user isn't immediately prompted to
     // unlock again right after changing their password.

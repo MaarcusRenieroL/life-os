@@ -2,6 +2,7 @@ package com.lifeos.vault.controller;
 
 import com.lifeos.vault.domains.dto.request.GenerateRecoveryCodesRequest;
 import com.lifeos.vault.domains.dto.request.RedeemRecoveryCodeRequest;
+import com.lifeos.vault.domains.dto.request.ResetWithRecoveryCodeRequest;
 import com.lifeos.vault.domains.dto.response.ApiResponse;
 import com.lifeos.vault.domains.dto.response.RecoveryCodeStatusResponse;
 import com.lifeos.vault.domains.dto.response.RecoveryCodesResponse;
@@ -54,5 +55,14 @@ public class RecoveryCodeController {
     recoveryCodeService.redeem(userId, request.getCode());
 
     return ResponseEntity.ok(ApiResponse.success(null, "Recovery code redeemed successfully"));
+  }
+
+  @PostMapping("/reset")
+  public ResponseEntity<ApiResponse<Void>> reset(
+      Authentication authentication, @Valid @RequestBody ResetWithRecoveryCodeRequest request) {
+    UUID userId = (UUID) authentication.getPrincipal();
+    recoveryCodeService.resetWithCode(userId, request.getCode(), request.getNewMasterPassword());
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Master password reset successfully"));
   }
 }

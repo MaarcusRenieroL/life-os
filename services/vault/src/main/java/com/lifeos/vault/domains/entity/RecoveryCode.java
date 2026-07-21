@@ -42,6 +42,15 @@ public class RecoveryCode {
   @Column(name = "used_at")
   Instant usedAt;
 
+  @Column(name = "key_salt")
+  String keySalt;
+
+  @Column(name = "wrapped_key_ciphertext")
+  String wrappedKeyCiphertext;
+
+  @Column(name = "wrapped_key_iv")
+  String wrappedKeyIv;
+
   @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;
