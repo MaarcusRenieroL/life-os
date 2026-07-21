@@ -2,7 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 
-import { ApiResponse, AuthResponse, DeviceSession, LoginRequest } from '../models/auth.model';
+import {
+  ApiResponse,
+  AuthResponse,
+  DeviceSession,
+  LoginRequest,
+  UserProfileResponse,
+} from '../models/auth.model';
 import { TokenService } from './token.service';
 
 @Injectable({ providedIn: 'root' })
@@ -56,5 +62,17 @@ export class AuthApiService {
     return this.http
       .post<ApiResponse<void>>(`${this.baseUrl}/sessions/${sessionId}/revoke`, {})
       .pipe(map(() => undefined));
+  }
+
+  getMe(): Observable<UserProfileResponse> {
+    return this.http
+      .get<ApiResponse<UserProfileResponse>>(`${this.baseUrl}/me`)
+      .pipe(map((response) => response.data));
+  }
+
+  updateProfile(name: string): Observable<UserProfileResponse> {
+    return this.http
+      .put<ApiResponse<UserProfileResponse>>(`${this.baseUrl}/me`, { name })
+      .pipe(map((response) => response.data));
   }
 }

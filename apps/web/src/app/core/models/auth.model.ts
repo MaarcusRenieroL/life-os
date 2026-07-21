@@ -31,3 +31,9 @@ export interface DeviceSession {
   lastActiveAt: string;
   revokedAt: string | null;
 }
+
+export interface UserProfileResponse {
+  id: string;
+  email: string;
+  name: string | null;
+}

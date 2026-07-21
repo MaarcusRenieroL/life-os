@@ -64,10 +64,25 @@
               id="settingsEmail"
               type="email"
               [ngModel]="email()"
-              (ngModelChange)="email.set($event)"
+              [disabled]="true"
               class="w-full"
             />
           </div>
+        </div>
+
+        <div class="mt-3.5 flex items-center gap-2.5">
+          <p-button
+            label="Save"
+            [loading]="savingProfile()"
+            [disabled]="!name()"
+            (onClick)="saveProfile()"
+          />
+          @if (profileSaved()) {
+            <span class="text-[11.5px] text-primary">Saved</span>
+          }
+          @if (profileError()) {
+            <span class="text-[11.5px] text-destructive">{{ profileError() }}</span>
+          }
         </div>
       </section>
 

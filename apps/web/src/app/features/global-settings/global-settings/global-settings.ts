@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -7,6 +7,7 @@ import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import { APP_MODULES, AppModuleConfig } from '../../../core/config/app-modules';
+import { AuthApiService } from '../../../core/services/auth-api.service';
 import { CurrentUserService } from '../../../core/services/current-user.service';
 import { DeleteAccountConfirmDialog } from '../../data-management/delete-account-confirm-dialog/delete-account-confirm-dialog';
 
@@ -51,6 +52,7 @@ const THEME_OPTIONS: { label: string; value: ThemePreference }[] = [
 })
 export class GlobalSettings {
   private readonly currentUserService = inject(CurrentUserService);
+  private readonly authApi = inject(AuthApiService);
 
   protected readonly navItems = NAV_ITEMS;
   protected readonly themeOptions = THEME_OPTIONS;
@@ -58,10 +60,19 @@ export class GlobalSettings {
   protected readonly user = this.currentUserService.user;
   protected readonly activeSection = signal<string>('profile');
 
-  // Editable copies of the profile fields, prefilled from the current user.
-  // No profile-update API exists yet, so edits here are local-only.
+  // Editable copy of the name field, prefilled from the current user. Email
+  // has no update endpoint (it's the login identifier) so it's shown read-only.
   protected readonly name = signal(this.user().name);
-  protected readonly email = signal(this.user().email);
+  protected readonly email = computed(() => this.user().email);
+
+  protected readonly savingProfile = signal(false);
+  protected readonly profileSaved = signal(false);
+  protected readonly profileError = signal<string | null>(null);
+
+  // CurrentUserService's initial fetch is async, so `user()` is still the empty
+  // placeholder when this component constructs - hydrate the editable `name`
+  // signal once real data lands, but only once, so it doesn't clobber typing.
+  private hydratedName = false;
 
   // Mock, local-only copy of the module registry — toggling here does not mutate
   // APP_MODULES or persist anywhere, since there's no backend for module-enablement yet.
@@ -71,6 +82,37 @@ export class GlobalSettings {
   protected readonly theme = signal<ThemePreference>('terminal-dark');
 
   protected readonly deleteAccountDialogVisible = signal(false);
+
+  constructor() {
+    effect(() => {
+      const current = this.user();
+      if (!this.hydratedName && current.email) {
+        this.name.set(current.name);
+        this.hydratedName = true;
+      }
+    });
+  }
+
+  protected saveProfile(): void {
+    if (this.savingProfile()) return;
+
+    this.savingProfile.set(true);
+    this.profileError.set(null);
+    this.profileSaved.set(false);
+
+    this.authApi.updateProfile(this.name()).subscribe({
+      next: () => {
+        this.savingProfile.set(false);
+        this.profileSaved.set(true);
+        this.currentUserService.setName(this.name());
+        setTimeout(() => this.profileSaved.set(false), 2000);
+      },
+      error: (error) => {
+        this.savingProfile.set(false);
+        this.profileError.set(error?.error?.message ?? 'Unable to update profile.');
+      },
+    });
+  }
 
   protected scrollToSection(id: string): void {
     this.activeSection.set(id);
