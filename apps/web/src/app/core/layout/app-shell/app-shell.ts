@@ -44,7 +44,7 @@ export class AppShell {
 
   protected readonly moduleCode = computed(() => (this.routeData()['module'] as string) ?? 'home');
   protected readonly activeModule = computed(() =>
-    this.moduleOptions.find((m) => m.code === (this.moduleCode() === 'password-manager' ? 'PM' : '')),
+    this.moduleOptions.find((m) => m.code === this.moduleCode()),
   );
   protected readonly isHome = computed(() => this.moduleCode() === 'home');
   protected readonly selectedModulePath = computed(() => this.activeModule()?.path ?? null);

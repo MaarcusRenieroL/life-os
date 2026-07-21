@@ -1,10 +1,11 @@
-<main class="mx-auto max-w-[1000px] px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10">
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
   <div class="mb-[22px]">
     <h1 class="text-[22px] font-semibold tracking-tight">Security</h1>
     <p class="mt-1 text-[12.5px] text-foreground/55">Master password, biometrics, sessions and devices</p>
   </div>
 
-  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+  <div class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
     <div class="mb-3.5 text-[13px] font-semibold">Master password</div>
 
     <div class="mb-3 flex items-center justify-between">
@@ -26,7 +27,7 @@
     </div>
   </div>
 
-  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+  <div class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
     <div class="mb-3.5 text-[13px] font-semibold">Authentication</div>
 
     <div class="flex items-center justify-between border-b border-border py-2.5">
@@ -52,8 +53,9 @@
       />
     </div>
   </div>
+  </div>
 
-  <div class="rounded-[0.45rem] border border-border bg-card p-5">
+  <div class="mt-4 rounded-[0.45rem] border border-border bg-card p-5">
     <div class="mb-3.5 flex items-center justify-between">
       <div class="text-[13px] font-semibold">Devices &amp; sessions</div>
       @if (otherDevices().length > 0) {
@@ -68,18 +70,31 @@
     </div>
 
     @for (device of devices(); track device.id) {
-      <div class="flex items-center justify-between border-b border-border py-2.5 last:border-b-0">
-        <div>
-          <div class="text-[12.5px]">{{ device.deviceName }}</div>
-          <div class="text-[11px] text-foreground/50">
+      <div class="flex items-center justify-between border-b border-border py-3 transition-colors last:border-b-0 hover:bg-foreground/[0.025]">
+        <div class="flex items-center gap-3">
+          <div
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.4rem] border border-border bg-background"
+            [class.border-primary/40]="isCurrentDevice(device)"
+          >
+            <i class="pi text-[13px] text-foreground/60" [class]="deviceIcon(device.deviceType)"></i>
+          </div>
+          <div>
+            <div class="text-[12.5px]">
+              {{ device.deviceName }}{{ isCurrentDevice(device) ? ' · this device' : '' }}
+            </div>
             <!-- DeviceSession has no location field - showing deviceType as a stand-in
                  for now (e.g. "web"). Swap for something better once/if the backend
                  ever captures real location. -->
-            {{ device.deviceType }}{{ isCurrentDevice(device) ? ' - this device' : '' }}
+            <div class="text-[11px] text-foreground/50">
+              {{ device.deviceType }} · last active {{ relativeTime(device.lastActiveAt) }}
+            </div>
           </div>
         </div>
         @if (isCurrentDevice(device)) {
-          <span class="text-[11px] text-primary">active now</span>
+          <span class="flex items-center gap-1.5 text-[11px] text-primary">
+            <span class="h-1.5 w-1.5 rounded-full bg-primary"></span>
+            active now
+          </span>
         } @else {
           <p-button
             icon="pi pi-sign-out"

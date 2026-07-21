@@ -1,4 +1,4 @@
-<main class="mx-auto max-w-[1100px] px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10">
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
   <div class="mb-6 flex items-center gap-2 text-[12.5px]">
     <a routerLink="/home" class="text-foreground no-underline hover:text-primary">life-os</a>
     <span class="text-foreground/40">/</span>
@@ -10,7 +10,7 @@
       @for (item of navItems; track item.id) {
         <button
           type="button"
-          class="cursor-pointer whitespace-nowrap rounded-[0.45rem] bg-transparent px-3 py-2 text-left text-[12.5px]"
+          class="cursor-pointer whitespace-nowrap rounded-[0.45rem] bg-transparent px-3 py-2 text-left text-[12.5px] transition-colors"
           [class.bg-foreground/6]="activeSection() === item.id && !item.danger"
           [class.font-semibold]="activeSection() === item.id"
           [class.text-danger-alt]="item.danger"
@@ -23,7 +23,7 @@
     </nav>
 
     <div class="flex flex-col gap-4">
-      <section id="profile" class="rounded-[0.45rem] border border-border bg-card p-5">
+      <section id="profile" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
         <div class="mb-3.5 text-[13px] font-semibold">Profile</div>
 
         <div class="mb-4 flex items-center gap-3.5">
@@ -82,7 +82,7 @@
         </div>
       </section>
 
-      <section id="modules" class="rounded-[0.45rem] border border-border bg-card p-5">
+      <section id="modules" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
         <div class="mb-3.5 text-[13px] font-semibold">Modules</div>
 
         @if (modulesError()) {
@@ -109,48 +109,50 @@
         </div>
       </section>
 
-      <section id="appearance" class="rounded-[0.45rem] border border-border bg-card p-5">
-        <div class="mb-3.5 text-[13px] font-semibold">Appearance</div>
+      <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <section id="appearance" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+          <div class="mb-3.5 text-[13px] font-semibold">Appearance</div>
 
-        <div class="flex items-center justify-between">
-          <span class="text-[12.5px] text-foreground/75">Theme</span>
-          <p-select
-            [ngModel]="theme()"
-            (ngModelChange)="theme.set($event)"
-            [options]="themeOptions"
-            optionLabel="label"
-            optionValue="value"
-            styleClass="w-56"
-          />
-        </div>
-      </section>
+          <div class="flex items-center justify-between">
+            <span class="text-[12.5px] text-foreground/75">Theme</span>
+            <p-select
+              [ngModel]="theme()"
+              (ngModelChange)="theme.set($event)"
+              [options]="themeOptions"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-56"
+            />
+          </div>
+        </section>
 
-      <section id="notifications" class="rounded-[0.45rem] border border-border bg-card p-5">
-        <div class="mb-1.5 text-[13px] font-semibold">Notifications</div>
-        <div class="text-[11.5px] text-foreground/55">
-          Email and push notification preferences are coming soon — there's no notifications backend yet.
-        </div>
-      </section>
+        <section id="notifications" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+          <div class="mb-1.5 text-[13px] font-semibold">Notifications</div>
+          <div class="text-[11.5px] text-foreground/55">
+            Email and push notification preferences are coming soon — there's no notifications backend yet.
+          </div>
+        </section>
 
-      <section id="integrations" class="rounded-[0.45rem] border border-border bg-card p-5">
-        <div class="mb-1.5 text-[13px] font-semibold">Integrations</div>
-        <div class="text-[11.5px] text-foreground/55">
-          Connect third-party services (calendars, job boards, banks) once those integrations exist.
-        </div>
-      </section>
+        <section id="integrations" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+          <div class="mb-1.5 text-[13px] font-semibold">Integrations</div>
+          <div class="text-[11.5px] text-foreground/55">
+            Connect third-party services (calendars, job boards, banks) once those integrations exist.
+          </div>
+        </section>
 
-      <section id="data-privacy" class="rounded-[0.45rem] border border-border bg-card p-5">
-        <div class="mb-1.5 text-[13px] font-semibold">Data &amp; privacy</div>
-        <div class="text-[11.5px] text-foreground/55">
-          Export, import and backup live on the
-          <a routerLink="/vault/data" class="text-primary no-underline hover:underline"
-            >Password Manager's Data Management page</a
-          >
-          for now — an account-wide version is planned.
-        </div>
-      </section>
+        <section id="data-privacy" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+          <div class="mb-1.5 text-[13px] font-semibold">Data &amp; privacy</div>
+          <div class="text-[11.5px] text-foreground/55">
+            Export, import and backup live on the
+            <a routerLink="/vault/data" class="text-primary no-underline hover:underline"
+              >Password Manager's Data Management page</a
+            >
+            for now — an account-wide version is planned.
+          </div>
+        </section>
+      </div>
 
-      <section id="danger-zone" class="rounded-[0.45rem] border border-danger-alt/35 bg-card p-5">
+      <section id="danger-zone" class="rounded-[0.45rem] border border-danger-alt/35 bg-card p-5 transition-colors hover:border-danger-alt/55">
         <div class="mb-1.5 text-[13px] font-semibold text-danger-alt">Danger zone</div>
         <div class="mb-3.5 text-[11.5px] text-foreground/55">
           Permanently deletes your vault and account. This cannot be undone.

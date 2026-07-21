@@ -1,10 +1,11 @@
-<main class="mx-auto max-w-[1000px] px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10">
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
   <div class="mb-[22px]">
     <h1 class="text-[22px] font-semibold tracking-tight">Data Management</h1>
     <p class="mt-1 text-[12.5px] text-foreground/55">Export, backup and account controls</p>
   </div>
 
-  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+  <div class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
     <div class="mb-3.5 text-[13px] font-semibold">Export / import</div>
 
     <div class="flex items-center justify-between border-b border-border py-2.5">
@@ -41,7 +42,7 @@
     </div>
   </div>
 
-  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+  <div class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
     <div class="mb-3.5 text-[13px] font-semibold">Backup &amp; recovery</div>
 
     <div class="flex items-center justify-between py-2.5">
@@ -53,7 +54,7 @@
     </div>
   </div>
 
-  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+  <div class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
     <div class="mb-3.5 text-[13px] font-semibold">Encryption</div>
 
     <div class="flex items-center justify-between border-b border-border py-2.5">
@@ -79,7 +80,7 @@
     </div>
   </div>
 
-  <div class="mb-4 rounded-[0.45rem] border border-border bg-card p-5">
+  <div class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
     <div class="mb-3.5 text-[13px] font-semibold">Your data</div>
 
     <div class="flex items-center justify-between py-2.5">
@@ -95,8 +96,9 @@
       />
     </div>
   </div>
+  </div>
 
-  <div class="rounded-[0.45rem] border border-danger-alt/35 bg-card p-5">
+  <div class="mt-4 rounded-[0.45rem] border border-danger-alt/35 bg-card p-5 transition-colors hover:border-danger-alt/55">
     <div class="mb-1.5 text-[13px] font-semibold text-danger-alt">Danger zone</div>
     <p class="mb-3.5 text-[11.5px] text-foreground/55">
       Permanently deletes your vault and account. This cannot be undone.
