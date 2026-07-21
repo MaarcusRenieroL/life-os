@@ -49,52 +49,5 @@
     </div>
   }
 
-  <div class="mt-7">
-    <div class="mb-3 flex items-center justify-between">
-      <div class="text-[13px] font-semibold">Linked services / subscriptions</div>
-      <p-button
-        label="Add service or subscription"
-        icon="pi pi-plus"
-        [text]="true"
-        severity="secondary"
-        (onClick)="openAddSubscription()"
-      />
-    </div>
-
-    @if (subscriptions().length === 0) {
-      <div class="rounded-[0.45rem] border border-border bg-card p-8 text-center text-[12px] text-foreground/50">
-        No linked services yet.
-      </div>
-    } @else {
-      <div class="overflow-hidden overflow-x-auto rounded-[0.45rem] border border-border">
-        <div class="min-w-[560px]">
-          <div
-            class="grid grid-cols-[2fr_1fr_1fr_1fr] bg-card px-4 py-2.5 text-[11px] text-foreground/45"
-          >
-            <div>SERVICE</div>
-            <div>CARD USED</div>
-            <div>BILLING</div>
-            <div>AMOUNT</div>
-          </div>
-          @for (subscription of subscriptions(); track subscription.id) {
-            <div
-              class="grid grid-cols-[2fr_1fr_1fr_1fr] border-t border-border px-4 py-3 text-[12.5px]"
-            >
-              <div>{{ subscription.serviceName }}</div>
-              <div class="text-foreground/60">{{ cardLabelFor(subscription.cardId) }}</div>
-              <div class="text-foreground/60">{{ subscription.billingCycle }}</div>
-              <div>{{ formatAmount(subscription.amount) }}</div>
-            </div>
-          }
-        </div>
-      </div>
-    }
-  </div>
-
   <app-add-card-dialog [(visible)]="addCardVisible" (saved)="addCard($event)" />
-  <app-add-subscription-dialog
-    [(visible)]="addSubscriptionVisible"
-    [cards]="cards()"
-    (saved)="addSubscription($event)"
-  />
 </main>

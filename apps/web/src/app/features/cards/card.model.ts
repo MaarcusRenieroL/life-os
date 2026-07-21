@@ -58,8 +58,6 @@ export function maskFromLastFour(lastFourDigits: number, network: ApiCardNetwork
   return `**** **** **** ${last4}`;
 }
 
-export type BillingCycle = 'monthly' | 'yearly' | 'weekly';
-
 export interface CardSummary {
   id: string;
   nickname: string;
@@ -79,30 +77,3 @@ export interface AddCardFormValue {
   billingZip: string;
 }
 
-export interface SubscriptionSummary {
-  id: string;
-  serviceName: string;
-  cardId: string | null;
-  billingCycle: BillingCycle;
-  amount: number;
-  nextRenewalDate: string;
-  linkedVaultEntryId: string | null;
-  remindBeforeRenewal: boolean;
-}
-
-export interface AddSubscriptionFormValue {
-  serviceName: string;
-  cardId: string | null;
-  billingCycle: BillingCycle;
-  amount: number;
-  nextRenewalDate: string;
-  linkedVaultEntryId: string | null;
-  remindBeforeRenewal: boolean;
-}
-
-/** Short "Chase •4471" style label used in the subscriptions table. */
-export function cardShortLabel(card: CardSummary): string {
-  const firstWord = card.nickname.trim().split(/\s+/)[0] || card.nickname;
-  const last4 = card.maskedNumber.replace(/\D/g, '').slice(-4);
-  return `${firstWord} •${last4}`;
-}
