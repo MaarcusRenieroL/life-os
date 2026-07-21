@@ -32,6 +32,9 @@ public class User {
   @Column(name = "email")
   String email;
 
+  @Column(name = "name")
+  String name;
+
   @Column(name = "password_hash")
   String passwordHash;
 

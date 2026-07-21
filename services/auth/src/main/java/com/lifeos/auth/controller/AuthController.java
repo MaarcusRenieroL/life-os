@@ -5,13 +5,16 @@ import com.lifeos.auth.domains.dto.request.CreateChallengeRequest;
 import com.lifeos.auth.domains.dto.request.EnrollBiometricRequest;
 import com.lifeos.auth.domains.dto.request.LogoutRequest;
 import com.lifeos.auth.domains.dto.request.RefreshRequest;
+import com.lifeos.auth.domains.dto.request.UpdateProfileRequest;
 import com.lifeos.auth.domains.dto.request.UserLoginRequest;
 import com.lifeos.auth.domains.dto.request.UserRegisterRequest;
 import com.lifeos.auth.domains.dto.response.ApiResponse;
 import com.lifeos.auth.domains.dto.response.AuthResponse;
 import com.lifeos.auth.domains.dto.response.ChallengeResponse;
+import com.lifeos.auth.domains.dto.response.UserProfileResponse;
 import com.lifeos.auth.domains.entity.DeviceSession;
 import com.lifeos.auth.service.AuthService;
+import com.lifeos.auth.service.UserService;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +24,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +35,25 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private final AuthService authService;
+  private final UserService userService;
+
+  @GetMapping("/me")
+  public ResponseEntity<ApiResponse<UserProfileResponse>> me(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return ResponseEntity.ok(
+        ApiResponse.success(userService.getProfile(userId), "Profile fetched successfully"));
+  }
+
+  @PutMapping("/me")
+  public ResponseEntity<ApiResponse<UserProfileResponse>> updateMe(
+      Authentication authentication, @RequestBody UpdateProfileRequest request) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            userService.updateProfile(userId, request.getName()), "Profile updated successfully"));
+  }
 
   @PostMapping("/register")
   public ResponseEntity<ApiResponse<Void>> register(
