@@ -4,13 +4,14 @@ import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { PasswordModule } from 'primeng/password';
 
+import { VaultResetDialog } from '../vault-reset-dialog/vault-reset-dialog';
 import { VaultApiService } from '../../../core/services/vault-api.service';
 import { VaultStateService } from '../../../core/services/vault-state.service';
 
 @Component({
   selector: 'app-vault-unlock',
   standalone: true,
-  imports: [ReactiveFormsModule, ButtonModule, PasswordModule],
+  imports: [ReactiveFormsModule, ButtonModule, PasswordModule, VaultResetDialog],
   templateUrl: './vault-unlock.html',
   styleUrl: './vault-unlock.scss',
 })
@@ -24,6 +25,7 @@ export class VaultUnlock implements OnInit {
   protected readonly hasMasterPassword = signal(false);
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly resetDialogVisible = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
     masterPassword: ['', [Validators.required, Validators.minLength(8)]],
@@ -82,5 +84,9 @@ export class VaultUnlock implements OnInit {
         this.errorMessage.set(err?.error?.message ?? 'Unable to set up the vault.');
       },
     });
+  }
+
+  protected openResetDialog(): void {
+    this.resetDialogVisible.set(true);
   }
 }

@@ -96,4 +96,13 @@ export class VaultApiService {
       .get<ApiResponse<RecoveryCodeStatus[]>>(`${this.baseUrl}/recovery-codes`)
       .pipe(map((response) => response.data));
   }
+
+  resetWithRecoveryCode(code: string, newMasterPassword: string): Observable<void> {
+    return this.http
+      .post<ApiResponse<void>>(`${this.baseUrl}/recovery-codes/reset`, {
+        code,
+        newMasterPassword,
+      })
+      .pipe(map(() => undefined));
+  }
 }

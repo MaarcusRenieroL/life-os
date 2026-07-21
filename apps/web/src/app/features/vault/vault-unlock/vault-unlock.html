@@ -45,6 +45,18 @@
           [loading]="loading()"
         />
       </form>
+
+      @if (hasMasterPassword()) {
+        <button
+          type="button"
+          class="mt-4 block w-full text-center text-xs text-muted-foreground hover:text-foreground"
+          (click)="openResetDialog()"
+        >
+          Forgot master password?
+        </button>
+      }
     </div>
   }
+
+  <app-vault-reset-dialog [(visible)]="resetDialogVisible" />
 </main>
