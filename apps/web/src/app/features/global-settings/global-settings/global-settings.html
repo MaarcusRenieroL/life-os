@@ -1,5 +1,4 @@
 <main class="mx-auto max-w-[1100px] px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10">
-  <!-- Breadcrumb header -->
   <div class="mb-6 flex items-center gap-2 text-[12.5px]">
     <a routerLink="/home" class="text-foreground no-underline hover:text-primary">life-os</a>
     <span class="text-foreground/40">/</span>
@@ -7,7 +6,6 @@
   </div>
 
   <div class="grid grid-cols-1 gap-8 md:grid-cols-[220px_1fr]">
-    <!-- Left nav -->
     <nav class="flex flex-row gap-0.5 overflow-x-auto md:flex-col md:overflow-visible">
       @for (item of navItems; track item.id) {
         <button
@@ -24,9 +22,7 @@
       }
     </nav>
 
-    <!-- Right content -->
     <div class="flex flex-col gap-4">
-      <!-- Profile -->
       <section id="profile" class="rounded-[0.45rem] border border-border bg-card p-5">
         <div class="mb-3.5 text-[13px] font-semibold">Profile</div>
 
@@ -86,7 +82,6 @@
         </div>
       </section>
 
-      <!-- Modules -->
       <section id="modules" class="rounded-[0.45rem] border border-border bg-card p-5">
         <div class="mb-3.5 text-[13px] font-semibold">Modules</div>
 
@@ -114,7 +109,6 @@
         </div>
       </section>
 
-      <!-- Appearance -->
       <section id="appearance" class="rounded-[0.45rem] border border-border bg-card p-5">
         <div class="mb-3.5 text-[13px] font-semibold">Appearance</div>
 
@@ -131,7 +125,6 @@
         </div>
       </section>
 
-      <!-- Notifications -->
       <section id="notifications" class="rounded-[0.45rem] border border-border bg-card p-5">
         <div class="mb-1.5 text-[13px] font-semibold">Notifications</div>
         <div class="text-[11.5px] text-foreground/55">
@@ -139,7 +132,6 @@
         </div>
       </section>
 
-      <!-- Integrations -->
       <section id="integrations" class="rounded-[0.45rem] border border-border bg-card p-5">
         <div class="mb-1.5 text-[13px] font-semibold">Integrations</div>
         <div class="text-[11.5px] text-foreground/55">
@@ -147,7 +139,6 @@
         </div>
       </section>
 
-      <!-- Data & privacy -->
       <section id="data-privacy" class="rounded-[0.45rem] border border-border bg-card p-5">
         <div class="mb-1.5 text-[13px] font-semibold">Data &amp; privacy</div>
         <div class="text-[11.5px] text-foreground/55">
@@ -159,7 +150,6 @@
         </div>
       </section>
 
-      <!-- Danger zone -->
       <section id="danger-zone" class="rounded-[0.45rem] border border-danger-alt/35 bg-card p-5">
         <div class="mb-1.5 text-[13px] font-semibold text-danger-alt">Danger zone</div>
         <div class="mb-3.5 text-[11.5px] text-foreground/55">
