@@ -1,5 +1,6 @@
 package com.lifeos.vault.config;
 
+import com.lifeos.common.security.InternalApiKeyFilter;
 import com.lifeos.common.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final InternalApiKeyFilter internalApiKeyFilter;
 
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -24,8 +26,16 @@ public class SecurityConfig {
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
-            request -> request.requestMatchers("/error").permitAll().anyRequest().authenticated())
+            request ->
+                request
+                    .requestMatchers("/error")
+                    .permitAll()
+                    .requestMatchers("/v1/vault/internal/**")
+                    .hasAuthority("INTERNAL_SERVICE")
+                    .anyRequest()
+                    .authenticated())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(internalApiKeyFilter, JwtAuthenticationFilter.class)
         .build();
   }
 
