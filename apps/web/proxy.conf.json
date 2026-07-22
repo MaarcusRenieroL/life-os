@@ -13,5 +13,10 @@
     "target": "http://localhost:8004",
     "secure": false,
     "changeOrigin": true
+  },
+  "/v1/batches": {
+    "target": "http://localhost:8005",
+    "secure": false,
+    "changeOrigin": true
   }
 }
