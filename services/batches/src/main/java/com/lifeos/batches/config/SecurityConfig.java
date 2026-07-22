@@ -1,4 +1,4 @@
-package com.lifeos.vault.config;
+package com.lifeos.batches.config;
 
 import com.lifeos.common.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
