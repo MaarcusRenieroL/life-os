@@ -1,4 +1,4 @@
-package com.lifeos.auth.domains.dto.response;
+package com.lifeos.common.domains.dto.response;
 
 import java.time.Instant;
 import lombok.Builder;

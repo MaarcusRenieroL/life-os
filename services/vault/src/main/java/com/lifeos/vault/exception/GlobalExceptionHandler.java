@@ -1,6 +1,6 @@
 package com.lifeos.vault.exception;
 
-import com.lifeos.vault.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.ApiResponse;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

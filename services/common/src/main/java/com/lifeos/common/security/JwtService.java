@@ -1,11 +1,9 @@
-package com.lifeos.auth.service;
+package com.lifeos.common.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import java.util.Date;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,19 +14,6 @@ public class JwtService {
 
   @Value("${jwt.secret}")
   private String jwtSecret;
-
-  @Value("${jwt.access-token-expiration-ms}")
-  private int expirationMs;
-
-  public String generateAccessToken(UUID userId) {
-
-    return Jwts.builder()
-        .setSubject(userId.toString())
-        .setIssuedAt(new Date())
-        .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
-        .signWith(buildKey(), SignatureAlgorithm.HS256)
-        .compact();
-  }
 
   public UUID extractUserId(String token) {
     Claims claims =
@@ -47,7 +32,9 @@ public class JwtService {
     }
   }
 
-  private SecretKey buildKey() {
+  // Public so services that also issue tokens (auth-service) can reuse the exact
+  // same key derivation for signing, instead of duplicating this line themselves.
+  public SecretKey buildKey() {
     return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
   }
 }

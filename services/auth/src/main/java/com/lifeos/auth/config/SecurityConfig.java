@@ -1,6 +1,6 @@
 package com.lifeos.auth.config;
 
-import com.lifeos.auth.filter.JwtAuthenticationFilter;
+import com.lifeos.common.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

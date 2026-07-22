@@ -1,7 +1,7 @@
 package com.lifeos.core.controller;
 
 import com.lifeos.core.domains.dto.request.UpdateModuleSettingRequest;
-import com.lifeos.core.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.core.domains.dto.response.ModuleSettingResponse;
 import com.lifeos.core.service.ModuleSettingService;
 import java.util.List;

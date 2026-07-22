@@ -41,7 +41,7 @@ public class AuthService {
 
   private final PasswordEncoder passwordEncoder;
 
-  private final JwtService jwtService;
+  private final AccessTokenService accessTokenService;
   private final UserService userService;
 
   private final ChallengeStore challengeStore;
@@ -244,7 +244,7 @@ public class AuthService {
   }
 
   private AuthResponse issueTokens(DeviceSession deviceSession) {
-    String accessToken = jwtService.generateAccessToken(deviceSession.getUserId());
+    String accessToken = accessTokenService.generateAccessToken(deviceSession.getUserId());
 
     String rawRefreshToken = UUID.randomUUID().toString();
 

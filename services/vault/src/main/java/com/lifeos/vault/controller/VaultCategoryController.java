@@ -2,7 +2,7 @@ package com.lifeos.vault.controller;
 
 import com.lifeos.vault.domains.dto.request.CreateVaultCategoryRequest;
 import com.lifeos.vault.domains.dto.request.UpdateVaultCategoryRequest;
-import com.lifeos.vault.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.vault.domains.dto.response.VaultCategoryResponse;
 import com.lifeos.vault.service.VaultCategoryService;
 import jakarta.validation.Valid;

@@ -1,6 +1,6 @@
 package com.lifeos.vault.controller;
 
-import com.lifeos.vault.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.vault.domains.dto.response.HealthSummaryResponse;
 import com.lifeos.vault.service.HealthService;
 import lombok.RequiredArgsConstructor;

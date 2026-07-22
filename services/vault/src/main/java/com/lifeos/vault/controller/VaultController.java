@@ -5,7 +5,7 @@ import com.lifeos.vault.domains.dto.request.CreateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.request.MasterPasswordRequest;
 import com.lifeos.vault.domains.dto.request.UpdateMasterPasswordRequest;
 import com.lifeos.vault.domains.dto.request.UpdateVaultEntryRequest;
-import com.lifeos.vault.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.vault.domains.dto.response.BulkImportResultResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntryResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntrySummaryResponse;

@@ -2,7 +2,7 @@ package com.lifeos.vault.controller;
 
 import com.lifeos.vault.domains.dto.request.CreateCardRequest;
 import com.lifeos.vault.domains.dto.request.UpdateCardRequest;
-import com.lifeos.vault.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.vault.domains.dto.response.CardResponse;
 import com.lifeos.vault.service.CardService;
 import jakarta.validation.Valid;

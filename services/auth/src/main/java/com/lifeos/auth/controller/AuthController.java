@@ -8,7 +8,7 @@ import com.lifeos.auth.domains.dto.request.RefreshRequest;
 import com.lifeos.auth.domains.dto.request.UpdateProfileRequest;
 import com.lifeos.auth.domains.dto.request.UserLoginRequest;
 import com.lifeos.auth.domains.dto.request.UserRegisterRequest;
-import com.lifeos.auth.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.auth.domains.dto.response.AuthResponse;
 import com.lifeos.auth.domains.dto.response.ChallengeResponse;
 import com.lifeos.auth.domains.dto.response.UserProfileResponse;

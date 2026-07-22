@@ -3,7 +3,7 @@ package com.lifeos.vault.controller;
 import com.lifeos.vault.domains.dto.request.GenerateRecoveryCodesRequest;
 import com.lifeos.vault.domains.dto.request.RedeemRecoveryCodeRequest;
 import com.lifeos.vault.domains.dto.request.ResetWithRecoveryCodeRequest;
-import com.lifeos.vault.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.vault.domains.dto.response.RecoveryCodeStatusResponse;
 import com.lifeos.vault.domains.dto.response.RecoveryCodesResponse;
 import com.lifeos.vault.service.RecoveryCodeService;
