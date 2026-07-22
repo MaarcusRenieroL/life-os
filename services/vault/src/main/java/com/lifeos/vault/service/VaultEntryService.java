@@ -1,5 +1,6 @@
 package com.lifeos.vault.service;
 
+import com.lifeos.common.events.AuditEventType;
 import com.lifeos.vault.domains.dto.request.CreateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.request.UpdateVaultEntryRequest;
 import com.lifeos.vault.domains.dto.response.BulkImportResultResponse;
@@ -10,10 +11,12 @@ import com.lifeos.vault.domains.entity.VaultEntry;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
 import com.lifeos.vault.exception.VaultEntryNotFoundException;
 import com.lifeos.vault.exception.VaultLockedException;
+import com.lifeos.vault.publisher.AuditEventPublisher;
 import com.lifeos.vault.repository.VaultEntryRepository;
 import com.lifeos.vault.store.VaultKeyStore;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ public class VaultEntryService {
   private final VaultEntryRepository vaultEntryRepository;
   private final EncryptionService encryptionService;
   private final VaultKeyStore vaultKeyStore;
+  private final AuditEventPublisher auditEventPublisher;
 
   public List<VaultEntrySummaryResponse> getEntries(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -52,7 +56,13 @@ public class VaultEntryService {
     UUID userId = (UUID) authentication.getPrincipal();
     SecretKey key = requireUnlockedKey(userId);
 
-    vaultEntryRepository.save(buildEntry(userId, request, key));
+    VaultEntry entry = vaultEntryRepository.save(buildEntry(userId, request, key));
+
+    auditEventPublisher.publish(
+        userId,
+        AuditEventType.ENTRY_CREATED,
+        "New entry added: " + entry.getTitle(),
+        Map.of("entryId", entry.getId().toString(), "entryName", entry.getTitle()));
   }
 
   public void updateEntry(Authentication authentication, UUID id, UpdateVaultEntryRequest request) {
@@ -89,6 +99,12 @@ public class VaultEntryService {
     }
 
     vaultEntryRepository.save(entry);
+
+    auditEventPublisher.publish(
+        userId,
+        AuditEventType.ENTRY_UPDATED,
+        "Entry updated: " + entry.getTitle(),
+        Map.of("entryId", entry.getId().toString(), "entryName", entry.getTitle()));
   }
 
   /**
@@ -162,7 +178,19 @@ public class VaultEntryService {
   @Transactional
   public void deleteEntry(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
+
+    VaultEntry entry =
+        vaultEntryRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() -> new VaultEntryNotFoundException(id));
+
     vaultEntryRepository.deleteByIdAndUserId(id, userId);
+
+    auditEventPublisher.publish(
+        userId,
+        AuditEventType.ENTRY_DELETED,
+        "Entry deleted: " + entry.getTitle(),
+        Map.of("entryId", id.toString(), "entryName", entry.getTitle()));
   }
 
   private VaultEntrySummaryResponse toSummary(VaultEntry e) {

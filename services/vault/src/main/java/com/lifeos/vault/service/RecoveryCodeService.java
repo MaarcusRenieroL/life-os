@@ -1,5 +1,6 @@
 package com.lifeos.vault.service;
 
+import com.lifeos.common.events.AuditEventType;
 import com.lifeos.vault.domains.dto.response.RecoveryCodeStatusResponse;
 import com.lifeos.vault.domains.entity.PaymentCard;
 import com.lifeos.vault.domains.entity.RecoveryCode;
@@ -7,6 +8,7 @@ import com.lifeos.vault.domains.entity.VaultEntry;
 import com.lifeos.vault.domains.entity.VaultMasterPassword;
 import com.lifeos.vault.exception.InvalidMasterPasswordException;
 import com.lifeos.vault.exception.InvalidRecoveryCodeException;
+import com.lifeos.vault.publisher.AuditEventPublisher;
 import com.lifeos.vault.repository.PaymentCardRepository;
 import com.lifeos.vault.repository.RecoveryCodeRepository;
 import com.lifeos.vault.repository.VaultEntryRepository;
@@ -42,6 +44,7 @@ public class RecoveryCodeService {
   private final PasswordEncoder passwordEncoder;
   private final EncryptionService encryptionService;
   private final PasswordStrengthService passwordStrengthService;
+  private final AuditEventPublisher auditEventPublisher;
 
   @Transactional
   public List<String> generate(UUID userId, String currentPassword) {
@@ -56,8 +59,6 @@ public class RecoveryCodeService {
 
     recoveryCodeRepository.deleteAllByUserId(userId);
 
-    // Same key vault entries/cards are currently encrypted with - each code below gets
-    // its own sealed copy of this exact key, wrapped under a key derived from that code.
     SecretKey vaultKey =
         encryptionService.deriveKey(currentPassword, vaultMasterPassword.getSalt());
     String vaultKeyBase64 = Base64.getEncoder().encodeToString(vaultKey.getEncoded());
@@ -88,6 +89,9 @@ public class RecoveryCodeService {
 
     recoveryCodeRepository.saveAll(recoveryCodes);
 
+    auditEventPublisher.publish(
+        userId, AuditEventType.RECOVERY_CODE_GENERATED, "Generated recovery code", null);
+
     return plainTextCodes;
   }
 
@@ -108,6 +112,9 @@ public class RecoveryCodeService {
         recoveryCode.setUsedAt(Instant.now());
 
         recoveryCodeRepository.save(recoveryCode);
+
+        auditEventPublisher.publish(
+            userId, AuditEventType.RECOVERY_CODE_REDEEMED, "Recovery code redeemed", null);
 
         return;
       }
@@ -224,10 +231,13 @@ public class RecoveryCodeService {
 
         vaultMasterPasswordRepository.save(vaultMasterPassword);
 
-        // Every code in this batch (including the one just redeemed) wraps the old
-        // vault key, which no longer matches the newly re-encrypted data - all of them
-        // are invalidated here rather than only marking this one used.
         recoveryCodeRepository.deleteAllByUserId(userId);
+
+        auditEventPublisher.publish(
+            userId,
+            AuditEventType.RECOVERY_CODE_RESET,
+            "Master password reset via recovery code",
+            null);
 
         return;
       }

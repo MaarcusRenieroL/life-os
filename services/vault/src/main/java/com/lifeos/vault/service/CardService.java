@@ -1,5 +1,6 @@
 package com.lifeos.vault.service;
 
+import com.lifeos.common.events.AuditEventType;
 import com.lifeos.vault.domains.dto.request.CreateCardRequest;
 import com.lifeos.vault.domains.dto.request.UpdateCardRequest;
 import com.lifeos.vault.domains.dto.response.CardResponse;
@@ -7,9 +8,11 @@ import com.lifeos.vault.domains.entity.PaymentCard;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
 import com.lifeos.vault.exception.PaymentCardNotFoundException;
 import com.lifeos.vault.exception.VaultLockedException;
+import com.lifeos.vault.publisher.AuditEventPublisher;
 import com.lifeos.vault.repository.PaymentCardRepository;
 import com.lifeos.vault.store.VaultKeyStore;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +29,8 @@ public class CardService {
   private final VaultKeyStore vaultKeyStore;
 
   private final EncryptionService encryptionService;
+
+  private final AuditEventPublisher auditEventPublisher;
 
   public List<CardResponse> getCards(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -73,7 +78,15 @@ public class CardService {
             .billingZip(request.getBillingZip())
             .build();
 
-    return toResponse(paymentCardRepository.save(paymentCard), key);
+    PaymentCard saved = paymentCardRepository.save(paymentCard);
+
+    auditEventPublisher.publish(
+        userId,
+        AuditEventType.CARD_ADDED,
+        "New card added: " + saved.getNickname(),
+        Map.of("cardId", saved.getId().toString(), "cardLabel", saved.getNickname()));
+
+    return toResponse(saved, key);
   }
 
   public CardResponse updateCard(
@@ -113,6 +126,8 @@ public class CardService {
       card.setExpiryIv(expiryEnc.iv());
     }
 
+    auditEventPublisher.publish(userId, AuditEventType.ENTRY_UPDATED, "Card updated", null);
+
     return toResponse(paymentCardRepository.save(card), key);
   }
 
@@ -126,7 +141,18 @@ public class CardService {
   public void deleteCard(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 
+    PaymentCard card =
+        paymentCardRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() -> new PaymentCardNotFoundException(id));
+
     paymentCardRepository.deleteByIdAndUserId(id, userId);
+
+    auditEventPublisher.publish(
+        userId,
+        AuditEventType.CARD_DELETED,
+        "Card deleted: " + card.getNickname(),
+        Map.of("cardId", id.toString(), "cardLabel", card.getNickname()));
   }
 
   private SecretKey requireUnlockedKey(UUID userId) {

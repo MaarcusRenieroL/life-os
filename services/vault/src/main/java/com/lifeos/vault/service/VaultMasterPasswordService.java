@@ -1,5 +1,6 @@
 package com.lifeos.vault.service;
 
+import com.lifeos.common.events.AuditEventType;
 import com.lifeos.vault.domains.dto.response.VaultStatusResponse;
 import com.lifeos.vault.domains.entity.PaymentCard;
 import com.lifeos.vault.domains.entity.VaultEntry;
@@ -7,6 +8,7 @@ import com.lifeos.vault.domains.entity.VaultMasterPassword;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
 import com.lifeos.vault.exception.InvalidMasterPasswordException;
 import com.lifeos.vault.exception.MasterPasswordAlreadySetException;
+import com.lifeos.vault.publisher.AuditEventPublisher;
 import com.lifeos.vault.repository.PaymentCardRepository;
 import com.lifeos.vault.repository.RecoveryCodeRepository;
 import com.lifeos.vault.repository.VaultEntryRepository;
@@ -25,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class VaultMasterPasswordService {
 
-  private static final long VAULT_UNLOCK_DURATION_SECONDS = 900; // 15 minutes
+  private static final long VAULT_UNLOCK_DURATION_SECONDS = 900;
 
   private final VaultEntryRepository vaultEntryRepository;
   private final VaultMasterPasswordRepository vaultMasterPasswordRepository;
@@ -36,6 +38,8 @@ public class VaultMasterPasswordService {
   private final PasswordEncoder passwordEncoder;
   private final PasswordStrengthService passwordStrengthService;
   private final VaultKeyStore vaultKeyStore;
+
+  private final AuditEventPublisher auditEventPublisher;
 
   public void setup(UUID userId, String masterPassword) {
     if (vaultMasterPasswordRepository.existsByUserId(userId)) {
@@ -75,8 +79,10 @@ public class VaultMasterPasswordService {
     return VaultStatusResponse.builder()
         .hasMasterPassword(vaultMasterPassword != null)
         .unlocked(vaultKeyStore.get(userId) != null)
-        .masterPasswordStrength(vaultMasterPassword != null ? vaultMasterPassword.getStrength() : null)
-        .masterPasswordUpdatedAt(vaultMasterPassword != null ? vaultMasterPassword.getUpdatedAt() : null)
+        .masterPasswordStrength(
+            vaultMasterPassword != null ? vaultMasterPassword.getStrength() : null)
+        .masterPasswordUpdatedAt(
+            vaultMasterPassword != null ? vaultMasterPassword.getUpdatedAt() : null)
         .build();
   }
 
@@ -126,12 +132,10 @@ public class VaultMasterPasswordService {
     List<PaymentCard> cards = paymentCardRepository.findAllByUserId(userId);
 
     for (PaymentCard card : cards) {
-      // Each field re-encrypted independently, not one all-or-nothing check -
-      // passwordEncrypted in particular is never actually set by CreateCardRequest
-      // today, so requiring it to be non-null would skip every real card.
       if (card.getCardNumberEncrypted() != null) {
         String plainText =
-            encryptionService.decrypt(card.getCardNumberEncrypted(), card.getCardNumberIv(), oldKey);
+            encryptionService.decrypt(
+                card.getCardNumberEncrypted(), card.getCardNumberIv(), oldKey);
 
         var newEnc = encryptionService.encrypt(plainText, newKey);
 
@@ -140,7 +144,8 @@ public class VaultMasterPasswordService {
       }
 
       if (card.getCvvEncrypted() != null) {
-        String plainText = encryptionService.decrypt(card.getCvvEncrypted(), card.getCvvIv(), oldKey);
+        String plainText =
+            encryptionService.decrypt(card.getCvvEncrypted(), card.getCvvIv(), oldKey);
 
         var newEnc = encryptionService.encrypt(plainText, newKey);
 
@@ -177,14 +182,13 @@ public class VaultMasterPasswordService {
 
     vaultMasterPasswordRepository.save(existingMasterPassword);
 
-    // Every outstanding recovery code wraps the now-stale old vault key - redeeming one
-    // after this point would silently recover a key that can't decrypt current data, so
-    // they're invalidated rather than left to fail confusingly later.
     recoveryCodeRepository.deleteAllByUserId(userId);
 
-    // Re-unlock with the new key so the user isn't immediately prompted to
-    // unlock again right after changing their password.
     vaultKeyStore.save(
-        userId, new VaultKeyRecord(newKey, Instant.now().plusSeconds(VAULT_UNLOCK_DURATION_SECONDS)));
+        userId,
+        new VaultKeyRecord(newKey, Instant.now().plusSeconds(VAULT_UNLOCK_DURATION_SECONDS)));
+
+    auditEventPublisher.publish(
+        userId, AuditEventType.MASTER_PASSWORD_CHANGED, "Master Password Updated", null);
   }
 }
