@@ -4,3 +4,16 @@ server:
 spring:
   application:
     name: batches
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    schemas: batches_schema
+    default-schema: batches_schema
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: batches_services
+
+jwt:
+  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
