@@ -68,11 +68,14 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
       - "8001:8001"
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
 
   vault:
     build:
@@ -83,11 +86,14 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
       - "8002:8002"
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
 
   job-tracker:
     build:
@@ -136,9 +142,13 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
       - "8005:8005"
     depends_on:
+      kafka:
+        condition: service_started
       postgres:
         condition: service_healthy
 
