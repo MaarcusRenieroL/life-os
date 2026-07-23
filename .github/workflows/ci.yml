@@ -38,11 +38,17 @@ jobs:
           distribution: "temurin"
           cache: maven
 
+      - name: Install shared common module
+        run: cd services/common && mvn clean install -DskipTests
+
       - name: Run Auth Tests
         run: cd services/auth && mvn clean test
 
       - name: Run Vault Tests
         run: cd services/vault && mvn clean test
+
+      - name: Run Batches Tests
+        run: cd services/batches && mvn clean test
 
       - name: Run Job Tracker Tests
         run: cd services/job-tracker && mvn clean test
