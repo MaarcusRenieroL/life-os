@@ -67,14 +67,6 @@
       <div class="overflow-hidden rounded-[0.45rem] border border-border bg-card">
         <div class="border-b border-border px-4 py-3 text-[12.5px] font-semibold">Insights</div>
         <div class="flex items-center justify-between border-b border-border px-4 py-3">
-          <span class="text-xs text-foreground/65">2FA enabled</span>
-          <span class="text-xs">{{ twoFactorEnabledCount() }} / {{ stats().total }}</span>
-        </div>
-        <div class="flex items-center justify-between border-b border-border px-4 py-3">
-          <span class="text-xs text-foreground/65">2FA available but off</span>
-          <span class="text-xs text-warning">{{ twoFactorAvailableOffCount() }} accounts</span>
-        </div>
-        <div class="flex items-center justify-between border-b border-border px-4 py-3">
           <span class="text-xs text-foreground/65">Passwords older than 1yr</span>
           <span class="text-xs">{{ staleCount() }}</span>
         </div>

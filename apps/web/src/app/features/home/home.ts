@@ -3,12 +3,11 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { APP_MODULES, AppModuleConfig } from '../../core/config/app-modules';
-import { VaultEntrySummary } from '../../core/models/vault.model';
+import { HealthSummary, VaultEntrySummary } from '../../core/models/vault.model';
 import { AuthApiService } from '../../core/services/auth-api.service';
 import { CurrentUserService } from '../../core/services/current-user.service';
 import { TokenService } from '../../core/services/token.service';
 import { VaultApiService } from '../../core/services/vault-api.service';
-import { deriveMockSecurity } from '../../core/utils/vault-mock-security.util';
 import { finalize } from 'rxjs';
 
 interface ModuleTile {
@@ -50,6 +49,7 @@ export class Home implements OnInit {
   protected readonly today = new Date();
 
   protected readonly entries = signal<VaultEntrySummary[]>([]);
+  protected readonly healthSummary = signal<HealthSummary | null>(null);
 
   protected readonly firstName = computed(() => this.user().name.split(' ')[0]);
 
@@ -64,14 +64,9 @@ export class Home implements OnInit {
     () => APP_MODULES.filter((module) => module.enabled).length,
   );
 
-  private readonly security = computed(() => deriveMockSecurity(this.entries()));
-
   protected readonly vaultActionRequiredCount = computed(() => {
-    const security = this.security();
-    return this.entries().filter((entry) => {
-      const strength = security.get(entry.id)?.strength;
-      return strength === 'Weak' || strength === 'Reused';
-    }).length;
+    const summary = this.healthSummary();
+    return (summary?.weakCount ?? 0) + (summary?.duplicateCount ?? 0);
   });
 
   // TODO: wire to Job Tracker once that module has a frontend/backend integration.
@@ -103,7 +98,9 @@ export class Home implements OnInit {
       { title: 'Decide on Datadog offer', meta: 'due Friday', arrowClass: 'text-warning', link: '#' },
     ];
 
-    const weakEntry = this.entries().find((entry) => this.security().get(entry.id)?.strength === 'Weak');
+    const weakEntry = this.healthSummary()?.actionRequired.find((item) =>
+      item.issue.toLowerCase().includes('weak'),
+    );
     if (weakEntry) {
       items.push({
         title: `Change weak password — ${weakEntry.title}`,
@@ -126,6 +123,13 @@ export class Home implements OnInit {
   ngOnInit(): void {
     this.vaultApi.getEntries().subscribe({
       next: (entries) => this.entries.set(entries),
+      error: () => undefined,
+    });
+
+    // Best-effort - requires the vault to be unlocked (it decrypts passwords to
+    // score them), so this silently stays null if it's locked.
+    this.vaultApi.getHealthSummary().subscribe({
+      next: (summary) => this.healthSummary.set(summary),
       error: () => undefined,
     });
   }

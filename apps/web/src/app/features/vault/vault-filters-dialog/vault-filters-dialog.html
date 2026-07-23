@@ -29,27 +29,6 @@
     </div>
 
     <div>
-      <div class="mb-2 text-[11px] text-foreground/55">2FA STATUS</div>
-      <div class="flex flex-wrap gap-2">
-        @for (option of twoFaOptions; track option.value) {
-          <button
-            type="button"
-            (click)="toggleTwoFa(option.value)"
-            class="rounded-[0.45rem] border px-3 py-1.5 text-xs"
-            [class.border-primary/40]="draft.twoFactor.includes(option.value)"
-            [class.bg-primary/15]="draft.twoFactor.includes(option.value)"
-            [class.text-primary]="draft.twoFactor.includes(option.value)"
-            [class.border-border]="!draft.twoFactor.includes(option.value)"
-            [class.bg-background]="!draft.twoFactor.includes(option.value)"
-            [class.text-foreground/65]="!draft.twoFactor.includes(option.value)"
-          >
-            {{ option.label }}
-          </button>
-        }
-      </div>
-    </div>
-
-    <div>
       <div class="mb-2 text-[11px] text-foreground/55">CATEGORY</div>
       <div class="flex flex-wrap gap-2">
         @for (category of categories(); track category.id) {

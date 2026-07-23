@@ -171,13 +171,12 @@
       <div class="overflow-hidden overflow-x-auto rounded-[0.5rem] border border-border">
         <div class="min-w-[720px]">
           <div
-            class="grid grid-cols-[28px_2.2fr_1fr_1fr_0.7fr_1fr_90px] items-center gap-2 border-b border-border bg-card px-4 py-2.5 text-[11px] text-foreground/45"
+            class="grid grid-cols-[28px_2.2fr_1fr_1fr_1fr_90px] items-center gap-2 border-b border-border bg-card px-4 py-2.5 text-[11px] text-foreground/45"
           >
             <p-checkbox [ngModel]="allChecked()" (onChange)="toggleSelectAll()" [binary]="true" />
             <div>NAME</div>
             <div>CATEGORY</div>
             <div>STRENGTH</div>
-            <div>2FA</div>
             <div>UPDATED</div>
             <div></div>
           </div>
@@ -185,7 +184,7 @@
           @for (entry of filteredEntries(); track entry.id) {
             <div
               (click)="openEntry(entry.id)"
-              class="grid cursor-pointer grid-cols-[28px_2.2fr_1fr_1fr_0.7fr_1fr_90px] items-center gap-2 border-b border-border px-4 py-3 transition-colors duration-150 last:border-b-0 hover:bg-accent/20"
+              class="grid cursor-pointer grid-cols-[28px_2.2fr_1fr_1fr_1fr_90px] items-center gap-2 border-b border-border px-4 py-3 transition-colors duration-150 last:border-b-0 hover:bg-accent/20"
             >
               <div (click)="$event.stopPropagation()">
                 <p-checkbox
@@ -221,11 +220,8 @@
                 <span class="truncate">{{ categoryName(entry.categoryId) }}</span>
               </div>
               <div class="flex items-center gap-1.5">
-                <span class="h-1.5 w-1.5 rounded-full" [class]="strengthDotClass(security(entry).strength)"></span>
-                <span class="text-[11px]" [class]="strengthColorClass(security(entry).strength)">{{ security(entry).strength }}</span>
-              </div>
-              <div class="text-[11px]" [class.text-primary]="security(entry).twoFactor === 'enabled'" [class.text-foreground/30]="security(entry).twoFactor !== 'enabled'">
-                {{ security(entry).twoFactor === 'enabled' ? 'on' : 'off' }}
+                <span class="h-1.5 w-1.5 rounded-full" [class]="strengthDotClass(strength(entry))"></span>
+                <span class="text-[11px]" [class]="strengthColorClass(strength(entry))">{{ strength(entry) }}</span>
               </div>
               <div class="text-[11px] text-foreground/50">{{ entry.updatedAt | date: 'MMM d' }}</div>
               <div class="flex items-center justify-end gap-0.5" (click)="$event.stopPropagation()">
@@ -335,13 +331,7 @@
             <div class="flex flex-wrap justify-between gap-2 border-t border-border pt-3 text-[11px] text-foreground/55">
               <span>
                 Strength:
-                <span [class]="strengthColorClass(security(entry).strength)">{{ security(entry).strength }}</span>
-              </span>
-              <span>
-                2FA:
-                <span [class.text-primary]="security(entry).twoFactor === 'enabled'" [class.text-foreground/30]="security(entry).twoFactor !== 'enabled'">
-                  {{ security(entry).twoFactor === 'enabled' ? 'on' : 'off' }}
-                </span>
+                <span [class]="strengthColorClass(strength(entry))">{{ strength(entry) }}</span>
               </span>
               <span>Updated {{ entry.updatedAt | date: 'MMM d, y' }}</span>
             </div>

@@ -2,8 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { VaultApiService } from '../../../core/services/vault-api.service';
-import { HealthSummary, VaultEntrySummary } from '../../../core/models/vault.model';
-import { MockEntrySecurity, deriveMockSecurity } from '../../../core/utils/vault-mock-security.util';
+import { HealthSummary } from '../../../core/models/vault.model';
 
 interface ActionItem {
   id: string;
@@ -32,16 +31,6 @@ export class VaultHealth implements OnInit {
 
   protected readonly summary = signal<HealthSummary | null>(null);
   protected readonly loading = signal(true);
-
-  // The health score/stats/action-required/age-buckets all come from the real
-  // GET /v1/vault/health/summary endpoint now. 2FA insights are the one thing
-  // still mocked below - VaultEntry has no column tracking 2FA status yet (see
-  // HealthService's class-level TODO on the backend), so entries + the same
-  // mock-security util Vault/entries already uses are kept around just for that.
-  protected readonly entries = signal<VaultEntrySummary[]>([]);
-  private readonly security = computed<Map<string, MockEntrySecurity>>(() =>
-    deriveMockSecurity(this.entries()),
-  );
 
   protected readonly stats = computed(() => {
     const summary = this.summary();
@@ -98,16 +87,6 @@ export class VaultHealth implements OnInit {
     }),
   );
 
-  protected readonly twoFactorEnabledCount = computed(() => {
-    const security = this.security();
-    return this.entries().filter((entry) => security.get(entry.id)?.twoFactor === 'enabled').length;
-  });
-
-  protected readonly twoFactorAvailableOffCount = computed(() => {
-    const security = this.security();
-    return this.entries().filter((entry) => security.get(entry.id)?.twoFactor === 'available-off').length;
-  });
-
   // The backend's age buckets already exclude NOTE-type / password-less entries
   // (see HealthService) - "1y+" is exactly what the design calls "stale".
   protected readonly staleCount = computed(
@@ -140,13 +119,6 @@ export class VaultHealth implements OnInit {
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
-    });
-
-    // Only needed for the still-mocked 2FA insights above - not the source of
-    // the score/stats/action-required/age-buckets anymore.
-    this.vaultApi.getEntries().subscribe({
-      next: (entries) => this.entries.set(entries),
-      error: () => undefined,
     });
   }
 }

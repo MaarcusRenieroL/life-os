@@ -14,8 +14,8 @@ import { ClipboardService } from '../../../core/services/clipboard.service';
 import { VaultApiService } from '../../../core/services/vault-api.service';
 import { VaultCategoryApiService } from '../../../core/services/vault-category-api.service';
 import { VaultStateService } from '../../../core/services/vault-state.service';
-import { VaultCategory, VaultEntryDetail, VaultEntrySummary } from '../../../core/models/vault.model';
-import { deriveMockSecurity, MockEntrySecurity } from '../../../core/utils/vault-mock-security.util';
+import { HealthSummary, VaultCategory, VaultEntryDetail, VaultEntrySummary } from '../../../core/models/vault.model';
+import { buildEntryStrengthMap, EntryStrengthLabel } from '../../../core/utils/vault-entry-security.util';
 import { VaultCategoryManager } from '../vault-category-manager/vault-category-manager';
 import { VaultFiltersDialog } from '../vault-filters-dialog/vault-filters-dialog';
 import { emptyVaultFilters, isVaultFiltersEmpty, VaultFilters } from '../vault-filters-dialog/vault-filters-dialog.model';
@@ -72,15 +72,16 @@ export class VaultEntryList implements OnInit {
   protected readonly showPassword = signal(false);
   protected readonly movingToFolder = signal(false);
 
-  protected readonly mockSecurity = computed<Map<string, MockEntrySecurity>>(() =>
-    deriveMockSecurity(this.entries()),
+  protected readonly healthSummary = signal<HealthSummary | null>(null);
+  protected readonly entryStrength = computed(() =>
+    buildEntryStrengthMap(this.healthSummary()?.actionRequired ?? []),
   );
 
   protected readonly filteredEntries = computed(() => {
     const query = this.search().trim().toLowerCase();
     const chip = this.quickChip();
     const filters = this.filters();
-    const security = this.mockSecurity();
+    const strengthMap = this.entryStrength();
 
     return this.entries().filter((entry) => {
       if (query) {
@@ -99,11 +100,8 @@ export class VaultEntryList implements OnInit {
         return false;
       }
 
-      const entrySecurity = security.get(entry.id);
-      if (filters.strengths.length > 0 && !filters.strengths.includes(entrySecurity?.strength ?? 'Strong')) {
-        return false;
-      }
-      if (filters.twoFactor.length > 0 && !filters.twoFactor.includes(entrySecurity?.twoFactor ?? 'not-supported')) {
+      const strength = strengthMap.get(entry.id) ?? 'Strong';
+      if (filters.strengths.length > 0 && !filters.strengths.includes(strength)) {
         return false;
       }
       if (filters.categoryIds.length > 0 && !filters.categoryIds.includes(entry.categoryId ?? '')) {
@@ -122,20 +120,11 @@ export class VaultEntryList implements OnInit {
   });
 
   protected readonly stats = computed(() => {
-    const security = this.mockSecurity();
-    const entries = this.entries();
-    let weak = 0;
-    let duplicate = 0;
-    let actionRequired = 0;
+    const summary = this.healthSummary();
+    const weak = summary?.weakCount ?? 0;
+    const duplicate = summary?.duplicateCount ?? 0;
 
-    for (const entry of entries) {
-      const value = security.get(entry.id);
-      if (value?.strength === 'Weak') weak++;
-      if (value?.strength === 'Reused') duplicate++;
-      if (value?.strength === 'Weak' || value?.strength === 'Reused') actionRequired++;
-    }
-
-    return { total: entries.length, weak, duplicate, actionRequired };
+    return { total: this.entries().length, weak, duplicate, actionRequired: weak + duplicate };
   });
 
   protected readonly allChecked = computed(
@@ -164,6 +153,13 @@ export class VaultEntryList implements OnInit {
       },
       error: () => this.loading.set(false),
     });
+
+    // Best-effort - if the vault is locked this 403s and strength badges just
+    // fall back to "Strong" via entryStrength()'s empty-map default.
+    this.vaultApi.getHealthSummary().subscribe({
+      next: (summary) => this.healthSummary.set(summary),
+      error: () => undefined,
+    });
   }
 
   refreshCategories(): void {
@@ -180,17 +176,17 @@ export class VaultEntryList implements OnInit {
     return this.categories().find((c) => c.id === id)?.color ?? null;
   }
 
-  security(entry: VaultEntrySummary): MockEntrySecurity {
-    return this.mockSecurity().get(entry.id) ?? { strength: 'Strong', twoFactor: 'not-supported' };
+  strength(entry: VaultEntrySummary): EntryStrengthLabel {
+    return this.entryStrength().get(entry.id) ?? 'Strong';
   }
 
-  strengthColorClass(strength: MockEntrySecurity['strength']): string {
+  strengthColorClass(strength: EntryStrengthLabel): string {
     if (strength === 'Weak') return 'text-warning';
     if (strength === 'Reused') return 'text-destructive';
     return 'text-primary';
   }
 
-  strengthDotClass(strength: MockEntrySecurity['strength']): string {
+  strengthDotClass(strength: EntryStrengthLabel): string {
     if (strength === 'Weak') return 'bg-warning';
     if (strength === 'Reused') return 'bg-destructive';
     return 'bg-primary';
