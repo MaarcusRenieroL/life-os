@@ -3,10 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
+import { forkJoin } from 'rxjs';
 
 import { BulkImportResult, VaultEntryWriteRequest } from '../../../core/models/vault.model';
 import { VaultApiService } from '../../../core/services/vault-api.service';
 import { BackupApiService } from '../../../core/services/backup-api.service';
+import { AuditLogApiService } from '../../../core/services/audit-log-api.service';
 import { DeleteAccountConfirmDialog } from '../delete-account-confirm-dialog/delete-account-confirm-dialog';
 
 type BackupFrequency = 'daily' | 'weekly' | 'off';
@@ -27,6 +29,7 @@ const BACKUP_FREQUENCY_OPTIONS: { label: string; value: BackupFrequency }[] = [
 export class DataManagementPage implements OnInit {
   private readonly vaultApi = inject(VaultApiService);
   private readonly backupApi = inject(BackupApiService);
+  private readonly auditLogApi = inject(AuditLogApiService);
 
   private readonly csvFileInput = viewChild<HTMLInputElement>('csvFileInput');
 
@@ -151,21 +154,25 @@ export class DataManagementPage implements OnInit {
   }
 
   /**
-   * Bundles the real vault export (entries + cards) into a single JSON download.
-   * "auditLog" and "settings" are still placeholders - those areas have no backend yet.
+   * Bundles the real vault export, cards, and audit log into a single JSON
+   * download. "settings" stays an empty placeholder - there's no settings/
+   * preferences feature anywhere in the app yet, not specific to this page.
    */
   protected downloadEverything(): void {
     if (this.downloadingEverything()) return;
     this.downloadingEverything.set(true);
 
-    this.vaultApi.exportVault().subscribe({
-      next: (data) => {
+    forkJoin({
+      vault: this.vaultApi.exportVault(),
+      auditLog: this.auditLogApi.getEvents(),
+    }).subscribe({
+      next: ({ vault, auditLog }) => {
         this.downloadJson(
           {
-            vault: data.entries,
-            cards: data.cards,
-            auditLog: [], // TODO(backend): no audit log API yet.
-            settings: {}, // TODO(backend): no settings API yet.
+            vault: vault.entries,
+            cards: vault.cards,
+            auditLog,
+            settings: {},
           },
           'life-os-data-export.json',
         );
