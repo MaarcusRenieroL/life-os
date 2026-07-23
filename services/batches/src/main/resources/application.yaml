@@ -15,6 +15,8 @@ spring:
     consumer:
       group-id: batches_services
   batch:
+    job:
+      enabled: false
     jdbc:
       initialize-schema: never
       table-prefix: batches_schema.BATCH_
