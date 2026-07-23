@@ -1,6 +1,7 @@
 package com.lifeos.batches.controller;
 
 import com.lifeos.batches.config.VaultBackupClient;
+import com.lifeos.batches.domains.dto.response.BackupSummaryResponse;
 import com.lifeos.batches.domains.entity.VaultBackup;
 import com.lifeos.batches.exception.VaultBackupNotFoundException;
 import com.lifeos.batches.repository.VaultBackupRepository;
@@ -13,6 +14,7 @@ import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +45,23 @@ public class BackupController {
     jobOperator.start(vaultBackupJob, params);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Backup Started"));
+  }
+
+  @GetMapping("/latest")
+  public ResponseEntity<ApiResponse<BackupSummaryResponse>> latestBackup(
+      Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    BackupSummaryResponse summary =
+        vaultBackupRepository
+            .findFirstByUserIdOrderByCreatedAtDesc(userId)
+            .map(backup -> BackupSummaryResponse.builder()
+                .id(backup.getId())
+                .createdAt(backup.getCreatedAt())
+                .build())
+            .orElse(null);
+
+    return ResponseEntity.ok(ApiResponse.success(summary, "Latest backup retrieved successfully"));
   }
 
   @PostMapping("/restore")

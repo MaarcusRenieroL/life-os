@@ -29,3 +29,9 @@ internal:
 
 vault:
   internal-base-url: ${VAULT_INTERNAL_BASE_URL:http://vault:8002}
+
+owner:
+  user-id: ${OWNER_USER_ID}
+
+backup:
+  cron: ${BACKUP_CRON:0 0 3 * * *}
