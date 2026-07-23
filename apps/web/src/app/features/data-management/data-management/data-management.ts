@@ -1,4 +1,4 @@
-import { Component, inject, signal, viewChild } from '@angular/core';
+import { Component, OnInit, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -6,6 +6,7 @@ import { SelectModule } from 'primeng/select';
 
 import { BulkImportResult, VaultEntryWriteRequest } from '../../../core/models/vault.model';
 import { VaultApiService } from '../../../core/services/vault-api.service';
+import { BackupApiService } from '../../../core/services/backup-api.service';
 import { DeleteAccountConfirmDialog } from '../delete-account-confirm-dialog/delete-account-confirm-dialog';
 
 type BackupFrequency = 'daily' | 'weekly' | 'off';
@@ -23,18 +24,21 @@ const BACKUP_FREQUENCY_OPTIONS: { label: string; value: BackupFrequency }[] = [
   templateUrl: './data-management.html',
   styleUrl: './data-management.scss',
 })
-export class DataManagementPage {
+export class DataManagementPage implements OnInit {
   private readonly vaultApi = inject(VaultApiService);
+  private readonly backupApi = inject(BackupApiService);
 
   private readonly csvFileInput = viewChild<HTMLInputElement>('csvFileInput');
 
   protected readonly backupFrequencyOptions = BACKUP_FREQUENCY_OPTIONS;
 
-  // Mock, local-only preference - no backend for backup frequency yet.
+  // Local-only preference - the scheduler runs on a fixed cron, there's no
+  // per-user frequency setting on the backend yet.
   protected readonly backupFrequency = signal<BackupFrequency>('daily');
 
-  // TODO(backend): no backup/restore API yet, this timestamp is static mock copy.
-  protected readonly lastBackupLabel = 'Today, 3:00 AM';
+  protected readonly lastBackupLabel = signal('No backups yet');
+  protected readonly restoringBackup = signal(false);
+  protected readonly restoreError = signal<string | null>(null);
 
   protected readonly exportingVault = signal(false);
   protected readonly downloadingEverything = signal(false);
@@ -46,6 +50,23 @@ export class DataManagementPage {
 
   protected readonly importResult = signal<BulkImportResult | null>(null);
   protected readonly importError = signal<string | null>(null);
+
+  ngOnInit(): void {
+    this.loadLatestBackup();
+  }
+
+  private loadLatestBackup(): void {
+    this.backupApi.getLatest().subscribe({
+      next: (summary) => {
+        if (summary) {
+          this.lastBackupLabel.set(new Date(summary.createdAt).toLocaleString());
+        }
+      },
+      error: () => {
+        // leave the default "No backups yet" label
+      },
+    });
+  }
 
   /**
    * Pulls the real, fully-decrypted export (entries + cards) from the backend and
@@ -157,7 +178,25 @@ export class DataManagementPage {
   }
 
   protected openRestoreDialog(): void {
+    this.restoreError.set(null);
     this.restoreDialogVisible.set(true);
+  }
+
+  protected restoreFromBackup(): void {
+    if (this.restoringBackup()) return;
+    this.restoringBackup.set(true);
+    this.restoreError.set(null);
+
+    this.backupApi.restoreBackup().subscribe({
+      next: () => {
+        this.restoringBackup.set(false);
+        this.restoreDialogVisible.set(false);
+      },
+      error: (error) => {
+        this.restoringBackup.set(false);
+        this.restoreError.set(error?.error?.message ?? 'Unable to restore from backup.');
+      },
+    });
   }
 
   protected openDeleteAccountDialog(): void {

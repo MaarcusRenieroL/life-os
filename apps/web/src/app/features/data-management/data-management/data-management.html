@@ -48,7 +48,7 @@
     <div class="flex items-center justify-between py-2.5">
       <div>
         <div class="text-[12.5px]">Last automatic backup</div>
-        <div class="text-[11px] text-foreground/50">{{ lastBackupLabel }}</div>
+        <div class="text-[11px] text-foreground/50">{{ lastBackupLabel() }}</div>
       </div>
       <p-button label="Restore from backup" severity="secondary" (onClick)="openRestoreDialog()" />
     </div>
@@ -122,10 +122,25 @@
     <div class="pt-2">
       <div class="mb-2 text-[15px] font-semibold">Restore from backup</div>
       <p class="mb-4 text-[12.5px] leading-relaxed text-foreground/65">
-        Restoring from a backup is not available yet - there is no backup/restore API for this action yet.
+        This replaces your current vault entries, cards, and categories with the contents of your
+        most recent backup ({{ lastBackupLabel() }}). This cannot be undone.
       </p>
-      <div class="flex justify-end">
-        <p-button label="Close" severity="secondary" (onClick)="restoreDialogVisible.set(false)" />
+      @if (restoreError()) {
+        <p class="mb-4 text-[12.5px] leading-relaxed text-danger-alt">{{ restoreError() }}</p>
+      }
+      <div class="flex justify-end gap-2">
+        <p-button
+          label="Cancel"
+          severity="secondary"
+          [disabled]="restoringBackup()"
+          (onClick)="restoreDialogVisible.set(false)"
+        />
+        <p-button
+          label="Restore"
+          severity="danger"
+          [loading]="restoringBackup()"
+          (onClick)="restoreFromBackup()"
+        />
       </div>
     </div>
   </p-dialog>
