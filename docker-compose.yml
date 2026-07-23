@@ -148,6 +148,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      VAULT_INTERNAL_BASE_URL: http://vault:8002
     ports:
       - "8005:8005"
     depends_on:

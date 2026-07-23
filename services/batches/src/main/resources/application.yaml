@@ -21,3 +21,9 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+
+internal:
+  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+
+vault:
+  internal-base-url: ${VAULT_INTERNAL_BASE_URL:http://vault:8002}
