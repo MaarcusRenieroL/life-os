@@ -68,16 +68,12 @@ public class GmailOAuthService {
             .orElseGet(() -> GmailOAuthToken.builder().userId(userId).build());
 
     gmailOAuthToken.setAccessTokenEncrypted(encryptionService.encrypt(response.getAccessToken()));
-    gmailOAuthToken.setRefreshTokenEncrypted(
-        encryptionService.encrypt(response.getRefreshToken()));
+    gmailOAuthToken.setRefreshTokenEncrypted(encryptionService.encrypt(response.getRefreshToken()));
     gmailOAuthToken.setExpiresAt(Instant.now().plusSeconds(expiresInSeconds(response)));
 
     gmailOAuthRepository.save(gmailOAuthToken);
   }
 
-  // Returns a currently-valid access token, transparently refreshing it via
-  // the stored refresh_token if it's expired (or about to, within 60s). This
-  // is what the scheduled poller will call before every Gmail API request.
   public String getValidAccessToken() {
     UUID userId = UUID.fromString(ownerUserId);
 
