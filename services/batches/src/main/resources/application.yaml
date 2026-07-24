@@ -35,3 +35,11 @@ owner:
 
 backup:
   cron: ${BACKUP_CRON:0 0 3 * * *}
+
+encryption:
+  secret: ${GMAIL_ENCRYPTION_SECRET}
+
+gmail:
+  client-id: ${GMAIL_CLIENT_ID}
+  client-secret: ${GMAIL_CLIENT_SECRET}
+  redirect-uri: ${GMAIL_REDIRECT_URI:http://localhost:8005/v1/batches/gmail/callback}

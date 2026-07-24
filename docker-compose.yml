@@ -151,6 +151,10 @@ services:
       VAULT_INTERNAL_BASE_URL: http://vault:8002
       OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
       BACKUP_CRON: ${BACKUP_CRON:-0 0 3 * * *}
+      GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
+      GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
+      GMAIL_REDIRECT_URI: ${GMAIL_REDIRECT_URI:-http://localhost:8005/v1/batches/gmail/callback}
+      GMAIL_ENCRYPTION_SECRET: ${GMAIL_ENCRYPTION_SECRET:-zjQIMjy7Pp+dEPaXnwwFqETV64YQSQBYJYelXbSi5qc=}
     ports:
       - "8005:8005"
     depends_on:
