@@ -7,6 +7,7 @@ import com.lifeos.finance_tracker.domains.dto.response.AccountResponse;
 import com.lifeos.finance_tracker.domains.entity.Account;
 import com.lifeos.finance_tracker.exception.AccountNotFoundException;
 import com.lifeos.finance_tracker.repository.AccountRepository;
+import com.lifeos.common.security.EncryptionService;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
