@@ -1,0 +1,123 @@
+export type VaultEntryType = 'LOGIN' | 'CARD' | 'NOTE';
+
+export type PasswordStrength = 'VERY_WEAK' | 'WEAK' | 'FAIR' | 'STRONG' | 'VERY_STRONG';
+
+export interface VaultStatus {
+  hasMasterPassword: boolean;
+  unlocked: boolean;
+  masterPasswordStrength: PasswordStrength | null;
+  masterPasswordUpdatedAt: string | null;
+}
+
+export interface MasterPasswordRequest {
+  masterPassword: string;
+}
+
+export interface VaultEntrySummary {
+  id: string;
+  type: VaultEntryType;
+  title: string;
+  email: string | null;
+  username: string | null;
+  url: string | null;
+  icon: string | null;
+  categoryId: string | null;
+  favorite: boolean;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VaultEntryDetail extends VaultEntrySummary {
+  password: string | null;
+  notes: string | null;
+}
+
+export interface VaultEntryWriteRequest {
+  type: VaultEntryType;
+  title: string;
+  email?: string | null;
+  username?: string | null;
+  url?: string | null;
+  icon?: string | null;
+  password?: string | null;
+  notes?: string | null;
+  categoryId?: string | null;
+  favorite?: boolean;
+  expiresAt?: string | null;
+}
+
+export interface VaultCategory {
+  id: string;
+  name: string;
+  color: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VaultCategoryWriteRequest {
+  name: string;
+  color?: string | null;
+}
+
+export interface PasswordAgeBucket {
+  label: string;
+  count: number;
+}
+
+export interface ActionRequiredEntry {
+  id: string;
+  title: string;
+  issue: string;
+}
+
+export interface HealthSummary {
+  score: number;
+  totalCount: number;
+  weakCount: number;
+  duplicateCount: number;
+  compromisedCount: number;
+  ageBuckets: PasswordAgeBucket[];
+  actionRequired: ActionRequiredEntry[];
+}
+
+export interface RecoveryCodesResponse {
+  codes: string[];
+}
+
+export interface RecoveryCodeStatus {
+  id: string;
+  used: boolean;
+  usedAt: string | null;
+  createdAt: string;
+}
+
+export interface VaultExportCard {
+  id: string;
+  nickname: string | null;
+  network: string;
+  cardNumber: string;
+  cvv: string;
+  expiry: string | null;
+  cardHolderName: string | null;
+  billingZip: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VaultExport {
+  entries: VaultEntryDetail[];
+  cards: VaultExportCard[];
+  exportedAt: string;
+}
+
+export interface BulkImportRowError {
+  rowIndex: number;
+  message: string;
+}
+
+export interface BulkImportResult {
+  importedCount: number;
+  failedCount: number;
+  errors: BulkImportRowError[];
+}

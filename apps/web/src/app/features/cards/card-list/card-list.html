@@ -1,0 +1,53 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <div class="mb-[22px] flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-[22px] font-semibold tracking-tight">Cards</h1>
+      <p class="mt-1 text-[12.5px] text-foreground/55">
+        Separate vault section — not shown in default password search
+      </p>
+    </div>
+    <p-button label="+ Add card" (onClick)="openAddCard()" />
+  </div>
+
+  @if (loading()) {
+    <p class="text-sm text-muted-foreground">Loading cards…</p>
+  } @else {
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      @for (card of cards(); track card.id) {
+        <div
+          class="group relative flex h-[150px] flex-col justify-between rounded-[0.45rem] border border-border bg-gradient-to-br from-card to-[oklch(0.2_0.02_255)] p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-[0_12px_32px_oklch(0_0_0_/_25%)]"
+        >
+          <p-button
+            icon="pi pi-trash"
+            severity="danger"
+            [text]="true"
+            [rounded]="true"
+            pTooltip="Delete card"
+            tooltipPosition="top"
+            styleClass="!absolute !top-1.5 !right-1.5 opacity-0 group-hover:opacity-100"
+            (onClick)="deleteCard(card.id)"
+          />
+          <div class="flex justify-between">
+            <span class="text-[11px] text-foreground/55">{{ card.nickname.toUpperCase() }}</span>
+            <span class="text-[11px] text-primary">{{ card.network.toUpperCase() }}</span>
+          </div>
+          <div class="text-base tracking-[0.12em]">{{ card.maskedNumber }}</div>
+          <div class="flex justify-between text-[11px] text-foreground/55">
+            <span>{{ card.cardholderName }}</span>
+            <span>EXP {{ card.expiry }}</span>
+          </div>
+        </div>
+      }
+
+      <button
+        type="button"
+        (click)="openAddCard()"
+        class="flex h-[150px] cursor-pointer items-center justify-center rounded-[0.45rem] border border-dashed border-border p-5 text-xs text-foreground/40 transition-colors duration-150 hover:border-primary/40 hover:text-foreground/65"
+      >
+        + add credit or debit card
+      </button>
+    </div>
+  }
+
+  <app-add-card-dialog [(visible)]="addCardVisible" (saved)="addCard($event)" />
+</main>

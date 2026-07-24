@@ -1,6 +1,6 @@
 package com.lifeos.auth.config;
 
-import com.lifeos.auth.filter.JwtAuthenticationFilter;
+import com.lifeos.common.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,14 +21,10 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
     return httpSecurity
-        // disabling csrf
         .csrf(csrf -> csrf.disable())
-        // setting session creation policy to stateless
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
-            // making sure register and login api endpoints are accessible to public but the rest
-            // are not
             request ->
                 request
                     .requestMatchers(
@@ -39,7 +35,6 @@ public class SecurityConfig {
                     .permitAll()
                     .anyRequest()
                     .authenticated())
-        // adding auth filter
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .build();
   }

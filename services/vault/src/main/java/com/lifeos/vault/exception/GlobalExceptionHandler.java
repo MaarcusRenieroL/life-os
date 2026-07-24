@@ -1,6 +1,6 @@
 package com.lifeos.vault.exception;
 
-import com.lifeos.vault.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.ApiResponse;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +35,34 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiResponse<Void>> handleMasterPasswordAlreadySet(
       MasterPasswordAlreadySetException exception) {
     return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(VaultCategoryNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleVaultCategoryNotFound(
+      VaultCategoryNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(VaultCategoryAlreadyExistsException.class)
+  public ResponseEntity<ApiResponse<Void>> handleVaultCategoryAlreadyExists(
+      VaultCategoryAlreadyExistsException exception) {
+    return ResponseEntity.status(HttpStatus.CONFLICT)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(PaymentCardNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handlePaymentCardNotFound(
+      PaymentCardNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(InvalidRecoveryCodeException.class)
+  public ResponseEntity<ApiResponse<Void>> handleInvalidRecoveryCode(
+      InvalidRecoveryCodeException exception) {
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
         .body(ApiResponse.error(exception.getMessage()));
   }
 

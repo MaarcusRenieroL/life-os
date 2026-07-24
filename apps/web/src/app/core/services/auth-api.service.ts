@@ -2,7 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
 
-import { ApiResponse, AuthResponse, LoginRequest } from '../models/auth.model';
+import {
+  ApiResponse,
+  AuthResponse,
+  DeviceSession,
+  LoginRequest,
+  UserProfileResponse,
+} from '../models/auth.model';
 import { TokenService } from './token.service';
 
 @Injectable({ providedIn: 'root' })
@@ -31,5 +37,46 @@ export class AuthApiService {
     return this.http
       .post<ApiResponse<void>>(`${this.baseUrl}/logout`, { deviceSessionId })
       .pipe(map(() => undefined));
+  }
+
+  refresh(): Observable<AuthResponse> {
+    return this.http
+      .post<ApiResponse<AuthResponse>>(`${this.baseUrl}/refresh`, {
+        refreshToken: this.tokenService.getRefreshToken(),
+      })
+      .pipe(
+        map((response) => response.data),
+        tap((auth) =>
+          this.tokenService.setTokens(auth.accessToken, auth.refreshToken, auth.deviceSessionId),
+        ),
+      );
+  }
+
+  listSessions(): Observable<DeviceSession[]> {
+    return this.http
+      .get<ApiResponse<DeviceSession[]>>(`${this.baseUrl}/sessions`)
+      .pipe(map((response) => response.data));
+  }
+
+  revokeSession(sessionId: string): Observable<void> {
+    return this.http
+      .post<ApiResponse<void>>(`${this.baseUrl}/sessions/${sessionId}/revoke`, {})
+      .pipe(map(() => undefined));
+  }
+
+  getMe(): Observable<UserProfileResponse> {
+    return this.http
+      .get<ApiResponse<UserProfileResponse>>(`${this.baseUrl}/me`)
+      .pipe(map((response) => response.data));
+  }
+
+  updateProfile(name: string): Observable<UserProfileResponse> {
+    return this.http
+      .put<ApiResponse<UserProfileResponse>>(`${this.baseUrl}/me`, { name })
+      .pipe(map((response) => response.data));
+  }
+
+  deleteAccount(): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/me`).pipe(map(() => undefined));
   }
 }

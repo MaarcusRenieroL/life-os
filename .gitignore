@@ -25,6 +25,11 @@ Thumbs.db
 *.swp
 *.swo
 
+.classpath
+.factorypath
+.project
+.settings/
+
 src-tauri/target
 
 venv/

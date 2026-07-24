@@ -1,0 +1,108 @@
+<p-dialog
+  [(visible)]="visible"
+  header="Manage categories"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '26rem' }"
+>
+  <div class="flex flex-col gap-4 font-mono">
+    <div>
+      <div class="mb-2 text-[11px] tracking-[0.03em] text-foreground/55 uppercase">Categories</div>
+
+      @if (loading()) {
+        <p class="text-[12.5px] text-foreground/55">Loading…</p>
+      } @else if (categories().length === 0) {
+        <div class="rounded-[0.45rem] border border-dashed border-border px-3 py-5 text-center text-[12.5px] text-foreground/45">
+          No categories yet — add your first one below.
+        </div>
+      } @else {
+        <ul class="flex flex-col gap-1.5">
+          @for (category of categories(); track category.id) {
+            <li
+              class="flex items-center gap-2.5 rounded-[0.45rem] border px-3 py-2"
+              [class.border-primary/40]="editingId() === category.id"
+              [class.bg-primary/10]="editingId() === category.id"
+              [class.border-border]="editingId() !== category.id"
+              [class.bg-card]="editingId() !== category.id"
+            >
+              <span class="h-2 w-2 shrink-0 rounded-full" [style.background-color]="category.color"></span>
+              <span class="flex-1 truncate text-[12.5px] text-foreground">{{ category.name }}</span>
+              <button
+                type="button"
+                (click)="startEdit(category)"
+                class="cursor-pointer rounded-[0.35rem] p-1.5 text-foreground/55 hover:bg-foreground/6 hover:text-foreground"
+                aria-label="Edit category"
+              >
+                <i class="pi pi-pencil text-xs"></i>
+              </button>
+              <button
+                type="button"
+                (click)="deleteCategory(category.id)"
+                class="cursor-pointer rounded-[0.35rem] p-1.5 text-foreground/55 hover:bg-destructive/10 hover:text-destructive"
+                aria-label="Delete category"
+              >
+                <i class="pi pi-trash text-xs"></i>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="h-px bg-border"></div>
+
+    <form class="flex flex-col gap-3" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="text-[11px] tracking-[0.03em] text-foreground/55 uppercase">
+        {{ editingId() ? 'Edit category' : 'New category' }}
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="categoryName" class="text-[11px] text-foreground/55">Name</label>
+        <input
+          pInputText
+          id="categoryName"
+          formControlName="name"
+          class="w-full"
+          placeholder="e.g. Finance"
+        />
+        @if (form.controls.name.invalid && form.controls.name.touched) {
+          <span class="text-xs text-destructive">Name is required.</span>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <span class="text-[11px] text-foreground/55">Color</span>
+        <div class="flex flex-wrap gap-2">
+          @for (color of presetColors; track color) {
+            <button
+              type="button"
+              [attr.aria-label]="'Select color ' + color"
+              class="h-6 w-6 cursor-pointer rounded-full transition-transform"
+              [class.scale-110]="form.controls.color.value === color"
+              [style.background-color]="color"
+              [style.box-shadow]="
+                form.controls.color.value === color ? '0 0 0 2px var(--card), 0 0 0 4px ' + color : 'none'
+              "
+              (click)="selectColor(color)"
+            ></button>
+          }
+        </div>
+      </div>
+
+      @if (errorMessage()) {
+        <p class="text-xs text-destructive">{{ errorMessage() }}</p>
+      }
+
+      <div class="mt-1 flex justify-end gap-2.5">
+        @if (editingId()) {
+          <p-button type="button" label="Cancel" severity="secondary" (onClick)="startCreate()" />
+        }
+        <p-button
+          type="submit"
+          [label]="editingId() ? 'Save changes' : 'Create category'"
+          [loading]="submitting()"
+        />
+      </div>
+    </form>
+  </div>
+</p-dialog>

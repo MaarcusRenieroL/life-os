@@ -1,11 +1,133 @@
-<main class="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 font-mono text-foreground">
-  <div class="surface-panel w-full max-w-sm p-8 text-center">
-    <p class="text-xs uppercase tracking-widest text-muted-foreground">life-os</p>
-    <h1 class="mt-1 text-2xl font-semibold text-foreground">You're signed in</h1>
-    <p class="mt-2 text-sm text-muted-foreground">
-      The workspace and vault modules aren't built yet.
-    </p>
+<main class="w-full px-4 py-9 font-mono text-foreground sm:px-11 sm:py-11 xl:px-16">
+  <div class="mb-7 flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">{{ greeting() }}, {{ firstName() }}</h1>
+      <p class="mt-1.5 text-[12.5px] text-foreground/55">
+        {{ today | date: 'EEEE, MMMM d, y' }} — here's where things stand
+      </p>
+    </div>
+    <button
+      type="button"
+      class="shrink-0 text-[11px] text-foreground/45 transition-colors hover:text-foreground"
+      (click)="logout()"
+    >
+      Sign out
+    </button>
+  </div>
 
-    <p-button label="Sign out" severity="secondary" styleClass="w-full mt-6" (onClick)="logout()" />
+  <div class="mb-7 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+    <div class="group rounded-[0.5rem] border border-border bg-card px-[18px] py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-[0_8px_24px_oklch(0_0_0_/_18%)]">
+      <div class="flex items-center justify-between">
+        <div class="text-[22px] font-semibold tabular-nums">{{ modulesActiveCount() }}</div>
+        <i class="pi pi-th-large text-[13px] text-foreground/30"></i>
+      </div>
+      <div class="mt-0.5 text-[11px] text-foreground/55">modules active</div>
+    </div>
+    <div class="group rounded-[0.5rem] border border-danger-alt/30 bg-card px-[18px] py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-danger-alt/55 hover:shadow-[0_8px_24px_oklch(0_0_0_/_18%)]">
+      <div class="flex items-center justify-between">
+        <div class="text-[22px] font-semibold text-danger-alt tabular-nums">{{ vaultActionRequiredCount() }}</div>
+        <i class="pi pi-exclamation-triangle text-[13px] text-danger-alt/50"></i>
+      </div>
+      <div class="mt-0.5 text-[11px] text-foreground/55">vault items need attention</div>
+    </div>
+    <div class="group rounded-[0.5rem] border border-primary/30 bg-card px-[18px] py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/55 hover:shadow-[0_8px_24px_oklch(0_0_0_/_18%)]">
+      <div class="flex items-center justify-between">
+        <div class="text-[22px] font-semibold text-primary tabular-nums">{{ interviewsThisWeek ?? '—' }}</div>
+        <i class="pi pi-calendar text-[13px] text-primary/50"></i>
+      </div>
+      <div class="mt-0.5 text-[11px] text-foreground/55">interviews this week</div>
+    </div>
+    <div class="group rounded-[0.5rem] border border-warning/30 bg-card px-[18px] py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-warning/55 hover:shadow-[0_8px_24px_oklch(0_0_0_/_18%)]">
+      <div class="flex items-center justify-between">
+        <div class="text-[22px] font-semibold text-warning tabular-nums">{{ offersPending ?? '—' }}</div>
+        <i class="pi pi-briefcase text-[13px] text-warning/50"></i>
+      </div>
+      <div class="mt-0.5 text-[11px] text-foreground/55">offers pending</div>
+    </div>
+  </div>
+
+  <div class="mb-3 text-xs font-semibold tracking-[0.03em] text-foreground/55">YOUR MODULES</div>
+  <div class="mb-8 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+    @for (tile of homeModuleTiles(); track tile.code) {
+      @if (tile.enabled) {
+        <a
+          [routerLink]="tile.path"
+          class="group flex flex-col gap-2.5 rounded-[0.5rem] border border-border bg-card p-[18px] no-underline transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_8px_24px_oklch(0_0_0_/_18%)]"
+        >
+          <span
+            class="flex h-[30px] w-[30px] items-center justify-center rounded-[0.4rem] bg-primary/15 text-[11px] font-bold text-primary transition-transform duration-200 group-hover:scale-110"
+            >{{ tile.code }}</span
+          >
+          <span class="text-[13px] font-semibold text-foreground">{{ tile.name }}</span>
+          <span class="text-[11px] text-foreground/55">{{ tile.subtitle }}</span>
+        </a>
+      } @else {
+        <div
+          class="flex flex-col gap-2.5 rounded-[0.5rem] border border-dashed border-border bg-background/40 p-[18px] opacity-50 transition-opacity hover:opacity-70"
+        >
+          <span class="flex h-[30px] w-[30px] items-center justify-center rounded-[0.4rem] bg-foreground/8 text-[11px] font-bold"
+            >{{ tile.code }}</span
+          >
+          <span class="text-[13px] font-semibold text-foreground">{{ tile.name }}</span>
+          <span class="text-[11px] text-foreground/50">{{ tile.subtitle }}</span>
+        </div>
+      }
+    }
+  </div>
+
+  <div class="mb-7 grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
+    <div class="rounded-[0.5rem] border border-border bg-card p-5">
+      <div class="mb-3.5 text-[12.5px] font-semibold">Recent activity</div>
+      <div class="flex flex-col gap-0.5">
+        @for (item of recentActivity; track $index) {
+          <div
+            class="flex items-center gap-3 border-b border-border/70 py-[9px] transition-colors last:border-b-0 hover:bg-foreground/[0.025]"
+          >
+            <span class="h-1.5 w-1.5 shrink-0 rounded-full" [class]="item.dotClass"></span>
+            <div class="flex-1 text-[12.5px]" [innerHTML]="item.text"></div>
+            <span class="text-[11px] text-foreground/45">{{ item.meta }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="rounded-[0.5rem] border border-border bg-card p-5">
+      <div class="mb-3.5 text-[12.5px] font-semibold">Needs your attention</div>
+      <div class="flex flex-col gap-2.5">
+        @for (item of attentionItems(); track item.title) {
+          @if (item.link !== '#') {
+            <a
+              [routerLink]="item.link"
+              class="group flex items-center justify-between gap-3 border-b border-border/70 py-[9px] no-underline transition-colors last:border-b-0 hover:bg-foreground/[0.025]"
+            >
+              <div>
+                <div class="text-[12.5px] text-foreground">{{ item.title }}</div>
+                <div class="mt-0.5 text-[11px] text-foreground/50">{{ item.meta }}</div>
+              </div>
+              <span class="text-[11px] transition-transform duration-150 group-hover:translate-x-0.5" [class]="item.arrowClass">→</span>
+            </a>
+          } @else {
+            <div class="flex items-center justify-between gap-3 border-b border-border/70 py-[9px] last:border-b-0">
+              <div>
+                <div class="text-[12.5px] text-foreground">{{ item.title }}</div>
+                <div class="mt-0.5 text-[11px] text-foreground/50">{{ item.meta }}</div>
+              </div>
+              <span class="text-[11px]" [class]="item.arrowClass">→</span>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="mb-3 text-xs font-semibold tracking-[0.03em] text-foreground/55">EXPLORE MORE MODULES</div>
+  <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+    @for (module of exploreModules(); track module.code) {
+      <div
+        class="rounded-[0.45rem] border border-dashed border-border/85 bg-background/40 p-3 text-[11px] text-foreground/45 transition-colors hover:border-foreground/25 hover:text-foreground/65"
+      >
+        {{ module.name }}
+      </div>
+    }
   </div>
 </main>

@@ -1,5 +1,6 @@
 package com.lifeos.auth.service;
 
+import com.lifeos.auth.domains.dto.response.UserProfileResponse;
 import com.lifeos.auth.domains.entity.User;
 import com.lifeos.auth.exception.UserNotFoundException;
 import com.lifeos.auth.repository.UserRepository;
@@ -28,5 +29,31 @@ public class UserService {
 
   public boolean existsByEmail(String email) {
     return userRepository.existsByEmail(email);
+  }
+
+  public UserProfileResponse getProfile(UUID userId) {
+    User user =
+        userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+
+    return UserProfileResponse.builder()
+        .id(user.getId())
+        .name(user.getName())
+        .email(user.getEmail())
+        .build();
+  }
+
+  public UserProfileResponse updateProfile(UUID userId, String name) {
+    User existingUser =
+        userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+
+    existingUser.setName(name);
+
+    userRepository.save(existingUser);
+
+    return UserProfileResponse.builder()
+        .id(existingUser.getId())
+        .name(existingUser.getName())
+        .email(existingUser.getEmail())
+        .build();
   }
 }

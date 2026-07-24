@@ -10,4 +10,6 @@ public interface BiometricEnrollmentRepository extends JpaRepository<BiometricEn
   boolean existsByUserIdAndDeviceId(UUID userId, String deviceId);
 
   Optional<BiometricEnrollment> findByDeviceId(String deviceId);
+
+  void deleteAllByUserId(UUID userId);
 }

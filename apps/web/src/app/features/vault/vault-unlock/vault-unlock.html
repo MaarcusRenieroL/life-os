@@ -1,0 +1,62 @@
+<main class="flex min-h-dvh items-center justify-center px-4 font-mono text-foreground">
+  @if (checkingStatus()) {
+    <p class="text-sm text-muted-foreground">Checking vault status…</p>
+  } @else {
+    <div class="surface-panel w-full max-w-sm p-8">
+      <div class="mb-8">
+        <p class="text-xs uppercase tracking-widest text-muted-foreground">life-os</p>
+        <h1 class="mt-1 text-2xl font-semibold text-foreground">
+          {{ hasMasterPassword() ? 'Unlock vault' : 'Set up your vault' }}
+        </h1>
+        <p class="mt-2 text-sm text-muted-foreground">
+          {{
+            hasMasterPassword()
+              ? 'Enter your master password to unlock the vault.'
+              : 'Choose a master password. This encrypts every secret in your vault.'
+          }}
+        </p>
+      </div>
+
+      <form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="flex flex-col gap-1.5">
+          <label for="masterPassword" class="text-xs text-muted-foreground">Master password</label>
+          <p-password
+            inputId="masterPassword"
+            formControlName="masterPassword"
+            [toggleMask]="true"
+            [feedback]="false"
+            autocomplete="current-password"
+            styleClass="w-full"
+            inputStyleClass="w-full"
+          />
+          @if (form.controls.masterPassword.invalid && form.controls.masterPassword.touched) {
+            <span class="text-xs text-destructive">Master password must be at least 8 characters.</span>
+          }
+        </div>
+
+        @if (errorMessage()) {
+          <p class="text-sm text-destructive">{{ errorMessage() }}</p>
+        }
+
+        <p-button
+          type="submit"
+          [label]="hasMasterPassword() ? 'Unlock' : 'Set up vault'"
+          styleClass="w-full mt-2"
+          [loading]="loading()"
+        />
+      </form>
+
+      @if (hasMasterPassword()) {
+        <button
+          type="button"
+          class="mt-4 block w-full text-center text-xs text-muted-foreground hover:text-foreground"
+          (click)="openResetDialog()"
+        >
+          Forgot master password?
+        </button>
+      }
+    </div>
+  }
+
+  <app-vault-reset-dialog [(visible)]="resetDialogVisible" />
+</main>

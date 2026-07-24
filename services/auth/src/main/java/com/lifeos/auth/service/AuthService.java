@@ -9,11 +9,13 @@ import com.lifeos.auth.domains.entity.User;
 import com.lifeos.auth.domains.record.ChallengeRecord;
 import com.lifeos.auth.exception.EmailAlreadyExistsException;
 import com.lifeos.auth.exception.InvalidCredentialsException;
+import com.lifeos.auth.publisher.AuditEventPublisher;
 import com.lifeos.auth.repository.BiometricEnrollmentRepository;
 import com.lifeos.auth.repository.DeviceSessionRepository;
 import com.lifeos.auth.repository.RefreshTokenRepository;
 import com.lifeos.auth.exception.BiometricAlreadyEnrolledException;
 import com.lifeos.auth.store.ChallengeStore;
+import com.lifeos.common.events.AuditEventType;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
@@ -25,6 +27,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,7 +44,7 @@ public class AuthService {
 
   private final PasswordEncoder passwordEncoder;
 
-  private final JwtService jwtService;
+  private final AccessTokenService accessTokenService;
   private final UserService userService;
 
   private final ChallengeStore challengeStore;
@@ -49,6 +52,7 @@ public class AuthService {
   private final DeviceSessionRepository deviceSessionRepository;
   private final RefreshTokenRepository refreshTokenRepository;
   private final BiometricEnrollmentRepository biometricEnrollmentRepository;
+  private final AuditEventPublisher auditEventPublisher;
 
   public void register(String email, String rawPassword) {
     boolean isExistingUser = userService.existsByEmail(email);
@@ -80,6 +84,12 @@ public class AuthService {
             .build();
 
     deviceSessionRepository.save(deviceSession);
+
+    auditEventPublisher.publish(
+        existingUser.getId(),
+        AuditEventType.LOGIN_SUCCESS,
+        "Signed in from " + deviceName,
+        Map.of("device", deviceName, "deviceType", deviceType));
 
     return issueTokens(deviceSession);
   }
@@ -142,6 +152,12 @@ public class AuthService {
     deviceSessionRepository.save(deviceSession);
 
     refreshTokenRepository.revokeAllBySessionId(deviceSessionId);
+
+    auditEventPublisher.publish(
+        authenticatedUserId,
+        AuditEventType.SESSION_REVOKED,
+        "Signed out from " + deviceSession.getDeviceName(),
+        Map.of("device", deviceSession.getDeviceName(), "reason", "user_initiated"));
   }
 
   public void enrollBiometric(UUID userId, String publicKey, String deviceId, String type) {
@@ -209,6 +225,12 @@ public class AuthService {
 
     deviceSessionRepository.save(deviceSession);
 
+    auditEventPublisher.publish(
+        enrollment.getUserId(),
+        AuditEventType.LOGIN_SUCCESS,
+        "Signed in from " + deviceName,
+        Map.of("device", deviceName, "deviceType", deviceType));
+
     return issueTokens(deviceSession);
   }
 
@@ -244,7 +266,7 @@ public class AuthService {
   }
 
   private AuthResponse issueTokens(DeviceSession deviceSession) {
-    String accessToken = jwtService.generateAccessToken(deviceSession.getUserId());
+    String accessToken = accessTokenService.generateAccessToken(deviceSession.getUserId());
 
     String rawRefreshToken = UUID.randomUUID().toString();
 

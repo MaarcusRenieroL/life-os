@@ -17,4 +17,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
       "update RefreshToken rt set rt.revokedAt = CURRENT_TIMESTAMP where rt.deviceSessionId ="
           + " :deviceSessionId and rt.revokedAt is null")
   int revokeAllBySessionId(@Param("deviceSessionId") UUID deviceSessionId);
+
+  void deleteByDeviceSessionId(UUID deviceSessionId);
 }

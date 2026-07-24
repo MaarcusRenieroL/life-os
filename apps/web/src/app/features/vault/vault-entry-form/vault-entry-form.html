@@ -1,0 +1,199 @@
+<p-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '520px' }"
+  [header]="isEdit() ? 'Edit entry' : 'New entry'"
+>
+  @if (loading()) {
+    <p class="text-sm text-muted-foreground">Loading…</p>
+  } @else {
+    <form class="flex flex-col gap-4 font-mono" [formGroup]="form" (ngSubmit)="submit()">
+      <div class="flex flex-col gap-1.5">
+        <label for="type" class="text-xs text-muted-foreground">Type</label>
+        <p-select
+          inputId="type"
+          formControlName="type"
+          [options]="typeOptions"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="title" class="text-xs text-muted-foreground">Title</label>
+        <input pInputText id="title" formControlName="title" class="w-full" />
+        @if (form.controls.title.invalid && form.controls.title.touched) {
+          <span class="text-xs text-destructive">Title is required.</span>
+        }
+      </div>
+
+      @if (isLogin()) {
+        <div class="flex flex-col gap-1.5">
+          <label for="email" class="text-xs text-muted-foreground">Email</label>
+          <div class="flex gap-2">
+            <input pInputText id="email" formControlName="email" class="flex-1" />
+            @if (isEdit()) {
+              <p-button
+                icon="pi pi-copy"
+                severity="secondary"
+                [text]="true"
+                [rounded]="true"
+                pTooltip="Copy email"
+                tooltipPosition="top"
+                (onClick)="copyField(form.controls.email.value, 'email')"
+              />
+            }
+          </div>
+          @if (form.controls.email.invalid && form.controls.email.touched) {
+            <span class="text-xs text-destructive">Must be a valid email.</span>
+          }
+          @if (isEdit() && clipboardService.copiedField() === 'email') {
+            <span class="text-xs text-primary">Copied!</span>
+          }
+        </div>
+      }
+
+      @if (!isNote()) {
+        <div class="flex flex-col gap-1.5">
+          <label for="username" class="text-xs text-muted-foreground">
+            {{ isCard() ? 'Cardholder name' : 'Username' }}
+          </label>
+          <div class="flex gap-2">
+            <input pInputText id="username" formControlName="username" class="flex-1" />
+            @if (isEdit()) {
+              <p-button
+                icon="pi pi-copy"
+                severity="secondary"
+                [text]="true"
+                [rounded]="true"
+                pTooltip="Copy"
+                tooltipPosition="top"
+                (onClick)="copyField(form.controls.username.value, 'username')"
+              />
+            }
+          </div>
+          @if (isEdit() && clipboardService.copiedField() === 'username') {
+            <span class="text-xs text-primary">Copied!</span>
+          }
+        </div>
+      }
+
+      @if (isLogin()) {
+        <div class="flex flex-col gap-1.5">
+          <label for="url" class="text-xs text-muted-foreground">URL</label>
+          <div class="flex items-center gap-2">
+            @if (faviconUrl(); as favicon) {
+              <img [src]="favicon" alt="" class="h-5 w-5 shrink-0 rounded-[3px]" />
+            }
+            <input pInputText id="url" formControlName="url" class="w-full" placeholder="https://example.com" />
+          </div>
+        </div>
+      }
+
+      @if (!isNote()) {
+        <div class="flex flex-col gap-2">
+          <label for="password" class="text-xs text-muted-foreground">
+            {{ isCard() ? 'Card number' : 'Password' }}
+          </label>
+          <div class="flex gap-2">
+            <p-password
+              inputId="password"
+              formControlName="password"
+              [toggleMask]="true"
+              [feedback]="false"
+              styleClass="flex-1"
+              inputStyleClass="w-full"
+            />
+            @if (isEdit()) {
+              <p-button
+                icon="pi pi-copy"
+                severity="secondary"
+                [text]="true"
+                [rounded]="true"
+                pTooltip="Copy"
+                tooltipPosition="top"
+                (onClick)="copyField(passwordValue() ?? '', 'password')"
+              />
+            }
+            @if (isLogin()) {
+              <p-button
+                icon="pi pi-refresh"
+                severity="secondary"
+                [text]="true"
+                [rounded]="true"
+                pTooltip="Generate password"
+                tooltipPosition="top"
+                (onClick)="openGenerator()"
+              />
+            }
+          </div>
+          @if (isEdit() && clipboardService.copiedField() === 'password') {
+            <span class="text-xs text-primary">Copied!</span>
+          }
+          @if (isLogin()) {
+            <app-password-strength-meter [password]="passwordValue() ?? ''" />
+          }
+        </div>
+      }
+
+      <app-password-generator-dialog
+        [(visible)]="generatorDialogvisible"
+        (passwordSelected)="onPasswordGenerated($event)"
+      />
+
+      <div class="flex flex-col gap-1.5">
+        <label for="notes" class="text-xs text-muted-foreground">{{ isNote() ? 'Note' : 'Notes' }}</label>
+        <textarea
+          pTextarea
+          id="notes"
+          formControlName="notes"
+          [rows]="isNote() ? 8 : 3"
+          class="w-full"
+        ></textarea>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="categoryId" class="text-xs text-muted-foreground">Category</label>
+        <p-select
+          inputId="categoryId"
+          formControlName="categoryId"
+          [options]="categoryOptions()"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+        />
+      </div>
+
+      <div class="flex items-center gap-2">
+        <p-checkbox inputId="favorite" formControlName="favorite" [binary]="true" />
+        <label for="favorite" class="text-sm text-muted-foreground">Mark as favorite</label>
+      </div>
+
+      @if (errorMessage()) {
+        <p class="text-sm text-destructive">{{ errorMessage() }}</p>
+      }
+
+      <div class="mt-2 flex justify-end gap-2.5">
+        <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
+        <p-button
+          type="submit"
+          [label]="isEdit() ? 'Save changes' : 'Create entry'"
+          [loading]="submitting()"
+        />
+      </div>
+
+      @if (isEdit()) {
+        <p-button
+          type="button"
+          label="Delete entry"
+          severity="danger"
+          [text]="true"
+          styleClass="w-full"
+          (onClick)="deleteEntry()"
+        />
+      }
+    </form>
+  }
+</p-dialog>

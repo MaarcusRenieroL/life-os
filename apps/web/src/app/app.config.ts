@@ -6,12 +6,13 @@ import { providePrimeNG } from 'primeng/config';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { LifeOsPreset } from './core/theme/life-os-preset';
+import { tokenRefreshInterceptor } from './core/interceptors/token-refresh.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, tokenRefreshInterceptor])),
     providePrimeNG({
       theme: {
         preset: LifeOsPreset,
@@ -20,5 +21,5 @@ export const appConfig: ApplicationConfig = {
         },
       },
     }),
-  ]
+  ],
 };

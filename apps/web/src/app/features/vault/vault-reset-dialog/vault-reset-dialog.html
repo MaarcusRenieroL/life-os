@@ -1,0 +1,74 @@
+<p-dialog
+  [(visible)]="visible"
+  header="Reset master password"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '28rem' }"
+  styleClass="font-mono"
+  (onShow)="onShow()"
+>
+  <p class="mb-4 text-[11px] text-foreground/55">
+    This uses a recovery code instead of your current password. It re-encrypts your entire vault and permanently invalidates all your remaining recovery codes - generate a new batch afterward.
+  </p>
+
+  <form class="flex flex-col gap-3.5" [formGroup]="form" (ngSubmit)="submit()">
+    <div>
+      <label for="recoveryCode" class="mb-1.5 block text-[11px] text-foreground/55">
+        RECOVERY CODE
+      </label>
+      <input
+        id="recoveryCode"
+        pInputText
+        formControlName="code"
+        placeholder="XXXX-XXXX-XXXX"
+        class="w-full"
+      />
+    </div>
+
+    <div>
+      <label for="resetNewPassword" class="mb-1.5 block text-[11px] text-foreground/55">
+        NEW MASTER PASSWORD
+      </label>
+      <p-password
+        inputId="resetNewPassword"
+        formControlName="newPassword"
+        [toggleMask]="true"
+        [feedback]="false"
+        styleClass="w-full"
+        inputStyleClass="w-full"
+      />
+      <app-password-strength-meter class="mt-2 block" [password]="newPasswordValue() ?? ''" />
+    </div>
+
+    <div>
+      <label for="resetConfirmPassword" class="mb-1.5 block text-[11px] text-foreground/55">
+        CONFIRM NEW PASSWORD
+      </label>
+      <p-password
+        inputId="resetConfirmPassword"
+        formControlName="confirmPassword"
+        [toggleMask]="true"
+        [feedback]="false"
+        styleClass="w-full"
+        inputStyleClass="w-full"
+      />
+      @if (passwordsMismatch) {
+        <span class="mt-1.5 block text-xs text-destructive">Passwords don't match.</span>
+      }
+    </div>
+
+    @if (errorMessage()) {
+      <p class="text-xs text-destructive">{{ errorMessage() }}</p>
+    }
+
+    <div class="mt-1.5 flex justify-end gap-2.5">
+      <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
+      <p-button
+        type="submit"
+        label="Reset password"
+        [disabled]="!canSubmit"
+        [loading]="submitting()"
+      />
+    </div>
+  </form>
+</p-dialog>

@@ -1,3 +1,67 @@
 .surface-panel {
   @apply rounded-lg border border-border/60 bg-card/60 shadow-xs backdrop-blur;
 }
+
+/*
+ * PrimeNG's Aura preset renders every form/button component at the browser's
+ * default 16px font with ~42px touch-target height (form.field tokens have no
+ * root fontSize, so it inherits the document's 16px). That's desktop/touch
+ * sized and reads as oversized next to this app's 11-13px monospace design,
+ * especially on phones. Scale every PrimeNG component down to match.
+ * !important is needed here because PrimeNG injects its own component CSS
+ * into <head> at runtime, after styles.css, so same-specificity rules here
+ * would otherwise lose the cascade.
+ */
+.p-component {
+  font-size: 0.8125rem !important; /* 13px */
+}
+
+.p-button {
+  padding-block: 0.5rem !important;
+  padding-inline: 0.875rem !important;
+  font-size: 0.8125rem !important;
+}
+
+.p-inputtext,
+.p-password-input,
+.p-select-label,
+.p-select-option,
+.p-textarea {
+  padding-block: 0.5rem !important;
+  padding-inline: 0.75rem !important;
+  font-size: 0.8125rem !important;
+}
+
+.p-select-dropdown,
+.p-password-toggle-mask-icon-wrapper {
+  width: 2.25rem !important;
+}
+
+.p-dialog-header {
+  padding: 1.25rem 1.25rem 0.5rem !important;
+}
+
+.p-dialog-content {
+  padding: 0.5rem 1.25rem 1.25rem !important;
+  font-size: 0.8125rem !important;
+}
+
+.p-dialog-title {
+  font-size: 0.9375rem !important;
+}
+
+.p-checkbox,
+.p-checkbox-box {
+  width: 1.125rem !important;
+  height: 1.125rem !important;
+}
+
+.p-toggleswitch {
+  width: 2rem !important;
+  height: 1.125rem !important;
+}
+
+.p-toggleswitch .p-toggleswitch-slider:before {
+  width: 0.875rem !important;
+  height: 0.875rem !important;
+}

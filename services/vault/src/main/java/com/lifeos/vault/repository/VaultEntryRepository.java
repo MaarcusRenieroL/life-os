@@ -12,4 +12,6 @@ public interface VaultEntryRepository extends JpaRepository<VaultEntry, UUID> {
   Optional<VaultEntry> findByIdAndUserId(UUID id, UUID userId);
 
   void deleteByIdAndUserId(UUID id, UUID userId);
+
+  void deleteAllByUserId(UUID userId);
 }

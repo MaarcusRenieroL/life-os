@@ -1,0 +1,37 @@
+server:
+  port: 8005
+
+spring:
+  application:
+    name: batches
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    schemas: batches_schema
+    default-schema: batches_schema
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: batches_services
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+      table-prefix: batches_schema.BATCH_
+
+jwt:
+  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+
+internal:
+  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+
+vault:
+  internal-base-url: ${VAULT_INTERNAL_BASE_URL:http://vault:8002}
+
+owner:
+  user-id: ${OWNER_USER_ID}
+
+backup:
+  cron: ${BACKUP_CRON:0 0 3 * * *}

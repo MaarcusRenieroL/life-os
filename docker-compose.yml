@@ -32,6 +32,7 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://kafka:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT, PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     ports:
       - "9092:9092"
     depends_on:
@@ -61,33 +62,41 @@ services:
 
   auth:
     build:
-      context: ./services/auth
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/auth/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
     ports:
       - "8001:8001"
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
 
   vault:
     build:
-      context: ./services/vault
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/vault/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
     ports:
       - "8002:8002"
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
 
   job-tracker:
     build:
@@ -107,8 +116,8 @@ services:
 
   core:
     build:
-      context: ./services/core
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/core/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
@@ -117,6 +126,7 @@ services:
       REDIS_PORT: 6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       OLLAMA_URL: http://host.docker.internal:11434
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
     ports:
       - "8004:8004"
     depends_on:
@@ -126,6 +136,28 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+
+  batches:
+    build:
+      context: .
+      dockerfile: services/batches/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      VAULT_INTERNAL_BASE_URL: http://vault:8002
+      OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
+      BACKUP_CRON: ${BACKUP_CRON:-0 0 3 * * *}
+    ports:
+      - "8005:8005"
+    depends_on:
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_healthy
 
 volumes:
   postgres_data:
