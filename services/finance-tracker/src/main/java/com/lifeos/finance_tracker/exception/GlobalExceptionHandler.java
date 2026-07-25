@@ -46,6 +46,19 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(RecurringPatternNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleRecurringPatternNotFound(
+      RecurringPatternNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(BudgetNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleBudgetNotFound(BudgetNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
     String message =
