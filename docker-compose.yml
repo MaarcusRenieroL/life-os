@@ -155,6 +155,9 @@ services:
       GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
       GMAIL_REDIRECT_URI: ${GMAIL_REDIRECT_URI:-http://localhost:8005/v1/batches/gmail/callback}
       GMAIL_ENCRYPTION_SECRET: ${GMAIL_ENCRYPTION_SECRET:-zjQIMjy7Pp+dEPaXnwwFqETV64YQSQBYJYelXbSi5qc=}
+      GMAIL_ALERT_SENDERS: ${GMAIL_ALERT_SENDERS:-canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
+      GMAIL_POLL_CRON: ${GMAIL_POLL_CRON:-0 0 9,15,21 * * *}
+      FINANCE_INTERNAL_BASE_URL: ${FINANCE_INTERNAL_BASE_URL:-http://finance-tracker:8006}
     ports:
       - "8005:8005"
     depends_on:

@@ -13,14 +13,19 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class GmailMessageService {
+
+  private static final Logger log = LoggerFactory.getLogger(GmailMessageService.class);
 
   @Value("${gmail.alert-senders}")
   private String alertSendersConfig;
@@ -34,9 +39,15 @@ public class GmailMessageService {
     Gmail gmail = buildGmailClient();
 
     List<String> senderAddresses = List.of(alertSendersConfig.split(","));
-    String query = "newer_than:1d (from:" + String.join(" OR from:", senderAddresses) + ")";
+    String query = "newer_than:2d (from:" + String.join(" OR from:", senderAddresses) + ")";
+
+    log.info("Gmail search query: {}", query);
 
     ListMessagesResponse listResponse = gmail.users().messages().list("me").setQ(query).execute();
+
+    log.info(
+        "Gmail search returned {} messages",
+        listResponse.getMessages() == null ? 0 : listResponse.getMessages().size());
 
     if (listResponse.getMessages() == null) {
       return List.of();
@@ -50,10 +61,17 @@ public class GmailMessageService {
                     gmail.users().messages().get("me", messageStub.getId()).setFormat("full").execute();
 
                 return toRawAlertEmail(message);
-              } catch (IOException e) {
-                throw new RuntimeException("Failed to fetch Gmail message: " + messageStub.getId(), e);
+              } catch (Exception e) {
+                // One malformed/unexpected message (odd MIME structure, missing
+                // header, etc.) shouldn't take down the whole poll - skip it and
+                // keep going. This is the same senders' mailing-list/marketing
+                // mail mixed in with real alerts, not just clean transaction emails.
+                log.warn("Skipping Gmail message {}: {}", messageStub.getId(), e.getMessage());
+
+                return null;
               }
             })
+        .filter(Objects::nonNull)
         .toList();
   }
 
@@ -77,22 +95,69 @@ public class GmailMessageService {
   }
 
   private String decodeBody(MessagePart payload) {
-    String encodedBody;
+    Optional<MessagePart> textPlainPart = findPartByMimeType(payload, "text/plain");
 
-    if (payload.getParts() == null) {
-      encodedBody = payload.getBody().getData();
-    } else {
-      Optional<MessagePart> textPart =
-          payload.getParts().stream().filter(part -> "text/plain".equals(part.getMimeType())).findFirst();
-
-      encodedBody =
-          textPart
-              .orElseThrow(() -> new IllegalStateException("No text/plain part found"))
-              .getBody()
-              .getData();
+    if (textPlainPart.isPresent()) {
+      return decodePartData(textPlainPart.get());
     }
 
-    return new String(Base64.getUrlDecoder().decode(encodedBody), StandardCharsets.UTF_8);
+    // Some bank alerts (e.g. HDFC's richer templates with banner images) are
+    // sent as HTML-only, with no text/plain alternative at all - not a
+    // nesting issue, there's genuinely nothing else to fall back to but the
+    // HTML part itself, tags stripped.
+    MessagePart htmlPart =
+        findPartByMimeType(payload, "text/html")
+            .orElseThrow(() -> new IllegalStateException("No text/plain or text/html part found"));
+
+    return stripHtml(decodePartData(htmlPart));
+  }
+
+  private String decodePartData(MessagePart part) {
+    return new String(
+        Base64.getUrlDecoder().decode(part.getBody().getData()), StandardCharsets.UTF_8);
+  }
+
+  // Bank alert HTML is simple transactional markup, not a full web page - a
+  // crude tag-strip is enough to recover the plain-text content the same
+  // regexes in HdfcCreditCardAlertParser etc. expect, without pulling in an
+  // actual HTML parser dependency for this one use case.
+  private String stripHtml(String html) {
+    String withoutTags = html.replaceAll("(?s)<[^>]*>", " ");
+
+    String withEntitiesDecoded =
+        withoutTags
+            .replace("&nbsp;", " ")
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&#39;", "'")
+            .replace("&quot;", "\"");
+
+    return withEntitiesDecoded.replaceAll("\\s+", " ").trim();
+  }
+
+  // MIME parts can nest arbitrarily deep - a multipart/alternative (text vs
+  // html) is often itself wrapped inside a multipart/mixed (if there's an
+  // attachment), so a flat scan of payload.getParts() isn't enough. Depth-first
+  // search until a leaf of the requested mimeType is found.
+  private Optional<MessagePart> findPartByMimeType(MessagePart part, String mimeType) {
+    if (mimeType.equals(part.getMimeType())) {
+      return Optional.of(part);
+    }
+
+    if (part.getParts() == null) {
+      return Optional.empty();
+    }
+
+    for (MessagePart child : part.getParts()) {
+      Optional<MessagePart> found = findPartByMimeType(child, mimeType);
+
+      if (found.isPresent()) {
+        return found;
+      }
+    }
+
+    return Optional.empty();
   }
 
   private Gmail buildGmailClient() {

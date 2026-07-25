@@ -10,12 +10,17 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;
 
+// No @Builder here - unlike every other request DTO, this one used to have
+// it, but nothing in finance-tracker actually builds this object (only
+// deserializes it from the internal endpoint's request body). @Builder
+// generates an all-args constructor, which suppresses Java's implicit no-args
+// one - and without a no-args constructor, Jackson has nothing to instantiate
+// with, so every incoming request failed with "no Creators, like default
+// constructor, exist".
 @Getter
-@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateEmailAlertTransactionRequest {
 
