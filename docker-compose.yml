@@ -165,8 +165,8 @@ services:
 
   finance-tracker:
     build:
-      context: ./services/finance-tracker/
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/finance-tracker/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
