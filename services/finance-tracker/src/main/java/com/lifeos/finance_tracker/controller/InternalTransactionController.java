@@ -1,6 +1,7 @@
 package com.lifeos.finance_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.finance_tracker.domains.dto.request.CreateCsvImportTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateEmailAlertTransactionRequest;
 import com.lifeos.finance_tracker.service.TransactionService;
 import jakarta.validation.Valid;
@@ -24,6 +25,14 @@ public class InternalTransactionController {
   public ResponseEntity<ApiResponse<Void>> createEmailAlertTransaction(
       @Valid @RequestBody CreateEmailAlertTransactionRequest request) {
     transactionService.createFromEmailAlert(request);
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Transaction processed successfully"));
+  }
+
+  @PostMapping("/transactions/csv-import")
+  public ResponseEntity<ApiResponse<Void>> createCsvImportTransaction(
+      @Valid @RequestBody CreateCsvImportTransactionRequest request) {
+    transactionService.createFromCsvImport(request);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Transaction processed successfully"));
   }

@@ -1,6 +1,7 @@
 package com.lifeos.finance_tracker.service;
 
 import com.lifeos.finance_tracker.domains.dto.request.CategorizeTransactionRequest;
+import com.lifeos.finance_tracker.domains.dto.request.CreateCsvImportTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateEmailAlertTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
@@ -15,6 +16,7 @@ import com.lifeos.finance_tracker.exception.TransactionNotFoundException;
 import com.lifeos.finance_tracker.repository.AccountRepository;
 import com.lifeos.finance_tracker.repository.TransactionRepository;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -182,6 +184,42 @@ public class TransactionService {
             .type(request.getType())
             .sourceType(SourceType.EMAIL_ALERT)
             .sourceReference(request.getSourceReference())
+            .status(TransactionStatus.RECONCILED)
+            .isReconciled(true)
+            .importedAt(Instant.now())
+            .build();
+
+    categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
+
+    transactionRepository.save(transaction);
+  }
+
+  public void createFromCsvImport(CreateCsvImportTransactionRequest request) {
+    Instant windowStart = request.getTransactionDate().minus(1, ChronoUnit.DAYS);
+    Instant windowEnd = request.getTransactionDate().plus(1, ChronoUnit.DAYS);
+
+    boolean isDuplicate =
+        transactionRepository.existsByAccountIdAndAmountAndTransactionDateBetween(
+            request.getAccountId(), request.getAmount(), windowStart, windowEnd);
+
+    if (isDuplicate) {
+      return;
+    }
+
+    Account account =
+        accountRepository
+            .findByIdAndUserId(request.getAccountId(), request.getUserId())
+            .orElseThrow(() -> new AccountNotFoundException(request.getAccountId()));
+
+    Transaction transaction =
+        Transaction.builder()
+            .accountId(account.getId())
+            .userId(account.getUserId())
+            .transactionDate(request.getTransactionDate())
+            .description(request.getDescription())
+            .amount(request.getAmount())
+            .type(request.getType())
+            .sourceType(SourceType.CSV_IMPORT)
             .status(TransactionStatus.RECONCILED)
             .isReconciled(true)
             .importedAt(Instant.now())
