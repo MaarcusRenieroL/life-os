@@ -1,6 +1,7 @@
 package com.lifeos.finance_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.finance_tracker.domains.dto.request.CategorizeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionRequest;
@@ -69,6 +70,17 @@ public class TransactionController {
     transactionService.delete(authentication, id);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Transaction deleted successfully"));
+  }
+
+  @PutMapping("/{id}/categorize")
+  public ResponseEntity<ApiResponse<TransactionResponse>> categorizeTransaction(
+      Authentication authentication,
+      @PathVariable UUID id,
+      @Valid @RequestBody CategorizeTransactionRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            transactionService.categorize(authentication, id, request),
+            "Transaction categorized successfully"));
   }
 
   @PutMapping("/{id}/merge")

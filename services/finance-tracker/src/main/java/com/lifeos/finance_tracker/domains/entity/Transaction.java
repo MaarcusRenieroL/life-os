@@ -51,6 +51,10 @@ public class Transaction {
   @Enumerated(EnumType.STRING)
   TransactionType type;
 
+  UUID categoryId;
+
+  boolean categoryManuallySet;
+
   @JdbcTypeCode(SqlTypes.JSON)
   List<String> tags;
 

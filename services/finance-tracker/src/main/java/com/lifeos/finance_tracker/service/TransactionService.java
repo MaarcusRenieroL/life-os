@@ -1,5 +1,6 @@
 package com.lifeos.finance_tracker.service;
 
+import com.lifeos.finance_tracker.domains.dto.request.CategorizeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateEmailAlertTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
@@ -115,6 +116,21 @@ public class TransactionService {
     transactionRepository.deleteByIdAndUserId(id, userId);
   }
 
+  public TransactionResponse categorize(
+      Authentication authentication, UUID id, CategorizeTransactionRequest request) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    Transaction transaction =
+        transactionRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() -> new TransactionNotFoundException(id));
+
+    transaction.setCategoryId(request.getCategoryId());
+    transaction.setCategoryManuallySet(true);
+
+    return toResponse(transactionRepository.save(transaction));
+  }
+
   public TransactionResponse merge(
       Authentication authentication, UUID id, MergeTransactionsRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -177,6 +193,8 @@ public class TransactionService {
         .description(transaction.getDescription())
         .amount(transaction.getAmount())
         .type(transaction.getType())
+        .categoryId(transaction.getCategoryId())
+        .categoryManuallySet(transaction.isCategoryManuallySet())
         .tags(transaction.getTags())
         .notes(transaction.getNotes())
         .receiptUrl(transaction.getReceiptUrl())

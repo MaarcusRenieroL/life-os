@@ -33,6 +33,10 @@ public class TransactionResponse {
 
   TransactionType type;
 
+  UUID categoryId;
+
+  boolean categoryManuallySet;
+
   List<String> tags;
 
   String notes;
