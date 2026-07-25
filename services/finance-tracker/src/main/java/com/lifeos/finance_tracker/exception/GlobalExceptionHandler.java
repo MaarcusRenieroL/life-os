@@ -25,6 +25,27 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(CategoryNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleCategoryNotFound(
+      CategoryNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(MerchantNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleMerchantNotFound(
+      MerchantNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(CategorizationRuleNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleCategorizationRuleNotFound(
+      CategorizationRuleNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
     String message =
