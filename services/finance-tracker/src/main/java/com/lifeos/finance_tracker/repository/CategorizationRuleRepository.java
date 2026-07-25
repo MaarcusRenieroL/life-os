@@ -13,4 +13,6 @@ public interface CategorizationRuleRepository extends JpaRepository<Categorizati
   Optional<CategorizationRule> findByIdAndUserId(UUID id, UUID userId);
 
   void deleteByIdAndUserId(UUID id, UUID userId);
+
+  List<CategorizationRule> findAllByUserIdAndIsActiveTrueOrderByPriorityDesc(UUID userId);
 }

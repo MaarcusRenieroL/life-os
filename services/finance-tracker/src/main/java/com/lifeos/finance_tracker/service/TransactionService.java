@@ -27,6 +27,7 @@ public class TransactionService {
 
   private final AccountRepository accountRepository;
   private final TransactionRepository transactionRepository;
+  private final CategorizationService categorizationService;
 
   public List<TransactionResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -66,6 +67,8 @@ public class TransactionService {
             .status(TransactionStatus.ACTIVE)
             .importedAt(Instant.now())
             .build();
+
+    categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
 
     return toResponse(transactionRepository.save(transaction));
   }
@@ -169,7 +172,7 @@ public class TransactionService {
             .orElseThrow(
                 () -> new AccountNotFoundException(request.getBankName(), request.getAccountType()));
 
-    transactionRepository.save(
+    Transaction transaction =
         Transaction.builder()
             .accountId(account.getId())
             .userId(account.getUserId())
@@ -182,7 +185,11 @@ public class TransactionService {
             .status(TransactionStatus.RECONCILED)
             .isReconciled(true)
             .importedAt(Instant.now())
-            .build());
+            .build();
+
+    categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
+
+    transactionRepository.save(transaction);
   }
 
   private TransactionResponse toResponse(Transaction transaction) {
