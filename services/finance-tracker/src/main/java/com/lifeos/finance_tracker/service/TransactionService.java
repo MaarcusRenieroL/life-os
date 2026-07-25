@@ -1,13 +1,17 @@
 package com.lifeos.finance_tracker.service;
 
+import com.lifeos.finance_tracker.domains.dto.request.CreateEmailAlertTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.response.TransactionResponse;
+import com.lifeos.finance_tracker.domains.entity.Account;
 import com.lifeos.finance_tracker.domains.entity.Transaction;
 import com.lifeos.finance_tracker.domains.enums.SourceType;
 import com.lifeos.finance_tracker.domains.enums.TransactionStatus;
+import com.lifeos.finance_tracker.exception.AccountNotFoundException;
 import com.lifeos.finance_tracker.exception.TransactionNotFoundException;
+import com.lifeos.finance_tracker.repository.AccountRepository;
 import com.lifeos.finance_tracker.repository.TransactionRepository;
 import java.time.Instant;
 import java.util.List;
@@ -20,6 +24,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class TransactionService {
 
+  private final AccountRepository accountRepository;
   private final TransactionRepository transactionRepository;
 
   public List<TransactionResponse> getAll(Authentication authentication) {
@@ -39,9 +44,6 @@ public class TransactionService {
             .orElseThrow(() -> new TransactionNotFoundException(id)));
   }
 
-  // Manual entry only - sourceType/status are set here, not accepted from the
-  // caller. Email-alert and CSV-import transactions are created internally by
-  // their own ingestion paths, not through this method.
   public TransactionResponse save(Authentication authentication, CreateTransactionRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -113,9 +115,6 @@ public class TransactionService {
     transactionRepository.deleteByIdAndUserId(id, userId);
   }
 
-  // {id} is the canonical transaction; every transaction listed in the request
-  // gets marked as a duplicate pointing back at it. None are deleted - merging
-  // is a soft link so the duplicate's original data stays auditable.
   public TransactionResponse merge(
       Authentication authentication, UUID id, MergeTransactionsRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -137,6 +136,37 @@ public class TransactionService {
     transactionRepository.saveAll(duplicates);
 
     return toResponse(canonical);
+  }
+
+  public void createFromEmailAlert(CreateEmailAlertTransactionRequest request) {
+    boolean isExisting =
+        transactionRepository.existsBySourceReference(request.getSourceReference());
+
+    if (isExisting) {
+      return;
+    }
+
+    Account account =
+        accountRepository
+            .findByUserIdAndBankNameAndAccountType(
+                request.getUserId(), request.getBankName(), request.getAccountType())
+            .orElseThrow(
+                () -> new AccountNotFoundException(request.getBankName(), request.getAccountType()));
+
+    transactionRepository.save(
+        Transaction.builder()
+            .accountId(account.getId())
+            .userId(account.getUserId())
+            .transactionDate(request.getTransactionDate())
+            .description(request.getDescription())
+            .amount(request.getAmount())
+            .type(request.getType())
+            .sourceType(SourceType.EMAIL_ALERT)
+            .sourceReference(request.getSourceReference())
+            .status(TransactionStatus.RECONCILED)
+            .isReconciled(true)
+            .importedAt(Instant.now())
+            .build());
   }
 
   private TransactionResponse toResponse(Transaction transaction) {

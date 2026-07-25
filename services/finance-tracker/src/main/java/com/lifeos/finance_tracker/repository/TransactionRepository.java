@@ -15,4 +15,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
   List<Transaction> findAllByIdInAndUserId(List<UUID> ids, UUID userId);
 
   void deleteByIdAndUserId(UUID id, UUID userId);
+
+  boolean existsBySourceReference(String sourceReference);
 }
