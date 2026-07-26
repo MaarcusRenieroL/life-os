@@ -62,6 +62,10 @@ public class Transaction {
 
   String receiptUrl;
 
+  String disputeReason;
+
+  Instant disputeDate;
+
   boolean isRecurring;
 
   @Enumerated(EnumType.STRING)

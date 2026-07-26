@@ -4,6 +4,7 @@ import com.lifeos.finance_tracker.domains.dto.request.CategorizeTransactionReque
 import com.lifeos.finance_tracker.domains.dto.request.CreateCsvImportTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateEmailAlertTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
+import com.lifeos.finance_tracker.domains.dto.request.DisputeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.response.TransactionResponse;
@@ -20,6 +21,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
@@ -31,12 +36,12 @@ public class TransactionService {
   private final TransactionRepository transactionRepository;
   private final CategorizationService categorizationService;
 
-  public List<TransactionResponse> getAll(Authentication authentication) {
+  public Page<TransactionResponse> getAllPaginated(Authentication authentication, int page, int size) {
     UUID userId = (UUID) authentication.getPrincipal();
 
-    return transactionRepository.findAllByUserIdOrderByTransactionDateDesc(userId).stream()
-        .map(this::toResponse)
-        .toList();
+    Pageable pageable = PageRequest.of(page, size, Sort.by("transactionDate").descending());
+
+    return transactionRepository.findAllByUserId(userId, pageable).map(this::toResponse);
   }
 
   public TransactionResponse get(Authentication authentication, UUID id) {
@@ -172,7 +177,8 @@ public class TransactionService {
             .findByUserIdAndBankNameAndAccountType(
                 request.getUserId(), request.getBankName(), request.getAccountType())
             .orElseThrow(
-                () -> new AccountNotFoundException(request.getBankName(), request.getAccountType()));
+                () ->
+                    new AccountNotFoundException(request.getBankName(), request.getAccountType()));
 
     Transaction transaction =
         Transaction.builder()
@@ -230,6 +236,22 @@ public class TransactionService {
     transactionRepository.save(transaction);
   }
 
+  public TransactionResponse dispute(
+      Authentication authentication, UUID id, DisputeTransactionRequest request) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    Transaction transaction =
+        transactionRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() -> new TransactionNotFoundException(id));
+
+    transaction.setStatus(TransactionStatus.DISPUTED);
+    transaction.setDisputeReason(request.getReason());
+    transaction.setDisputeDate(Instant.now());
+
+    return toResponse(transactionRepository.save(transaction));
+  }
+
   private TransactionResponse toResponse(Transaction transaction) {
     return TransactionResponse.builder()
         .id(transaction.getId())
@@ -243,6 +265,8 @@ public class TransactionService {
         .tags(transaction.getTags())
         .notes(transaction.getNotes())
         .receiptUrl(transaction.getReceiptUrl())
+        .disputeReason(transaction.getDisputeReason())
+        .disputeDate(transaction.getDisputeDate())
         .isRecurring(transaction.isRecurring())
         .sourceType(transaction.getSourceType())
         .sourceReference(transaction.getSourceReference())

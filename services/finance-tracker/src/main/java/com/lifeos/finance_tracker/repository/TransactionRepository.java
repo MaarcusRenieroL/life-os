@@ -7,6 +7,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,6 +16,8 @@ import org.springframework.data.repository.query.Param;
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
   List<Transaction> findAllByUserIdOrderByTransactionDateDesc(UUID userId);
+
+  Page<Transaction> findAllByUserId(UUID userId, Pageable pageable);
 
   Optional<Transaction> findByIdAndUserId(UUID id, UUID userId);
 
@@ -68,4 +72,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
               + "LIMIT :limit",
       nativeQuery = true)
   List<Object[]> getTopMerchantsRaw(@Param("userId") UUID userId, @Param("limit") int limit);
+
+  List<Transaction> findAllByUserIdAndTransactionDateBetweenOrderByTransactionDateAsc(
+      UUID userId, Instant start, Instant end);
 }

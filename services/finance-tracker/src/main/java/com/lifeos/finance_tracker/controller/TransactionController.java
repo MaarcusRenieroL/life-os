@@ -3,14 +3,15 @@ package com.lifeos.finance_tracker.controller;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.finance_tracker.domains.dto.request.CategorizeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
+import com.lifeos.finance_tracker.domains.dto.request.DisputeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.response.TransactionResponse;
 import com.lifeos.finance_tracker.service.TransactionService;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -30,11 +32,14 @@ public class TransactionController {
   private final TransactionService transactionService;
 
   @GetMapping
-  public ResponseEntity<ApiResponse<List<TransactionResponse>>> getTransactions(
-      Authentication authentication) {
+  public ResponseEntity<ApiResponse<Page<TransactionResponse>>> getTransactions(
+      Authentication authentication,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int size) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            transactionService.getAll(authentication), "Transactions fetched successfully"));
+            transactionService.getAllPaginated(authentication, page, size),
+            "Transactions fetched successfully"));
   }
 
   @GetMapping("/{id}")
@@ -92,5 +97,15 @@ public class TransactionController {
         ApiResponse.success(
             transactionService.merge(authentication, id, request),
             "Transactions merged successfully"));
+  }
+
+  @PutMapping("/{id}/dispute")
+  public ResponseEntity<ApiResponse<TransactionResponse>> disputeTransaction(
+      Authentication authentication,
+      @PathVariable UUID id,
+      @Valid @RequestBody DisputeTransactionRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            transactionService.dispute(authentication, id, request), "Dispute saved successfully"));
   }
 }

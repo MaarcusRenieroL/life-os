@@ -43,6 +43,10 @@ public class TransactionResponse {
 
   String receiptUrl;
 
+  String disputeReason;
+
+  Instant disputeDate;
+
   boolean isRecurring;
 
   SourceType sourceType;
