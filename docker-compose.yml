@@ -178,6 +178,11 @@ services:
       FINANCE_ENCRYPTION_SECRET: ${FINANCE_ENCRYPTION_SECRET:-wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
+      OLLAMA_URL: http://host.docker.internal:11434
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "8006:8006"
     depends_on:
@@ -185,6 +190,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres_data:

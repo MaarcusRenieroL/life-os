@@ -3,10 +3,10 @@ package com.lifeos.finance_tracker;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
-// scanBasePackages needed since JwtService/JwtAuthenticationFilter live in
-// com.lifeos.common, outside this app's default com.lifeos.finance_tracker scan root.
 @SpringBootApplication
+@EnableScheduling
 @ComponentScan(basePackages = {"com.lifeos.finance_tracker", "com.lifeos.common"})
 public class FinanceTrackerApplication {
 
