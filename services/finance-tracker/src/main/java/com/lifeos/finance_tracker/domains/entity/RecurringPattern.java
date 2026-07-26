@@ -36,6 +36,11 @@ public class RecurringPattern {
 
   UUID merchantId;
 
+  // Normalized merchant name from MerchantClusteringService's LLM output -
+  // used to dedupe/upsert patterns across detection runs, since merchantId
+  // isn't reliably populated on Transaction yet.
+  String merchantKey;
+
   UUID categoryId;
 
   BigDecimal averageAmount;
