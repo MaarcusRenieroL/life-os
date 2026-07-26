@@ -7,36 +7,63 @@ import com.lifeos.finance_tracker.domains.record.MonthlyTrend;
 import com.lifeos.finance_tracker.repository.TransactionRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
 public class AnalyticsService {
 
-  private final TransactionRepository transactionRepository;
   private static final ZoneId ZONE_ID = ZoneId.of("Asia/Kolkata");
+  private static final Duration CACHE_TTL = Duration.ofMinutes(5);
+
+  private final TransactionRepository transactionRepository;
+  private final StringRedisTemplate stringRedisTemplate;
+  private final ObjectMapper objectMapper;
 
   public DashboardSummary getDashboardSummary(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
+    String key = "analytics:dashboard:" + userId + ":" + YearMonth.now(ZONE_ID);
+    String cached = stringRedisTemplate.opsForValue().get(key);
+
+    if (cached != null) {
+      return objectMapper.readValue(cached, DashboardSummary.class);
+    }
+
     ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
     Instant start = now.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant();
-
     Instant end = now.toLocalDate().plusDays(1).atStartOfDay(ZONE_ID).toInstant();
 
-    return transactionRepository.getDashboardSummary(userId, start, end);
+    DashboardSummary result = transactionRepository.getDashboardSummary(userId, start, end);
+
+    stringRedisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(result), CACHE_TTL);
+
+    return result;
   }
 
   public CategoryComparison getCategoryAnalytics(Authentication authentication, UUID categoryId) {
     UUID userId = (UUID) authentication.getPrincipal();
+
+    String key = "analytics:category:" + userId + ":" + categoryId;
+    String cached = stringRedisTemplate.opsForValue().get(key);
+
+    if (cached != null) {
+      return objectMapper.readValue(cached, CategoryComparison.class);
+    }
+
     ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
     Instant startThisMonth = now.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant();
@@ -70,12 +97,24 @@ public class AnalyticsService {
               .multiply(BigDecimal.valueOf(100));
     }
 
-    return new CategoryComparison(
-        categoryId, currentMonthSpend, lastMonthSpend, difference, percentageChange);
+    CategoryComparison result =
+        new CategoryComparison(
+            categoryId, currentMonthSpend, lastMonthSpend, difference, percentageChange);
+
+    stringRedisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(result), CACHE_TTL);
+
+    return result;
   }
 
   public List<MonthlyTrend> getMonthlyTrends(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
+
+    String key = "analytics:trends:" + userId;
+    String cached = stringRedisTemplate.opsForValue().get(key);
+
+    if (cached != null) {
+      return objectMapper.readValue(cached, new TypeReference<List<MonthlyTrend>>() {});
+    }
 
     Instant since =
         ZonedDateTime.now(ZONE_ID)
@@ -90,17 +129,33 @@ public class AnalyticsService {
     for (Object[] row : rawTrends) {
       trends.add(new MonthlyTrend((String) row[0], (BigDecimal) row[1]));
     }
+
+    stringRedisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(trends), CACHE_TTL);
+
     return trends;
   }
 
   public List<MerchantSpend> getTopMerchants(Authentication authentication, int limit) {
     UUID userId = (UUID) authentication.getPrincipal();
+
+    String key = "analytics:merchants:" + userId + ":" + limit;
+    String cached = stringRedisTemplate.opsForValue().get(key);
+
+    if (cached != null) {
+      return objectMapper.readValue(cached, new TypeReference<List<MerchantSpend>>() {});
+    }
+
     List<Object[]> rawMerchants = transactionRepository.getTopMerchantsRaw(userId, limit);
 
     List<MerchantSpend> merchants = new ArrayList<>();
     for (Object[] row : rawMerchants) {
       merchants.add(new MerchantSpend((String) row[0], (BigDecimal) row[1]));
     }
+
+    stringRedisTemplate
+        .opsForValue()
+        .set(key, objectMapper.writeValueAsString(merchants), CACHE_TTL);
+
     return merchants;
   }
 }
