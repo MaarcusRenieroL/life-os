@@ -13,4 +13,6 @@ public interface BudgetRepository extends JpaRepository<Budget, UUID> {
   Optional<Budget> findByIdAndUserId(UUID id, UUID userId);
 
   void deleteByIdAndUserId(UUID id, UUID userId);
+
+  Budget findByUserIdAndCategoryId(UUID userId, UUID categoryId);
 }
