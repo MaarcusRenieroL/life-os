@@ -8,6 +8,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.GmailScopes;
 import com.lifeos.batches.domains.entity.GmailOAuthToken;
+import com.lifeos.batches.domains.record.GmailConnectionStatus;
 import com.lifeos.batches.repository.GmailOAuthRepository;
 import com.lifeos.common.security.EncryptionService;
 import java.io.IOException;
@@ -72,6 +73,15 @@ public class GmailOAuthService {
     gmailOAuthToken.setExpiresAt(Instant.now().plusSeconds(expiresInSeconds(response)));
 
     gmailOAuthRepository.save(gmailOAuthToken);
+  }
+
+  public GmailConnectionStatus getStatus() {
+    UUID userId = UUID.fromString(ownerUserId);
+
+    return gmailOAuthRepository
+        .findByUserId(userId)
+        .map(token -> new GmailConnectionStatus(true, token.getCreatedAt(), token.getUpdatedAt()))
+        .orElseGet(() -> new GmailConnectionStatus(false, null, null));
   }
 
   public String getValidAccessToken() {

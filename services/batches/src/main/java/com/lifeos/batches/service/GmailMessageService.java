@@ -11,6 +11,7 @@ import com.lifeos.batches.domains.record.RawAlertEmail;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
@@ -36,24 +37,45 @@ public class GmailMessageService {
   private static final GsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
   public List<RawAlertEmail> fetchRecentAlerts() throws IOException {
+    return fetchAlerts("newer_than:2d");
+  }
+
+  // Full historical sync - no date restriction, pulls every matching alert
+  // email ever received. Separate from the regular 2-day poll (which exists
+  // to keep the scheduled job fast and cheap), triggered manually since it
+  // can be a large one-time fetch.
+  public List<RawAlertEmail> fetchAllAlerts() throws IOException {
+    return fetchAlerts(null);
+  }
+
+  private List<RawAlertEmail> fetchAlerts(String dateRestriction) throws IOException {
     Gmail gmail = buildGmailClient();
 
     List<String> senderAddresses = List.of(alertSendersConfig.split(","));
-    String query = "newer_than:2d (from:" + String.join(" OR from:", senderAddresses) + ")";
+    String senderClause = "(from:" + String.join(" OR from:", senderAddresses) + ")";
+    String query = dateRestriction == null ? senderClause : dateRestriction + " " + senderClause;
 
     log.info("Gmail search query: {}", query);
 
-    ListMessagesResponse listResponse = gmail.users().messages().list("me").setQ(query).execute();
+    // Gmail's messages().list() paginates (default ~100 per page) - a flat
+    // single call silently truncated results for any account with more
+    // matching mail than one page, which is exactly why a full sync never
+    // actually returned "all" transactions. Page through nextPageToken until
+    // it's exhausted.
+    List<Message> messageStubs = new ArrayList<>();
+    String pageToken = null;
+    do {
+      ListMessagesResponse listResponse =
+          gmail.users().messages().list("me").setQ(query).setPageToken(pageToken).execute();
+      if (listResponse.getMessages() != null) {
+        messageStubs.addAll(listResponse.getMessages());
+      }
+      pageToken = listResponse.getNextPageToken();
+    } while (pageToken != null);
 
-    log.info(
-        "Gmail search returned {} messages",
-        listResponse.getMessages() == null ? 0 : listResponse.getMessages().size());
+    log.info("Gmail search returned {} messages", messageStubs.size());
 
-    if (listResponse.getMessages() == null) {
-      return List.of();
-    }
-
-    return listResponse.getMessages().stream()
+    return messageStubs.stream()
         .map(
             messageStub -> {
               try {
