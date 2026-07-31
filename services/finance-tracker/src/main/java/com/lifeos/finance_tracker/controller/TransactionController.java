@@ -9,6 +9,7 @@ import com.lifeos.finance_tracker.domains.dto.request.RenameTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionCategoriesRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.response.TransactionResponse;
+import com.lifeos.finance_tracker.domains.enums.SourceType;
 import com.lifeos.finance_tracker.domains.record.PageResponse;
 import com.lifeos.finance_tracker.service.TransactionService;
 import jakarta.validation.Valid;
@@ -37,10 +38,15 @@ public class TransactionController {
   public ResponseEntity<ApiResponse<PageResponse<TransactionResponse>>> getTransactions(
       Authentication authentication,
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "50") int size) {
+      @RequestParam(defaultValue = "50") int size,
+      @RequestParam(required = false) String search,
+      @RequestParam(required = false) String status,
+      @RequestParam(required = false) UUID categoryId,
+      @RequestParam(required = false) SourceType sourceType) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            transactionService.getAllPaginated(authentication, page, size),
+            transactionService.getAllPaginated(
+                authentication, page, size, search, status, categoryId, sourceType),
             "Transactions fetched successfully"));
   }
 

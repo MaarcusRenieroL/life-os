@@ -58,12 +58,21 @@ public class TransactionService {
   private final BudgetSpendService budgetSpendService;
 
   public PageResponse<TransactionResponse> getAllPaginated(
-      Authentication authentication, int page, int size) {
+      Authentication authentication,
+      int page,
+      int size,
+      String search,
+      String status,
+      UUID categoryId,
+      SourceType sourceType) {
     UUID userId = (UUID) authentication.getPrincipal();
 
     Pageable pageable = PageRequest.of(page, size, Sort.by("transactionDate").descending());
 
-    Page<Transaction> transactions = transactionRepository.findAllByUserId(userId, pageable);
+    Page<Transaction> transactions =
+        transactionRepository.findAll(
+            TransactionSpecifications.matching(userId, search, status, categoryId, sourceType),
+            pageable);
 
     Map<UUID, List<UUID>> tagsByTransactionId =
         transactionCategoryRepository
