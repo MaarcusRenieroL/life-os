@@ -39,6 +39,7 @@ export const APP_MODULES: AppModuleConfig[] = [
       { label: 'Subscriptions', path: '/finance/subscriptions' },
       { label: 'Budgets', path: '/finance/budgets' },
       { label: 'Analytics', path: '/finance/analytics' },
+      { label: 'Report', path: '/finance/report' },
       { label: 'Import', path: '/finance/import' },
       { label: 'Rules', path: '/finance/rules' },
       { label: 'Accounts', path: '/finance/accounts' },
