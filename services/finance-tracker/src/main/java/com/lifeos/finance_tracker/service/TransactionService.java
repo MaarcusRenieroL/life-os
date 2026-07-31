@@ -55,6 +55,7 @@ public class TransactionService {
   private final TransactionCategoryRepository transactionCategoryRepository;
   private final CategorizationService categorizationService;
   private final MerchantService merchantService;
+  private final BudgetSpendService budgetSpendService;
 
   public PageResponse<TransactionResponse> getAllPaginated(
       Authentication authentication, int page, int size) {
@@ -123,6 +124,7 @@ public class TransactionService {
 
     applyToBalance(account, transaction.getAmount(), transaction.getType());
     merchantService.recordTransaction(userId, transaction.getDescription(), transaction.getAmount());
+    recordBudgetSpendIfExpense(transaction);
 
     return toResponse(transactionRepository.save(transaction), List.of());
   }
@@ -329,6 +331,7 @@ public class TransactionService {
 
     applyToBalance(account, transaction.getAmount(), transaction.getType());
     merchantService.recordTransaction(account.getUserId(), description, transaction.getAmount());
+    recordBudgetSpendIfExpense(transaction);
 
     transactionRepository.save(transaction);
   }
@@ -378,8 +381,26 @@ public class TransactionService {
 
     applyToBalance(account, transaction.getAmount(), transaction.getType());
     merchantService.recordTransaction(account.getUserId(), description, transaction.getAmount());
+    recordBudgetSpendIfExpense(transaction);
 
     transactionRepository.save(transaction);
+  }
+
+  // Records spend against the transaction's category budget (if any) so
+  // Budget.alertThreshold notifications actually fire. Only hooked into the
+  // initial-categorization paths (manual entry, email alert, CSV import) -
+  // not into categorize()/updateCategories() recategorization, since
+  // BudgetSpendService only supports incrementing the running total and
+  // re-recording on every recategorization would double-count spend that
+  // was already attributed to a transaction's original category.
+  private void recordBudgetSpendIfExpense(Transaction transaction) {
+    if (transaction.getType() == TransactionType.DEBIT && transaction.getCategoryId() != null) {
+      budgetSpendService.recordSpend(
+          transaction.getUserId(),
+          transaction.getCategoryId(),
+          transaction.getAmount(),
+          transaction.getTransactionDate());
+    }
   }
 
   public TransactionResponse dispute(
