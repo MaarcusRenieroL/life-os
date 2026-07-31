@@ -1,5 +1,6 @@
 package com.lifeos.finance_tracker.domains.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lifeos.finance_tracker.domains.enums.AccountType;
 import com.lifeos.finance_tracker.domains.enums.CurrencyCode;
 import java.math.BigDecimal;
@@ -38,8 +39,10 @@ public class AccountResponse {
 
   BigDecimal currentBalance;
 
+  @JsonProperty("isActive")
   boolean isActive;
 
+  @JsonProperty("isPrimary")
   boolean isPrimary;
 
   String emailForAlerts;

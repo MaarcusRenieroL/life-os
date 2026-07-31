@@ -1,5 +1,6 @@
 package com.lifeos.finance_tracker.domains.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lifeos.finance_tracker.domains.enums.SourceType;
 import com.lifeos.finance_tracker.domains.enums.TransactionStatus;
 import com.lifeos.finance_tracker.domains.enums.TransactionType;
@@ -37,7 +38,10 @@ public class TransactionResponse {
 
   boolean categoryManuallySet;
 
-  List<String> tags;
+  // All categories assigned to this transaction - see TransactionCategory. The
+  // primary categoryId above mirrors categoryIds[0] for features (budgets,
+  // rowStatus, rule learning) that only understand a single category.
+  List<UUID> categoryIds;
 
   String notes;
 
@@ -47,14 +51,17 @@ public class TransactionResponse {
 
   Instant disputeDate;
 
+  @JsonProperty("isRecurring")
   boolean isRecurring;
 
   SourceType sourceType;
 
   String sourceReference;
 
+  @JsonProperty("isReconciled")
   boolean isReconciled;
 
+  @JsonProperty("isDuplicate")
   boolean isDuplicate;
 
   UUID duplicateOf;

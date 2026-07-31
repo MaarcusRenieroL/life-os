@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -33,8 +32,6 @@ public class CreateTransactionRequest {
   BigDecimal amount;
 
   @NotNull TransactionType type;
-
-  List<String> tags;
 
   @Size(max = 500)
   String notes;

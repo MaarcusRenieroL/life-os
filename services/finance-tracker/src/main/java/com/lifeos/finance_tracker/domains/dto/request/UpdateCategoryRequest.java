@@ -27,5 +27,7 @@ public class UpdateCategoryRequest {
 
   Boolean isActive;
 
+  Boolean excludeFromAutoLearning;
+
   Integer displayOrder;
 }

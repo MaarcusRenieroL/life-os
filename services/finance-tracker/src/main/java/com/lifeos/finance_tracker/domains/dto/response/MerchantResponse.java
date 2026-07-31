@@ -1,5 +1,6 @@
 package com.lifeos.finance_tracker.domains.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -38,6 +39,7 @@ public class MerchantResponse {
 
   List<String> aliases;
 
+  @JsonProperty("isRecognized")
   boolean isRecognized;
 
   Instant createdAt;

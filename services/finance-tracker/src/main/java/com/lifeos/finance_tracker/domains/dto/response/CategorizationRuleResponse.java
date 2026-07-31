@@ -1,5 +1,6 @@
 package com.lifeos.finance_tracker.domains.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.lifeos.finance_tracker.domains.enums.MatchField;
 import com.lifeos.finance_tracker.domains.enums.MatchType;
 import java.time.Instant;
@@ -30,9 +31,12 @@ public class CategorizationRuleResponse {
 
   int priority;
 
+  @JsonProperty("isActive")
   boolean isActive;
 
   int hitCount;
+
+  boolean autoLearned;
 
   Instant createdAt;
 
