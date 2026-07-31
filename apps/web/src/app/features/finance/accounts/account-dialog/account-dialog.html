@@ -52,23 +52,59 @@
       <input pInputText id="acctNumber" formControlName="accountNumber" placeholder="•••• •••• 4471" class="w-full" />
     </div>
 
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label for="acctBalance" class="mb-1.5 block text-[11px] text-foreground/55">CURRENT BALANCE</label>
+        <p-inputnumber
+          inputId="acctBalance"
+          formControlName="currentBalance"
+          mode="currency"
+          currency="INR"
+          locale="en-IN"
+          [minFractionDigits]="0"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+        />
+      </div>
+      <div>
+        <label for="acctOpenedDate" class="mb-1.5 block text-[11px] text-foreground/55">OPENED DATE</label>
+        <p-datepicker
+          inputId="acctOpenedDate"
+          formControlName="openedDate"
+          dateFormat="M d, yy"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+    </div>
+
     <div>
-      <label for="acctBalance" class="mb-1.5 block text-[11px] text-foreground/55">CURRENT BALANCE</label>
-      <p-inputnumber
-        inputId="acctBalance"
-        formControlName="currentBalance"
-        mode="currency"
-        currency="INR"
-        locale="en-IN"
-        [minFractionDigits]="0"
-        styleClass="w-full"
-        inputStyleClass="w-full"
+      <label for="acctEmailAlerts" class="mb-1.5 block text-[11px] text-foreground/55">EMAIL FOR ALERTS (OPTIONAL)</label>
+      <input
+        pInputText
+        id="acctEmailAlerts"
+        formControlName="emailForAlerts"
+        placeholder="alerts@bank.com"
+        class="w-full"
       />
     </div>
 
-    <div class="flex items-center gap-2">
-      <p-checkbox formControlName="isPrimary" inputId="acctPrimary" [binary]="true" />
-      <label for="acctPrimary" class="text-[11.5px] text-foreground/70">Primary account</label>
+    <div>
+      <label for="acctNotes" class="mb-1.5 block text-[11px] text-foreground/55">NOTES (OPTIONAL)</label>
+      <input pInputText id="acctNotes" formControlName="notes" class="w-full" />
+    </div>
+
+    <div class="flex items-center gap-5">
+      <div class="flex items-center gap-2">
+        <p-checkbox formControlName="isPrimary" inputId="acctPrimary" [binary]="true" />
+        <label for="acctPrimary" class="text-[11.5px] text-foreground/70">Primary account</label>
+      </div>
+      @if (editing()) {
+        <div class="flex items-center gap-2">
+          <p-checkbox formControlName="isActive" inputId="acctActive" [binary]="true" />
+          <label for="acctActive" class="text-[11.5px] text-foreground/70">Active</label>
+        </div>
+      }
     </div>
 
     <div class="mt-2 flex justify-end gap-2.5">

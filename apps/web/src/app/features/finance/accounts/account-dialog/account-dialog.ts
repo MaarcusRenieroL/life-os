@@ -2,6 +2,7 @@ import { Component, inject, input, model, output } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
+import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
@@ -32,7 +33,16 @@ const CURRENCY_OPTIONS: { label: string; value: CurrencyCode }[] = [
 @Component({
   selector: 'app-account-dialog',
   standalone: true,
-  imports: [ReactiveFormsModule, DialogModule, ButtonModule, InputTextModule, InputNumberModule, SelectModule, CheckboxModule],
+  imports: [
+    ReactiveFormsModule,
+    DialogModule,
+    ButtonModule,
+    InputTextModule,
+    InputNumberModule,
+    SelectModule,
+    CheckboxModule,
+    DatePickerModule,
+  ],
   templateUrl: './account-dialog.html',
   styleUrl: './account-dialog.scss',
 })
@@ -54,8 +64,11 @@ export class AccountDialog {
     bankName: [''],
     accountNumber: ['', [Validators.maxLength(50)]],
     currencyCode: ['INR' as CurrencyCode, [Validators.required]],
+    openedDate: [null as Date | null],
     currentBalance: [0],
+    isActive: [true],
     isPrimary: [false],
+    emailForAlerts: ['', [Validators.email, Validators.maxLength(255)]],
     notes: [''],
   });
 
@@ -68,8 +81,11 @@ export class AccountDialog {
         bankName: editing.bankName ?? '',
         accountNumber: '',
         currencyCode: editing.currencyCode,
+        openedDate: editing.openedDate ? new Date(editing.openedDate) : null,
         currentBalance: editing.currentBalance,
+        isActive: editing.isActive,
         isPrimary: editing.isPrimary,
+        emailForAlerts: editing.emailForAlerts ?? '',
         notes: editing.notes ?? '',
       });
       this.form.controls.accountNumber.clearValidators();
@@ -80,8 +96,11 @@ export class AccountDialog {
         bankName: '',
         accountNumber: '',
         currencyCode: 'INR',
+        openedDate: null,
         currentBalance: 0,
+        isActive: true,
         isPrimary: false,
+        emailForAlerts: '',
         notes: '',
       });
       this.form.controls.accountNumber.setValidators([Validators.required, Validators.maxLength(50)]);
@@ -108,8 +127,11 @@ export class AccountDialog {
         accountType: value.accountType,
         bankName: value.bankName || undefined,
         currencyCode: value.currencyCode,
+        openedDate: value.openedDate ? value.openedDate.toISOString() : undefined,
         currentBalance: value.currentBalance,
+        isActive: value.isActive,
         isPrimary: value.isPrimary,
+        emailForAlerts: value.emailForAlerts || undefined,
         notes: value.notes || undefined,
         ...(value.accountNumber ? { accountNumber: value.accountNumber } : {}),
       };
@@ -121,8 +143,10 @@ export class AccountDialog {
         bankName: value.bankName || undefined,
         accountNumber: value.accountNumber,
         currencyCode: value.currencyCode,
+        openedDate: value.openedDate ? value.openedDate.toISOString() : undefined,
         currentBalance: value.currentBalance,
         isPrimary: value.isPrimary,
+        emailForAlerts: value.emailForAlerts || undefined,
         notes: value.notes || undefined,
       });
     }
