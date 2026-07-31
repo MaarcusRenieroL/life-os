@@ -13,6 +13,18 @@ import { SecurityPage } from './features/security/security-page/security-page';
 import { AuditLogPage } from './features/audit-log/audit-log/audit-log';
 import { DataManagementPage } from './features/data-management/data-management/data-management';
 import { GlobalSettings } from './features/global-settings/global-settings/global-settings';
+import { FinanceDashboard } from './features/finance/dashboard/dashboard';
+import { FinanceTransactions } from './features/finance/transactions/transactions';
+import { FinanceSubscriptions } from './features/finance/subscriptions/subscriptions';
+import { FinanceBudgets } from './features/finance/budgets/budgets';
+import { FinanceAnalytics } from './features/finance/analytics/analytics';
+import { FinanceImport } from './features/finance/import/import';
+import { FinanceRules } from './features/finance/rules/rules';
+import { FinanceReport } from './features/finance/report/report';
+import { FinanceAccounts } from './features/finance/accounts/accounts';
+import { FinanceCategories } from './features/finance/categories/categories';
+import { FinanceMerchants } from './features/finance/merchants/merchants';
+import { TransactionDetail } from './features/finance/transaction-detail/transaction-detail';
 
 export const routes: Routes = [
   { path: 'login', component: Login },
@@ -60,6 +72,66 @@ export const routes: Routes = [
         component: DataManagementPage,
         canActivate: [vaultUnlockGuard],
         data: { module: 'PM', tab: 'vault' },
+      },
+      {
+        path: 'finance/dashboard',
+        component: FinanceDashboard,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/transactions',
+        component: FinanceTransactions,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/transactions/:id',
+        component: TransactionDetail,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/subscriptions',
+        component: FinanceSubscriptions,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/budgets',
+        component: FinanceBudgets,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/analytics',
+        component: FinanceAnalytics,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/import',
+        component: FinanceImport,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/rules',
+        component: FinanceRules,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/report',
+        component: FinanceReport,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/accounts',
+        component: FinanceAccounts,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/categories',
+        component: FinanceCategories,
+        data: { module: 'FN', tab: 'finance' },
+      },
+      {
+        path: 'finance/merchants',
+        component: FinanceMerchants,
+        data: { module: 'FN', tab: 'finance' },
       },
     ],
   },
