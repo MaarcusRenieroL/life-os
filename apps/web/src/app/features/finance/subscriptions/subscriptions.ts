@@ -42,6 +42,7 @@ export class FinanceSubscriptions implements OnInit {
   private readonly categoryApi = inject(FinanceCategoryApiService);
 
   protected readonly loading = signal(true);
+  protected readonly errorMessage = signal<string | null>(null);
   protected readonly patterns = signal<RecurringPatternResponse[]>([]);
   protected readonly merchants = signal<MerchantResponse[]>([]);
   protected readonly categories = signal<CategoryResponse[]>([]);
@@ -159,14 +160,19 @@ export class FinanceSubscriptions implements OnInit {
     if (!id || !categoryId) return;
     this.recurringApi.updateCategory(id, categoryId).subscribe({
       next: (updated) => this.patterns.update((rows) => rows.map((p) => (p.id === id ? updated : p))),
-      error: () => undefined,
+      error: (err) => this.errorMessage.set(this.extractError(err)),
     });
   }
 
   protected dismiss(row: SubscriptionRow): void {
     this.recurringApi.dismiss(row.id).subscribe({
       next: () => this.patterns.update((rows) => rows.filter((p) => p.id !== row.id)),
-      error: () => undefined,
+      error: (err) => this.errorMessage.set(this.extractError(err)),
     });
+  }
+
+  private extractError(err: unknown): string {
+    const httpError = err as { error?: { message?: string } };
+    return httpError?.error?.message ?? 'That action failed. Please try again.';
   }
 }

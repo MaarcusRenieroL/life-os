@@ -47,6 +47,7 @@ export class FinanceBudgets implements OnInit {
   private readonly analyticsApi = inject(FinanceAnalyticsApiService);
 
   protected readonly loading = signal(true);
+  protected readonly errorMessage = signal<string | null>(null);
   protected readonly budgets = signal<BudgetResponse[]>([]);
   protected readonly categories = signal<CategoryResponse[]>([]);
   protected readonly comparisons = signal<Map<string, CategoryComparison>>(new Map());
@@ -154,21 +155,26 @@ export class FinanceBudgets implements OnInit {
   protected createBudget(request: CreateBudgetRequest): void {
     this.budgetApi.createBudget(request).subscribe({
       next: (budget) => this.budgets.update((rows) => [...rows, budget]),
-      error: () => undefined,
+      error: (err) => this.errorMessage.set(this.extractError(err)),
     });
   }
 
   protected updateBudget(event: { id: string; request: UpdateBudgetRequest }): void {
     this.budgetApi.updateBudget(event.id, event.request).subscribe({
       next: (updated) => this.budgets.update((rows) => rows.map((b) => (b.id === updated.id ? updated : b))),
-      error: () => undefined,
+      error: (err) => this.errorMessage.set(this.extractError(err)),
     });
   }
 
   protected deleteBudget(card: BudgetCard): void {
     this.budgetApi.deleteBudget(card.budget.id).subscribe({
       next: () => this.budgets.update((rows) => rows.filter((b) => b.id !== card.budget.id)),
-      error: () => undefined,
+      error: (err) => this.errorMessage.set(this.extractError(err)),
     });
+  }
+
+  private extractError(err: unknown): string {
+    const httpError = err as { error?: { message?: string } };
+    return httpError?.error?.message ?? 'That action failed. Please try again.';
   }
 }

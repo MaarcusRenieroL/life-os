@@ -6,6 +6,12 @@
     </div>
   </div>
 
+  @if (errorMessage()) {
+    <div class="mb-4 rounded-[0.45rem] border border-destructive/35 bg-destructive/10 px-4 py-3 text-[12.5px] text-destructive">
+      {{ errorMessage() }}
+    </div>
+  }
+
   @if (loading()) {
     <p class="text-[12.5px] text-foreground/50">Loading subscriptions…</p>
   } @else {
