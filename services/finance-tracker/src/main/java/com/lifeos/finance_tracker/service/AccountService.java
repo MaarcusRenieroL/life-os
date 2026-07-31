@@ -8,15 +8,18 @@ import com.lifeos.finance_tracker.domains.entity.Account;
 import com.lifeos.finance_tracker.exception.AccountNotFoundException;
 import com.lifeos.finance_tracker.repository.AccountRepository;
 import com.lifeos.common.security.EncryptionService;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AccountService {
 
   private final AccountRepository accountRepository;
@@ -49,7 +52,8 @@ public class AccountService {
             .accountNumberEncrypted(encryptionService.encrypt(request.getAccountNumber()))
             .currencyCode(request.getCurrencyCode())
             .openedDate(request.getOpenedDate())
-            .currentBalance(request.getCurrentBalance())
+            .currentBalance(
+                request.getCurrentBalance() != null ? request.getCurrentBalance() : BigDecimal.ZERO)
             .isActive(true)
             .isPrimary(request.isPrimary())
             .emailForAlerts(request.getEmailForAlerts())
@@ -142,8 +146,11 @@ public class AccountService {
   }
 
   private AccountResponse toResponse(Account account) {
-    String accountNumber = encryptionService.decrypt(account.getAccountNumberEncrypted());
-    String lastFour = accountNumber.substring(Math.max(0, accountNumber.length() - 4));
+    String lastFour = "----";
+    if (account.getAccountNumberEncrypted() != null) {
+      String accountNumber = encryptionService.decrypt(account.getAccountNumberEncrypted());
+      lastFour = accountNumber.substring(Math.max(0, accountNumber.length() - 4));
+    }
 
     return AccountResponse.builder()
         .id(account.getId())

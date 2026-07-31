@@ -5,13 +5,15 @@ import com.lifeos.finance_tracker.domains.dto.request.CategorizeTransactionReque
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.DisputeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
+import com.lifeos.finance_tracker.domains.dto.request.RenameTransactionRequest;
+import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionCategoriesRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.response.TransactionResponse;
+import com.lifeos.finance_tracker.domains.record.PageResponse;
 import com.lifeos.finance_tracker.service.TransactionService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,7 +34,7 @@ public class TransactionController {
   private final TransactionService transactionService;
 
   @GetMapping
-  public ResponseEntity<ApiResponse<Page<TransactionResponse>>> getTransactions(
+  public ResponseEntity<ApiResponse<PageResponse<TransactionResponse>>> getTransactions(
       Authentication authentication,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "50") int size) {
@@ -88,6 +90,17 @@ public class TransactionController {
             "Transaction categorized successfully"));
   }
 
+  @PutMapping("/{id}/rename")
+  public ResponseEntity<ApiResponse<TransactionResponse>> renameTransaction(
+      Authentication authentication,
+      @PathVariable UUID id,
+      @Valid @RequestBody RenameTransactionRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            transactionService.renameTransaction(authentication, id, request),
+            "Transaction renamed successfully"));
+  }
+
   @PutMapping("/{id}/merge")
   public ResponseEntity<ApiResponse<TransactionResponse>> mergeTransactions(
       Authentication authentication,
@@ -107,5 +120,16 @@ public class TransactionController {
     return ResponseEntity.ok(
         ApiResponse.success(
             transactionService.dispute(authentication, id, request), "Dispute saved successfully"));
+  }
+
+  @PutMapping("/{id}/categories")
+  public ResponseEntity<ApiResponse<TransactionResponse>> updateTransactionCategories(
+      Authentication authentication,
+      @PathVariable UUID id,
+      @Valid @RequestBody UpdateTransactionCategoriesRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            transactionService.updateCategories(authentication, id, request),
+            "Transaction categories updated successfully"));
   }
 }

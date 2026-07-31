@@ -1,10 +1,13 @@
 package com.lifeos.finance_tracker.service;
 
+import com.lifeos.finance_tracker.domains.dto.request.UpdateMonthlyIncomeRequest;
+import com.lifeos.finance_tracker.domains.entity.UserFinanceSettings;
 import com.lifeos.finance_tracker.domains.record.CategoryComparison;
 import com.lifeos.finance_tracker.domains.record.DashboardSummary;
 import com.lifeos.finance_tracker.domains.record.MerchantSpend;
 import com.lifeos.finance_tracker.domains.record.MonthlyTrend;
 import com.lifeos.finance_tracker.repository.TransactionRepository;
+import com.lifeos.finance_tracker.repository.UserFinanceSettingsRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
@@ -30,6 +33,7 @@ public class AnalyticsService {
   private static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
   private final TransactionRepository transactionRepository;
+  private final UserFinanceSettingsRepository userFinanceSettingsRepository;
   private final StringRedisTemplate stringRedisTemplate;
   private final ObjectMapper objectMapper;
 
@@ -39,19 +43,44 @@ public class AnalyticsService {
     String key = "analytics:dashboard:" + userId + ":" + YearMonth.now(ZONE_ID);
     String cached = stringRedisTemplate.opsForValue().get(key);
 
+    DashboardSummary result;
     if (cached != null) {
-      return objectMapper.readValue(cached, DashboardSummary.class);
+      result = objectMapper.readValue(cached, DashboardSummary.class);
+    } else {
+      ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
+      Instant start = now.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant();
+      Instant end = now.toLocalDate().plusDays(1).atStartOfDay(ZONE_ID).toInstant();
+
+      result = transactionRepository.getDashboardSummary(userId, start, end);
+
+      stringRedisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(result), CACHE_TTL);
     }
 
-    ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
-    Instant start = now.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant();
-    Instant end = now.toLocalDate().plusDays(1).atStartOfDay(ZONE_ID).toInstant();
+    // Fixed income is a user setting, not derived from transactions - always
+    // read fresh (a single PK lookup, not worth caching) rather than letting
+    // it go stale for up to CACHE_TTL after the user changes it.
+    BigDecimal fixedMonthlyIncome =
+        userFinanceSettingsRepository
+            .findById(userId)
+            .map(UserFinanceSettings::getMonthlyIncome)
+            .orElse(null);
 
-    DashboardSummary result = transactionRepository.getDashboardSummary(userId, start, end);
+    return new DashboardSummary(result.totalIncome(), result.totalExpenses(), fixedMonthlyIncome);
+  }
 
-    stringRedisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(result), CACHE_TTL);
+  public DashboardSummary updateMonthlyIncome(
+      Authentication authentication, UpdateMonthlyIncomeRequest request) {
+    UUID userId = (UUID) authentication.getPrincipal();
 
-    return result;
+    UserFinanceSettings settings =
+        userFinanceSettingsRepository
+            .findById(userId)
+            .orElseGet(() -> UserFinanceSettings.builder().userId(userId).build());
+
+    settings.setMonthlyIncome(request.getMonthlyIncome());
+    userFinanceSettingsRepository.save(settings);
+
+    return getDashboardSummary(authentication);
   }
 
   public CategoryComparison getCategoryAnalytics(Authentication authentication, UUID categoryId) {

@@ -1,8 +1,10 @@
 package com.lifeos.finance_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.finance_tracker.domains.dto.request.UpdateMonthlyIncomeRequest;
 import com.lifeos.finance_tracker.domains.record.*;
 import com.lifeos.finance_tracker.service.AnalyticsService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,13 @@ public class AnalyticsController {
   public ResponseEntity<ApiResponse<DashboardSummary>> getDashboard(Authentication authentication) {
     DashboardSummary data = analyticsService.getDashboardSummary(authentication);
     return ResponseEntity.ok(ApiResponse.success(data, "Dashboard data retrieved successfully"));
+  }
+
+  @PutMapping("/monthly-income")
+  public ResponseEntity<ApiResponse<DashboardSummary>> updateMonthlyIncome(
+      Authentication authentication, @Valid @RequestBody UpdateMonthlyIncomeRequest request) {
+    DashboardSummary data = analyticsService.updateMonthlyIncome(authentication, request);
+    return ResponseEntity.ok(ApiResponse.success(data, "Monthly income updated successfully"));
   }
 
   @GetMapping("/category/{id}")

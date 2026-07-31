@@ -11,10 +11,12 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CategorizationRuleService {
 
   private final CategorizationRuleRepository categorizationRuleRepository;
@@ -40,6 +42,15 @@ public class CategorizationRuleService {
       Authentication authentication, CreateCategorizationRuleRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
 
+    // A user manually creating a rule always wins over anything auto-learned for
+    // the same match - drop the auto-learned duplicate so the correction isn't
+    // represented twice.
+    categorizationRuleRepository
+        .findByUserIdAndMatchFieldAndMatchValueIgnoreCase(
+            userId, request.getMatchField(), request.getMatchValue())
+        .filter(CategorizationRule::isAutoLearned)
+        .ifPresent(categorizationRuleRepository::delete);
+
     CategorizationRule rule =
         CategorizationRule.builder()
             .userId(userId)
@@ -50,6 +61,7 @@ public class CategorizationRuleService {
             .priority(request.getPriority())
             .isActive(true)
             .hitCount(0)
+            .autoLearned(false)
             .build();
 
     return toResponse(categorizationRuleRepository.save(rule));
@@ -111,6 +123,7 @@ public class CategorizationRuleService {
         .priority(rule.getPriority())
         .isActive(rule.isActive())
         .hitCount(rule.getHitCount())
+        .autoLearned(rule.isAutoLearned())
         .createdAt(rule.getCreatedAt())
         .updatedAt(rule.getUpdatedAt())
         .build();

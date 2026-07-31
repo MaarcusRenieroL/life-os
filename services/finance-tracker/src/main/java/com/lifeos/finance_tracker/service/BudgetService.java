@@ -11,10 +11,12 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class BudgetService {
 
   private final BudgetRepository budgetRepository;

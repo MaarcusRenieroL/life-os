@@ -1,10 +1,12 @@
 package com.lifeos.finance_tracker.service;
 
 import com.lifeos.common.events.AuditEventType;
+import com.lifeos.finance_tracker.domains.entity.Merchant;
 import com.lifeos.finance_tracker.domains.entity.RecurringPattern;
 import com.lifeos.finance_tracker.domains.entity.Transaction;
 import com.lifeos.finance_tracker.domains.enums.RecurringFrequency;
 import com.lifeos.finance_tracker.publisher.AuditEventPublisher;
+import com.lifeos.finance_tracker.repository.MerchantRepository;
 import com.lifeos.finance_tracker.repository.RecurringPatternRepository;
 import com.lifeos.finance_tracker.repository.TransactionRepository;
 import java.math.BigDecimal;
@@ -27,6 +29,7 @@ public class RecurringDetectionService {
 
   private final TransactionRepository transactionRepository;
   private final RecurringPatternRepository recurringPatternRepository;
+  private final MerchantRepository merchantRepository;
 
   private final AuditEventPublisher auditEventPublisher;
 
@@ -115,6 +118,8 @@ public class RecurringDetectionService {
       Instant lastDate = group.get(group.size() - 1).getTransactionDate();
       Instant nextExpectedDate = lastDate.plus((long) averageIntervalDays, ChronoUnit.DAYS);
 
+      Merchant merchant = findOrCreateMerchant(userId, merchantKey, group);
+
       RecurringPattern pattern =
           recurringPatternRepository
               .findByUserIdAndMerchantKey(userId, merchantKey)
@@ -123,6 +128,7 @@ public class RecurringDetectionService {
 
       boolean isNewPattern = pattern.getId() == null;
 
+      pattern.setMerchantId(merchant.getId());
       pattern.setAverageAmount(averageAmount);
       pattern.setFrequency(frequency);
       pattern.setLastTransactionDate(lastDate);
@@ -145,5 +151,36 @@ public class RecurringDetectionService {
 
   private boolean isNear(double actual, int target, double tolerance) {
     return Math.abs(actual - target) <= target * tolerance;
+  }
+
+  // Recurring patterns are matched to a merchant by name (the clustered merchantKey), creating
+  // one on first sight - this is currently the only place merchants get created automatically
+  // from transaction activity, since transactions themselves don't carry a merchantId.
+  private Merchant findOrCreateMerchant(UUID userId, String merchantKey, List<Transaction> group) {
+    Merchant merchant =
+        merchantRepository
+            .findByUserIdAndNameIgnoreCase(userId, merchantKey)
+            .orElseGet(
+                () ->
+                    Merchant.builder()
+                        .userId(userId)
+                        .name(merchantKey)
+                        .transactionCount(0)
+                        .isRecognized(false)
+                        .build());
+
+    Transaction latest = group.get(group.size() - 1);
+    BigDecimal averageAmount =
+        group.stream()
+            .map(Transaction::getAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add)
+            .divide(BigDecimal.valueOf(group.size()), 2, RoundingMode.HALF_UP);
+
+    merchant.setTransactionCount(group.size());
+    merchant.setLastTransactionDate(latest.getTransactionDate());
+    merchant.setAverageTransactionAmount(averageAmount);
+    merchant.setRecognized(true);
+
+    return merchantRepository.save(merchant);
   }
 }

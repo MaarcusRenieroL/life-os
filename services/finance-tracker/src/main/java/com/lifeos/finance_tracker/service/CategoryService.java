@@ -11,10 +11,12 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class CategoryService {
 
   private final CategoryRepository categoryRepository;
@@ -86,6 +88,10 @@ public class CategoryService {
       category.setActive(request.getIsActive());
     }
 
+    if (request.getExcludeFromAutoLearning() != null) {
+      category.setExcludeFromAutoLearning(request.getExcludeFromAutoLearning());
+    }
+
     if (request.getDisplayOrder() != null) {
       category.setDisplayOrder(request.getDisplayOrder());
     }
@@ -112,6 +118,7 @@ public class CategoryService {
         .icon(category.getIcon())
         .parentCategoryId(category.getParentCategoryId())
         .isActive(category.isActive())
+        .excludeFromAutoLearning(category.isExcludeFromAutoLearning())
         .displayOrder(category.getDisplayOrder())
         .createdAt(category.getCreatedAt())
         .build();
