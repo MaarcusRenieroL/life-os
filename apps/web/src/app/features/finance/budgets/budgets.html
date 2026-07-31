@@ -1,0 +1,108 @@
+<main class="w-full px-4 py-9 font-mono text-foreground sm:px-11 sm:py-9 xl:px-11">
+  <div class="mb-6 flex items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Budgets</h1>
+      <p class="mt-1.5 text-[12.5px] text-foreground/55">current billing cycle</p>
+    </div>
+    <button
+      type="button"
+      (click)="openCreate()"
+      class="rounded-[0.45rem] bg-primary px-[18px] py-2.5 text-[12.5px] font-semibold text-primary-foreground"
+    >
+      + New budget
+    </button>
+  </div>
+
+  @if (loading()) {
+    <p class="text-[12.5px] text-foreground/50">Loading budgets…</p>
+  } @else {
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div class="rounded-[0.5rem] border border-border bg-card p-[22px]">
+        <div class="mb-2.5 text-[11px] tracking-[0.03em] text-foreground/50">TOTAL BUDGETED</div>
+        <div class="flex items-baseline gap-2.5">
+          <span class="text-[26px] font-semibold tracking-[-0.02em]">{{ totalBudgeted() | currency: 'INR' : 'symbol' : '1.0-0' : 'en-IN' }}</span>
+          <span class="text-xs text-foreground/50">/ {{ totalSpent() | currency: 'INR' : 'symbol' : '1.0-0' : 'en-IN' }} spent</span>
+        </div>
+        <div class="mt-3.5 h-[7px] overflow-hidden rounded-[4px] bg-white/10">
+          <div
+            class="h-full"
+            [class]="overCount() > 0 ? 'bg-destructive' : nearLimitCount() > 0 ? 'bg-warning' : 'bg-primary'"
+            [style.width.%]="totalPct()"
+          ></div>
+        </div>
+      </div>
+      <div class="rounded-[0.5rem] border border-border bg-card p-[22px]">
+        <div class="text-2xl font-semibold text-primary">{{ onTrackCount() }}</div>
+        <div class="mt-0.5 text-[11.5px] text-foreground/55">on track</div>
+      </div>
+      <div class="rounded-[0.5rem] border p-[22px]" [class]="nearLimitCount() > 0 ? 'border-warning/30' : 'border-border'">
+        <div class="text-2xl font-semibold text-warning">{{ nearLimitCount() }}</div>
+        <div class="mt-0.5 text-[11.5px] text-foreground/55">near limit</div>
+      </div>
+      <div class="rounded-[0.5rem] border p-[22px]" [class]="overCount() > 0 ? 'border-destructive/30' : 'border-border'">
+        <div class="text-2xl font-semibold text-danger-alt">{{ overCount() }}</div>
+        <div class="mt-0.5 text-[11.5px] text-foreground/55">over budget</div>
+      </div>
+    </div>
+
+    @if (budgetCards().length === 0) {
+      <div class="rounded-[0.5rem] border border-border bg-card p-8 text-center text-[12.5px] text-foreground/45">
+        No budgets yet — set a cap on a category to start tracking it.
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        @for (card of budgetCards(); track card.budget.id) {
+          <div class="rounded-[0.5rem] border bg-card p-[22px]" [class]="card.borderClass">
+            <div class="mb-3.5 flex items-start justify-between">
+              <div>
+                <div class="text-[13.5px] font-semibold">{{ card.categoryName }}</div>
+                <div
+                  class="mt-0.5 text-[11px]"
+                  [class]="card.status === 'over' ? 'text-danger-alt' : card.status === 'near-limit' ? 'text-warning' : 'text-primary'"
+                >
+                  {{ card.statusText }}
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-[15px] font-semibold">{{ card.spend | currency: 'INR' : 'symbol' : '1.0-0' : 'en-IN' }}</div>
+                <div class="text-[11px] text-foreground/50">of {{ card.budget.budgetAmount | currency: 'INR' : 'symbol' : '1.0-0' : 'en-IN' }}</div>
+              </div>
+            </div>
+            <div class="mb-3.5 h-[7px] overflow-hidden rounded-[4px] bg-white/10">
+              <div class="h-full" [class]="card.barClass" [style.width.%]="card.pct"></div>
+            </div>
+            <div class="flex justify-between border-t border-border/70 pt-3 text-[11px] text-foreground/50">
+              <span>alert at {{ card.budget.alertThreshold }}%</span>
+              <div class="flex gap-3">
+                <button type="button" class="cursor-pointer text-[11px] text-primary" (click)="openEdit(card)">Edit</button>
+                <button type="button" class="cursor-pointer text-[11px] text-destructive" (click)="deleteBudget(card)">Delete</button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (uncappedCategories().length > 0) {
+      <div class="mt-5 rounded-[0.5rem] border border-border bg-card p-[22px]">
+        <div class="mb-3.5 text-[12.5px] font-semibold">Uncapped categories</div>
+        <div class="flex flex-wrap gap-2.5">
+          @for (c of uncappedCategories(); track c.id) {
+            <div class="flex items-center gap-2.5 rounded-[0.45rem] border border-border bg-background px-[13px] py-2.5 text-xs">
+              <span>{{ c.name }}</span>
+              <span class="text-foreground/45">{{ c.spend | currency: 'INR' : 'symbol' : '1.0-0' : 'en-IN' }}/mo</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
+</main>
+
+<app-budget-dialog
+  [(visible)]="dialogVisible"
+  [categories]="categories()"
+  [editing]="editingBudget()"
+  (created)="createBudget($event)"
+  (updated)="updateBudget($event)"
+/>
