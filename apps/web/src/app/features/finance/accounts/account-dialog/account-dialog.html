@@ -1,0 +1,79 @@
+<p-dialog
+  [(visible)]="visible"
+  [header]="editing() ? 'Edit account' : 'Add account'"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '26rem' }"
+  styleClass="font-mono"
+  (onShow)="onShow()"
+>
+  <form class="flex flex-col gap-3.5" [formGroup]="form" (ngSubmit)="submit()">
+    <div>
+      <label for="acctName" class="mb-1.5 block text-[11px] text-foreground/55">ACCOUNT NAME</label>
+      <input pInputText id="acctName" formControlName="accountName" placeholder="e.g. HDFC Savings" class="w-full" />
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label for="acctType" class="mb-1.5 block text-[11px] text-foreground/55">TYPE</label>
+        <p-select
+          inputId="acctType"
+          formControlName="accountType"
+          [options]="accountTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+      <div>
+        <label for="acctCurrency" class="mb-1.5 block text-[11px] text-foreground/55">CURRENCY</label>
+        <p-select
+          inputId="acctCurrency"
+          formControlName="currencyCode"
+          [options]="currencyOptions"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label for="acctBank" class="mb-1.5 block text-[11px] text-foreground/55">BANK (OPTIONAL)</label>
+      <input pInputText id="acctBank" formControlName="bankName" placeholder="e.g. HDFC Bank" class="w-full" />
+    </div>
+
+    <div>
+      <label for="acctNumber" class="mb-1.5 block text-[11px] text-foreground/55">
+        ACCOUNT NUMBER @if (editing()) { (leave blank to keep unchanged) }
+      </label>
+      <input pInputText id="acctNumber" formControlName="accountNumber" placeholder="•••• •••• 4471" class="w-full" />
+    </div>
+
+    <div>
+      <label for="acctBalance" class="mb-1.5 block text-[11px] text-foreground/55">CURRENT BALANCE</label>
+      <p-inputnumber
+        inputId="acctBalance"
+        formControlName="currentBalance"
+        mode="currency"
+        currency="INR"
+        locale="en-IN"
+        [minFractionDigits]="0"
+        styleClass="w-full"
+        inputStyleClass="w-full"
+      />
+    </div>
+
+    <div class="flex items-center gap-2">
+      <p-checkbox formControlName="isPrimary" inputId="acctPrimary" [binary]="true" />
+      <label for="acctPrimary" class="text-[11.5px] text-foreground/70">Primary account</label>
+    </div>
+
+    <div class="mt-2 flex justify-end gap-2.5">
+      <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
+      <p-button type="submit" [label]="editing() ? 'Save changes' : 'Add account'" />
+    </div>
+  </form>
+</p-dialog>
