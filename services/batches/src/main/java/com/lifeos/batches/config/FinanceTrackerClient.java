@@ -1,5 +1,6 @@
 package com.lifeos.batches.config;
 
+import com.lifeos.batches.domains.dto.request.CreateCsvImportTransactionRequest;
 import com.lifeos.batches.domains.dto.request.CreateEmailAlertTransactionRequest;
 import com.lifeos.batches.domains.record.ParsedAlert;
 import java.util.UUID;
@@ -33,6 +34,16 @@ public class FinanceTrackerClient {
     financeTrackerRestClient
         .post()
         .uri("/v1/finance/internal/transactions")
+        .header("X-Internal-Api-Key", internalApiKey)
+        .body(request)
+        .retrieve()
+        .toBodilessEntity();
+  }
+
+  public void createCsvImportTransaction(CreateCsvImportTransactionRequest request) {
+    financeTrackerRestClient
+        .post()
+        .uri("/v1/finance/internal/transactions/csv-import")
         .header("X-Internal-Api-Key", internalApiKey)
         .body(request)
         .retrieve()

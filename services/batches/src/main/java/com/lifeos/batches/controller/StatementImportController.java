@@ -1,7 +1,9 @@
 package com.lifeos.batches.controller;
 
+import com.lifeos.batches.domains.record.StatementImportResult;
 import com.lifeos.batches.service.StatementImportService;
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import java.io.IOException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,15 +22,19 @@ public class StatementImportController {
   private final StatementImportService statementImportService;
 
   @PostMapping("/import-statement")
-  public ResponseEntity<ApiResponse<Void>> importStatement(
+  public ResponseEntity<ApiResponse<StatementImportResult>> importStatement(
       Authentication authentication,
       @RequestParam("file") MultipartFile file,
-      @RequestParam("accountId") UUID accountId)
-      throws Exception {
+      @RequestParam("accountId") UUID accountId,
+      @RequestParam(value = "password", required = false) String password)
+      throws IOException {
     UUID userId = (UUID) authentication.getPrincipal();
 
-    statementImportService.importStatement(userId, file, accountId);
+    StatementImportResult result = statementImportService.importStatement(userId, file, accountId, password);
 
-    return ResponseEntity.ok(ApiResponse.success(null, "Import started"));
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            result,
+            result.rowsImported() + " of " + result.rowsParsed() + " transactions imported"));
   }
 }
