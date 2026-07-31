@@ -8,19 +8,35 @@ import {
   CreateTransactionRequest,
   DisputeTransactionRequest,
   MergeTransactionsRequest,
+  SourceType,
   SpringPage,
   TransactionResponse,
   UpdateTransactionCategoriesRequest,
   UpdateTransactionRequest,
 } from '../models/finance.model';
 
+export interface TransactionFilters {
+  search?: string;
+  status?: 'NEEDS_REVIEW' | 'CATEGORIZED' | 'DUPLICATE';
+  categoryId?: string;
+  sourceType?: SourceType;
+}
+
 @Injectable({ providedIn: 'root' })
 export class FinanceTransactionApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/v1/finance/transactions';
 
-  getTransactions(page = 0, size = 50): Observable<SpringPage<TransactionResponse>> {
-    const params = new HttpParams().set('page', page).set('size', size);
+  getTransactions(
+    page = 0,
+    size = 50,
+    filters?: TransactionFilters,
+  ): Observable<SpringPage<TransactionResponse>> {
+    let params = new HttpParams().set('page', page).set('size', size);
+    if (filters?.search) params = params.set('search', filters.search);
+    if (filters?.status) params = params.set('status', filters.status);
+    if (filters?.categoryId) params = params.set('categoryId', filters.categoryId);
+    if (filters?.sourceType) params = params.set('sourceType', filters.sourceType);
     return this.http
       .get<ApiResponse<SpringPage<TransactionResponse>>>(this.baseUrl, { params })
       .pipe(map((response) => response.data));

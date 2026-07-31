@@ -61,7 +61,7 @@
       optionLabel="name"
       optionValue="id"
       [ngModel]="categoryFilter()"
-      (ngModelChange)="categoryFilter.set($event)"
+      (ngModelChange)="selectCategoryFilter($event)"
       styleClass="text-xs"
       appendTo="body"
     />
@@ -71,12 +71,12 @@
       optionLabel="label"
       optionValue="value"
       [ngModel]="sourceFilter()"
-      (ngModelChange)="sourceFilter.set($event)"
+      (ngModelChange)="selectSourceFilter($event)"
       styleClass="text-xs"
       appendTo="body"
     />
 
-    <div class="ml-auto text-[11.5px] text-foreground/45">{{ filteredRows().length }} of {{ transactions().length }}</div>
+    <div class="ml-auto text-[11.5px] text-foreground/45">{{ transactions().length }} of {{ totalElements() }} matching</div>
   </div>
 
   @if (selected().size > 0) {

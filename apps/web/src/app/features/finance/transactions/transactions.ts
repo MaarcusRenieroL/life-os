@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Subject, forkJoin, of } from 'rxjs';
+import { catchError, debounceTime } from 'rxjs/operators';
 
 import {
   AccountResponse,
@@ -17,7 +17,7 @@ import {
 } from '../../../core/models/finance.model';
 import { FinanceAccountApiService } from '../../../core/services/finance-account-api.service';
 import { FinanceCategoryApiService } from '../../../core/services/finance-category-api.service';
-import { FinanceTransactionApiService } from '../../../core/services/finance-transaction-api.service';
+import { FinanceTransactionApiService, TransactionFilters } from '../../../core/services/finance-transaction-api.service';
 import { accountLabel, sourceLabel } from '../finance.util';
 import { AddTransactionDialog } from './add-transaction-dialog/add-transaction-dialog';
 import { CategorizeDialog } from './categorize-dialog/categorize-dialog';
@@ -105,33 +105,11 @@ export class FinanceTransactions implements OnInit {
     return 'CATEGORIZED';
   }
 
-  protected readonly filteredRows = computed(() => {
-    const q = this.query().toLowerCase();
-    const status = this.statusFilter();
-    const category = this.categoryFilter();
-    const source = this.sourceFilter();
-    const categoryMap = this.categoryMap();
-
-    return this.transactions().filter((t) => {
-      const rowStatus = this.rowStatus(t);
-      const categoryName = t.categoryId ? (categoryMap.get(t.categoryId)?.name ?? '') : 'Uncategorized';
-
-      if (status !== 'all' && rowStatus !== status) return false;
-      if (category !== 'all' && t.categoryId !== category && !(t.categoryIds ?? []).includes(category)) {
-        return false;
-      }
-      if (source !== 'all' && t.sourceType !== source) return false;
-      if (
-        q &&
-        !t.description.toLowerCase().includes(q) &&
-        !categoryName.toLowerCase().includes(q) &&
-        !String(t.amount).includes(q)
-      ) {
-        return false;
-      }
-      return true;
-    });
-  });
+  // Filtering now happens server-side (see TransactionSpecifications on the
+  // backend) so it applies across the whole result set, not just the loaded
+  // page - this is just a passthrough kept so the template doesn't need to
+  // change every reference from filteredRows() to transactions().
+  protected readonly filteredRows = computed(() => this.transactions());
 
   protected readonly allFilteredSelected = computed(() => {
     const rows = this.filteredRows();
@@ -143,6 +121,8 @@ export class FinanceTransactions implements OnInit {
     this.filteredRows().reduce((sum, t) => sum + (t.type === 'CREDIT' ? t.amount : -t.amount), 0),
   );
 
+  private readonly searchChanged = new Subject<void>();
+
   ngOnInit(): void {
     this.categoryApi.getCategories().subscribe({
       next: (categories) => this.categories.set(categories),
@@ -152,12 +132,25 @@ export class FinanceTransactions implements OnInit {
       next: (accounts) => this.accounts.set(accounts),
       error: (err) => this.errorMessage.set(this.extractError(err)),
     });
+    this.searchChanged.pipe(debounceTime(350)).subscribe(() => this.loadPage(0));
     this.loadPage(0);
+  }
+
+  private currentFilters(): TransactionFilters {
+    const status = this.statusFilter();
+    const category = this.categoryFilter();
+    const source = this.sourceFilter();
+    return {
+      search: this.query().trim() || undefined,
+      status: status === 'all' ? undefined : status,
+      categoryId: category === 'all' ? undefined : category,
+      sourceType: source === 'all' ? undefined : source,
+    };
   }
 
   private loadPage(page: number): void {
     this.loading.set(true);
-    this.transactionApi.getTransactions(page, PAGE_SIZE).subscribe({
+    this.transactionApi.getTransactions(page, PAGE_SIZE, this.currentFilters()).subscribe({
       next: (result) => {
         this.transactions.set(result.content);
         this.page.set(result.number);
@@ -176,10 +169,22 @@ export class FinanceTransactions implements OnInit {
 
   protected setQuery(value: string): void {
     this.query.set(value);
+    this.searchChanged.next();
   }
 
   protected selectStatus(status: StatusFilter): void {
     this.statusFilter.set(status);
+    this.loadPage(0);
+  }
+
+  protected selectCategoryFilter(categoryId: string): void {
+    this.categoryFilter.set(categoryId);
+    this.loadPage(0);
+  }
+
+  protected selectSourceFilter(source: SourceType | 'all'): void {
+    this.sourceFilter.set(source);
+    this.loadPage(0);
   }
 
   protected toggleRow(id: string): void {
