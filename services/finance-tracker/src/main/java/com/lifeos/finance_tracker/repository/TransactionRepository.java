@@ -27,13 +27,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
   boolean existsBySourceReference(String sourceReference);
 
-  boolean existsByAccountIdAndAmountAndTransactionDateBetween(
-      UUID accountId, BigDecimal amount, Instant transactionDateFrom, Instant transactionDateTo);
+  boolean existsByAccountIdAndAmountAndTransactionDateBetweenAndDescription(
+      UUID accountId,
+      BigDecimal amount,
+      Instant transactionDateFrom,
+      Instant transactionDateTo,
+      String description);
 
   @Query(
       "SELECT new com.lifeos.finance_tracker.domains.record.DashboardSummary("
           + "  COALESCE(SUM(CASE WHEN t.type = 'CREDIT' THEN t.amount ELSE 0 END), 0), "
-          + "  COALESCE(SUM(CASE WHEN t.type = 'DEBIT' THEN t.amount ELSE 0 END), 0)"
+          + "  COALESCE(SUM(CASE WHEN t.type = 'DEBIT' THEN t.amount ELSE 0 END), 0), "
+          + "  NULL"
           + ") "
           + "FROM Transaction t "
           + "WHERE t.userId = :userId AND t.transactionDate BETWEEN :start AND :end")
@@ -54,7 +59,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
       value =
           "SELECT TO_CHAR(DATE_TRUNC('month', transaction_date), 'YYYY-MM') as month, "
               + "COALESCE(SUM(amount), 0) as total_spend "
-              + "FROM transactions "
+              + "FROM finance_schema.transactions "
               + "WHERE user_id = :userId AND type = 'DEBIT' "
               + "AND transaction_date >= :since "
               + "GROUP BY DATE_TRUNC('month', transaction_date) "
@@ -65,7 +70,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
   @Query(
       value =
           "SELECT LOWER(TRIM(description)) as merchant, COALESCE(SUM(amount), 0) as total_spend "
-              + "FROM transactions "
+              + "FROM finance_schema.transactions "
               + "WHERE user_id = :userId AND type = 'DEBIT' "
               + "GROUP BY LOWER(TRIM(description)) "
               + "ORDER BY total_spend DESC "

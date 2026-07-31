@@ -51,6 +51,13 @@ public class CategorizationRule {
 
   int hitCount;
 
+  // True for rules CategorizationService#learnFromCorrection created on its own
+  // from a user's category correction, as opposed to a rule the user built
+  // directly on the Rules page. Lets the UI split "my rules" from "auto-learned
+  // rules" and lets learning skip creating a duplicate of a rule the user
+  // already has.
+  boolean autoLearned;
+
   @CreationTimestamp Instant createdAt;
 
   @UpdateTimestamp Instant updatedAt;

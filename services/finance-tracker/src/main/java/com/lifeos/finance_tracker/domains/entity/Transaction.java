@@ -12,7 +12,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -21,9 +20,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.type.SqlTypes;
 
 @Data
 @NoArgsConstructor
@@ -54,9 +51,6 @@ public class Transaction {
   UUID categoryId;
 
   boolean categoryManuallySet;
-
-  @JdbcTypeCode(SqlTypes.JSON)
-  List<String> tags;
 
   String notes;
 

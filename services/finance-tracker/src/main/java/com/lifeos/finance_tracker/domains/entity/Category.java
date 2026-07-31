@@ -48,6 +48,14 @@ public class Category {
 
   boolean isActive;
 
+  // When true, categorizing a transaction into this category never
+  // creates/strengthens a categorization rule - for categories like Rapido
+  // or Transportation where the payee is often an individual driver's
+  // name (a one-off UPI recipient) rather than a recurring merchant, so
+  // auto-learning a rule from it would just be clutter that never matches
+  // again.
+  boolean excludeFromAutoLearning;
+
   int displayOrder;
 
   @CreationTimestamp Instant createdAt;

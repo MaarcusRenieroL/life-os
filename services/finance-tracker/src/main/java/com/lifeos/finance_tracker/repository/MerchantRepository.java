@@ -13,4 +13,6 @@ public interface MerchantRepository extends JpaRepository<Merchant, UUID> {
   Optional<Merchant> findByIdAndUserId(UUID id, UUID userId);
 
   void deleteByIdAndUserId(UUID id, UUID userId);
+
+  Optional<Merchant> findByUserIdAndNameIgnoreCase(UUID userId, String name);
 }
