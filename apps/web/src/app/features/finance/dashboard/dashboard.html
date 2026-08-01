@@ -76,7 +76,7 @@
         } @else {
           <div class="text-[26px] font-semibold tracking-[-0.02em] text-primary">
             {{
-              fixedMonthlyIncome() != null
+              fixedMonthlyIncome() !== null
                 ? (fixedMonthlyIncome() | currency: 'INR' : 'symbol' : '1.0-0' : 'en-IN')
                 : 'Not set'
             }}
