@@ -13,18 +13,6 @@ import { SecurityPage } from './features/security/security-page/security-page';
 import { AuditLogPage } from './features/audit-log/audit-log/audit-log';
 import { DataManagementPage } from './features/data-management/data-management/data-management';
 import { GlobalSettings } from './features/global-settings/global-settings/global-settings';
-import { FinanceDashboard } from './features/finance/dashboard/dashboard';
-import { FinanceTransactions } from './features/finance/transactions/transactions';
-import { FinanceSubscriptions } from './features/finance/subscriptions/subscriptions';
-import { FinanceBudgets } from './features/finance/budgets/budgets';
-import { FinanceAnalytics } from './features/finance/analytics/analytics';
-import { FinanceImport } from './features/finance/import/import';
-import { FinanceRules } from './features/finance/rules/rules';
-import { FinanceReport } from './features/finance/report/report';
-import { FinanceAccounts } from './features/finance/accounts/accounts';
-import { FinanceCategories } from './features/finance/categories/categories';
-import { FinanceMerchants } from './features/finance/merchants/merchants';
-import { TransactionDetail } from './features/finance/transaction-detail/transaction-detail';
 
 export const routes: Routes = [
   { path: 'login', component: Login },
@@ -75,62 +63,65 @@ export const routes: Routes = [
       },
       {
         path: 'finance/dashboard',
-        component: FinanceDashboard,
+        loadComponent: () => import('./features/finance/dashboard/dashboard').then((m) => m.FinanceDashboard),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/transactions',
-        component: FinanceTransactions,
+        loadComponent: () =>
+          import('./features/finance/transactions/transactions').then((m) => m.FinanceTransactions),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/transactions/:id',
-        component: TransactionDetail,
+        loadComponent: () =>
+          import('./features/finance/transaction-detail/transaction-detail').then((m) => m.TransactionDetail),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/subscriptions',
-        component: FinanceSubscriptions,
+        loadComponent: () =>
+          import('./features/finance/subscriptions/subscriptions').then((m) => m.FinanceSubscriptions),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/budgets',
-        component: FinanceBudgets,
+        loadComponent: () => import('./features/finance/budgets/budgets').then((m) => m.FinanceBudgets),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/analytics',
-        component: FinanceAnalytics,
+        loadComponent: () => import('./features/finance/analytics/analytics').then((m) => m.FinanceAnalytics),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/import',
-        component: FinanceImport,
+        loadComponent: () => import('./features/finance/import/import').then((m) => m.FinanceImport),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/rules',
-        component: FinanceRules,
+        loadComponent: () => import('./features/finance/rules/rules').then((m) => m.FinanceRules),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/report',
-        component: FinanceReport,
+        loadComponent: () => import('./features/finance/report/report').then((m) => m.FinanceReport),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/accounts',
-        component: FinanceAccounts,
+        loadComponent: () => import('./features/finance/accounts/accounts').then((m) => m.FinanceAccounts),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/categories',
-        component: FinanceCategories,
+        loadComponent: () => import('./features/finance/categories/categories').then((m) => m.FinanceCategories),
         data: { module: 'FN', tab: 'finance' },
       },
       {
         path: 'finance/merchants',
-        component: FinanceMerchants,
+        loadComponent: () => import('./features/finance/merchants/merchants').then((m) => m.FinanceMerchants),
         data: { module: 'FN', tab: 'finance' },
       },
     ],
