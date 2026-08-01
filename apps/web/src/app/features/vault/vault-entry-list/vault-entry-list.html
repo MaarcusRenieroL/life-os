@@ -1,0 +1,357 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <div class="mb-[22px] flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-[22px] font-semibold tracking-tight">Vault</h1>
+      <p class="mt-1 text-[12.5px] text-foreground/55">
+        {{ stats().total }} items
+        @if (stats().actionRequired > 0) {
+          &middot; {{ stats().actionRequired }} need attention
+        }
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2.5">
+      <p-button label="Categories" icon="pi pi-tag" severity="secondary" (onClick)="openCategoryManager()" />
+      <p-button label="Generate password" severity="secondary" (onClick)="openGenerator()" />
+      <p-button label="+ Add entry" (onClick)="openAddEntry()" />
+    </div>
+  </div>
+
+  <app-vault-category-manager [(visible)]="categoryManagerVisible" (categoriesChanged)="refreshCategories()" />
+  <app-vault-filters-dialog
+    [(visible)]="filtersVisible"
+    [categories]="categories()"
+    [filters]="filters()"
+    (applied)="applyFilters($event)"
+  />
+  <app-vault-entry-form
+    [(visible)]="entryFormVisible"
+    [entryId]="editingEntryId()"
+    (saved)="onEntrySaved()"
+  />
+  <app-password-generator-dialog [(visible)]="generatorVisible" />
+
+  @if (!vaultState.unlocked()) {
+    <a routerLink="/vault" class="mb-4 block surface-panel px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
+      🔒 Unlock to reveal passwords
+    </a>
+  }
+
+  @if (loading()) {
+    <p class="text-sm text-muted-foreground">Loading entries…</p>
+  } @else {
+    <div class="mb-[22px] grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-foreground/25">
+        <div class="text-xl font-semibold tabular-nums">{{ stats().total }}</div>
+        <div class="mt-0.5 text-[11px] text-foreground/55">total items</div>
+      </div>
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-warning/50">
+        <div class="text-xl font-semibold text-warning tabular-nums">{{ stats().weak }}</div>
+        <div class="mt-0.5 text-[11px] text-foreground/55">weak</div>
+      </div>
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-danger-alt/50">
+        <div class="text-xl font-semibold text-danger-alt tabular-nums">{{ stats().duplicate }}</div>
+        <div class="mt-0.5 text-[11px] text-foreground/55">duplicate</div>
+      </div>
+      <div class="rounded-[0.45rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-destructive/50">
+        <div class="text-xl font-semibold text-destructive tabular-nums">{{ stats().actionRequired }}</div>
+        <div class="mt-0.5 text-[11px] text-foreground/55">action required</div>
+      </div>
+    </div>
+
+    <div class="mb-3.5 flex flex-wrap items-center gap-2.5">
+      <input
+        [(ngModel)]="search"
+        placeholder="filter by name, username, url..."
+        class="w-full rounded-[0.45rem] border border-border bg-card px-3 py-2 text-[12.5px] text-foreground outline-none transition-all duration-150 focus:border-primary/50 focus:shadow-[0_0_0_3px_oklch(0.7_0.19_165_/_12%)] sm:w-[260px]"
+      />
+      <button
+        type="button"
+        (click)="setQuickChip('all')"
+        class="rounded-[0.45rem] border px-3 py-[7px] text-xs transition-colors duration-150 hover:border-foreground/25"
+        [class.border-primary/40]="quickChip() === 'all'"
+        [class.bg-primary/15]="quickChip() === 'all'"
+        [class.text-primary]="quickChip() === 'all'"
+        [class.border-border]="quickChip() !== 'all'"
+        [class.bg-card]="quickChip() !== 'all'"
+        [class.text-foreground/65]="quickChip() !== 'all'"
+      >
+        All
+      </button>
+      <button
+        type="button"
+        (click)="setQuickChip('favorites')"
+        class="rounded-[0.45rem] border px-3 py-[7px] text-xs transition-colors duration-150 hover:border-foreground/25"
+        [class.border-primary/40]="quickChip() === 'favorites'"
+        [class.bg-primary/15]="quickChip() === 'favorites'"
+        [class.text-primary]="quickChip() === 'favorites'"
+        [class.border-border]="quickChip() !== 'favorites'"
+        [class.bg-card]="quickChip() !== 'favorites'"
+        [class.text-foreground/65]="quickChip() !== 'favorites'"
+      >
+        Favorites
+      </button>
+      @for (category of categories(); track category.id) {
+        <button
+          type="button"
+          (click)="setQuickChip(category.id)"
+          class="rounded-[0.45rem] border px-3 py-[7px] text-xs transition-colors duration-150 hover:border-foreground/25"
+          [class.border-primary/40]="quickChip() === category.id"
+          [class.bg-primary/15]="quickChip() === category.id"
+          [class.text-primary]="quickChip() === category.id"
+          [class.border-border]="quickChip() !== category.id"
+          [class.bg-card]="quickChip() !== category.id"
+          [class.text-foreground/65]="quickChip() !== category.id"
+        >
+          {{ category.name }}
+        </button>
+      }
+      <button
+        type="button"
+        (click)="openFilters()"
+        class="rounded-[0.45rem] border px-3 py-[7px] text-xs transition-colors duration-150 hover:border-foreground/25"
+        [class.border-primary/40]="filtersActive()"
+        [class.bg-primary/15]="filtersActive()"
+        [class.text-primary]="filtersActive()"
+        [class.border-border]="!filtersActive()"
+        [class.bg-card]="!filtersActive()"
+        [class.text-foreground/65]="!filtersActive()"
+      >
+        + Filters
+      </button>
+      <div class="ml-auto text-[11px] text-foreground/45">{{ filteredEntries().length }} shown</div>
+    </div>
+
+    @if (selected().size > 0) {
+      <div class="mb-3 flex flex-wrap items-center gap-1.5 rounded-[0.45rem] border border-primary/30 bg-primary/10 px-3 py-2">
+        <span class="mr-1 text-[12.5px] font-semibold text-primary">{{ selected().size }} selected</span>
+        <div class="flex-1"></div>
+        <p-button
+          label="Move to folder"
+          icon="pi pi-folder"
+          [text]="true"
+          severity="secondary"
+          size="small"
+          (onClick)="folderMenu.toggle($event)"
+        />
+        <p-menu #folderMenu [popup]="true" [model]="bulkFolderMenuItems()" />
+        <p-button
+          label="Export"
+          icon="pi pi-download"
+          [text]="true"
+          severity="secondary"
+          size="small"
+          (onClick)="exportSelected()"
+        />
+        <p-button
+          label="Delete"
+          icon="pi pi-trash"
+          [text]="true"
+          severity="danger"
+          size="small"
+          (onClick)="deleteSelected()"
+        />
+        <p-button
+          icon="pi pi-times"
+          [text]="true"
+          [rounded]="true"
+          severity="secondary"
+          size="small"
+          pTooltip="Clear selection"
+          tooltipPosition="top"
+          (onClick)="clearSelection()"
+        />
+      </div>
+    }
+
+    @if (filteredEntries().length === 0) {
+      <div class="surface-panel p-8 text-center text-sm text-muted-foreground">
+        No entries match your filters.
+      </div>
+    } @else {
+      <div class="overflow-hidden overflow-x-auto rounded-[0.5rem] border border-border">
+        <div class="min-w-[720px]">
+          <div
+            class="grid grid-cols-[28px_2.2fr_1fr_1fr_1fr_90px] items-center gap-2 border-b border-border bg-card px-4 py-2.5 text-[11px] text-foreground/45"
+          >
+            <p-checkbox [ngModel]="allChecked()" (onChange)="toggleSelectAll()" [binary]="true" />
+            <div>NAME</div>
+            <div>CATEGORY</div>
+            <div>STRENGTH</div>
+            <div>UPDATED</div>
+            <div></div>
+          </div>
+
+          @for (entry of filteredEntries(); track entry.id) {
+            <div
+              role="button"
+              tabindex="0"
+              (click)="openEntry(entry.id)"
+              (keydown.enter)="openEntry(entry.id)"
+              class="grid cursor-pointer grid-cols-[28px_2.2fr_1fr_1fr_1fr_90px] items-center gap-2 border-b border-border px-4 py-3 transition-colors duration-150 last:border-b-0 hover:bg-accent/20"
+            >
+              <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+              <div (click)="$event.stopPropagation()">
+                <p-checkbox
+                  [ngModel]="selected().has(entry.id)"
+                  (onChange)="toggleSelect(entry.id)"
+                  [binary]="true"
+                />
+              </div>
+              <div class="flex min-w-0 items-center gap-2.5">
+                <div class="flex h-[26px] w-[26px] shrink-0 items-center justify-center overflow-hidden rounded-[0.45rem] border border-border bg-background text-[10px] text-primary">
+                  @if (entry.icon?.startsWith('http')) {
+                    <img [src]="entry.icon" alt="" class="h-full w-full object-cover" />
+                  } @else {
+                    {{ entry.title.slice(0, 2).toUpperCase() }}
+                  }
+                </div>
+                <div class="min-w-0">
+                  <div class="truncate text-[12.5px]">
+                    {{ entry.title }}
+                    @if (entry.favorite) {
+                      <span class="text-primary">★</span>
+                    }
+                  </div>
+                  <div class="truncate text-[11px] text-foreground/50">
+                    {{ entry.username || entry.email || entry.url || '—' }}
+                  </div>
+                </div>
+              </div>
+              <div class="flex min-w-0 items-center gap-1.5 text-[11px] text-foreground/60">
+                @if (categoryColor(entry.categoryId); as color) {
+                  <span class="h-1.5 w-1.5 shrink-0 rounded-full" [style.background-color]="color"></span>
+                }
+                <span class="truncate">{{ categoryName(entry.categoryId) }}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="h-1.5 w-1.5 rounded-full" [class]="strengthDotClass(strength(entry))"></span>
+                <span class="text-[11px]" [class]="strengthColorClass(strength(entry))">{{ strength(entry) }}</span>
+              </div>
+              <div class="text-[11px] text-foreground/50">{{ entry.updatedAt | date: 'MMM d' }}</div>
+              <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+              <div class="flex items-center justify-end gap-0.5" (click)="$event.stopPropagation()">
+                <p-button
+                  icon="pi pi-copy"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  pTooltip="Copy username"
+                  tooltipPosition="top"
+                  (onClick)="copy(entry.username || entry.email, 'row-' + entry.id)"
+                />
+                <p-button
+                  icon="pi pi-ellipsis-v"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  pTooltip="More actions"
+                  tooltipPosition="top"
+                  (onClick)="rowMenu.toggle($event)"
+                />
+                <p-menu #rowMenu [popup]="true" [model]="rowMenuItems(entry)" />
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
+
+  @if (openEntryId(); as id) {
+    <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
+    <div
+      (click)="closeEntry()"
+      (keydown.escape)="closeEntry()"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-background/75 p-4"
+    >
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+      <div (click)="$event.stopPropagation()" class="w-full max-w-[480px] rounded-[0.45rem] border border-border bg-card p-6 shadow-[0_24px_64px_oklch(0_0_0_/_50%)]">
+        @if (openEntryDetail(); as entry) {
+          <div class="mb-[18px] flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-[0.45rem] border border-border bg-background text-[11px] text-primary">
+                @if (entry.icon?.startsWith('http')) {
+                  <img [src]="entry.icon" alt="" class="h-full w-full object-cover" />
+                } @else {
+                  {{ entry.title.slice(0, 2).toUpperCase() }}
+                }
+              </div>
+              <div class="text-[15px] font-semibold">{{ entry.title }}</div>
+            </div>
+            <p-button
+              icon="pi pi-times"
+              severity="secondary"
+              [text]="true"
+              [rounded]="true"
+              (onClick)="closeEntry()"
+            />
+          </div>
+          <div class="flex flex-col gap-3.5">
+            <div>
+              <div class="mb-1.5 block text-[11px] text-foreground/55">USERNAME / EMAIL</div>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 truncate rounded-[0.45rem] border border-border bg-background px-3 py-2.5 text-[13px]">
+                  {{ entry.username || entry.email || '—' }}
+                </div>
+                <p-button
+                  icon="pi pi-copy"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  pTooltip="Copy"
+                  tooltipPosition="top"
+                  (onClick)="copy(entry.username || entry.email, 'modal-user')"
+                />
+              </div>
+            </div>
+            <div>
+              <div class="mb-1.5 block text-[11px] text-foreground/55">PASSWORD</div>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 truncate rounded-[0.45rem] border border-border bg-background px-3 py-2.5 text-[13px] tracking-[0.03em]">
+                  {{ showPassword() ? entry.password : '•'.repeat(entry.password?.length || 8) }}
+                </div>
+                <p-button
+                  [icon]="showPassword() ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  [pTooltip]="showPassword() ? 'Hide' : 'Show'"
+                  tooltipPosition="top"
+                  (onClick)="togglePasswordVisibility()"
+                />
+                <p-button
+                  icon="pi pi-copy"
+                  severity="secondary"
+                  [text]="true"
+                  [rounded]="true"
+                  pTooltip="Copy"
+                  tooltipPosition="top"
+                  (onClick)="copy(entry.password, 'modal-pw')"
+                />
+              </div>
+            </div>
+            @if (entry.url) {
+              <div>
+                <div class="mb-1.5 block text-[11px] text-foreground/55">URL</div>
+                <a [href]="entry.url" target="_blank" rel="noopener" class="text-[12.5px] text-primary">{{ entry.url }}</a>
+              </div>
+            }
+            <div class="flex flex-wrap justify-between gap-2 border-t border-border pt-3 text-[11px] text-foreground/55">
+              <span>
+                Strength:
+                <span [class]="strengthColorClass(strength(entry))">{{ strength(entry) }}</span>
+              </span>
+              <span>Updated {{ entry.updatedAt | date: 'MMM d, y' }}</span>
+            </div>
+          </div>
+          <div class="mt-[22px] flex justify-end gap-2.5">
+            <p-button label="Edit" icon="pi pi-pencil" severity="secondary" (onClick)="editOpenEntry()" />
+            <p-button label="Done" (onClick)="closeEntry()" />
+          </div>
+        } @else {
+          <p class="text-sm text-muted-foreground">Loading…</p>
+        }
+      </div>
+    </div>
+  }
+</main>

@@ -1,0 +1,171 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <div class="mb-6 flex items-center gap-2 text-[12.5px]">
+    <a routerLink="/home" class="text-foreground no-underline hover:text-primary">life-os</a>
+    <span class="text-foreground/40">/</span>
+    <span class="text-foreground/85">Settings</span>
+  </div>
+
+  <div class="grid grid-cols-1 gap-8 md:grid-cols-[220px_1fr]">
+    <nav class="flex flex-row gap-0.5 overflow-x-auto md:flex-col md:overflow-visible">
+      @for (item of navItems; track item.id) {
+        <button
+          type="button"
+          class="cursor-pointer whitespace-nowrap rounded-[0.45rem] bg-transparent px-3 py-2 text-left text-[12.5px] transition-colors"
+          [class.bg-foreground/6]="activeSection() === item.id && !item.danger"
+          [class.font-semibold]="activeSection() === item.id"
+          [class.text-danger-alt]="item.danger"
+          [class.text-foreground/65]="!item.danger && activeSection() !== item.id"
+          (click)="scrollToSection(item.id)"
+        >
+          {{ item.label }}
+        </button>
+      }
+    </nav>
+
+    <div class="flex flex-col gap-4">
+      <section id="profile" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+        <div class="mb-3.5 text-[13px] font-semibold">Profile</div>
+
+        <div class="mb-4 flex items-center gap-3.5">
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-background text-sm text-primary"
+          >
+            {{ user().initials }}
+          </div>
+          <p-button
+            label="Change avatar"
+            icon="pi pi-camera"
+            [text]="true"
+            severity="secondary"
+            (onClick)="changeAvatar()"
+          />
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label for="settingsName" class="mb-1.5 block text-[11px] text-foreground/55">NAME</label>
+            <input
+              pInputText
+              id="settingsName"
+              type="text"
+              [ngModel]="name()"
+              (ngModelChange)="name.set($event)"
+              class="w-full"
+            />
+          </div>
+          <div>
+            <label for="settingsEmail" class="mb-1.5 block text-[11px] text-foreground/55">EMAIL</label>
+            <input
+              pInputText
+              id="settingsEmail"
+              type="email"
+              [ngModel]="email()"
+              [disabled]="true"
+              class="w-full"
+            />
+          </div>
+        </div>
+
+        <div class="mt-3.5 flex items-center gap-2.5">
+          <p-button
+            label="Save"
+            [loading]="savingProfile()"
+            [disabled]="!name()"
+            (onClick)="saveProfile()"
+          />
+          @if (profileSaved()) {
+            <span class="text-[11px] text-primary">Saved</span>
+          }
+          @if (profileError()) {
+            <span class="text-[11px] text-destructive">{{ profileError() }}</span>
+          }
+        </div>
+      </section>
+
+      <section id="modules" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+        <div class="mb-3.5 text-[13px] font-semibold">Modules</div>
+
+        @if (modulesError()) {
+          <p class="mb-3 text-[11px] text-destructive">{{ modulesError() }}</p>
+        }
+
+        <div class="flex flex-col">
+          @for (module of modules(); track module.code) {
+            <div class="flex items-center justify-between border-b border-border py-2.5 last:border-b-0">
+              <span class="text-[12.5px]">{{ module.name }}</span>
+              @if (module.enabled) {
+                <p-toggleswitch [ngModel]="true" (ngModelChange)="toggleModule(module.code)" />
+              } @else {
+                <p-button
+                  label="Set up"
+                  icon="pi pi-plus"
+                  [text]="true"
+                  severity="secondary"
+                  (onClick)="setUpModule(module.code)"
+                />
+              }
+            </div>
+          }
+        </div>
+      </section>
+
+      <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <section id="appearance" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+          <div class="mb-3.5 text-[13px] font-semibold">Appearance</div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-[12.5px] text-foreground/75">Theme</span>
+            <p-select
+              [ngModel]="theme()"
+              (ngModelChange)="theme.set($event)"
+              [options]="themeOptions"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-56"
+            />
+          </div>
+        </section>
+
+        <section id="notifications" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+          <div class="mb-1.5 text-[13px] font-semibold">Notifications</div>
+          <div class="text-[11px] text-foreground/55">
+            Email and push notification preferences are coming soon — there's no notifications backend yet.
+          </div>
+        </section>
+
+        <section id="integrations" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+          <div class="mb-1.5 text-[13px] font-semibold">Integrations</div>
+          <div class="text-[11px] text-foreground/55">
+            Connect third-party services (calendars, job boards, banks) once those integrations exist.
+          </div>
+        </section>
+
+        <section id="data-privacy" class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+          <div class="mb-1.5 text-[13px] font-semibold">Data &amp; privacy</div>
+          <div class="text-[11px] text-foreground/55">
+            Export, import and backup live on the
+            <a routerLink="/vault/data" class="text-primary no-underline hover:underline"
+              >Password Manager's Data Management page</a
+            >
+            for now — an account-wide version is planned.
+          </div>
+        </section>
+      </div>
+
+      <section id="danger-zone" class="rounded-[0.45rem] border border-danger-alt/35 bg-card p-5 transition-colors hover:border-danger-alt/55">
+        <div class="mb-1.5 text-[13px] font-semibold text-danger-alt">Danger zone</div>
+        <div class="mb-3.5 text-[11px] text-foreground/55">
+          Permanently deletes your vault and account. This cannot be undone.
+        </div>
+        <p-button
+          label="Delete account"
+          severity="danger"
+          [outlined]="true"
+          (onClick)="openDeleteAccountDialog()"
+        />
+      </section>
+    </div>
+  </div>
+
+  <app-delete-account-confirm-dialog [(visible)]="deleteAccountDialogVisible" />
+</main>

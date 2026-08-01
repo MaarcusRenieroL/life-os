@@ -1,0 +1,102 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <div class="mb-[22px]">
+    <h1 class="text-[22px] font-semibold tracking-tight">Password Health</h1>
+    <p class="mt-1 text-[12.5px] text-foreground/55">
+      Overall score reflects weak, reused and compromised credentials across your vault
+    </p>
+  </div>
+
+  @if (loading()) {
+    <p class="text-sm text-muted-foreground">Loading health data…</p>
+  } @else {
+    <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-[280px_1fr]">
+      <div class="flex flex-col items-center justify-center gap-1.5 rounded-[0.45rem] border border-border bg-card p-6">
+        <div class="relative flex h-[120px] w-[120px] items-center justify-center rounded-full" [style]="scoreRingStyle()">
+          <div class="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full bg-card">
+            <div class="text-[26px] font-semibold">{{ score() }}</div>
+            <div class="text-[10px] text-foreground/50">/ 100</div>
+          </div>
+        </div>
+        <div class="mt-2 text-xs" [class]="scoreLabelClass()">{{ scoreLabel() }}</div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="rounded-[0.45rem] border border-border bg-card p-4 transition-colors hover:border-foreground/25">
+          <div class="text-xl font-semibold tabular-nums">{{ stats().total }}</div>
+          <div class="mt-0.5 text-[11px] text-foreground/55">total passwords</div>
+        </div>
+        <div class="rounded-[0.45rem] border border-warning/40 bg-card p-4 transition-colors hover:border-warning/70">
+          <div class="text-xl font-semibold text-warning tabular-nums">{{ stats().weak }}</div>
+          <div class="mt-0.5 text-[11px] text-foreground/55">weak passwords</div>
+        </div>
+        <div class="rounded-[0.45rem] border border-danger-alt/40 bg-card p-4 transition-colors hover:border-danger-alt/70">
+          <div class="text-xl font-semibold text-danger-alt tabular-nums">{{ stats().duplicate }}</div>
+          <div class="mt-0.5 text-[11px] text-foreground/55">duplicate / reused</div>
+        </div>
+        <div class="rounded-[0.45rem] border border-destructive/40 bg-card p-4 transition-colors hover:border-destructive/70">
+          <div class="text-xl font-semibold text-destructive tabular-nums">{{ stats().compromised }}</div>
+          <div class="mt-0.5 text-[11px] text-foreground/55">compromised (dark web)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div class="overflow-hidden rounded-[0.45rem] border border-border bg-card">
+        <div class="border-b border-border px-4 py-3 text-[12.5px] font-semibold">Action required</div>
+        @if (actionItems().length === 0) {
+          <div class="px-4 py-6 text-center text-[12.5px] text-foreground/50">Nothing needs attention right now.</div>
+        } @else {
+          @for (item of actionItems(); track item.id) {
+            <div class="flex items-center justify-between border-b border-border px-4 py-3 last:border-b-0">
+              <div class="min-w-0">
+                <div class="truncate text-[12.5px]">{{ item.title }}</div>
+                <div class="truncate text-[11px]" [class]="item.issueClass">{{ item.issue }}</div>
+              </div>
+              <a
+                routerLink="/vault/entries"
+                [queryParams]="{ edit: item.id }"
+                class="shrink-0 text-[11px] text-primary no-underline"
+              >
+                {{ item.linkLabel }} &gt;
+              </a>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="overflow-hidden rounded-[0.45rem] border border-border bg-card">
+        <div class="border-b border-border px-4 py-3 text-[12.5px] font-semibold">Insights</div>
+        <div class="flex items-center justify-between border-b border-border px-4 py-3">
+          <span class="text-xs text-foreground/65">Passwords older than 1yr</span>
+          <span class="text-xs">{{ staleCount() }}</span>
+        </div>
+        <div class="flex items-center justify-between px-4 py-3">
+          <span class="text-xs text-foreground/65">Dark web monitoring</span>
+          <span class="text-xs text-foreground/40">not configured</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 rounded-[0.45rem] border border-border bg-card p-[18px]">
+      <div class="mb-3.5 text-[12.5px] font-semibold">Password age distribution</div>
+      <div class="flex h-[86px] items-end gap-2.5 border-b border-border/60">
+        @for (bucket of ageBuckets(); track bucket.label) {
+          <div class="group flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+            <span class="text-[11px] text-foreground/60 opacity-0 transition-opacity group-hover:opacity-100">{{ bucket.count }}</span>
+            <div
+              class="w-full rounded-t-[3px] transition-[filter] duration-150 group-hover:brightness-110"
+              [class]="bucket.colorClass"
+              [style.height.%]="bucket.heightPct"
+              [title]="bucket.count + ' passwords'"
+            ></div>
+          </div>
+        }
+      </div>
+      <div class="mt-1.5 flex gap-2.5">
+        @for (bucket of ageBuckets(); track bucket.label) {
+          <span class="flex-1 text-center text-[10px] text-foreground/45">{{ bucket.label }}</span>
+        }
+      </div>
+    </div>
+  }
+</main>

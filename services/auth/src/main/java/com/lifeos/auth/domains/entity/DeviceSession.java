@@ -14,6 +14,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Data
 @AllArgsConstructor
@@ -38,9 +39,11 @@ public class DeviceSession {
   @Column(name = "device_type")
   String deviceType;
 
+  @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;
 
+  @CreationTimestamp
   @Column(name = "last_active_at")
   Instant lastActiveAt;
 

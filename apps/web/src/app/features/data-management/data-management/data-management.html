@@ -1,0 +1,180 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <div class="mb-[22px]">
+    <h1 class="text-[22px] font-semibold tracking-tight">Data Management</h1>
+    <p class="mt-1 text-[12.5px] text-foreground/55">Export, backup and account controls</p>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+  <div class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+    <div class="mb-3.5 text-[13px] font-semibold">Export / import</div>
+
+    <div class="flex items-center justify-between border-b border-border py-2.5">
+      <div>
+        <div class="text-[12.5px]">Export vault</div>
+        <div class="text-[11px] text-foreground/50">CSV, encrypted JSON</div>
+      </div>
+      <p-button
+        label="Export"
+        severity="secondary"
+        [loading]="exportingVault()"
+        (onClick)="exportVault()"
+      />
+    </div>
+
+    <div class="flex items-center justify-between py-2.5">
+      <div>
+        <div class="text-[12.5px]">Import from another manager</div>
+        <div class="text-[11px] text-foreground/50">CSV with Title, Url, Username, Password columns</div>
+      </div>
+      <p-button
+        label="Import"
+        severity="secondary"
+        [loading]="importingCsv()"
+        (onClick)="importFromAnotherManager()"
+      />
+      <input
+        #csvFileInput
+        type="file"
+        accept=".csv,text/csv"
+        class="hidden"
+        (change)="onCsvFileSelected($event)"
+      />
+    </div>
+  </div>
+
+  <div class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+    <div class="mb-3.5 text-[13px] font-semibold">Backup &amp; recovery</div>
+
+    <div class="flex items-center justify-between py-2.5">
+      <div>
+        <div class="text-[12.5px]">Last automatic backup</div>
+        <div class="text-[11px] text-foreground/50">{{ lastBackupLabel() }}</div>
+      </div>
+      <p-button label="Restore from backup" severity="secondary" (onClick)="openRestoreDialog()" />
+    </div>
+  </div>
+
+  <div class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+    <div class="mb-3.5 text-[13px] font-semibold">Encryption</div>
+
+    <div class="flex items-center justify-between border-b border-border py-2.5">
+      <div>
+        <div class="text-[12.5px]">Vault encryption</div>
+        <div class="text-[11px] text-foreground/50">AES-256, zero-knowledge - only you hold the key</div>
+      </div>
+      <span class="text-[11px] text-primary">active</span>
+    </div>
+
+    <div class="flex items-center justify-between py-2.5">
+      <div>
+        <div class="text-[12.5px]">Auto-backup frequency</div>
+        <div class="text-[11px] text-foreground/50">Encrypted snapshots stored separately from the vault</div>
+      </div>
+      <p-select
+        [options]="backupFrequencyOptions"
+        [ngModel]="backupFrequency()"
+        (ngModelChange)="backupFrequency.set($event)"
+        optionLabel="label"
+        optionValue="value"
+      />
+    </div>
+  </div>
+
+  <div class="rounded-[0.45rem] border border-border bg-card p-5 transition-colors hover:border-border/80">
+    <div class="mb-3.5 text-[13px] font-semibold">Your data</div>
+
+    <div class="flex items-center justify-between py-2.5">
+      <div>
+        <div class="text-[12.5px]">Download everything</div>
+        <div class="text-[11px] text-foreground/50">Full copy of vault, cards, audit log and settings</div>
+      </div>
+      <p-button
+        label="Download"
+        severity="secondary"
+        [loading]="downloadingEverything()"
+        (onClick)="downloadEverything()"
+      />
+    </div>
+  </div>
+  </div>
+
+  <div class="mt-4 rounded-[0.45rem] border border-danger-alt/35 bg-card p-5 transition-colors hover:border-danger-alt/55">
+    <div class="mb-1.5 text-[13px] font-semibold text-danger-alt">Danger zone</div>
+    <p class="mb-3.5 text-[11px] text-foreground/55">
+      Permanently deletes your vault and account. This cannot be undone.
+    </p>
+    <p-button
+      label="Delete account"
+      severity="danger"
+      [outlined]="true"
+      (onClick)="openDeleteAccountDialog()"
+    />
+  </div>
+
+  <p-dialog
+    [(visible)]="restoreDialogVisible"
+    [modal]="true"
+    [dismissableMask]="true"
+    [showHeader]="false"
+    [style]="{ width: '25rem' }"
+    styleClass="font-mono border border-border"
+  >
+    <div class="pt-2">
+      <div class="mb-2 text-[15px] font-semibold">Restore from backup</div>
+      <p class="mb-4 text-[12.5px] leading-relaxed text-foreground/65">
+        This replaces your current vault entries, cards, and categories with the contents of your
+        most recent backup ({{ lastBackupLabel() }}). This cannot be undone.
+      </p>
+      @if (restoreError()) {
+        <p class="mb-4 text-[12.5px] leading-relaxed text-danger-alt">{{ restoreError() }}</p>
+      }
+      <div class="flex justify-end gap-2">
+        <p-button
+          label="Cancel"
+          severity="secondary"
+          [disabled]="restoringBackup()"
+          (onClick)="restoreDialogVisible.set(false)"
+        />
+        <p-button
+          label="Restore"
+          severity="danger"
+          [loading]="restoringBackup()"
+          (onClick)="restoreFromBackup()"
+        />
+      </div>
+    </div>
+  </p-dialog>
+
+  <p-dialog
+    [(visible)]="importResultDialogVisible"
+    header="Import result"
+    [modal]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '25rem' }"
+    styleClass="font-mono"
+  >
+    @if (importError()) {
+      <p class="text-[12.5px] text-destructive">{{ importError() }}</p>
+    } @else if (importResult(); as result) {
+      <p class="mb-3 text-[12.5px]">
+        Imported {{ result.importedCount }} of {{ result.importedCount + result.failedCount }} entries.
+      </p>
+
+      @if (result.errors.length > 0) {
+        <div class="max-h-48 overflow-y-auto rounded-[0.45rem] border border-border bg-background p-3">
+          @for (rowError of result.errors; track rowError.rowIndex) {
+            <div class="border-b border-border py-1.5 text-[11px] text-destructive last:border-b-0">
+              Row {{ rowError.rowIndex + 1 }}: {{ rowError.message }}
+            </div>
+          }
+        </div>
+      }
+    }
+
+    <div class="mt-4 flex justify-end">
+      <p-button label="Close" severity="secondary" (onClick)="importResultDialogVisible.set(false)" />
+    </div>
+  </p-dialog>
+
+  <app-delete-account-confirm-dialog [(visible)]="deleteAccountDialogVisible" />
+</main>

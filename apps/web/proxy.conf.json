@@ -1,0 +1,27 @@
+{
+  "/v1/auth": {
+    "target": "http://localhost:8001",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/v1/vault": {
+    "target": "http://localhost:8002",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/v1/core": {
+    "target": "http://localhost:8004",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/v1/batches": {
+    "target": "http://localhost:8005",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/v1/finance": {
+    "target": "http://localhost:8006",
+    "secure": false,
+    "changeOrigin": true
+  }
+}

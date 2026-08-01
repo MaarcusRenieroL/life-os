@@ -1,0 +1,41 @@
+<p-dialog
+  [(visible)]="visible"
+  [header]="editing() ? 'Edit merchant' : 'New merchant'"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '24rem' }"
+  styleClass="font-mono"
+  (onShow)="onShow()"
+>
+  <form class="flex flex-col gap-3.5" [formGroup]="form" (ngSubmit)="submit()">
+    <div>
+      <label for="merchName" class="mb-1.5 block text-[11px] text-foreground/55">NAME</label>
+      <input pInputText id="merchName" formControlName="name" placeholder="e.g. Swiggy" class="w-full" />
+    </div>
+
+    <div>
+      <label for="merchCategory" class="mb-1.5 block text-[11px] text-foreground/55">DEFAULT CATEGORY (OPTIONAL)</label>
+      <p-select
+        inputId="merchCategory"
+        formControlName="categoryId"
+        [options]="categories()"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="No default category"
+        styleClass="w-full"
+        appendTo="body"
+        [showClear]="true"
+      />
+    </div>
+
+    <div>
+      <label for="merchWebsite" class="mb-1.5 block text-[11px] text-foreground/55">WEBSITE (OPTIONAL)</label>
+      <input pInputText id="merchWebsite" formControlName="website" placeholder="https://…" class="w-full" />
+    </div>
+
+    <div class="mt-2 flex justify-end gap-2.5">
+      <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
+      <p-button type="submit" [label]="editing() ? 'Save changes' : 'Create merchant'" />
+    </div>
+  </form>
+</p-dialog>

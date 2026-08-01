@@ -1,0 +1,162 @@
+<div class="flex min-h-dvh flex-col font-mono text-foreground">
+  <header
+    class="sticky top-0 z-30 flex h-20 shrink-0 items-center gap-3 border-b border-border bg-background/92 px-3 backdrop-blur-sm sm:gap-[22px] sm:px-5"
+  >
+    <a routerLink="/home" class="group flex shrink-0 items-center gap-2">
+      <span
+        class="flex h-5 w-5 items-center justify-center rounded-[4px] bg-primary text-[11px] font-bold text-primary-foreground transition-transform duration-150 group-hover:scale-110"
+        >$</span
+      >
+      <span class="hidden text-[13px] font-semibold transition-colors sm:inline group-hover:text-primary">life-os</span>
+    </a>
+
+    @if (!isHome()) {
+      <p-select
+        class="shrink-0"
+        [options]="moduleOptions"
+        [ngModel]="selectedModulePath()"
+        (ngModelChange)="navigateToModule($event)"
+        optionLabel="name"
+        optionValue="path"
+        optionDisabled="unavailable"
+        appendTo="body"
+        styleClass="w-[190px]"
+      >
+        <ng-template #dropdownicon>
+          <i class="pi pi-chevron-down text-[10px] text-foreground/45"></i>
+        </ng-template>
+        <ng-template #header>
+          <div class="px-2 pt-1.5 pb-1 text-[10px] text-foreground/45">SWITCH MODULE</div>
+        </ng-template>
+        <ng-template #selectedItem let-selectedModule>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold text-primary">{{ selectedModule.code }}</span>
+            <span class="whitespace-nowrap text-[12.5px]">{{ selectedModule.name }}</span>
+          </div>
+        </ng-template>
+        <ng-template #item let-module>
+          <div class="flex items-center gap-2" [class.opacity-40]="module.unavailable">
+            <span class="w-5 text-[10px] font-bold text-primary">{{ module.code }}</span>
+            <span class="text-xs">{{ module.name }}</span>
+          </div>
+        </ng-template>
+      </p-select>
+
+      @if (activeModule()?.tabs; as tabs) {
+        <nav class="hidden items-center gap-0.5 overflow-x-auto md:flex">
+          @for (tab of tabs; track tab.path) {
+            <a
+              [routerLink]="tab.path"
+              routerLinkActive="bg-foreground/6 text-foreground"
+              class="whitespace-nowrap rounded-[0.45rem] px-3 py-1.5 text-xs text-foreground/55 no-underline transition-colors duration-150 hover:bg-foreground/[0.04] hover:text-foreground"
+              >{{ tab.label }}</a
+            >
+          }
+        </nav>
+      }
+    }
+
+    <div class="flex-1"></div>
+
+    <div class="flex shrink-0 items-center gap-2 sm:gap-3.5">
+      <div
+        class="hidden items-center gap-2 rounded-[0.45rem] border bg-card px-2.5 py-[5px] transition-all duration-150 sm:flex sm:w-[190px] lg:w-[220px]"
+        [class.border-primary/50]="searchFocused()"
+        [class.shadow-[0_0_0_3px_oklch(0.7_0.19_165_/_12%)]]="searchFocused()"
+        [class.border-border]="!searchFocused()"
+      >
+        <input
+          id="app-shell-search"
+          type="text"
+          placeholder="search everything"
+          class="w-full bg-transparent text-[11px] text-foreground placeholder:text-foreground/40 outline-none"
+          (focus)="searchFocused.set(true)"
+          (blur)="searchFocused.set(false)"
+        />
+        <span class="rounded-[4px] border border-border px-[5px] py-px text-[10px] text-foreground/35">^K</span>
+      </div>
+
+      <button
+        type="button"
+        class="group relative flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-150 hover:bg-foreground/[0.06]"
+        aria-label="Notifications"
+      >
+        <span class="h-4 w-4 rounded-[5px] border border-border transition-colors group-hover:border-foreground/30"></span>
+        <span class="absolute top-1 right-1 flex h-1.5 w-1.5">
+          <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-60"></span>
+          <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-destructive"></span>
+        </span>
+      </button>
+
+      @if (isHome()) {
+        <a
+          routerLink="/settings"
+          class="hidden text-[11px] text-foreground/60 no-underline transition-colors hover:text-foreground sm:inline"
+          >Settings</a
+        >
+      }
+
+      <div
+        class="hidden h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-[10px] text-primary transition-colors duration-150 hover:border-primary/50 sm:flex"
+      >
+        {{ currentUser().initials }}
+      </div>
+
+      <button
+        type="button"
+        class="flex h-7 w-7 items-center justify-center rounded-[0.45rem] border border-border bg-card transition-colors duration-150 hover:border-foreground/30 md:hidden"
+        aria-label="Toggle menu"
+        (click)="toggleMobileMenu()"
+      >
+        <i class="pi text-xs" [class.pi-bars]="!mobileMenuOpen()" [class.pi-times]="mobileMenuOpen()"></i>
+      </button>
+    </div>
+  </header>
+
+  @if (mobileMenuOpen()) {
+    <div class="flex flex-col gap-3 border-b border-border bg-background px-4 py-4 md:hidden">
+      <div class="flex items-center gap-2 rounded-[0.45rem] border border-border bg-card px-2.5 py-2">
+        <i class="pi pi-search text-xs text-foreground/40"></i>
+        <input
+          type="text"
+          placeholder="search everything"
+          class="w-full bg-transparent text-[12.5px] text-foreground placeholder:text-foreground/40 outline-none"
+        />
+      </div>
+
+      @if (isHome()) {
+        <a
+          routerLink="/settings"
+          (click)="closeMobileMenu()"
+          class="rounded-[0.45rem] px-3 py-2 text-[12.5px] text-foreground/70 no-underline hover:bg-foreground/6 hover:text-foreground"
+          >Settings</a
+        >
+      } @else if (activeModule()?.tabs; as tabs) {
+        <nav class="flex flex-col gap-0.5">
+          @for (tab of tabs; track tab.path) {
+            <a
+              [routerLink]="tab.path"
+              routerLinkActive="bg-foreground/6 text-foreground"
+              (click)="closeMobileMenu()"
+              class="rounded-[0.45rem] px-3 py-2 text-[12.5px] text-foreground/70 no-underline hover:bg-foreground/6 hover:text-foreground"
+              >{{ tab.label }}</a
+            >
+          }
+        </nav>
+      }
+
+      <div class="flex items-center gap-2 border-t border-border pt-3">
+        <div
+          class="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card text-[10px] text-primary"
+        >
+          {{ currentUser().initials }}
+        </div>
+        <span class="text-[12.5px] text-foreground/70">{{ currentUser().name }}</span>
+      </div>
+    </div>
+  }
+
+  <div class="flex-1">
+    <router-outlet />
+  </div>
+</div>

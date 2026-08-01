@@ -1,0 +1,32 @@
+<p-dialog
+  [(visible)]="visible"
+  [modal]="true"
+  [dismissableMask]="true"
+  [showHeader]="false"
+  [style]="{ width: '25rem' }"
+  styleClass="font-mono border border-danger-alt/35"
+>
+  <div class="pt-2">
+    <div class="mb-2 text-[15px] font-semibold text-danger-alt">Delete account?</div>
+    <p class="mb-5 text-[12.5px] leading-relaxed text-foreground/65">
+      This permanently deletes your entire vault (entries, cards, recovery codes) and your account. This
+      cannot be undone.
+    </p>
+
+    @if (errorMessage()) {
+      <div class="mb-5 rounded-[0.45rem] border border-danger-alt/35 bg-background p-3.5">
+        <div class="text-xs text-danger-alt">{{ errorMessage() }}</div>
+      </div>
+    }
+
+    <div class="flex justify-end gap-2.5">
+      <p-button label="Cancel" severity="secondary" (onClick)="cancel()" />
+      <p-button
+        label="Delete account"
+        severity="danger"
+        [loading]="deleting()"
+        (onClick)="confirmDelete()"
+      />
+    </div>
+  </div>
+</p-dialog>

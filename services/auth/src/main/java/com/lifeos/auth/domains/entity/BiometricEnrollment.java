@@ -14,6 +14,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Data
 @AllArgsConstructor
@@ -41,6 +42,7 @@ public class BiometricEnrollment {
   @Column(name = "type")
   String type;
 
+  @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;
 }

@@ -1,0 +1,56 @@
+<main class="w-full px-4 py-9 font-mono text-foreground sm:px-11 sm:py-9 xl:px-11">
+  <div class="mb-6 flex items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Categories</h1>
+      <p class="mt-1.5 text-[12.5px] text-foreground/55">{{ categories().length }} categories</p>
+    </div>
+    <button
+      type="button"
+      (click)="openCreate()"
+      class="rounded-[0.45rem] bg-primary px-[18px] py-2.5 text-[12.5px] font-semibold text-primary-foreground"
+    >
+      + New category
+    </button>
+  </div>
+
+  @if (loading()) {
+    <p class="text-[12.5px] text-foreground/50">Loading categories…</p>
+  } @else {
+    <div class="flex flex-col gap-5">
+      @for (group of [
+        { label: 'Expense', items: grouped().EXPENSE },
+        { label: 'Income', items: grouped().INCOME },
+        { label: 'Transfer', items: grouped().TRANSFER },
+        { label: 'Investment', items: grouped().INVESTMENT }
+      ]; track group.label) {
+        @if (group.items.length > 0) {
+          <div class="rounded-[0.5rem] border border-border bg-card p-5">
+            <div class="mb-3.5 text-[12.5px] font-semibold">{{ group.label }}</div>
+            <div class="flex flex-wrap gap-2">
+              @for (c of group.items; track c.id) {
+                <div class="flex items-center gap-2.5 rounded-[0.45rem] border border-border bg-background px-3 py-2 text-xs">
+                  <span>{{ c.name }}</span>
+                  <button type="button" class="cursor-pointer text-foreground/45 hover:text-primary" (click)="openEdit(c)">edit</button>
+                  <button type="button" class="cursor-pointer text-foreground/45 hover:text-destructive" (click)="deleteCategory(c)">delete</button>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      }
+
+      @if (categories().length === 0) {
+        <div class="rounded-[0.5rem] border border-border bg-card p-8 text-center text-[12.5px] text-foreground/45">
+          No categories yet — create one to start budgeting and categorizing transactions.
+        </div>
+      }
+    </div>
+  }
+</main>
+
+<app-category-dialog
+  [(visible)]="dialogVisible"
+  [editing]="editingCategory()"
+  (created)="onCreated($event)"
+  (updated)="onUpdated($event)"
+/>

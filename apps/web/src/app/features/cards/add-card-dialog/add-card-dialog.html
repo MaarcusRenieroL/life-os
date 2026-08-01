@@ -1,0 +1,74 @@
+<p-dialog
+  [(visible)]="visible"
+  header="Add card"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '28rem' }"
+  styleClass="font-mono"
+  (onShow)="onShow()"
+>
+  <form class="flex flex-col gap-3.5" [formGroup]="form" (ngSubmit)="submit()">
+    <div>
+      <label for="cardNickname" class="mb-1.5 block text-[11px] text-foreground/55">NICKNAME</label>
+      <input
+        pInputText
+        id="cardNickname"
+        formControlName="nickname"
+        placeholder="e.g. Chase Sapphire"
+        class="w-full"
+      />
+    </div>
+
+    <div>
+      <label for="cardNumber" class="mb-1.5 block text-[11px] text-foreground/55">CARD NUMBER</label>
+      <input
+        pInputText
+        id="cardNumber"
+        formControlName="cardNumber"
+        placeholder="•••• •••• •••• ••••"
+        class="w-full"
+      />
+    </div>
+
+    <div class="grid grid-cols-3 gap-3">
+      <div>
+        <label for="cardExpiry" class="mb-1.5 block text-[11px] text-foreground/55">EXPIRY</label>
+        <input pInputText id="cardExpiry" formControlName="expiry" placeholder="MM/YY" class="w-full" />
+      </div>
+      <div>
+        <label for="cardCvv" class="mb-1.5 block text-[11px] text-foreground/55">CVV</label>
+        <input pInputText id="cardCvv" formControlName="cvv" placeholder="•••" class="w-full" />
+      </div>
+      <div>
+        <label for="cardNetwork" class="mb-1.5 block text-[11px] text-foreground/55">NETWORK</label>
+        <p-select
+          inputId="cardNetwork"
+          formControlName="network"
+          [options]="networkOptions"
+          styleClass="w-full"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label for="cardholderName" class="mb-1.5 block text-[11px] text-foreground/55">CARDHOLDER NAME</label>
+      <input
+        pInputText
+        id="cardholderName"
+        formControlName="cardholderName"
+        placeholder="Marcus X."
+        class="w-full"
+      />
+    </div>
+
+    <div>
+      <label for="cardBillingZip" class="mb-1.5 block text-[11px] text-foreground/55">BILLING ZIP</label>
+      <input pInputText id="cardBillingZip" formControlName="billingZip" placeholder="94103" class="w-full" />
+    </div>
+
+    <div class="mt-2 flex justify-end gap-2.5">
+      <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
+      <p-button type="submit" label="Save card" />
+    </div>
+  </form>
+</p-dialog>

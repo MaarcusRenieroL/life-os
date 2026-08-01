@@ -1,0 +1,24 @@
+<p-dialog
+  [(visible)]="visible"
+  header="Dispute transaction"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '22rem' }"
+  styleClass="font-mono"
+  (onShow)="onShow()"
+>
+  <form class="flex flex-col gap-3.5" [formGroup]="form" (ngSubmit)="submit()">
+    <p class="text-[11.5px] text-foreground/55">
+      Flagging {{ count() }} transaction{{ count() === 1 ? '' : 's' }} as disputed.
+    </p>
+    <div>
+      <label for="disputeReason" class="mb-1.5 block text-[11px] text-foreground/55">REASON</label>
+      <input pInputText id="disputeReason" formControlName="reason" placeholder="e.g. Never received this charge" class="w-full" />
+    </div>
+
+    <div class="mt-2 flex justify-end gap-2.5">
+      <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
+      <p-button type="submit" label="Dispute" severity="danger" />
+    </div>
+  </form>
+</p-dialog>
