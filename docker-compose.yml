@@ -113,6 +113,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_started
+      job-scraper:
+        condition: service_started
 
   core:
     build:
@@ -192,6 +194,18 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
+
+  job-scraper:
+    build:
+      context: ./services/job-scraper
+      dockerfile: Dockerfile
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8007:8007"
+    depends_on:
+      kafka:
+        condition: service_started
 
 volumes:
   postgres_data:
