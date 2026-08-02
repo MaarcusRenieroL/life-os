@@ -20,9 +20,3 @@ jwt:
   secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
   access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}
   refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:2592000000}
-
-# auth doesn't use EncryptionService itself, but it's component-scanned in from
-# com.lifeos.common (see AuthApplication's @ComponentScan) and its constructor
-# requires this property to be resolvable, so it needs a value even if unused here.
-encryption:
-  secret: ${ENCRYPTION_SECRET:wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}

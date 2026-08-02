@@ -24,13 +24,7 @@ public class SecurityConfig {
         .sessionManagement(
             session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
-            request ->
-                request
-                    .requestMatchers(
-                        "/error", "/v1/batches/gmail/connect", "/v1/batches/gmail/callback")
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated())
+            request -> request.requestMatchers("/error").permitAll().anyRequest().authenticated())
         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
         .build();
   }

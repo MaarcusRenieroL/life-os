@@ -61,69 +61,6 @@ export const routes: Routes = [
         canActivate: [vaultUnlockGuard],
         data: { module: 'PM', tab: 'vault' },
       },
-      {
-        path: 'finance/dashboard',
-        loadComponent: () => import('./features/finance/dashboard/dashboard').then((m) => m.FinanceDashboard),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/transactions',
-        loadComponent: () =>
-          import('./features/finance/transactions/transactions').then((m) => m.FinanceTransactions),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/transactions/:id',
-        loadComponent: () =>
-          import('./features/finance/transaction-detail/transaction-detail').then((m) => m.TransactionDetail),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/subscriptions',
-        loadComponent: () =>
-          import('./features/finance/subscriptions/subscriptions').then((m) => m.FinanceSubscriptions),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/budgets',
-        loadComponent: () => import('./features/finance/budgets/budgets').then((m) => m.FinanceBudgets),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/analytics',
-        loadComponent: () => import('./features/finance/analytics/analytics').then((m) => m.FinanceAnalytics),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/import',
-        loadComponent: () => import('./features/finance/import/import').then((m) => m.FinanceImport),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/rules',
-        loadComponent: () => import('./features/finance/rules/rules').then((m) => m.FinanceRules),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/report',
-        loadComponent: () => import('./features/finance/report/report').then((m) => m.FinanceReport),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/accounts',
-        loadComponent: () => import('./features/finance/accounts/accounts').then((m) => m.FinanceAccounts),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/categories',
-        loadComponent: () => import('./features/finance/categories/categories').then((m) => m.FinanceCategories),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/merchants',
-        loadComponent: () => import('./features/finance/merchants/merchants').then((m) => m.FinanceMerchants),
-        data: { module: 'FN', tab: 'finance' },
-      },
     ],
   },
   { path: '**', redirectTo: 'login' },
