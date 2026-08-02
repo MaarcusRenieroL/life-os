@@ -1,0 +1,35 @@
+<p-dialog
+  [(visible)]="visible"
+  header="Set categories"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '24rem' }"
+  styleClass="font-mono"
+  (onShow)="onShow()"
+>
+  <div class="flex flex-col gap-3.5">
+    @if (transactionLabel()) {
+      <div class="text-[12.5px] text-foreground/70">{{ transactionLabel() }}</div>
+    }
+
+    <div>
+      <label for="txnCategories" class="mb-1.5 block text-[11px] text-foreground/55">CATEGORIES</label>
+      <p-multiselect
+        inputId="txnCategories"
+        [options]="categories()"
+        optionLabel="name"
+        optionValue="id"
+        [(ngModel)]="selectedCategoryIds"
+        placeholder="Select one or more categories"
+        styleClass="w-full"
+        appendTo="body"
+        display="chip"
+      />
+    </div>
+
+    <div class="mt-2 flex justify-end gap-2.5">
+      <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
+      <p-button type="button" label="Save" [disabled]="selectedCategoryIds.length === 0" (onClick)="submit()" />
+    </div>
+  </div>
+</p-dialog>
