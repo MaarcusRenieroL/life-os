@@ -35,17 +35,3 @@ owner:
 
 backup:
   cron: ${BACKUP_CRON:0 0 3 * * *}
-
-encryption:
-  secret: ${GMAIL_ENCRYPTION_SECRET}
-
-gmail:
-  client-id: ${GMAIL_CLIENT_ID}
-  client-secret: ${GMAIL_CLIENT_SECRET}
-  redirect-uri: ${GMAIL_REDIRECT_URI:http://localhost:8005/v1/batches/gmail/callback}
-  alert-senders: ${GMAIL_ALERT_SENDERS:canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
-  poll:
-    cron: ${GMAIL_POLL_CRON:0 0 9,15,21 * * *}
-
-finance:
-  internal-base-url: ${FINANCE_INTERNAL_BASE_URL:http://finance-tracker:8006}
