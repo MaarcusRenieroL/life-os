@@ -1,5 +1,6 @@
 import express from "express";
 import { connectProducer, publishJobScraped } from "./kafka/producer";
+import { scrapeLinkedIn } from "./scrapers/linkedin";
 import { Job, JobSource } from "./types";
 
 const PORT = 8007;
@@ -46,12 +47,16 @@ app.get("/", (request, response) => {
 });
 
 app.post("/scrape/linkedin", async (request, response) => {
+  response.status(202).send();
+
   try {
-    await publishJobScraped(buildFakeJob("LINKEDIN"));
-    response.status(202).send();
+    const jobs = await scrapeLinkedIn();
+    for (const job of jobs) {
+      await publishJobScraped(job);
+    }
+    console.log(`Published ${jobs.length} jobs from LinkedIn`);
   } catch (error) {
-    console.error(error);
-    response.status(500).send();
+    console.error("LinkedIn scrape failed:", error);
   }
 });
 
