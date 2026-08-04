@@ -203,6 +203,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     volumes:
       - ./services/job-scraper/linkedin-session.json:/app/linkedin-session.json:ro
+      - ./services/job-scraper/naukri-session.json:/app/naukri-session.json:ro
     ports:
       - "8007:8007"
     depends_on:

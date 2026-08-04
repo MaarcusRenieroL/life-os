@@ -1,11 +1,15 @@
 import express from "express";
 import { connectProducer, publishJobScraped } from "./kafka/producer";
 import { scrapeLinkedIn } from "./scrapers/linkedin";
+import { scrapeNaukri } from "./scrapers/naukri";
 import { Job, JobSource } from "./types";
 
 const PORT = 8007;
 
 const app = express();
+
+let isScrapingLinkedIn = false;
+let isScrapingNaukri = false;
 
 function buildFakeJob(source: JobSource): Job {
   const now = new Date();
@@ -47,6 +51,12 @@ app.get("/", (request, response) => {
 });
 
 app.post("/scrape/linkedin", async (request, response) => {
+  if (isScrapingLinkedIn) {
+    response.status(429).send("a linkedin scrape is already in progress");
+    return;
+  }
+
+  isScrapingLinkedIn = true;
   response.status(202).send();
 
   try {
@@ -57,16 +67,30 @@ app.post("/scrape/linkedin", async (request, response) => {
     console.log(`Published ${jobs.length} jobs from LinkedIn`);
   } catch (error) {
     console.error("LinkedIn scrape failed:", error);
+  } finally {
+    isScrapingLinkedIn = false;
   }
 });
 
 app.post("/scrape/naukri", async (request, response) => {
+  if (isScrapingNaukri) {
+    response.status(429).send("a naukri scrape is already in progress");
+    return;
+  }
+
+  isScrapingNaukri = true;
+  response.status(202).send();
+
   try {
-    await publishJobScraped(buildFakeJob("NAUKRI"));
-    response.status(202).send();
+    const jobs = await scrapeNaukri();
+    for (const job of jobs) {
+      await publishJobScraped(job);
+    }
+    console.log(`Published ${jobs.length} jobs from Naukri`);
   } catch (error) {
-    console.error(error);
-    response.status(500).send();
+    console.error("Naukri scrape failed:", error);
+  } finally {
+    isScrapingNaukri = false;
   }
 });
 

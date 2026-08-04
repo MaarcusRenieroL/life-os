@@ -1,6 +1,10 @@
 import { Browser, BrowserContext, chromium, Page } from "playwright";
 import { Job, WorkModel } from "../types";
 
+function randomDelay(minMs: number, maxMs: number) {
+  return minMs + Math.random() * (maxMs - minMs);
+}
+
 export async function scrapeLinkedIn(): Promise<Job[]> {
   const browser: Browser = await chromium.launch({ headless: true });
   const context: BrowserContext = await browser.newContext({
@@ -11,7 +15,7 @@ export async function scrapeLinkedIn(): Promise<Job[]> {
   await page.goto(
     "https://www.linkedin.com/jobs/search?keywords=software%20engineer",
   );
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(randomDelay(2000, 4000));
 
   await loadCards(page);
 
@@ -33,7 +37,7 @@ async function loadCards(page: Page, maxIterations = 20) {
     }
 
     await cards[cards.length - 1].scrollIntoViewIfNeeded();
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(randomDelay(1500, 3000));
 
     const newCount = (await page.locator("li[data-occludable-job-id]").all())
       .length;
