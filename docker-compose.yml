@@ -106,6 +106,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
     ports:
       - "8003:8003"
     depends_on:
