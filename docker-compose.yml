@@ -108,6 +108,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: postgres
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: mistral
     ports:
       - "8003:8003"
     depends_on:

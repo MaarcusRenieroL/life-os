@@ -1,13 +1,18 @@
 package com.lifeos.job_tracker.service;
 
 import com.lifeos.job_tracker.domains.dto.request.CreateApplicationRequest;
+import com.lifeos.job_tracker.domains.dto.request.ScoreApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.response.ApplicationResponse;
 import com.lifeos.job_tracker.domains.entity.Application;
+import com.lifeos.job_tracker.domains.entity.Job;
 import com.lifeos.job_tracker.domains.enums.ApplicationStage;
 import com.lifeos.job_tracker.domains.enums.ApplicationStatus;
+import com.lifeos.job_tracker.domains.record.JobScoreResult;
 import com.lifeos.job_tracker.exception.ApplicationNotFoundException;
+import com.lifeos.job_tracker.exception.JobNotFoundException;
 import com.lifeos.job_tracker.repository.ApplicationRepository;
+import com.lifeos.job_tracker.repository.JobRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +28,8 @@ import org.springframework.util.StringUtils;
 public class ApplicationService {
 
   private final ApplicationRepository applicationRepository;
+  private final JobRepository jobRepository;
+  private final JobScoringService jobScoringService;
 
   public List<ApplicationResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -113,6 +120,30 @@ public class ApplicationService {
     if (StringUtils.hasText(request.getNotes())) {
       application.setNotes(request.getNotes());
     }
+
+    return toResponse(applicationRepository.saveAndFlush(application));
+  }
+
+  public ApplicationResponse score(
+      Authentication authentication, UUID id, ScoreApplicationRequest request) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    Application application =
+        applicationRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() -> new ApplicationNotFoundException(id));
+
+    Job job =
+        jobRepository
+            .findById(application.getJobId())
+            .orElseThrow(() -> new JobNotFoundException(application.getJobId()));
+
+    JobScoreResult result = jobScoringService.scoreApplication(job, request.getResumeText());
+
+    application.setAiScorePercentage(result.scorePercentage());
+    application.setAiScoreReasoning(result.reasoning());
+    application.setAiRecommendedSections(result.recommendedSections());
+    application.setAiInterviewPrepTopics(result.interviewPrepTopics());
 
     return toResponse(applicationRepository.saveAndFlush(application));
   }

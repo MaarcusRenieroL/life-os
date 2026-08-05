@@ -2,6 +2,7 @@ package com.lifeos.job_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.job_tracker.domains.dto.request.CreateApplicationRequest;
+import com.lifeos.job_tracker.domains.dto.request.ScoreApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.response.ApplicationResponse;
 import com.lifeos.job_tracker.service.ApplicationService;
@@ -61,6 +62,17 @@ public class ApplicationController {
         ApiResponse.success(
             applicationService.update(authentication, id, request),
             "Application updated successfully"));
+  }
+
+  @PostMapping("/{id}/score")
+  public ResponseEntity<ApiResponse<ApplicationResponse>> scoreApplication(
+      Authentication authentication,
+      @PathVariable UUID id,
+      @Valid @RequestBody ScoreApplicationRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            applicationService.score(authentication, id, request),
+            "Application scored successfully"));
   }
 
   @DeleteMapping("/{id}")
