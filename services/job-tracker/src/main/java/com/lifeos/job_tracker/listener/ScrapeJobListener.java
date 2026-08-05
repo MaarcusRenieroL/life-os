@@ -43,7 +43,7 @@ public class ScrapeJobListener {
 
   @Bean
   public ConcurrentKafkaListenerContainerFactory<String, ScrapedJobEvent>
-      kafkaListenerContainerFactory(
+      scrapedJobKafkaListenerContainerFactory(
           ConsumerFactory<String, ScrapedJobEvent> scrapedJobConsumerFactory) {
     ConcurrentKafkaListenerContainerFactory<String, ScrapedJobEvent> factory =
         new ConcurrentKafkaListenerContainerFactory<>();
@@ -64,7 +64,10 @@ public class ScrapeJobListener {
       this.jobRepository = jobRepository;
     }
 
-    @KafkaListener(topics = "jobs.scraped", groupId = "job-tracker")
+    @KafkaListener(
+        topics = "jobs.scraped",
+        groupId = "job-tracker",
+        containerFactory = "scrapedJobKafkaListenerContainerFactory")
     public void consume(ScrapedJobEvent event) {
       UUID ownerId = UUID.fromString(userId);
 
