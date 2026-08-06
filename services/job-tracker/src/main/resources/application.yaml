@@ -31,3 +31,6 @@ encryption:
 ollama:
   base-url: ${OLLAMA_URL:http://localhost:11434}
   model: ${OLLAMA_MODEL:mistral}
+
+resume:
+  storage-path: ${RESUME_STORAGE_PATH:/app/resumes}
