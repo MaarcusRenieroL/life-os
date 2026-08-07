@@ -72,6 +72,11 @@ public class ApplicationResponse {
 
   String notes;
 
+  @JsonProperty("referralReceived")
+  boolean referralReceived;
+
+  String referralNotes;
+
   Instant createdAt;
 
   Instant updatedAt;

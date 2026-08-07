@@ -142,6 +142,14 @@ public class ApplicationService {
       application.setNotes(request.getNotes());
     }
 
+    if (request.getReferralReceived() != null) {
+      application.setReferralReceived(request.getReferralReceived());
+    }
+
+    if (StringUtils.hasText(request.getReferralNotes())) {
+      application.setReferralNotes(request.getReferralNotes());
+    }
+
     return toResponse(applicationRepository.saveAndFlush(application));
   }
 
@@ -251,6 +259,9 @@ public class ApplicationService {
         .nextFollowUpDate(application.getNextFollowUpDate())
         .status(application.getStatus())
         .notes(application.getNotes())
+        .referralReceived(
+            application.getReferralReceived() != null && application.getReferralReceived())
+        .referralNotes(application.getReferralNotes())
         .createdAt(application.getCreatedAt())
         .updatedAt(application.getUpdatedAt())
         .build();

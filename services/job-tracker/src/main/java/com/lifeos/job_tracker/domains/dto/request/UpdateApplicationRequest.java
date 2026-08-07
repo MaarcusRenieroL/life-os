@@ -8,10 +8,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;
 
-// Covers pipeline-management fields only - AI score/reasoning and resume
-// tailoring fields are set by the scoring/tailoring services directly, not
-// through this generic update endpoint, so a caller can't silently
-// overwrite AI-computed data with a stray PUT.
 @Getter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateApplicationRequest {
@@ -38,4 +34,8 @@ public class UpdateApplicationRequest {
 
   @Size(max = 2000)
   String notes;
+
+  Boolean referralReceived;
+
+  String referralNotes;
 }

@@ -93,6 +93,10 @@ public class Application {
 
   String notes;
 
+  Boolean referralReceived;
+
+  String referralNotes;
+
   @CreationTimestamp Instant createdAt;
 
   @UpdateTimestamp Instant updatedAt;
