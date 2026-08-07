@@ -15,6 +15,7 @@ import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
 import com.lifeos.job_tracker.exception.ApplicationNotFoundException;
 import com.lifeos.job_tracker.exception.JobNotFoundException;
 import com.lifeos.job_tracker.exception.ResumeNotFoundException;
+import com.lifeos.job_tracker.publisher.ApplicationEventPublisher;
 import com.lifeos.job_tracker.repository.ApplicationRepository;
 import com.lifeos.job_tracker.repository.JobRepository;
 import com.lifeos.job_tracker.repository.ResumeTemplateRepository;
@@ -45,6 +46,7 @@ public class ApplicationService {
   private final JobScoringService jobScoringService;
   private final ResumeTailoringService resumeTailoringService;
   private final PdfGenerationService pdfGenerationService;
+  private final ApplicationEventPublisher applicationEventPublisher;
 
   public List<ApplicationResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -84,7 +86,11 @@ public class ApplicationService {
     // surrounding @Transactional would otherwise defer past this method
     // returning, leaving toResponse() reading null timestamps off the
     // in-memory entity.
-    return toResponse(applicationRepository.saveAndFlush(application));
+    Application saved = applicationRepository.saveAndFlush(application);
+
+    applicationEventPublisher.publishApplied(saved.getId(), saved.getJobId(), userId);
+
+    return toResponse(saved);
   }
 
   public ApplicationResponse update(
