@@ -30,6 +30,13 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(NotificationNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleNotificationNotFound(
+      NotificationNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
     String message =
