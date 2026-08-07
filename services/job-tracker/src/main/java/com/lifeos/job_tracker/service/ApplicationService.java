@@ -6,17 +6,26 @@ import com.lifeos.job_tracker.domains.dto.request.UpdateApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.response.ApplicationResponse;
 import com.lifeos.job_tracker.domains.entity.Application;
 import com.lifeos.job_tracker.domains.entity.Job;
+import com.lifeos.job_tracker.domains.entity.ResumeTemplate;
 import com.lifeos.job_tracker.domains.enums.ApplicationStage;
 import com.lifeos.job_tracker.domains.enums.ApplicationStatus;
+import com.lifeos.job_tracker.domains.record.BulletSection;
 import com.lifeos.job_tracker.domains.record.JobScoreResult;
+import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
 import com.lifeos.job_tracker.exception.ApplicationNotFoundException;
 import com.lifeos.job_tracker.exception.JobNotFoundException;
+import com.lifeos.job_tracker.exception.ResumeNotFoundException;
 import com.lifeos.job_tracker.repository.ApplicationRepository;
 import com.lifeos.job_tracker.repository.JobRepository;
+import com.lifeos.job_tracker.repository.ResumeTemplateRepository;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,9 +36,15 @@ import org.springframework.util.StringUtils;
 @Transactional
 public class ApplicationService {
 
+  @Value("${resume.storage-path}")
+  private String resumeStoragePath;
+
   private final ApplicationRepository applicationRepository;
   private final JobRepository jobRepository;
+  private final ResumeTemplateRepository resumeTemplateRepository;
   private final JobScoringService jobScoringService;
+  private final ResumeTailoringService resumeTailoringService;
+  private final PdfGenerationService pdfGenerationService;
 
   public List<ApplicationResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -144,6 +159,48 @@ public class ApplicationService {
     application.setAiScoreReasoning(result.reasoning());
     application.setAiRecommendedSections(result.recommendedSections());
     application.setAiInterviewPrepTopics(result.interviewPrepTopics());
+
+    return toResponse(applicationRepository.saveAndFlush(application));
+  }
+
+  public ApplicationResponse tailorResume(Authentication authentication, UUID id)
+      throws IOException {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    Application application =
+        applicationRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() -> new ApplicationNotFoundException(id));
+
+    Job job =
+        jobRepository
+            .findById(application.getJobId())
+            .orElseThrow(() -> new JobNotFoundException(application.getJobId()));
+
+    ResumeTemplate resumeTemplate =
+        resumeTemplateRepository
+            .findByUserIdAndIsActiveTrue(userId)
+            .orElseThrow(ResumeNotFoundException::new);
+
+    ResumeTailoringResult result =
+        resumeTailoringService.tailorResume(job, resumeTemplate.getResumeText());
+
+    List<BulletSection> sections =
+        List.of(
+            new BulletSection("Experience Highlights", result.experienceBullets()),
+            new BulletSection("Skills", result.skillsHighlight()));
+
+    byte[] pdfBytes =
+        pdfGenerationService.generateResumePdf(
+            job.getJobTitle() + " - Tailored Resume", result.summary(), sections);
+
+    Path userDir = Path.of(resumeStoragePath, userId.toString(), "applications");
+    Files.createDirectories(userDir);
+    Path filePath = userDir.resolve(application.getId() + ".pdf");
+    Files.write(filePath, pdfBytes);
+
+    application.setResumeS3Path(filePath.toString());
+    application.setResumeGenerationTimestamp(Instant.now());
 
     return toResponse(applicationRepository.saveAndFlush(application));
   }

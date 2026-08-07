@@ -40,5 +40,7 @@ public class ResumeTemplate {
 
   Boolean isActive;
 
+  String resumeText;
+
   @CreationTimestamp Instant createdAt;
 }

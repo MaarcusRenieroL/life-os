@@ -7,6 +7,7 @@ import com.lifeos.job_tracker.domains.dto.request.UpdateApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.response.ApplicationResponse;
 import com.lifeos.job_tracker.service.ApplicationService;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -73,6 +74,15 @@ public class ApplicationController {
         ApiResponse.success(
             applicationService.score(authentication, id, request),
             "Application scored successfully"));
+  }
+
+  @PostMapping("/{id}/tailor-resume")
+  public ResponseEntity<ApiResponse<ApplicationResponse>> tailorResume(
+      Authentication authentication, @PathVariable UUID id) throws IOException {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            applicationService.tailorResume(authentication, id),
+            "Resume tailored successfully"));
   }
 
   @DeleteMapping("/{id}")

@@ -59,6 +59,7 @@ public class ResumeService {
             .updatedAt(Instant.now())
             .version(String.valueOf(Instant.now().toEpochMilli()))
             .isActive(true)
+            .resumeText(resumeText)
             .build();
 
     ResumeTemplate saved = resumeTemplateRepository.saveAndFlush(resumeTemplate);
