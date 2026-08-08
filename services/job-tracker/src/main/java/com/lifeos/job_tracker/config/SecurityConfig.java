@@ -30,6 +30,12 @@ public class SecurityConfig {
                 request
                     .requestMatchers("/error")
                     .permitAll()
+                    // WebSocket auth happens one layer up, inside the STOMP CONNECT
+                    // frame (JwtChannelInterceptor) - the handshake itself never
+                    // carries an Authorization header, since browsers can't set
+                    // custom headers on a WebSocket upgrade request.
+                    .requestMatchers("/ws/**")
+                    .permitAll()
                     .requestMatchers("/v1/job-tracker/internal/**")
                     .hasAuthority("INTERNAL_SERVICE")
                     .anyRequest()
