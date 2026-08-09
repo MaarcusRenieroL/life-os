@@ -48,13 +48,26 @@ export class JobsApplications implements OnInit {
   protected readonly selectedIds = signal<Set<string>>(new Set());
   protected readonly bulkStageTarget = signal<ApplicationStage>('RECRUITER_SCREENING');
   protected readonly bulkBusy = signal(false);
+  protected readonly searchTerm = signal('');
+
+  protected readonly filteredApplications = computed(() => {
+    const term = this.searchTerm().trim().toLowerCase();
+    if (term.length === 0) return this.applications();
+
+    const jobs = this.jobsById();
+    return this.applications().filter((app) => {
+      const job = jobs.get(app.jobId);
+      const haystack = [job?.jobTitle, job?.company, job?.location, app.notes].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(term);
+    });
+  });
 
   protected readonly columns = computed(() => {
     const grouped = new Map<ApplicationStage, ApplicationResponse[]>();
     for (const stage of STAGE_ORDER) {
       grouped.set(stage, []);
     }
-    for (const app of this.applications()) {
+    for (const app of this.filteredApplications()) {
       grouped.get(app.currentStage)?.push(app);
     }
     return grouped;
@@ -88,6 +101,10 @@ export class JobsApplications implements OnInit {
     this.applicationApi.updateApplication(application.id, { currentStage: nextStage }).subscribe({
       next: () => this.load(),
     });
+  }
+
+  protected setSearchTerm(value: string): void {
+    this.searchTerm.set(value);
   }
 
   protected toggleSelectMode(): void {
@@ -149,7 +166,8 @@ export class JobsApplications implements OnInit {
   }
 
   protected exportSelectedCsv(): void {
-    const ids = this.selectedIds().size > 0 ? this.selectedIds() : new Set(this.applications().map((a) => a.id));
+    const ids =
+      this.selectedIds().size > 0 ? this.selectedIds() : new Set(this.filteredApplications().map((a) => a.id));
     const rows = this.applications().filter((a) => ids.has(a.id));
 
     const header = ['Company', 'Job Title', 'Stage', 'Status', 'Applied On', 'Referral', 'AI Match %'];

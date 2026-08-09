@@ -2,9 +2,18 @@
   <div class="mb-6 flex items-end justify-between gap-4">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight">Applications</h1>
-      <p class="mt-1.5 text-[12.5px] text-foreground/55">{{ applications().length }} total</p>
+      <p class="mt-1.5 text-[12.5px] text-foreground/55">
+        {{ filteredApplications().length }} of {{ applications().length }} shown
+      </p>
     </div>
     <div class="flex gap-2">
+      <input
+        type="text"
+        placeholder="Search company, title, notes…"
+        [value]="searchTerm()"
+        (input)="setSearchTerm($any($event.target).value)"
+        class="w-[220px] rounded-[0.45rem] border border-border bg-card px-3.5 py-2.5 text-[12.5px] text-foreground placeholder:text-foreground/35"
+      />
       <button
         type="button"
         (click)="exportSelectedCsv()"
