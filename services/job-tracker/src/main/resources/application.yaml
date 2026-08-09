@@ -34,3 +34,7 @@ ollama:
 
 resume:
   storage-path: ${RESUME_STORAGE_PATH:/app/resumes}
+
+resend:
+  api-key: ${RESEND_API_KEY:}
+  from-email: ${RESEND_FROM_EMAIL:onboarding@resend.dev}

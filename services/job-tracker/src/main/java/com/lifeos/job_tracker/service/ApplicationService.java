@@ -71,9 +71,7 @@ public class ApplicationService {
             .userId(userId)
             .jobId(request.getJobId())
             .applicationDate(
-                request.getApplicationDate() != null
-                    ? request.getApplicationDate()
-                    : Instant.now())
+                request.getApplicationDate() != null ? request.getApplicationDate() : Instant.now())
             .resumeVersion(request.getResumeVersion())
             .coverLetterSubmitted(request.isCoverLetterSubmitted())
             .notes(request.getNotes())
@@ -81,11 +79,6 @@ public class ApplicationService {
             .status(ApplicationStatus.ACTIVE)
             .build();
 
-    // saveAndFlush (not save) - @CreationTimestamp/@UpdateTimestamp are only
-    // populated by Hibernate at actual INSERT execution, which the
-    // surrounding @Transactional would otherwise defer past this method
-    // returning, leaving toResponse() reading null timestamps off the
-    // in-memory entity.
     Application saved = applicationRepository.saveAndFlush(application);
 
     applicationEventPublisher.publishApplied(saved.getId(), saved.getJobId(), userId);
@@ -102,8 +95,16 @@ public class ApplicationService {
             .findByIdAndUserId(id, userId)
             .orElseThrow(() -> new ApplicationNotFoundException(id));
 
-    if (request.getCurrentStage() != null) {
+    ApplicationStage previousStage = application.getCurrentStage();
+
+    if (request.getCurrentStage() != null && !request.getCurrentStage().equals(previousStage)) {
       application.setCurrentStage(request.getCurrentStage());
+      applicationEventPublisher.publishStageChanged(
+          application.getId(),
+          application.getJobId(),
+          application.getUserId(),
+          previousStage == null ? null : previousStage.name(),
+          request.getCurrentStage().name());
     }
 
     if (request.getStatus() != null) {
@@ -241,8 +242,7 @@ public class ApplicationService {
         .resumeTailoringPrompt(application.getResumeTailoringPrompt())
         .resumeTailoringReasoning(application.getResumeTailoringReasoning())
         .coverLetterSubmitted(
-            application.getCoverLetterSubmitted() != null
-                && application.getCoverLetterSubmitted())
+            application.getCoverLetterSubmitted() != null && application.getCoverLetterSubmitted())
         .coverLetterS3Path(application.getCoverLetterS3Path())
         .aiScorePercentage(application.getAiScorePercentage())
         .aiScoreReasoning(application.getAiScoreReasoning())

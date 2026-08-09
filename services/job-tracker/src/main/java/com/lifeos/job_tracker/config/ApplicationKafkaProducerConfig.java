@@ -1,6 +1,7 @@
 package com.lifeos.job_tracker.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lifeos.job_tracker.domains.record.ApplicationStageChangedEvent;
 import com.lifeos.job_tracker.events.ApplicationAppliedEvent;
 import java.util.Map;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -34,5 +35,22 @@ public class ApplicationKafkaProducerConfig {
   public KafkaTemplate<String, ApplicationAppliedEvent> applicationAppliedKafkaTemplate(
       ProducerFactory<String, ApplicationAppliedEvent> applicationAppliedProducerFactory) {
     return new KafkaTemplate<>(applicationAppliedProducerFactory);
+  }
+
+  @Bean
+  public ProducerFactory<String, ApplicationStageChangedEvent>
+      applicationStageChangedProducerFactory(KafkaProperties kafkaProperties) {
+    Map<String, Object> properties = kafkaProperties.buildProducerProperties();
+    ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+
+    return new DefaultKafkaProducerFactory<>(
+        properties, new StringSerializer(), new JsonSerializer<>(objectMapper));
+  }
+
+  @Bean
+  public KafkaTemplate<String, ApplicationStageChangedEvent> applicationStageChangedKafkaTemplate(
+      ProducerFactory<String, ApplicationStageChangedEvent>
+          applicationStageChangedProducerFactory) {
+    return new KafkaTemplate<>(applicationStageChangedProducerFactory);
   }
 }
