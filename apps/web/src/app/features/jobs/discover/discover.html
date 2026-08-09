@@ -2,7 +2,9 @@
   <div class="mb-6 flex items-end justify-between gap-4">
     <div>
       <h1 class="text-2xl font-semibold tracking-tight">Discover Jobs</h1>
-      <p class="mt-1.5 text-[12.5px] text-foreground/55">{{ jobs().length }} job{{ jobs().length === 1 ? '' : 's' }} found</p>
+      <p class="mt-1.5 text-[12.5px] text-foreground/55">
+        {{ filteredJobs().length }} of {{ jobs().length }} job{{ jobs().length === 1 ? '' : 's' }} shown
+      </p>
     </div>
     <div class="flex gap-2">
       <button
@@ -31,6 +33,41 @@
     </div>
   </div>
 
+  <div class="mb-6 flex flex-wrap items-center gap-2.5">
+    <input
+      type="text"
+      placeholder="Search title, company, location, skill…"
+      [value]="searchTerm()"
+      (input)="setSearchTerm($any($event.target).value)"
+      class="min-w-[220px] flex-1 rounded-[0.45rem] border border-border bg-card px-3.5 py-2.5 text-[12.5px] text-foreground placeholder:text-foreground/35"
+    />
+    <select
+      class="rounded-[0.45rem] border border-border bg-card px-3 py-2.5 text-[12px]"
+      [value]="sourceFilter()"
+      (change)="setSourceFilter($any($event.target).value)"
+    >
+      <option [value]="all">All sources</option>
+      @for (source of sources; track source) {
+        <option [value]="source">{{ source }}</option>
+      }
+    </select>
+    <select
+      class="rounded-[0.45rem] border border-border bg-card px-3 py-2.5 text-[12px]"
+      [value]="workModelFilter()"
+      (change)="setWorkModelFilter($any($event.target).value)"
+    >
+      <option [value]="all">All work models</option>
+      @for (workModel of workModels; track workModel) {
+        <option [value]="workModel">{{ workModel }}</option>
+      }
+    </select>
+    @if (searchTerm() || sourceFilter() !== all || workModelFilter() !== all) {
+      <button type="button" (click)="clearFilters()" class="text-[11.5px] text-foreground/50 underline">
+        Clear filters
+      </button>
+    }
+  </div>
+
   @if (errorMessage()) {
     <div class="mb-4 rounded-[0.45rem] border border-destructive/35 bg-destructive/10 px-4 py-3 text-[12.5px] text-destructive">
       {{ errorMessage() }}
@@ -43,9 +80,13 @@
     <div class="rounded-[0.5rem] border border-border bg-card p-8 text-center text-[12.5px] text-foreground/45">
       No jobs yet — trigger a scrape above to discover jobs.
     </div>
+  } @else if (filteredJobs().length === 0) {
+    <div class="rounded-[0.5rem] border border-border bg-card p-8 text-center text-[12.5px] text-foreground/45">
+      No jobs match these filters.
+    </div>
   } @else {
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      @for (job of jobs(); track job.id) {
+      @for (job of filteredJobs(); track job.id) {
         <div class="rounded-[0.5rem] border border-border bg-card p-5">
           <div class="mb-2 flex items-start justify-between">
             <div>

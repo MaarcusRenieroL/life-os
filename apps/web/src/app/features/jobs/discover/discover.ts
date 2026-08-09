@@ -1,9 +1,11 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { JobResponse } from '../../../core/models/job-tracker.model';
+import { JobResponse, JobSource, WorkModel } from '../../../core/models/job-tracker.model';
 import { ApplicationApiService } from '../../../core/services/application-api.service';
 import { JobApiService } from '../../../core/services/job-api.service';
+
+const ALL = 'ALL';
 
 @Component({
   selector: 'app-jobs-discover',
@@ -23,8 +25,51 @@ export class JobsDiscover implements OnInit {
   protected readonly scraping = signal<string | null>(null);
   protected readonly applying = signal<string | null>(null);
 
+  protected readonly searchTerm = signal('');
+  protected readonly sourceFilter = signal<JobSource | typeof ALL>(ALL);
+  protected readonly workModelFilter = signal<WorkModel | typeof ALL>(ALL);
+  protected readonly all = ALL;
+
+  protected readonly sources: JobSource[] = ['LINKEDIN', 'NAUKRI', 'WELLFOUND'];
+  protected readonly workModels: WorkModel[] = ['REMOTE', 'HYBRID', 'ONSITE'];
+
+  protected readonly filteredJobs = computed(() => {
+    const term = this.searchTerm().trim().toLowerCase();
+    const source = this.sourceFilter();
+    const workModel = this.workModelFilter();
+
+    return this.jobs().filter((job) => {
+      if (source !== ALL && job.source !== source) return false;
+      if (workModel !== ALL && job.workModel !== workModel) return false;
+      if (term.length === 0) return true;
+
+      const haystack = [job.jobTitle, job.company, job.location, ...(job.requiredSkills ?? [])]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(term);
+    });
+  });
+
   ngOnInit(): void {
     this.load();
+  }
+
+  protected setSearchTerm(value: string): void {
+    this.searchTerm.set(value);
+  }
+
+  protected setSourceFilter(value: string): void {
+    this.sourceFilter.set(value as JobSource | typeof ALL);
+  }
+
+  protected setWorkModelFilter(value: string): void {
+    this.workModelFilter.set(value as WorkModel | typeof ALL);
+  }
+
+  protected clearFilters(): void {
+    this.searchTerm.set('');
+    this.sourceFilter.set(ALL);
+    this.workModelFilter.set(ALL);
   }
 
   protected scrapeLinkedIn(): void {
