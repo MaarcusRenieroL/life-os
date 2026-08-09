@@ -124,6 +124,42 @@ export const routes: Routes = [
         loadComponent: () => import('./features/finance/merchants/merchants').then((m) => m.FinanceMerchants),
         data: { module: 'FN', tab: 'finance' },
       },
+      {
+        path: 'jobs/dashboard',
+        loadComponent: () => import('./features/jobs/dashboard/dashboard').then((m) => m.JobsDashboard),
+        data: { module: 'JT', tab: 'jobs' },
+      },
+      {
+        path: 'jobs/discover',
+        loadComponent: () => import('./features/jobs/discover/discover').then((m) => m.JobsDiscover),
+        data: { module: 'JT', tab: 'jobs' },
+      },
+      {
+        path: 'jobs/applications',
+        loadComponent: () => import('./features/jobs/applications/applications').then((m) => m.JobsApplications),
+        data: { module: 'JT', tab: 'jobs' },
+      },
+      {
+        path: 'jobs/applications/:id',
+        loadComponent: () =>
+          import('./features/jobs/application-detail/application-detail').then((m) => m.JobsApplicationDetail),
+        data: { module: 'JT', tab: 'jobs' },
+      },
+      {
+        path: 'jobs/resume',
+        loadComponent: () => import('./features/jobs/resume/resume').then((m) => m.JobsResume),
+        data: { module: 'JT', tab: 'jobs' },
+      },
+      {
+        path: 'jobs/notifications',
+        loadComponent: () => import('./features/jobs/notifications/notifications').then((m) => m.JobsNotifications),
+        data: { module: 'JT', tab: 'jobs' },
+      },
+      {
+        path: 'jobs/settings',
+        loadComponent: () => import('./features/jobs/settings/settings').then((m) => m.JobsSettings),
+        data: { module: 'JT', tab: 'jobs' },
+      },
     ],
   },
   { path: '**', redirectTo: 'login' },

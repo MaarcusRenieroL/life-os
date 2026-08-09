@@ -1,0 +1,38 @@
+<main class="w-full px-4 py-9 font-mono text-foreground sm:px-11 sm:py-9 xl:px-11">
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold tracking-tight">Job Tracker</h1>
+    <p class="mt-1.5 text-[12.5px] text-foreground/55">Quick overview</p>
+  </div>
+
+  @if (loading()) {
+    <p class="text-[12.5px] text-foreground/50">Loading…</p>
+  } @else {
+    <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div class="rounded-[0.5rem] border border-border bg-card p-5">
+        <div class="text-[22px] font-semibold">{{ jobs().length }}</div>
+        <div class="mt-1 text-[11px] text-foreground/55">Jobs discovered</div>
+      </div>
+      <div class="rounded-[0.5rem] border border-border bg-card p-5">
+        <div class="text-[22px] font-semibold">{{ activeApplications() }}</div>
+        <div class="mt-1 text-[11px] text-foreground/55">Active applications</div>
+      </div>
+      <div class="rounded-[0.5rem] border border-border bg-card p-5">
+        <div class="text-[22px] font-semibold">{{ interviewing() }}</div>
+        <div class="mt-1 text-[11px] text-foreground/55">Interviewing</div>
+      </div>
+      <div class="rounded-[0.5rem] border border-border bg-card p-5">
+        <div class="text-[22px] font-semibold">{{ offers() }}</div>
+        <div class="mt-1 text-[11px] text-foreground/55">Offers</div>
+      </div>
+    </div>
+
+    <div class="flex gap-3">
+      <a routerLink="/jobs/discover" class="rounded-[0.45rem] bg-primary px-4 py-2.5 text-[12px] font-semibold text-primary-foreground">
+        Discover jobs
+      </a>
+      <a routerLink="/jobs/applications" class="rounded-[0.45rem] border border-border px-4 py-2.5 text-[12px] font-semibold">
+        View applications
+      </a>
+    </div>
+  }
+</main>

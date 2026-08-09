@@ -1,0 +1,57 @@
+<main class="w-full px-4 py-9 font-mono text-foreground sm:px-11 sm:py-9 xl:px-11">
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold tracking-tight">Settings</h1>
+    <p class="mt-1.5 text-[12.5px] text-foreground/55">Email alert preferences</p>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="mb-4 rounded-[0.45rem] border border-destructive/35 bg-destructive/10 px-4 py-3 text-[12.5px] text-destructive">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="text-[12.5px] text-foreground/50">Loading…</p>
+  } @else if (settings(); as s) {
+    <div class="max-w-xl rounded-[0.5rem] border border-border bg-card p-6">
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <span class="text-[12.5px]">Email on stage change</span>
+          <button
+            type="button"
+            (click)="toggle('emailOnStageChange')"
+            [class.bg-primary]="s.emailOnStageChange"
+            class="h-6 w-11 rounded-full bg-foreground/20 transition-colors"
+          ></button>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-[12.5px]">Email on interview scheduled</span>
+          <button
+            type="button"
+            (click)="toggle('emailOnInterviewScheduled')"
+            [class.bg-primary]="s.emailOnInterviewScheduled"
+            class="h-6 w-11 rounded-full bg-foreground/20 transition-colors"
+          ></button>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-[12.5px]">Email on offer received</span>
+          <button
+            type="button"
+            (click)="toggle('emailOnOfferReceived')"
+            [class.bg-primary]="s.emailOnOfferReceived"
+            class="h-6 w-11 rounded-full bg-foreground/20 transition-colors"
+          ></button>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-[12.5px]">Email on follow-up due</span>
+          <button
+            type="button"
+            (click)="toggle('emailOnFollowUpDue')"
+            [class.bg-primary]="s.emailOnFollowUpDue"
+            class="h-6 w-11 rounded-full bg-foreground/20 transition-colors"
+          ></button>
+        </div>
+      </div>
+    </div>
+  }
+</main>
