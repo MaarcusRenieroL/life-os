@@ -21,6 +21,7 @@ jwt:
 
 owner:
   user-id: ${OWNER_USER_ID}
+  email: ${OWNER_EMAIL:}
 
 internal:
   api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
