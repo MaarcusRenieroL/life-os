@@ -113,6 +113,7 @@ services:
       OLLAMA_MODEL: mistral
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-onboarding@resend.dev}
+      JOB_SCRAPER_URL: http://job-scraper:8007
     volumes:
       - resume_data:/app/resumes
     ports:

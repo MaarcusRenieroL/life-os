@@ -22,4 +22,9 @@ public class RestClientConfig {
         .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
         .build();
   }
+
+  @Bean
+  public RestClient jobScraperRestClient(@Value("${job-scraper.base-url}") String baseUrl) {
+    return RestClient.builder().baseUrl(baseUrl).build();
+  }
 }

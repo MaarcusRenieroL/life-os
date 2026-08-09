@@ -39,3 +39,6 @@ resume:
 resend:
   api-key: ${RESEND_API_KEY:}
   from-email: ${RESEND_FROM_EMAIL:onboarding@resend.dev}
+
+job-scraper:
+  base-url: ${JOB_SCRAPER_URL:http://localhost:8007}
