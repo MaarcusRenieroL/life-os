@@ -137,3 +137,49 @@ export interface UpdateNotificationSettingsRequest {
   emailOnOfferReceived?: boolean;
   emailOnFollowUpDue?: boolean;
 }
+
+// --- Analytics ---
+
+export interface AnalyticsDashboardResponse {
+  totalJobs: number;
+  totalApplications: number;
+  activeApplications: number;
+  interviewingCount: number;
+  offerCount: number;
+  responseRate: number;
+  offerRate: number;
+}
+
+export type PipelineResponse = Partial<Record<ApplicationStage, number>>;
+
+export interface RateResponse {
+  rate: number;
+  matchingCount: number;
+  totalCount: number;
+}
+
+export type SourcePerformanceResponse = Partial<Record<JobSource, number>>;
+
+export interface SkillCount {
+  skill: string;
+  count: number;
+}
+
+export interface ConversionFunnelResponse {
+  applied: number;
+  recruiterScreening: number;
+  interviewing: number;
+  offer: number;
+}
+
+export interface ReferralEffectivenessResponse {
+  referredOfferRate: number;
+  referredCount: number;
+  nonReferredOfferRate: number;
+  nonReferredCount: number;
+}
+
+export interface TimeToOfferResponse {
+  averageDays: number;
+  daysDistribution: number[];
+}

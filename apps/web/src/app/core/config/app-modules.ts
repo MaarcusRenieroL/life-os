@@ -35,6 +35,7 @@ export const APP_MODULES: AppModuleConfig[] = [
       { label: 'Dashboard', path: '/jobs/dashboard' },
       { label: 'Discover', path: '/jobs/discover' },
       { label: 'Applications', path: '/jobs/applications' },
+      { label: 'Analytics', path: '/jobs/analytics' },
       { label: 'Resume', path: '/jobs/resume' },
       { label: 'Notifications', path: '/jobs/notifications' },
       { label: 'Settings', path: '/jobs/settings' },

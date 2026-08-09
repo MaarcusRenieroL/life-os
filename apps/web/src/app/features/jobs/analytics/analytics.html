@@ -1,0 +1,166 @@
+<main class="w-full px-4 py-9 font-mono text-foreground sm:px-11 sm:py-9 xl:px-11">
+  <div class="mb-6 flex items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Analytics</h1>
+      <p class="mt-1.5 text-[12.5px] text-foreground/55">How the job search is actually going</p>
+    </div>
+    <a
+      routerLink="/jobs/applications"
+      class="rounded-[0.45rem] border border-border bg-card px-[15px] py-2.5 text-[12.5px] text-foreground no-underline"
+    >
+      View applications
+    </a>
+  </div>
+
+  @if (loading()) {
+    <p class="text-[12.5px] text-foreground/50">Loading analytics…</p>
+  } @else if (dashboard(); as d) {
+    <div class="mb-[18px] grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div class="rounded-[0.5rem] border border-border bg-card p-5">
+        <div class="mb-2 text-[11px] tracking-[0.03em] text-foreground/50">TOTAL APPLICATIONS</div>
+        <div class="text-[22px] font-semibold tracking-[-0.02em]">{{ d.totalApplications }}</div>
+      </div>
+      <div class="rounded-[0.5rem] border border-border bg-card p-5">
+        <div class="mb-2 text-[11px] tracking-[0.03em] text-foreground/50">ACTIVE</div>
+        <div class="text-[22px] font-semibold tracking-[-0.02em]">{{ d.activeApplications }}</div>
+      </div>
+      <div class="rounded-[0.5rem] border border-border bg-card p-5">
+        <div class="mb-2 text-[11px] tracking-[0.03em] text-foreground/50">INTERVIEWING</div>
+        <div class="text-[22px] font-semibold tracking-[-0.02em] text-warning">{{ d.interviewingCount }}</div>
+      </div>
+      <div class="rounded-[0.5rem] border border-border bg-card p-5">
+        <div class="mb-2 text-[11px] tracking-[0.03em] text-foreground/50">OFFERS</div>
+        <div class="text-[22px] font-semibold tracking-[-0.02em] text-primary">{{ d.offerCount }}</div>
+      </div>
+      <div class="rounded-[0.5rem] border border-border bg-card p-5">
+        <div class="mb-2 text-[11px] tracking-[0.03em] text-foreground/50">OFFER RATE</div>
+        <div class="text-[22px] font-semibold tracking-[-0.02em]">{{ d.offerRate | percent: '1.0-1' }}</div>
+      </div>
+    </div>
+
+    <div class="mb-[18px] grid grid-cols-1 gap-[18px] lg:grid-cols-2">
+      <div class="rounded-[0.5rem] border border-border bg-card p-6">
+        <div class="mb-[18px] text-[12.5px] font-semibold">Pipeline by stage</div>
+        @if (pipelineRows().length === 0) {
+          <div class="text-[12px] text-foreground/45">No applications yet.</div>
+        } @else {
+          <div class="flex flex-col gap-[13px]">
+            @for (row of pipelineRows(); track row.stage) {
+              <div>
+                <div class="mb-1.5 flex justify-between text-[11.5px]">
+                  <span class="text-foreground/70">{{ row.label }}</span>
+                  <span class="text-foreground/55">{{ row.count }}</span>
+                </div>
+                <div class="h-[5px] overflow-hidden rounded-[3px] bg-white/10">
+                  <div class="h-full" [class]="row.colorClass" [style.width.%]="row.pct"></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="rounded-[0.5rem] border border-border bg-card p-6">
+        <div class="mb-[18px] text-[12.5px] font-semibold">Conversion funnel</div>
+        @if (funnelSteps().length === 0 || funnelSteps()[0].count === 0) {
+          <div class="text-[12px] text-foreground/45">No applications yet.</div>
+        } @else {
+          <div class="flex flex-col gap-[13px]">
+            @for (step of funnelSteps(); track step.label) {
+              <div>
+                <div class="mb-1.5 flex justify-between text-[11.5px]">
+                  <span class="text-foreground/70">{{ step.label }}</span>
+                  <span class="text-foreground/55">{{ step.count }} - {{ step.pct | number: '1.0-0' }}%</span>
+                </div>
+                <div class="h-[5px] overflow-hidden rounded-[3px] bg-white/10">
+                  <div class="h-full bg-primary" [style.width.%]="step.pct"></div>
+                </div>
+              </div>
+            }
+          </div>
+          <p class="mt-4 text-[10.5px] leading-relaxed text-foreground/40">
+            Approximate: applications only store a current stage, not full history, so this reflects "reached or
+            passed" among applications that haven't been rejected or withdrawn.
+          </p>
+        }
+      </div>
+    </div>
+
+    <div class="mb-[18px] grid grid-cols-1 gap-[18px] lg:grid-cols-2">
+      <div class="rounded-[0.5rem] border border-border bg-card p-6">
+        <div class="mb-[18px] text-[12.5px] font-semibold">Top required skills</div>
+        @if (skillsGap().length === 0) {
+          <div class="text-[12px] text-foreground/45">No jobs saved yet.</div>
+        } @else {
+          <div class="flex flex-col gap-[13px]">
+            @for (skill of skillsGap(); track skill.skill) {
+              <div>
+                <div class="mb-1.5 flex justify-between text-[11.5px]">
+                  <span class="text-foreground/70">{{ skill.skill }}</span>
+                  <span class="text-foreground/55">{{ skill.count }}</span>
+                </div>
+                <div class="h-[5px] overflow-hidden rounded-[3px] bg-white/10">
+                  <div class="h-full bg-warning" [style.width.%]="(skill.count / maxSkillCount()) * 100"></div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="rounded-[0.5rem] border border-border bg-card p-6">
+        <div class="mb-[18px] text-[12.5px] font-semibold">Sources</div>
+        @if (sourceRows().length === 0) {
+          <div class="text-[12px] text-foreground/45">No jobs saved yet.</div>
+        } @else {
+          <div class="flex flex-col gap-0.5">
+            @for (row of sourceRows(); track row.source) {
+              <div class="grid grid-cols-[1fr_60px_70px] items-center gap-3 border-b border-border/60 py-2.5 last:border-b-0">
+                <span class="truncate text-xs">{{ row.source }}</span>
+                <span class="text-right text-xs text-foreground/55">{{ row.count }}</span>
+                <span class="text-right text-xs">{{ row.pct | number: '1.0-0' }}%</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-[18px] lg:grid-cols-3">
+      <div class="rounded-[0.5rem] border border-border bg-card p-6">
+        <div class="mb-2 text-[11px] tracking-[0.03em] text-foreground/50">RESPONSE RATE</div>
+        @if (responseRate(); as r) {
+          <div class="text-[22px] font-semibold tracking-[-0.02em]">{{ r.rate | percent: '1.0-1' }}</div>
+          <div class="mt-2 text-[11px] text-foreground/45">{{ r.matchingCount }} of {{ r.totalCount }} moved past applied</div>
+        }
+      </div>
+
+      <div class="rounded-[0.5rem] border border-border bg-card p-6">
+        <div class="mb-2 text-[11px] tracking-[0.03em] text-foreground/50">REFERRAL EFFECT</div>
+        @if (referralEffectiveness(); as ref) {
+          <div class="flex items-baseline gap-2">
+            <span class="text-[18px] font-semibold text-primary">{{ ref.referredOfferRate | percent: '1.0-0' }}</span>
+            <span class="text-[10.5px] text-foreground/40">referred ({{ ref.referredCount }})</span>
+          </div>
+          <div class="mt-1.5 flex items-baseline gap-2">
+            <span class="text-[18px] font-semibold text-foreground/70">{{ ref.nonReferredOfferRate | percent: '1.0-0' }}</span>
+            <span class="text-[10.5px] text-foreground/40">no referral ({{ ref.nonReferredCount }})</span>
+          </div>
+        }
+      </div>
+
+      <div class="rounded-[0.5rem] border border-border bg-card p-6">
+        <div class="mb-2 text-[11px] tracking-[0.03em] text-foreground/50">AVG TIME TO OFFER</div>
+        @if (timeToOffer(); as t) {
+          @if (t.daysDistribution.length === 0) {
+            <div class="text-[22px] font-semibold text-foreground/40">—</div>
+            <div class="mt-2 text-[11px] text-foreground/45">No offers yet</div>
+          } @else {
+            <div class="text-[22px] font-semibold tracking-[-0.02em]">{{ t.averageDays | number: '1.0-0' }} days</div>
+            <div class="mt-2 text-[11px] text-foreground/45">across {{ t.daysDistribution.length }} offer(s)</div>
+          }
+        }
+      </div>
+    </div>
+  }
+</main>

@@ -146,6 +146,11 @@ export const routes: Routes = [
         data: { module: 'JT', tab: 'jobs' },
       },
       {
+        path: 'jobs/analytics',
+        loadComponent: () => import('./features/jobs/analytics/analytics').then((m) => m.JobsAnalytics),
+        data: { module: 'JT', tab: 'jobs' },
+      },
+      {
         path: 'jobs/resume',
         loadComponent: () => import('./features/jobs/resume/resume').then((m) => m.JobsResume),
         data: { module: 'JT', tab: 'jobs' },
