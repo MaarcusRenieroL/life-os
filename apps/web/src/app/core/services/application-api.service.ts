@@ -5,6 +5,7 @@ import { Observable, map } from 'rxjs';
 import { ApiResponse } from '../models/auth.model';
 import {
   ApplicationResponse,
+  ApplicationStage,
   CreateApplicationRequest,
   ScoreApplicationRequest,
   UpdateApplicationRequest,
@@ -53,5 +54,17 @@ export class ApplicationApiService {
 
   deleteApplication(id: string): Observable<void> {
     return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/${id}`).pipe(map(() => undefined));
+  }
+
+  bulkUpdateStage(applicationIds: string[], stage: ApplicationStage): Observable<ApplicationResponse[]> {
+    return this.http
+      .post<ApiResponse<ApplicationResponse[]>>(`${this.baseUrl}/bulk/stage`, { applicationIds, stage })
+      .pipe(map((response) => response.data));
+  }
+
+  bulkDelete(applicationIds: string[]): Observable<void> {
+    return this.http
+      .post<ApiResponse<void>>(`${this.baseUrl}/bulk/delete`, { applicationIds })
+      .pipe(map(() => undefined));
   }
 }
