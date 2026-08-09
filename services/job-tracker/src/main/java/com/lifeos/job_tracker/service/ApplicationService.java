@@ -1,5 +1,7 @@
 package com.lifeos.job_tracker.service;
 
+import com.lifeos.job_tracker.domains.dto.request.BulkDeleteRequest;
+import com.lifeos.job_tracker.domains.dto.request.BulkStageUpdateRequest;
 import com.lifeos.job_tracker.domains.dto.request.CreateApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.request.ScoreApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateApplicationRequest;
@@ -229,6 +231,41 @@ public class ApplicationService {
             .orElseThrow(() -> new ApplicationNotFoundException(id));
 
     applicationRepository.delete(application);
+  }
+
+  // Mirrors the stage-change branch of update() per application so each one still
+  // fires its own stage-change Kafka event/notification/email individually.
+  public List<ApplicationResponse> bulkUpdateStage(
+      Authentication authentication, BulkStageUpdateRequest request) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return request.getApplicationIds().stream()
+        .map(
+            id -> {
+              Application application =
+                  applicationRepository
+                      .findByIdAndUserId(id, userId)
+                      .orElseThrow(() -> new ApplicationNotFoundException(id));
+
+              ApplicationStage previousStage = application.getCurrentStage();
+
+              if (!request.getStage().equals(previousStage)) {
+                application.setCurrentStage(request.getStage());
+                applicationEventPublisher.publishStageChanged(
+                    application.getId(),
+                    application.getJobId(),
+                    application.getUserId(),
+                    previousStage == null ? null : previousStage.name(),
+                    request.getStage().name());
+              }
+
+              return toResponse(applicationRepository.saveAndFlush(application));
+            })
+        .toList();
+  }
+
+  public void bulkDelete(Authentication authentication, BulkDeleteRequest request) {
+    request.getApplicationIds().forEach(id -> delete(authentication, id));
   }
 
   private ApplicationResponse toResponse(Application application) {

@@ -1,6 +1,8 @@
 package com.lifeos.job_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.job_tracker.domains.dto.request.BulkDeleteRequest;
+import com.lifeos.job_tracker.domains.dto.request.BulkStageUpdateRequest;
 import com.lifeos.job_tracker.domains.dto.request.CreateApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.request.ScoreApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateApplicationRequest;
@@ -91,5 +93,22 @@ public class ApplicationController {
     applicationService.delete(authentication, id);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Application deleted successfully"));
+  }
+
+  @PostMapping("/bulk/stage")
+  public ResponseEntity<ApiResponse<List<ApplicationResponse>>> bulkUpdateStage(
+      Authentication authentication, @Valid @RequestBody BulkStageUpdateRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            applicationService.bulkUpdateStage(authentication, request),
+            "Applications updated successfully"));
+  }
+
+  @PostMapping("/bulk/delete")
+  public ResponseEntity<ApiResponse<Void>> bulkDelete(
+      Authentication authentication, @Valid @RequestBody BulkDeleteRequest request) {
+    applicationService.bulkDelete(authentication, request);
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Applications deleted successfully"));
   }
 }
