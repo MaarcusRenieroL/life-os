@@ -61,6 +61,97 @@
         </div>
 
         <div class="rounded-[0.5rem] border border-border bg-card p-5">
+          <div class="mb-3 flex items-center justify-between">
+            <div class="text-[12.5px] font-semibold">Interview Rounds</div>
+            <button
+              type="button"
+              (click)="toggleAddInterview()"
+              class="text-[11px] font-semibold text-primary"
+            >
+              {{ addingInterview() ? 'Cancel' : '+ Add round' }}
+            </button>
+          </div>
+
+          @if (addingInterview()) {
+            <div class="mb-4 flex flex-col gap-2 rounded-[0.4rem] border border-border/70 p-3">
+              <input
+                type="text"
+                placeholder="Round name (e.g. Onsite - System Design)"
+                [value]="newRoundName()"
+                (input)="setNewRoundName($any($event.target).value)"
+                class="rounded-[0.4rem] border border-border bg-transparent px-2.5 py-2 text-[11.5px]"
+              />
+              <div class="flex gap-2">
+                <select
+                  class="flex-1 rounded-[0.4rem] border border-border bg-card px-2.5 py-2 text-[11px]"
+                  [value]="newRoundType()"
+                  (change)="setNewRoundType($any($event.target).value)"
+                >
+                  @for (type of roundTypes; track type) {
+                    <option [value]="type">{{ type }}</option>
+                  }
+                </select>
+                <input
+                  type="text"
+                  placeholder="Interviewer name"
+                  [value]="newInterviewerName()"
+                  (input)="setNewInterviewerName($any($event.target).value)"
+                  class="flex-1 rounded-[0.4rem] border border-border bg-transparent px-2.5 py-2 text-[11.5px]"
+                />
+              </div>
+              <button
+                type="button"
+                (click)="addInterview()"
+                [disabled]="savingInterview()"
+                class="self-start rounded-[0.4rem] bg-primary px-3.5 py-1.5 text-[11px] font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                {{ savingInterview() ? 'Saving…' : 'Save round' }}
+              </button>
+            </div>
+          }
+
+          @if (interviews().length === 0) {
+            <p class="text-[11.5px] text-foreground/45">No interview rounds logged yet.</p>
+          } @else {
+            <div class="flex flex-col gap-2.5">
+              @for (interview of interviews(); track interview.id) {
+                <div class="rounded-[0.4rem] border border-border/70 p-3">
+                  <div class="mb-1.5 flex items-start justify-between gap-2">
+                    <div>
+                      <div class="text-[11.5px] font-semibold">
+                        Round {{ interview.round }}{{ interview.roundName ? ' — ' + interview.roundName : '' }}
+                      </div>
+                      <div class="mt-0.5 text-[10.5px] text-foreground/50">
+                        {{ interview.roundType }}
+                        @if (interview.interviewerName) {
+                          · {{ interview.interviewerName }}
+                        }
+                      </div>
+                    </div>
+                    <button type="button" (click)="deleteInterview(interview)" class="text-[10.5px] text-destructive">
+                      Remove
+                    </button>
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    @for (result of resultOptions; track result) {
+                      <button
+                        type="button"
+                        (click)="setInterviewResult(interview, result)"
+                        [class.bg-primary]="interview.result === result"
+                        [class.text-primary-foreground]="interview.result === result"
+                        class="rounded-2xl border border-border px-2 py-0.5 text-[10px] font-semibold"
+                      >
+                        {{ result }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="rounded-[0.5rem] border border-border bg-card p-5">
           <div class="mb-3 text-[12.5px] font-semibold">Tailored Resume</div>
           @if (app.resumeS3Path) {
             <p class="mb-3 text-[11.5px] text-foreground/60">

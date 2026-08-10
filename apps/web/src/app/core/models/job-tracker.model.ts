@@ -13,6 +13,15 @@ export type ApplicationStage =
   | 'WITHDRAWN';
 export type ApplicationStatus = 'ACTIVE' | 'OFFER_RECEIVED' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
 export type NotificationReferenceType = 'JOB' | 'APPLICATION' | 'INTERVIEW' | 'CONTACT';
+export type InterviewRoundType =
+  | 'PHONE_SCREEN'
+  | 'TECHNICAL'
+  | 'SYSTEM_DESIGN'
+  | 'BEHAVIORAL'
+  | 'ONSITE'
+  | 'HR'
+  | 'FINAL';
+export type InterviewResult = 'PENDING' | 'PASSED' | 'FAILED' | 'CANCELLED' | 'RESCHEDULED';
 
 // --- Jobs ---
 
@@ -99,6 +108,61 @@ export interface UpdateApplicationRequest {
 
 export interface ScoreApplicationRequest {
   resumeText: string;
+}
+
+// --- Interviews ---
+
+export interface InterviewResponse {
+  id: string;
+  applicationId: string;
+  round: number;
+  roundName: string | null;
+  roundType: InterviewRoundType;
+  scheduledDate: string | null;
+  scheduledTime: string | null;
+  meetingLink: string | null;
+  interviewerName: string | null;
+  interviewerTitle: string | null;
+  topics: string[] | null;
+  preparationNotes: string | null;
+  questionsAsked: string | null;
+  performanceReview: string | null;
+  result: InterviewResult | null;
+  resultDate: string | null;
+  feedback: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateInterviewRequest {
+  round: number;
+  roundName?: string;
+  roundType: InterviewRoundType;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  meetingLink?: string;
+  interviewerName?: string;
+  interviewerTitle?: string;
+  topics?: string[];
+  preparationNotes?: string;
+}
+
+export interface UpdateInterviewRequest {
+  round?: number;
+  roundName?: string;
+  roundType?: InterviewRoundType;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  meetingLink?: string;
+  interviewerName?: string;
+  interviewerTitle?: string;
+  topics?: string[];
+  preparationNotes?: string;
+  questionsAsked?: string;
+  performanceReview?: string;
+  result?: InterviewResult;
+  resultDate?: string;
+  feedback?: string;
 }
 
 // --- Resumes ---
