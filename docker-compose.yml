@@ -109,8 +109,8 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
       OWNER_EMAIL: ${OWNER_EMAIL:-maarcusreniero.l@gmail.com}
-      OLLAMA_URL: http://host.docker.internal:11434
-      OLLAMA_MODEL: mistral
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-onboarding@resend.dev}
       JOB_SCRAPER_URL: http://job-scraper:8007
@@ -137,7 +137,6 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      OLLAMA_URL: http://host.docker.internal:11434
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
     ports:
       - "8004:8004"
@@ -193,8 +192,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
-      OLLAMA_URL: http://host.docker.internal:11434
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
     ports:
       - "8006:8006"
     depends_on:
