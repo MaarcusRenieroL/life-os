@@ -29,11 +29,7 @@ encryption:
 internal:
   api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
 
-ollama:
-  base-url: ${OLLAMA_URL:http://localhost:11434}
-  model: ${OLLAMA_MODEL:mistral}
-
-anthropic:
+claude:
   api-key: ${ANTHROPIC_API_KEY:}
   model: ${ANTHROPIC_MODEL:claude-sonnet-5}
 
