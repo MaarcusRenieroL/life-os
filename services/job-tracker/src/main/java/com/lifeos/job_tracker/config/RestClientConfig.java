@@ -10,11 +10,6 @@ import org.springframework.web.client.RestClient;
 public class RestClientConfig {
 
   @Bean
-  public RestClient ollamaRestClient(@Value("${ollama.base-url}") String baseUrl) {
-    return RestClient.builder().baseUrl(baseUrl).build();
-  }
-
-  @Bean
   public RestClient resendRestClient(@Value("${resend.api-key}") String apiKey) {
     return RestClient.builder()
         .baseUrl("https://api.resend.com")
