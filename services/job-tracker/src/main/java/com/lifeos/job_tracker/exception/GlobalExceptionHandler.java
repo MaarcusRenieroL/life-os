@@ -45,6 +45,14 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(InterviewNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleInterviewNotFound(
+      InterviewNotFoundException exception) {
+    log.warn("Interview not found: {}", exception.getMessage());
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
     String message =
