@@ -3,7 +3,9 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { APP_MODULES, AppModuleConfig } from '../../core/config/app-modules';
+import { ApplicationResponse } from '../../core/models/job-tracker.model';
 import { HealthSummary, VaultEntrySummary } from '../../core/models/vault.model';
+import { ApplicationApiService } from '../../core/services/application-api.service';
 import { AuthApiService } from '../../core/services/auth-api.service';
 import { CurrentUserService } from '../../core/services/current-user.service';
 import { FinanceAccountApiService } from '../../core/services/finance-account-api.service';
@@ -47,6 +49,7 @@ export class Home implements OnInit {
   private readonly vaultApi = inject(VaultApiService);
   private readonly financeAccountApi = inject(FinanceAccountApiService);
   private readonly financeTransactionApi = inject(FinanceTransactionApiService);
+  private readonly applicationApi = inject(ApplicationApiService);
   private readonly router = inject(Router);
 
   protected readonly user = this.currentUserService.user;
@@ -75,16 +78,21 @@ export class Home implements OnInit {
     return (summary?.weakCount ?? 0) + (summary?.duplicateCount ?? 0);
   });
 
-  // TODO: wire to Job Tracker once that module has a frontend/backend integration.
-  protected readonly interviewsThisWeek: number | null = null;
-  protected readonly offersPending: number | null = null;
+  protected readonly applications = signal<ApplicationResponse[] | null>(null);
+  protected readonly interviewsThisWeek = computed(
+    () => this.applications()?.filter((a) => a.currentStage === 'INTERVIEWING').length ?? null,
+  );
+  protected readonly offersPending = computed(
+    () => this.applications()?.filter((a) => a.currentStage === 'OFFER').length ?? null,
+  );
 
   protected readonly homeModuleTiles = computed<ModuleTile[]>(() => {
     const entries = this.entries();
     const actionRequired = this.vaultActionRequiredCount();
-    // Read so this tile list recomputes once finance data resolves.
+    // Read so this tile list recomputes once finance/job-tracker data resolves.
     this.financeTotalBalance();
     this.financeNeedsReviewCount();
+    this.applications();
 
     return APP_MODULES.slice(0, 4).map((module) =>
       this.toModuleTile(module, entries.length, actionRequired),
@@ -163,6 +171,11 @@ export class Home implements OnInit {
           );
         }
       });
+
+    this.applicationApi
+      .getApplications()
+      .pipe(catchError(() => of(null)))
+      .subscribe((applications) => this.applications.set(applications));
   }
 
   logout(): void {
@@ -187,6 +200,20 @@ export class Home implements OnInit {
         actionRequired > 0
           ? `${totalItems} items · ${actionRequired} need attention`
           : `${totalItems} items`;
+      return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
+    }
+
+    if (module.code === 'JT') {
+      const applications = this.applications();
+      if (applications === null) {
+        return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle: 'loading…' };
+      }
+      const active = applications.filter((a) => a.status === 'ACTIVE').length;
+      const interviewing = this.interviewsThisWeek() ?? 0;
+      const subtitle =
+        interviewing > 0
+          ? `${active} active · ${interviewing} interviewing`
+          : `${active} active application${active === 1 ? '' : 's'}`;
       return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
     }
 

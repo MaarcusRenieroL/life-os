@@ -32,14 +32,14 @@
     </div>
     <div class="group rounded-[0.5rem] border border-primary/30 bg-card px-[18px] py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/55 hover:shadow-[0_8px_24px_oklch(0_0_0_/_18%)]">
       <div class="flex items-center justify-between">
-        <div class="text-[22px] font-semibold text-primary tabular-nums">{{ interviewsThisWeek ?? '—' }}</div>
+        <div class="text-[22px] font-semibold text-primary tabular-nums">{{ interviewsThisWeek() ?? '—' }}</div>
         <i class="pi pi-calendar text-[13px] text-primary/50"></i>
       </div>
       <div class="mt-0.5 text-[11px] text-foreground/55">interviews this week</div>
     </div>
     <div class="group rounded-[0.5rem] border border-warning/30 bg-card px-[18px] py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-warning/55 hover:shadow-[0_8px_24px_oklch(0_0_0_/_18%)]">
       <div class="flex items-center justify-between">
-        <div class="text-[22px] font-semibold text-warning tabular-nums">{{ offersPending ?? '—' }}</div>
+        <div class="text-[22px] font-semibold text-warning tabular-nums">{{ offersPending() ?? '—' }}</div>
         <i class="pi pi-briefcase text-[13px] text-warning/50"></i>
       </div>
       <div class="mt-0.5 text-[11px] text-foreground/55">offers pending</div>
