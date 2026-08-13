@@ -18,7 +18,7 @@
           <span class="w-[9px] shrink-0"></span>
         }
 
-        <button type="button" class="flex flex-1 items-center gap-1.5 truncate text-left" (click)="select.emit(folder.id)">
+        <button type="button" class="flex flex-1 items-center gap-1.5 truncate text-left" (click)="folderSelect.emit(folder.id)">
           <i class="pi pi-folder shrink-0" style="font-size: 11px"></i>
           <span class="truncate">{{ folder.name }}</span>
           <span class="ml-auto shrink-0 text-[10.5px] text-foreground/40">{{ folder.noteCount }}</span>
@@ -42,7 +42,7 @@
           [folders]="folder.children"
           [selectedFolderId]="selectedFolderId"
           [depth]="depth + 1"
-          (select)="select.emit($event)"
+          (folderSelect)="folderSelect.emit($event)"
           (rename)="rename.emit($event)"
           (remove)="remove.emit($event)"
           (addChild)="addChild.emit($event)"

@@ -1,0 +1,44 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+// Content typed into the contenteditable div is set via innerHTML, so those
+// nodes never get Angular's view-encapsulation attribute - ::ng-deep is the
+// only way to style them from here without disabling encapsulation outright.
+::ng-deep .prose-content {
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0.6em 0 0.3em;
+  }
+  h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0.5em 0 0.3em;
+  }
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0.4em 0 0.2em;
+  }
+  ul {
+    list-style: disc;
+    padding-left: 1.4em;
+  }
+  ol {
+    list-style: decimal;
+    padding-left: 1.4em;
+  }
+  pre {
+    background: var(--color-card, #1a1a1a);
+    padding: 0.6em 0.8em;
+    border-radius: 0.4rem;
+    overflow-x: auto;
+    font-family: inherit;
+  }
+  a {
+    color: var(--color-primary, #22c55e);
+    text-decoration: underline;
+  }
+}

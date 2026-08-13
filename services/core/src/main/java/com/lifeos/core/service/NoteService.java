@@ -214,6 +214,19 @@ public class NoteService {
     return toFull(noteRepository.save(note));
   }
 
+  public NoteResponse addTag(UUID userId, UUID noteId, UUID tagId) {
+    Note note = requireOwned(userId, noteId);
+    tagService.requireOwned(userId, tagId);
+    addTagInternal(note.getId(), tagId);
+    return toFull(note);
+  }
+
+  public NoteResponse removeTag(UUID userId, UUID noteId, UUID tagId) {
+    Note note = requireOwned(userId, noteId);
+    noteTagRepository.deleteByNoteIdAndTagId(noteId, tagId);
+    return toFull(note);
+  }
+
   public void softDelete(UUID userId, UUID id) {
     Note note = requireOwned(userId, id);
     note.setDeletedAt(Instant.now());

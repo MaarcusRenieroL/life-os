@@ -1,0 +1,96 @@
+<main class="w-full px-4 py-10 font-mono text-foreground sm:px-8">
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="text-[22px] font-semibold tracking-tight">Templates</h1>
+    <p-button label="+ New template" (onClick)="openCreate()" />
+  </div>
+
+  @if (loading()) {
+    <p class="text-sm text-muted-foreground">Loading templates…</p>
+  } @else if (templates().length === 0) {
+    <div class="surface-panel px-6 py-16 text-center">
+      <p class="text-sm text-foreground/60">No templates yet.</p>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      @for (t of templates(); track t.id) {
+        <div
+          class="group flex cursor-pointer flex-col gap-2 rounded-[0.5rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-foreground/25"
+          role="button"
+          tabindex="0"
+          (click)="openPreview(t)"
+          (keydown.enter)="openPreview(t)"
+        >
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="truncate text-[13.5px] font-medium">{{ t.name }}</h3>
+            @if (t.category) {
+              <span class="shrink-0 rounded-full border border-border px-1.5 py-0.5 text-[10px] text-foreground/50">{{ t.category }}</span>
+            }
+          </div>
+          <p class="line-clamp-3 text-[12px] text-foreground/55">{{ t.preview }}</p>
+          <div class="mt-1 hidden items-center gap-3 text-[11px] text-foreground/50 group-hover:flex">
+            <button type="button" class="hover:text-primary" (click)="$event.stopPropagation(); openUseDialog(t)">Use</button>
+            <button type="button" class="hover:text-primary" (click)="$event.stopPropagation(); openEdit(t)">Edit</button>
+            <button type="button" class="hover:text-destructive" (click)="deleteTemplate(t, $event)">Delete</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <p-dialog
+    [visible]="previewTemplate() !== null && !useDialogVisible()"
+    (visibleChange)="closePreview()"
+    [modal]="true"
+    [style]="{ width: '500px' }"
+    [header]="previewTemplate()?.name ?? ''"
+  >
+    <p class="whitespace-pre-wrap text-[12.5px] text-foreground/70">{{ previewTemplate()?.preview }}</p>
+    <div class="mt-4 flex justify-end">
+      @if (previewTemplate(); as t) {
+        <p-button label="Use template" (onClick)="openUseDialog(t)" />
+      }
+    </div>
+  </p-dialog>
+
+  <p-dialog [(visible)]="useDialogVisible" [modal]="true" [style]="{ width: '360px' }" header="Create note from template">
+    <input
+      [ngModel]="useTitle()"
+      (ngModelChange)="useTitle.set($event)"
+      placeholder="Note title"
+      class="w-full rounded-[0.4rem] border border-border bg-card px-3 py-2 text-[12.5px] outline-none focus:border-primary/50"
+      (keydown.enter)="confirmUse()"
+    />
+    <div class="mt-4 flex justify-end gap-2">
+      <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="useDialogVisible.set(false)" />
+      <p-button label="Create" (onClick)="confirmUse()" />
+    </div>
+  </p-dialog>
+
+  <p-dialog [(visible)]="editorVisible" [modal]="true" [style]="{ width: '500px' }" [header]="editingId() ? 'Edit template' : 'New template'">
+    <div class="flex flex-col gap-2.5">
+      <input
+        [ngModel]="draftName()"
+        (ngModelChange)="draftName.set($event)"
+        placeholder="Template name"
+        class="w-full rounded-[0.4rem] border border-border bg-card px-3 py-2 text-[12.5px] outline-none"
+      />
+      <input
+        [ngModel]="draftCategory()"
+        (ngModelChange)="draftCategory.set($event)"
+        placeholder="Category (optional)"
+        class="w-full rounded-[0.4rem] border border-border bg-card px-3 py-2 text-[12.5px] outline-none"
+      />
+      <textarea
+        [ngModel]="draftContent()"
+        (ngModelChange)="draftContent.set($event)"
+        rows="8"
+        placeholder="Template content..."
+        class="w-full rounded-[0.4rem] border border-border bg-card px-3 py-2 text-[12.5px] outline-none"
+      ></textarea>
+    </div>
+    <div class="mt-4 flex justify-end gap-2">
+      <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="editorVisible.set(false)" />
+      <p-button label="Save" (onClick)="saveTemplate()" />
+    </div>
+  </p-dialog>
+</main>

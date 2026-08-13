@@ -62,7 +62,7 @@
       <app-folder-tree
         [folders]="folders()"
         [selectedFolderId]="selectedFolderId()"
-        (select)="selectFolder($event)"
+        (folderSelect)="selectFolder($event)"
         (rename)="openRenameFolder($event)"
         (remove)="deleteFolder($event)"
         (addChild)="openCreateFolder($event)"
@@ -141,9 +141,12 @@
         @for (note of filteredNotes(); track note.id) {
           <div
             class="group cursor-pointer rounded-[0.5rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-foreground/25"
+            role="button"
+            tabindex="0"
             draggable="true"
             (dragstart)="onDragStart($event, note.id)"
             (click)="openNote(note.id)"
+            (keydown.enter)="openNote(note.id)"
           >
             <div class="mb-1.5 flex items-start justify-between gap-2">
               <div class="flex items-center gap-1.5 overflow-hidden">
@@ -152,10 +155,14 @@
               </div>
               <div class="flex shrink-0 items-center gap-1">
                 @if (note.isPinned) {
-                  <i class="pi pi-thumbtack text-primary" style="font-size: 10px" (click)="togglePin(note, $event)"></i>
+                  <button type="button" class="text-primary" (click)="togglePin(note, $event)">
+                    <i class="pi pi-thumbtack" style="font-size: 10px"></i>
+                  </button>
                 }
                 @if (note.isFavorite) {
-                  <i class="pi pi-star-fill text-warning" style="font-size: 10px" (click)="toggleFavorite(note, $event)"></i>
+                  <button type="button" class="text-warning" (click)="toggleFavorite(note, $event)">
+                    <i class="pi pi-star-fill" style="font-size: 10px"></i>
+                  </button>
                 }
                 <button type="button" class="text-foreground/40 hover:text-foreground" (click)="$event.stopPropagation(); rowMenu.toggle($event)">
                   <i class="pi pi-ellipsis-h" style="font-size: 11px"></i>

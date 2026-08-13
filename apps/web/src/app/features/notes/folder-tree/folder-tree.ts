@@ -16,7 +16,7 @@ export class FolderTree {
   @Input() selectedFolderId: string | null = null;
   @Input() depth = 0;
 
-  @Output() select = new EventEmitter<string>();
+  @Output() folderSelect = new EventEmitter<string>();
   @Output() rename = new EventEmitter<Folder>();
   @Output() remove = new EventEmitter<Folder>();
   @Output() addChild = new EventEmitter<Folder>();

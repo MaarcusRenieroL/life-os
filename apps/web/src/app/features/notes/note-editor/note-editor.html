@@ -1,0 +1,270 @@
+@if (loading()) {
+  <div class="flex h-full items-center justify-center text-sm text-muted-foreground">Loading note…</div>
+} @else if (note(); as n) {
+  <div class="flex h-full w-full font-mono text-foreground">
+    <section class="flex flex-1 flex-col overflow-y-auto">
+      <!-- Top bar -->
+      <div class="flex flex-wrap items-center gap-2.5 border-b border-border px-5 py-3">
+        <a routerLink="/notes" class="text-foreground/50 hover:text-foreground"><i class="pi pi-arrow-left"></i></a>
+
+        <input
+          [ngModel]="n.title"
+          (ngModelChange)="onTitleInput($event)"
+          placeholder="Untitled note"
+          class="min-w-[160px] flex-1 border-none bg-transparent text-[15px] font-medium outline-none placeholder:text-foreground/30"
+        />
+
+        <p-select
+          [options]="noteTypes"
+          [ngModel]="n.noteType"
+          (ngModelChange)="changeNoteType($event)"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-[140px]"
+        />
+
+        <button type="button" class="text-foreground/50 hover:text-primary" [class.text-primary]="n.isPinned" (click)="togglePinned()" title="Pin">
+          <i class="pi pi-thumbtack"></i>
+        </button>
+        <button type="button" class="text-foreground/50 hover:text-warning" [class.text-warning]="n.isFavorite" (click)="toggleFavorite()" title="Favorite">
+          <i class="pi" [class.pi-star-fill]="n.isFavorite" [class.pi-star]="!n.isFavorite"></i>
+        </button>
+
+        <button type="button" class="text-foreground/50 hover:text-foreground" (click)="moreMenu.toggle($event)">
+          <i class="pi pi-ellipsis-h"></i>
+        </button>
+        <p-menu #moreMenu [model]="moreMenuItems()" [popup]="true" />
+
+        <button type="button" class="text-foreground/50 hover:text-foreground" (click)="toggleSidebar()" title="Toggle details">
+          <i class="pi pi-sidebar"></i>
+        </button>
+      </div>
+
+      <!-- Rich text toolbar -->
+      <div class="flex flex-wrap items-center gap-1 border-b border-border px-5 py-2 text-[13px] text-foreground/70">
+        <button type="button" class="rounded px-2 py-1 hover:bg-card" (click)="exec('bold')"><b>B</b></button>
+        <button type="button" class="rounded px-2 py-1 italic hover:bg-card" (click)="exec('italic')">I</button>
+        <button type="button" class="rounded px-2 py-1 underline hover:bg-card" (click)="exec('underline')">U</button>
+        <span class="mx-1 h-4 w-px bg-border"></span>
+        <button type="button" class="rounded px-2 py-1 hover:bg-card" (click)="execBlock('h1')">H1</button>
+        <button type="button" class="rounded px-2 py-1 hover:bg-card" (click)="execBlock('h2')">H2</button>
+        <button type="button" class="rounded px-2 py-1 hover:bg-card" (click)="execBlock('h3')">H3</button>
+        <span class="mx-1 h-4 w-px bg-border"></span>
+        <button type="button" class="rounded px-2 py-1 hover:bg-card" (click)="exec('insertUnorderedList')"><i class="pi pi-list"></i></button>
+        <button type="button" class="rounded px-2 py-1 hover:bg-card" (click)="exec('insertOrderedList')">1.</button>
+        <button type="button" class="rounded px-2 py-1 hover:bg-card" (click)="execBlock('pre')"><i class="pi pi-code"></i></button>
+        <button type="button" class="rounded px-2 py-1 hover:bg-card" (click)="insertLink()"><i class="pi pi-link"></i></button>
+      </div>
+
+      <!-- Editor -->
+      <div
+        #contentArea
+        class="min-h-[300px] flex-1 px-6 py-6 text-[13.5px] leading-relaxed outline-none prose-content"
+        contenteditable="true"
+        (input)="onContentInput()"
+      ></div>
+
+      <div class="border-t border-border px-5 py-2 text-[11px] text-foreground/40">
+        {{ n.wordCount }} words &middot; {{ n.readingTimeMinutes }} min read
+        @if (saving()) {
+          &middot; saving…
+        } @else if (lastSavedAt()) {
+          &middot; saved {{ lastSavedAt() | date: 'shortTime' }}
+        }
+      </div>
+    </section>
+
+    <!-- Details sidebar -->
+    @if (sidebarOpen()) {
+      <aside class="hidden w-[300px] shrink-0 flex-col gap-5 overflow-y-auto border-l border-border px-4 py-5 lg:flex">
+        <div>
+          <span class="mb-1.5 block text-[10.5px] uppercase tracking-wide text-foreground/40">Metadata</span>
+          <div class="space-y-1 text-[11.5px] text-foreground/60">
+            <div>Created {{ n.createdAt | date: 'medium' }}</div>
+            <div>Updated {{ n.updatedAt | date: 'medium' }}</div>
+            <div>{{ n.wordCount }} words &middot; {{ n.readingTimeMinutes }} min read</div>
+          </div>
+        </div>
+
+        <div>
+          <span class="mb-1.5 block text-[10.5px] uppercase tracking-wide text-foreground/40">Tags</span>
+          <div class="mb-2 flex flex-wrap gap-1.5">
+            @for (tag of n.tags; track tag.id) {
+              <span class="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px]">
+                {{ tag.name }}
+                <button type="button" class="text-foreground/40 hover:text-destructive" (click)="removeTag(tag.id)">×</button>
+              </span>
+            }
+          </div>
+          <div class="relative">
+            <input
+              [ngModel]="tagInput()"
+              (ngModelChange)="tagInput.set($event)"
+              (keydown.enter)="addTagByName(tagInput())"
+              placeholder="Add a tag..."
+              class="w-full rounded-[0.4rem] border border-border bg-card px-2.5 py-1.5 text-[11.5px] outline-none focus:border-primary/50"
+            />
+            @if (tagSuggestions().length > 0) {
+              <div class="absolute z-10 mt-1 w-full rounded-[0.4rem] border border-border bg-card shadow-lg">
+                @for (s of tagSuggestions(); track s.id) {
+                  <button type="button" class="block w-full px-2.5 py-1.5 text-left text-[11.5px] hover:bg-primary/10" (click)="addTagByName(s.name)">
+                    {{ s.name }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <div>
+          <span class="mb-1.5 block text-[10.5px] uppercase tracking-wide text-foreground/40">Folders</span>
+          <div class="mb-2 flex flex-wrap gap-1.5">
+            @for (fid of n.folderIds; track fid) {
+              <span class="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px]">
+                {{ folderName(fid) }}
+                <button type="button" class="text-foreground/40 hover:text-destructive" (click)="removeFolder(fid)">×</button>
+              </span>
+            }
+          </div>
+          <select
+            class="w-full rounded-[0.4rem] border border-border bg-card px-2.5 py-1.5 text-[11.5px] outline-none"
+            (change)="assignFolder($any($event.target).value)"
+          >
+            <option value="">Move to folder...</option>
+            @for (f of allFolders(); track f.id) {
+              <option [value]="f.id">{{ f.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <div class="mb-1.5 flex items-center justify-between">
+            <span class="text-[10.5px] uppercase tracking-wide text-foreground/40">Links</span>
+            <button type="button" class="text-foreground/40 hover:text-foreground" (click)="openNoteLinkDialog()"><i class="pi pi-plus" style="font-size: 10px"></i></button>
+          </div>
+          <p class="mb-1 text-[10.5px] text-foreground/40">Outgoing ({{ n.outgoingLinks.length }})</p>
+          <div class="mb-2 space-y-1">
+            @for (link of n.outgoingLinks; track link.id) {
+              <div class="flex items-center justify-between rounded-[0.4rem] bg-card px-2 py-1 text-[11.5px]">
+                <button type="button" class="truncate text-left hover:text-primary" (click)="goToNote(link.id)">{{ link.title }}</button>
+                <button type="button" class="shrink-0 text-foreground/40 hover:text-destructive" (click)="removeOutgoingLink(link.id)">×</button>
+              </div>
+            }
+          </div>
+          <p class="mb-1 text-[10.5px] text-foreground/40">Backlinks ({{ n.backlinks.length }})</p>
+          <div class="space-y-1">
+            @for (link of n.backlinks; track link.id) {
+              <button type="button" class="block w-full truncate rounded-[0.4rem] bg-card px-2 py-1 text-left text-[11.5px] hover:text-primary" (click)="goToNote(link.id)">
+                {{ link.title }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div>
+          <div class="mb-1.5 flex items-center justify-between">
+            <span class="text-[10.5px] uppercase tracking-wide text-foreground/40">Module links</span>
+            <button type="button" class="text-foreground/40 hover:text-foreground" (click)="openModuleLinkDialog()"><i class="pi pi-plus" style="font-size: 10px"></i></button>
+          </div>
+          <div class="space-y-1">
+            @for (link of n.moduleLinks; track link.id) {
+              <div class="flex items-center justify-between rounded-[0.4rem] bg-card px-2 py-1 text-[11.5px]">
+                <span class="truncate">{{ link.moduleType }} &middot; {{ link.moduleId }}</span>
+                <button type="button" class="shrink-0 text-foreground/40 hover:text-destructive" (click)="removeModuleLink(link.id)">×</button>
+              </div>
+            }
+            @if (n.moduleLinks.length === 0) {
+              <p class="text-[11px] text-foreground/40">Not linked to anything</p>
+            }
+          </div>
+        </div>
+
+        <div>
+          <div class="mb-1.5 flex items-center justify-between">
+            <span class="text-[10.5px] uppercase tracking-wide text-foreground/40">Attachments</span>
+            <label class="cursor-pointer text-foreground/40 hover:text-foreground">
+              <i class="pi pi-plus" style="font-size: 10px"></i>
+              <input type="file" class="hidden" (change)="onFileSelected($event)" />
+            </label>
+          </div>
+          <div class="space-y-1">
+            @for (a of n.attachments; track a.id) {
+              <div class="flex items-center justify-between rounded-[0.4rem] bg-card px-2 py-1.5 text-[11.5px]">
+                <button type="button" class="truncate text-left hover:text-primary" (click)="downloadAttachment(a.id)">{{ a.fileName }}</button>
+                <div class="flex shrink-0 items-center gap-1.5 text-foreground/40">
+                  <span>{{ formatFileSize(a.fileSize) }}</span>
+                  <button type="button" class="hover:text-destructive" (click)="deleteAttachment(a.id)">×</button>
+                </div>
+              </div>
+            }
+            @if (n.attachments.length === 0) {
+              <p class="text-[11px] text-foreground/40">No attachments</p>
+            }
+          </div>
+        </div>
+
+        <div>
+          <button type="button" class="mb-1.5 flex w-full items-center justify-between text-[10.5px] uppercase tracking-wide text-foreground/40" (click)="loadVersions()">
+            Version history ({{ n.contentVersion }})
+          </button>
+          <div class="space-y-1">
+            @for (v of versions(); track v.id) {
+              <div class="flex items-center justify-between rounded-[0.4rem] bg-card px-2 py-1 text-[11.5px]">
+                <span>v{{ v.versionNumber }} &middot; {{ v.createdAt | date: 'short' }}</span>
+                <button type="button" class="text-foreground/40 hover:text-primary" (click)="restoreVersion(v.versionNumber)">Restore</button>
+              </div>
+            }
+            @if (versionsLoaded() && versions().length === 0) {
+              <p class="text-[11px] text-foreground/40">No previous versions</p>
+            }
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-1.5">
+          <p-button label="Export MD" size="small" severity="secondary" [text]="true" (onClick)="exportNote('markdown')" />
+          <p-button label="Export HTML" size="small" severity="secondary" [text]="true" (onClick)="exportNote('html')" />
+          <p-button label="Export PDF" size="small" severity="secondary" [text]="true" (onClick)="exportNote('pdf')" />
+        </div>
+      </aside>
+    }
+  </div>
+
+  <p-dialog [(visible)]="moduleLinkDialogVisible" [modal]="true" [style]="{ width: '340px' }" header="Link to module">
+    <div class="flex flex-col gap-2.5">
+      <select
+        class="w-full rounded-[0.4rem] border border-border bg-card px-2.5 py-1.5 text-[12px]"
+        [ngModel]="moduleLinkType()"
+        (ngModelChange)="moduleLinkType.set($event)"
+      >
+        @for (t of moduleTypes; track t) {
+          <option [value]="t">{{ t }}</option>
+        }
+      </select>
+      <input
+        [ngModel]="moduleLinkId()"
+        (ngModelChange)="moduleLinkId.set($event)"
+        placeholder="Module item ID"
+        class="w-full rounded-[0.4rem] border border-border bg-card px-2.5 py-1.5 text-[12px] outline-none"
+      />
+    </div>
+    <div class="mt-4 flex justify-end gap-2">
+      <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="moduleLinkDialogVisible.set(false)" />
+      <p-button label="Link" (onClick)="saveModuleLink()" />
+    </div>
+  </p-dialog>
+
+  <p-dialog [(visible)]="noteLinkDialogVisible" [modal]="true" [style]="{ width: '340px' }" header="Link to another note">
+    <input
+      [ngModel]="noteLinkTarget()"
+      (ngModelChange)="noteLinkTarget.set($event)"
+      placeholder="Target note ID"
+      class="w-full rounded-[0.4rem] border border-border bg-card px-2.5 py-1.5 text-[12px] outline-none"
+    />
+    <div class="mt-4 flex justify-end gap-2">
+      <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="noteLinkDialogVisible.set(false)" />
+      <p-button label="Link" (onClick)="saveNoteLink()" />
+    </div>
+  </p-dialog>
+} @else {
+  <div class="flex h-full items-center justify-center text-sm text-muted-foreground">Note not found.</div>
+}

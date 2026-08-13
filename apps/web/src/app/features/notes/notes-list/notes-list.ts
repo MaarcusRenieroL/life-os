@@ -18,7 +18,7 @@ import { FolderTree } from '../folder-tree/folder-tree';
 @Component({
   selector: 'app-notes-list',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, ButtonModule, DialogModule, InputTextModule, MenuModule, SelectModule, FolderTree],
+  imports: [DatePipe, FormsModule, RouterLink, ButtonModule, DialogModule, MenuModule, SelectModule, FolderTree],
   templateUrl: './notes-list.html',
   styleUrl: './notes-list.scss',
 })
@@ -228,7 +228,11 @@ export class NotesList implements OnInit {
     event.stopPropagation();
     this.selected.update((current) => {
       const next = new Set(current);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
