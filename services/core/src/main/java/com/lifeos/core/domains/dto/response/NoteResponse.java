@@ -9,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
@@ -31,13 +32,20 @@ public class NoteResponse {
 
   UUID parentNoteId;
 
-  @JsonProperty("isPinned")
+  // @Data's default getter for a `boolean isPinned` field is isPinned(),
+  // which Jackson's bean-property naming strips the "is" from - serializing
+  // as "pinned" instead of "isPinned" and silently breaking frontend code
+  // that reads response.isPinned. @Getter(NONE) here plus the hand-written,
+  // @JsonProperty-annotated getter below is what actually forces the name;
+  // annotating the field alone creates a second, differently-named property
+  // instead of renaming the existing one.
+  @Getter(AccessLevel.NONE)
   boolean isPinned;
 
-  @JsonProperty("isArchived")
+  @Getter(AccessLevel.NONE)
   boolean isArchived;
 
-  @JsonProperty("isFavorite")
+  @Getter(AccessLevel.NONE)
   boolean isFavorite;
 
   int contentVersion;
@@ -63,4 +71,19 @@ public class NoteResponse {
   Instant createdAt;
 
   Instant updatedAt;
+
+  @JsonProperty("isPinned")
+  public boolean isPinned() {
+    return isPinned;
+  }
+
+  @JsonProperty("isArchived")
+  public boolean isArchived() {
+    return isArchived;
+  }
+
+  @JsonProperty("isFavorite")
+  public boolean isFavorite() {
+    return isFavorite;
+  }
 }

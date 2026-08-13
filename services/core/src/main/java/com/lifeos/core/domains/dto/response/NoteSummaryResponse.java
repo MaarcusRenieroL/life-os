@@ -9,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
@@ -29,16 +30,35 @@ public class NoteSummaryResponse {
 
   @Builder.Default List<TagResponse> tags = List.of();
 
-  @JsonProperty("isPinned")
+  // See NoteResponse for why these need an explicit @JsonProperty-annotated
+  // getter rather than a field-level annotation - Lombok's default getter
+  // name for a `boolean isXxx` field otherwise wins the Jackson naming and
+  // serializes as "xxx", not "isXxx".
+  @Getter(AccessLevel.NONE)
   boolean isPinned;
 
-  @JsonProperty("isFavorite")
+  @Getter(AccessLevel.NONE)
   boolean isFavorite;
 
-  @JsonProperty("isArchived")
+  @Getter(AccessLevel.NONE)
   boolean isArchived;
 
   Instant createdAt;
 
   Instant updatedAt;
+
+  @JsonProperty("isPinned")
+  public boolean isPinned() {
+    return isPinned;
+  }
+
+  @JsonProperty("isFavorite")
+  public boolean isFavorite() {
+    return isFavorite;
+  }
+
+  @JsonProperty("isArchived")
+  public boolean isArchived() {
+    return isArchived;
+  }
 }
