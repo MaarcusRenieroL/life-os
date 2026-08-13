@@ -46,7 +46,12 @@ public class NoteSearchService {
   private final TagRepository tagRepository;
   private final NoteFolderRepository noteFolderRepository;
   private final StringRedisTemplate redisTemplate;
-  private final ObjectMapper objectMapper;
+
+  // Not Spring-managed: spring-boot-starter-webmvc (the modular Boot 4
+  // starter this service uses) doesn't pull in Jackson's autoconfiguration
+  // the way spring-boot-starter-web does, so there's no ObjectMapper bean to
+  // inject here. A plain instance is all recent-searches JSON needs.
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   public Page<SearchResultResponse> search(UUID userId, String rawQuery, int page, int size) {
     ParsedQuery parsed = parse(rawQuery);
