@@ -1,22 +1,27 @@
 <main class="mx-auto w-full max-w-3xl px-4 py-10 font-mono text-foreground sm:px-8">
   <h1 class="mb-4 text-[22px] font-semibold tracking-tight">Search notes</h1>
 
-  <input
-    [ngModel]="query()"
-    (ngModelChange)="onQueryInput($event)"
-    placeholder='Try "tag:work" or "is:pinned" or free text...'
-    class="mb-6 w-full rounded-[0.5rem] border border-border bg-card px-4 py-3 text-[14px] outline-none focus:border-primary/50"
-  />
+  <div class="relative mb-6">
+    <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-foreground/35" style="font-size: 13px"></i>
+    <input
+      [ngModel]="query()"
+      (ngModelChange)="onQueryInput($event)"
+      placeholder='Try "tag:work" or "is:pinned" or free text...'
+      class="w-full rounded-[0.5rem] border border-border bg-card py-3 pl-10 pr-4 text-[14px] outline-none transition-colors focus:border-primary/50"
+    />
+  </div>
 
   @if (!searched()) {
     @if (recentSearches().length > 0) {
       <div>
-        <span class="mb-2 block text-[10.5px] uppercase tracking-wide text-foreground/40">Recent searches</span>
+        <span class="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-foreground/35">
+          <i class="pi pi-history" style="font-size: 9px"></i> Recent searches
+        </span>
         <div class="flex flex-wrap gap-2">
           @for (r of recentSearches(); track r.query + r.timestamp) {
             <button
               type="button"
-              class="rounded-full border border-border bg-card px-3 py-1 text-[12px] text-foreground/70 hover:border-primary/40 hover:text-primary"
+              class="rounded-full border border-border bg-card px-3 py-1 text-[12px] text-foreground/70 transition-colors hover:border-primary/40 hover:text-primary"
               (click)="useRecent(r.query)"
             >
               {{ r.query }} <span class="opacity-50">({{ r.resultCount }})</span>
@@ -25,37 +30,52 @@
         </div>
       </div>
     } @else {
-      <p class="text-[12.5px] text-foreground/50">
-        Search across titles, content, and tags. Use <code>tag:name</code>, <code>folder:name</code>,
-        <code>is:pinned</code>, <code>is:favorite</code>, <code>before:2026-01-01</code>, or
-        <code>after:2026-01-01</code> to filter.
-      </p>
+      <div class="surface-panel px-5 py-4 text-[12.5px] text-foreground/55">
+        <p class="mb-2 flex items-center gap-1.5 font-medium text-foreground/75">
+          <i class="pi pi-info-circle" style="font-size: 11px"></i> Search operators
+        </p>
+        <div class="flex flex-wrap gap-1.5">
+          @for (op of ['tag:name', 'folder:name', 'is:pinned', 'is:favorite', 'before:2026-01-01', 'after:2026-01-01']; track op) {
+            <code class="rounded-[0.3rem] border border-border/70 bg-card px-1.5 py-0.5 text-[11px] text-foreground/70">{{ op }}</code>
+          }
+        </div>
+      </div>
     }
   } @else if (loading()) {
-    <p class="text-sm text-muted-foreground">Searching…</p>
+    <div class="flex flex-col gap-2.5">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="h-[68px] animate-pulse rounded-[0.5rem] border border-border/60 bg-card/60"></div>
+      }
+    </div>
   } @else if (results().length === 0) {
-    <div class="surface-panel px-6 py-12 text-center">
-      <p class="text-sm text-foreground/60">No results for "{{ query() }}"</p>
-      <p class="mt-1 text-[11.5px] text-foreground/40">Try a different term or check your operators.</p>
+    <div class="surface-panel flex flex-col items-center gap-2 px-6 py-16 text-center">
+      <div class="flex h-11 w-11 items-center justify-center rounded-full bg-secondary">
+        <i class="pi pi-search text-lg text-foreground/40"></i>
+      </div>
+      <p class="text-[13px] font-medium text-foreground/75">No results for "{{ query() }}"</p>
+      <p class="text-[11.5px] text-foreground/45">Try a different term or check your operators.</p>
     </div>
   } @else {
-    <p class="mb-3 text-[11.5px] text-foreground/50">{{ totalElements() }} results</p>
+    <p class="mb-3 text-[11.5px] text-foreground/50">{{ totalElements() }} {{ totalElements() === 1 ? 'result' : 'results' }}</p>
     <div class="flex flex-col gap-2.5">
       @for (result of results(); track result.id) {
         <button
           type="button"
-          class="rounded-[0.5rem] border border-border bg-card px-4 py-3 text-left transition-colors hover:border-foreground/25"
+          class="rounded-[0.5rem] border border-border bg-card px-4 py-3 text-left transition-all hover:-translate-y-[1px] hover:border-foreground/25 hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.25)]"
           (click)="openNote(result.id)"
         >
           <div class="mb-1 flex items-center justify-between gap-2">
             <h3 class="truncate text-[13.5px] font-medium">{{ result.title }}</h3>
             <div class="flex shrink-0 gap-1">
               @for (tag of result.tags; track tag.id) {
-                <span class="rounded-full border border-border px-1.5 py-0.5 text-[10px]">{{ tag.name }}</span>
+                <span class="flex items-center gap-1 rounded-full border border-border px-1.5 py-0.5 text-[10px]">
+                  <span class="h-[5px] w-[5px] shrink-0 rounded-full" [style.background]="tag.color || 'var(--muted-foreground)'"></span>
+                  {{ tag.name }}
+                </span>
               }
             </div>
           </div>
-          <p class="line-clamp-2 text-[12px] text-foreground/55">{{ result.excerpt }}</p>
+          <p class="line-clamp-2 text-[12px] leading-relaxed text-foreground/55">{{ result.excerpt }}</p>
         </button>
       }
     </div>

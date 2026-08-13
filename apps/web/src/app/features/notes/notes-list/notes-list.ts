@@ -14,6 +14,7 @@ import { NoteTagsApiService } from '../../../core/services/note-tags-api.service
 import { NotesApiService } from '../../../core/services/notes-api.service';
 import { Folder, NoteSummary, Tag } from '../../../core/models/notes.model';
 import { FolderTree } from '../folder-tree/folder-tree';
+import { noteTypeMeta } from '../shared/note-type.util';
 
 @Component({
   selector: 'app-notes-list',
@@ -58,10 +59,21 @@ export class NotesList implements OnInit {
 
   protected readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalElements() / this.pageSize)));
 
+  protected readonly folderCount = computed(() => this.flatten(this.folders()).length);
+  protected readonly favoriteCount = signal(0);
+  protected readonly pinnedCount = signal(0);
+
+  protected readonly typeMeta = noteTypeMeta;
+
   ngOnInit(): void {
     this.loadFolders();
     this.loadTags();
     this.loadNotes();
+  }
+
+  private loadStatCounts(): void {
+    this.notesApi.favorites().subscribe((notes) => this.favoriteCount.set(notes.length));
+    this.notesApi.pinned().subscribe((notes) => this.pinnedCount.set(notes.length));
   }
 
   private loadFolders(): void {
@@ -74,6 +86,7 @@ export class NotesList implements OnInit {
 
   loadNotes(): void {
     this.loading.set(true);
+    this.loadStatCounts();
 
     if (this.quickView() === 'favorites') {
       this.notesApi.favorites().subscribe((notes) => this.finishLoad(notes));
@@ -336,5 +349,9 @@ export class NotesList implements OnInit {
 
   excerpt(note: NoteSummary): string {
     return note.description ?? '';
+  }
+
+  private flatten(folders: Folder[]): Folder[] {
+    return folders.flatMap((f) => [f, ...this.flatten(f.children)]);
   }
 }

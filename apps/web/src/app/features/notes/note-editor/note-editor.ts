@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -13,19 +13,7 @@ import { NoteFoldersApiService } from '../../../core/services/note-folders-api.s
 import { NoteTagsApiService } from '../../../core/services/note-tags-api.service';
 import { NotesApiService } from '../../../core/services/notes-api.service';
 import { Folder, Note, NoteModuleType, NoteType, NoteVersion, Tag } from '../../../core/models/notes.model';
-
-const NOTE_TYPES: { label: string; value: NoteType }[] = [
-  { label: 'General', value: 'GENERAL' },
-  { label: 'Meeting', value: 'MEETING' },
-  { label: 'Book', value: 'BOOK' },
-  { label: 'Learning', value: 'LEARNING' },
-  { label: 'Technical', value: 'TECHNICAL' },
-  { label: 'Snippet', value: 'SNIPPET' },
-  { label: 'Research', value: 'RESEARCH' },
-  { label: 'Checklist', value: 'CHECKLIST' },
-  { label: 'Travel', value: 'TRAVEL' },
-  { label: 'Decision', value: 'DECISION' },
-];
+import { NOTE_TYPE_LIST, noteTypeMeta } from '../shared/note-type.util';
 
 const MODULE_TYPES: NoteModuleType[] = ['PROJECT', 'GOAL', 'TASK', 'JOB_APPLICATION', 'HABIT'];
 
@@ -43,9 +31,16 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   private readonly foldersApi = inject(NoteFoldersApiService);
   private readonly tagsApi = inject(NoteTagsApiService);
 
-  @ViewChild('contentArea') contentArea?: ElementRef<HTMLDivElement>;
+  // Signal-based viewChild instead of @ViewChild: the content div only
+  // exists once `note()` is non-null (it's behind an @if), so a decorator
+  // query captured at ngAfterViewInit can be stale/undefined the first time
+  // a note loads. Reading it as a signal and reacting via effect() below
+  // means the sync always runs once both the note data AND the element are
+  // actually there, regardless of which one resolves first.
+  private readonly contentAreaRef = viewChild<ElementRef<HTMLDivElement>>('contentArea');
+  private syncedNoteId: string | null = null;
 
-  protected readonly noteTypes = NOTE_TYPES;
+  protected readonly noteTypes = NOTE_TYPE_LIST;
   protected readonly moduleTypes = MODULE_TYPES;
 
   protected readonly note = signal<Note | null>(null);
@@ -78,6 +73,23 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   private contentChanges = new Subject<string>();
   private destroyed = false;
 
+  constructor() {
+    // Fires whenever the note data or the contenteditable element changes -
+    // exactly the two things that need to both be present before the HTML
+    // can be poured in. Guarded by syncedNoteId so it only overwrites the
+    // div on an actual note switch/restore, never on every keystroke (the
+    // note signal also updates on each debounced autosave).
+    effect(() => {
+      const note = this.note();
+      const element = this.contentAreaRef()?.nativeElement;
+
+      if (note && element && this.syncedNoteId !== note.id) {
+        element.innerHTML = note.content ?? '';
+        this.syncedNoteId = note.id;
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.foldersApi.list().subscribe((folders) => this.allFolders.set(this.flatten(folders)));
     this.tagsApi.list().subscribe((tags) => this.allTags.set(tags));
@@ -108,11 +120,6 @@ export class NoteEditorPage implements OnInit, OnDestroy {
         this.note.set(note);
         this.loading.set(false);
         this.versionsLoaded.set(false);
-        queueMicrotask(() => {
-          if (this.contentArea) {
-            this.contentArea.nativeElement.innerHTML = note.content ?? '';
-          }
-        });
       },
       error: () => this.loading.set(false),
     });
@@ -124,7 +131,7 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   }
 
   onContentInput(): void {
-    const html = this.contentArea?.nativeElement.innerHTML ?? '';
+    const html = this.contentAreaRef()?.nativeElement.innerHTML ?? '';
     this.contentChanges.next(html);
   }
 
@@ -145,7 +152,7 @@ export class NoteEditorPage implements OnInit, OnDestroy {
 
   exec(command: string, value?: string): void {
     document.execCommand(command, false, value);
-    this.contentArea?.nativeElement.focus();
+    this.contentAreaRef()?.nativeElement.focus();
     this.onContentInput();
   }
 
@@ -158,6 +165,10 @@ export class NoteEditorPage implements OnInit, OnDestroy {
     if (url) {
       this.exec('createLink', url);
     }
+  }
+
+  typeMeta() {
+    return noteTypeMeta(this.note()?.noteType);
   }
 
   changeNoteType(value: NoteType): void {
@@ -366,13 +377,11 @@ export class NoteEditorPage implements OnInit, OnDestroy {
     if (!window.confirm(`Restore version ${versionNumber}? This becomes the new current version.`)) return;
 
     this.notesApi.restoreVersion(current.id, versionNumber).subscribe((updated) => {
+      // Same note id, new content - force the sync effect to treat this as
+      // a fresh load instead of skipping it as an autosave echo.
+      this.syncedNoteId = null;
       this.note.set(updated);
       this.versionsLoaded.set(false);
-      queueMicrotask(() => {
-        if (this.contentArea) {
-          this.contentArea.nativeElement.innerHTML = updated.content ?? '';
-        }
-      });
     });
   }
 }
