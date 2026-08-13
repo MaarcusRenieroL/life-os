@@ -110,6 +110,11 @@ public class NoteService {
             .title(request.getTitle())
             .content(request.getContent())
             .contentPlainText(plainText)
+            // CreateNoteRequest has no description field of its own (per
+            // spec, that's an update-only override) - derive the list-view
+            // preview from the content itself so a fresh note doesn't show
+            // a blank "No content yet" card the moment it has real text.
+            .description(NoteContentUtil.excerpt(plainText, 200))
             .noteType(request.getNoteType() != null ? request.getNoteType() : NoteType.GENERAL)
             .isPinned(false)
             .isArchived(false)
@@ -157,6 +162,7 @@ public class NoteService {
             .title(title)
             .content(content)
             .contentPlainText(plainText)
+            .description(NoteContentUtil.excerpt(plainText, 200))
             .noteType(NoteType.GENERAL)
             .isPinned(false)
             .isArchived(false)
@@ -189,6 +195,13 @@ public class NoteService {
       note.setContent(request.getContent());
       note.setContentPlainText(NoteContentUtil.toPlainText(request.getContent()));
       note.setContentVersion(note.getContentVersion() + 1);
+
+      // Keep the list-view preview in sync with the new content unless this
+      // same request also sent an explicit description - that's a
+      // deliberate user override and shouldn't be clobbered by auto-derive.
+      if (request.getDescription() == null) {
+        note.setDescription(NoteContentUtil.excerpt(note.getContentPlainText(), 200));
+      }
     }
 
     if (request.getDescription() != null) {
