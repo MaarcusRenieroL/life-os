@@ -35,7 +35,17 @@ export const APP_MODULES: AppModuleConfig[] = [
   { code: 'GL', name: 'Goals', enabled: false },
   { code: 'HB', name: 'Habits', enabled: false },
   { code: 'CL', name: 'Calendar', enabled: false },
-  { code: 'NT', name: 'Notes', enabled: false },
+  {
+    code: 'NT',
+    name: 'Notes',
+    enabled: true,
+    path: '/notes',
+    tabs: [
+      { label: 'All Notes', path: '/notes' },
+      { label: 'Search', path: '/notes/search' },
+      { label: 'Templates', path: '/notes/templates' },
+    ],
+  },
   { code: 'AN', name: 'Analytics', enabled: false },
   { code: 'NB', name: 'Nutrition', enabled: false },
   { code: 'LN', name: 'Learning', enabled: false },
