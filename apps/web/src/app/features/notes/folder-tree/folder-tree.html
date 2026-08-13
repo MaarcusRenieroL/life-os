@@ -1,0 +1,54 @@
+<ul class="flex flex-col gap-0.5" [class.pl-3]="depth > 0">
+  @for (folder of folders; track folder.id) {
+    <li>
+      <div
+        class="group flex items-center gap-1 rounded-[0.4rem] px-2 py-1.5 text-[12.5px] transition-colors"
+        [class.bg-primary/15]="selectedFolderId === folder.id"
+        [class.text-primary]="selectedFolderId === folder.id"
+        [class.text-foreground/70]="selectedFolderId !== folder.id"
+        [class.hover:bg-card]="selectedFolderId !== folder.id"
+        (dragover)="$event.preventDefault()"
+        (drop)="onDrop($event, folder.id)"
+      >
+        @if (folder.children.length > 0) {
+          <button type="button" class="shrink-0 text-foreground/40" (click)="toggle(folder.id)">
+            <i class="pi" [class.pi-chevron-down]="isExpanded(folder.id)" [class.pi-chevron-right]="!isExpanded(folder.id)" style="font-size: 9px"></i>
+          </button>
+        } @else {
+          <span class="w-[9px] shrink-0"></span>
+        }
+
+        <button type="button" class="flex flex-1 items-center gap-1.5 truncate text-left" (click)="select.emit(folder.id)">
+          <i class="pi pi-folder shrink-0" style="font-size: 11px"></i>
+          <span class="truncate">{{ folder.name }}</span>
+          <span class="ml-auto shrink-0 text-[10.5px] text-foreground/40">{{ folder.noteCount }}</span>
+        </button>
+
+        <div class="hidden shrink-0 items-center gap-0.5 group-hover:flex">
+          <button type="button" class="text-foreground/40 hover:text-foreground" title="New subfolder" (click)="addChild.emit(folder)">
+            <i class="pi pi-plus" style="font-size: 9px"></i>
+          </button>
+          <button type="button" class="text-foreground/40 hover:text-foreground" title="Rename" (click)="rename.emit(folder)">
+            <i class="pi pi-pencil" style="font-size: 9px"></i>
+          </button>
+          <button type="button" class="text-foreground/40 hover:text-destructive" title="Delete" (click)="remove.emit(folder)">
+            <i class="pi pi-trash" style="font-size: 9px"></i>
+          </button>
+        </div>
+      </div>
+
+      @if (folder.children.length > 0 && isExpanded(folder.id)) {
+        <app-folder-tree
+          [folders]="folder.children"
+          [selectedFolderId]="selectedFolderId"
+          [depth]="depth + 1"
+          (select)="select.emit($event)"
+          (rename)="rename.emit($event)"
+          (remove)="remove.emit($event)"
+          (addChild)="addChild.emit($event)"
+          (dropNote)="dropNote.emit($event)"
+        />
+      }
+    </li>
+  }
+</ul>
