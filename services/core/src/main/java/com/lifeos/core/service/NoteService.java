@@ -117,7 +117,7 @@ public class NoteService {
             .contentVersion(1)
             .build();
 
-    Note saved = noteRepository.save(note);
+    Note saved = noteRepository.saveAndFlush(note);
 
     if (request.getFolderId() != null) {
       noteFolderService.assignNoteToFolder(userId, saved.getId(), request.getFolderId());
@@ -164,7 +164,7 @@ public class NoteService {
             .contentVersion(1)
             .build();
 
-    return toFull(noteRepository.save(note));
+    return toFull(noteRepository.saveAndFlush(note));
   }
 
   public NoteResponse update(UUID userId, UUID id, UpdateNoteRequest request) {
@@ -211,7 +211,7 @@ public class NoteService {
       note.setFavorite(request.getIsFavorite());
     }
 
-    return toFull(noteRepository.save(note));
+    return toFull(noteRepository.saveAndFlush(note));
   }
 
   public NoteResponse addTag(UUID userId, UUID noteId, UUID tagId) {
@@ -237,7 +237,7 @@ public class NoteService {
     Note note = noteRepository.findByIdAndUserId(id, userId).orElseThrow(() -> new NoteNotFoundException(id));
     note.setDeletedAt(null);
     note.setArchived(false);
-    return toFull(noteRepository.save(note));
+    return toFull(noteRepository.saveAndFlush(note));
   }
 
   public NoteResponse duplicate(UUID userId, UUID id, DuplicateNoteRequest request) {
@@ -257,7 +257,7 @@ public class NoteService {
             .contentVersion(1)
             .build();
 
-    Note saved = noteRepository.save(copy);
+    Note saved = noteRepository.saveAndFlush(copy);
 
     for (NoteTag noteTag : noteTagRepository.findAllByNoteId(source.getId())) {
       addTagInternal(saved.getId(), noteTag.getTagId());
@@ -344,7 +344,7 @@ public class NoteService {
     note.setContentPlainText(version.getContentPlainText());
     note.setContentVersion(note.getContentVersion() + 1);
 
-    return toFull(noteRepository.save(note));
+    return toFull(noteRepository.saveAndFlush(note));
   }
 
   Note requireOwned(UUID userId, UUID id) {

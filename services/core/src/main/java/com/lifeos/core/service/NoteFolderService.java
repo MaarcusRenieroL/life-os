@@ -94,7 +94,7 @@ public class NoteFolderService {
             .name(request.getName())
             .build();
 
-    NoteFolder saved = noteFolderRepository.save(folder);
+    NoteFolder saved = noteFolderRepository.saveAndFlush(folder);
 
     return FolderResponse.builder()
         .id(saved.getId())
@@ -122,7 +122,7 @@ public class NoteFolderService {
     }
 
     folder.setName(request.getName());
-    NoteFolder saved = noteFolderRepository.save(folder);
+    NoteFolder saved = noteFolderRepository.saveAndFlush(folder);
 
     return FolderResponse.builder()
         .id(saved.getId())

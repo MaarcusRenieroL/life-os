@@ -53,7 +53,7 @@ public class TagService {
     Tag tag =
         Tag.builder().userId(userId).name(request.getName()).color(request.getColor()).build();
 
-    return toResponse(tagRepository.save(tag), 0);
+    return toResponse(tagRepository.saveAndFlush(tag), 0);
   }
 
   // Used when a note's tag list includes a name that doesn't exist yet
@@ -78,7 +78,7 @@ public class TagService {
       tag.setColor(request.getColor());
     }
 
-    Tag saved = tagRepository.save(tag);
+    Tag saved = tagRepository.saveAndFlush(tag);
     return toResponse(saved, noteTagRepository.countByTagId(saved.getId()));
   }
 

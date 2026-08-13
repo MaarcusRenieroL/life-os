@@ -30,7 +30,7 @@ public class NoteModuleLinkService {
     }
 
     NoteModuleLink link =
-        noteModuleLinkRepository.save(
+        noteModuleLinkRepository.saveAndFlush(
             NoteModuleLink.builder().noteId(noteId).moduleType(moduleType).moduleId(moduleId).build());
 
     return toResponse(link);

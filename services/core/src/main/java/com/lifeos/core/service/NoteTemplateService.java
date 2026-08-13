@@ -43,7 +43,7 @@ public class NoteTemplateService {
             .category(request.getCategory())
             .build();
 
-    return toResponse(noteTemplateRepository.save(template));
+    return toResponse(noteTemplateRepository.saveAndFlush(template));
   }
 
   public TemplateResponse update(UUID userId, UUID id, UpdateTemplateRequest request) {
@@ -61,7 +61,7 @@ public class NoteTemplateService {
       template.setCategory(request.getCategory());
     }
 
-    return toResponse(noteTemplateRepository.save(template));
+    return toResponse(noteTemplateRepository.saveAndFlush(template));
   }
 
   public void delete(UUID userId, UUID id) {

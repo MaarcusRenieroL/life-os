@@ -76,7 +76,7 @@ public class NoteAttachmentService {
               .fileType(file.getContentType())
               .build();
 
-      return toResponse(noteAttachmentRepository.save(attachment));
+      return toResponse(noteAttachmentRepository.saveAndFlush(attachment));
     } catch (IOException e) {
       throw new NoteValidationException("Failed to store attachment: " + e.getMessage());
     }
