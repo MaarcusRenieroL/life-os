@@ -127,6 +127,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       OLLAMA_URL: http://host.docker.internal:11434
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
     ports:
       - "8004:8004"
     depends_on:
