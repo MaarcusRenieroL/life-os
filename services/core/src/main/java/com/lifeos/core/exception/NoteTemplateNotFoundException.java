@@ -1,0 +1,10 @@
+package com.lifeos.core.exception;
+
+import java.util.UUID;
+
+public class NoteTemplateNotFoundException extends RuntimeException {
+
+  public NoteTemplateNotFoundException(UUID id) {
+    super("Template with id: " + id + " was not found");
+  }
+}
