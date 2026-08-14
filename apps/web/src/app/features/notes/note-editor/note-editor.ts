@@ -1,14 +1,21 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, SlicePipe } from '@angular/common';
 import { Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AutoCompleteCompleteEvent, AutoCompleteModule } from 'primeng/autocomplete';
 import { ButtonModule } from 'primeng/button';
+import { ConfirmationService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
+import { FileUploadHandlerEvent, FileUploadModule } from 'primeng/fileupload';
+import { InputTextModule } from 'primeng/inputtext';
 import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { SelectModule } from 'primeng/select';
+import { TagModule } from 'primeng/tag';
 import { Subject, debounceTime } from 'rxjs';
 
+import { RelativeTimePipe } from '../shared/relative-time.pipe';
 import { NoteFoldersApiService } from '../../../core/services/note-folders-api.service';
 import { NoteTagsApiService } from '../../../core/services/note-tags-api.service';
 import { NotesApiService } from '../../../core/services/notes-api.service';
@@ -20,7 +27,23 @@ const MODULE_TYPES: NoteModuleType[] = ['PROJECT', 'GOAL', 'TASK', 'JOB_APPLICAT
 @Component({
   selector: 'app-note-editor-page',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, ButtonModule, DialogModule, MenuModule, SelectModule],
+  imports: [
+    DatePipe,
+    SlicePipe,
+    FormsModule,
+    RouterLink,
+    AutoCompleteModule,
+    ButtonModule,
+    ConfirmDialogModule,
+    DialogModule,
+    FileUploadModule,
+    InputTextModule,
+    MenuModule,
+    SelectModule,
+    TagModule,
+    RelativeTimePipe,
+  ],
+  providers: [ConfirmationService],
   templateUrl: './note-editor.html',
   styleUrl: './note-editor.scss',
 })
@@ -30,6 +53,7 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   private readonly notesApi = inject(NotesApiService);
   private readonly foldersApi = inject(NoteFoldersApiService);
   private readonly tagsApi = inject(NoteTagsApiService);
+  private readonly confirmationService = inject(ConfirmationService);
 
   // Signal-based viewChild instead of @ViewChild: the content div only
   // exists once `note()` is non-null (it's behind an @if), so a decorator
@@ -52,11 +76,13 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   protected readonly allFolders = signal<Folder[]>([]);
   protected readonly allTags = signal<Tag[]>([]);
   protected readonly tagInput = signal('');
-  protected readonly tagSuggestions = computed(() => {
-    const q = this.tagInput().trim().toLowerCase();
-    const existingIds = new Set(this.note()?.tags.map((t) => t.id) ?? []);
-    if (!q) return [];
-    return this.allTags().filter((t) => t.name.toLowerCase().includes(q) && !existingIds.has(t.id)).slice(0, 8);
+  protected readonly tagSuggestions = signal<Tag[]>([]);
+  protected readonly addingTag = signal(false);
+
+  protected readonly folderPath = computed(() => {
+    const n = this.note();
+    if (!n || n.folderIds.length === 0) return 'Unfiled';
+    return n.folderIds.map((id) => this.folderName(id)).join(', ');
   });
 
   protected readonly moduleLinkDialogVisible = signal(false);
@@ -167,6 +193,16 @@ export class NoteEditorPage implements OnInit, OnDestroy {
     }
   }
 
+  insertChecklistItem(): void {
+    // A real, focusable checkbox rather than a styled div - matches the
+    // handoff's accessibility note that checklist items must be actual
+    // checkboxes, not decorative spans.
+    this.exec(
+      'insertHTML',
+      '<div class="checklist-item"><input type="checkbox" contenteditable="false" /><span> </span></div><div><br></div>',
+    );
+  }
+
   typeMeta() {
     return noteTypeMeta(this.note()?.noteType);
   }
@@ -217,11 +253,7 @@ export class NoteEditorPage implements OnInit, OnDestroy {
       { label: current?.isArchived ? 'Unarchive' : 'Archive', icon: 'pi pi-inbox', command: () => this.toggleArchive() },
       { label: 'Duplicate', icon: 'pi pi-copy', command: () => this.duplicate() },
       { separator: true },
-      { label: 'Export Markdown', icon: 'pi pi-file-export', command: () => this.exportNote('markdown') },
-      { label: 'Export HTML', icon: 'pi pi-file-export', command: () => this.exportNote('html') },
-      { label: 'Export PDF', icon: 'pi pi-file-pdf', command: () => this.exportNote('pdf') },
-      { separator: true },
-      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'text-destructive', command: () => this.deleteNote() },
+      { label: 'Delete', icon: 'pi pi-trash', styleClass: 'text-destructive', command: () => this.confirmDelete() },
     ];
   }
 
@@ -232,6 +264,23 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   }
 
   // Tags
+  searchTagSuggestions(event: AutoCompleteCompleteEvent): void {
+    const q = event.query.trim().toLowerCase();
+    const existingIds = new Set(this.note()?.tags.map((t) => t.id) ?? []);
+    this.tagSuggestions.set(
+      this.allTags().filter((t) => t.name.toLowerCase().includes(q) && !existingIds.has(t.id)).slice(0, 8),
+    );
+  }
+
+  onTagSelected(tag: Tag): void {
+    const current = this.note();
+    if (!current) return;
+    this.notesApi.addTag(current.id, tag.id).subscribe((updated) => {
+      this.note.set(updated);
+      this.tagInput.set('');
+    });
+  }
+
   addTagByName(name: string): void {
     const current = this.note();
     const trimmed = name.trim();
@@ -239,19 +288,13 @@ export class NoteEditorPage implements OnInit, OnDestroy {
 
     const existing = this.allTags().find((t) => t.name.toLowerCase() === trimmed.toLowerCase());
     if (existing) {
-      this.notesApi.addTag(current.id, existing.id).subscribe((updated) => {
-        this.note.set(updated);
-        this.tagInput.set('');
-      });
+      this.onTagSelected(existing);
       return;
     }
 
     this.tagsApi.create(trimmed).subscribe((tag) => {
       this.allTags.update((tags) => [...tags, tag]);
-      this.notesApi.addTag(current.id, tag.id).subscribe((updated) => {
-        this.note.set(updated);
-        this.tagInput.set('');
-      });
+      this.onTagSelected(tag);
     });
   }
 
@@ -330,15 +373,14 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   }
 
   // Attachments
-  onFileSelected(event: Event): void {
+  onAttachmentUpload(event: FileUploadHandlerEvent, fileUpload: { clear: () => void }): void {
     const current = this.note();
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
+    const file = event.files[0];
     if (!current || !file) return;
 
     this.notesApi.uploadAttachment(current.id, file).subscribe(() => {
       this.load(current.id);
-      input.value = '';
+      fileUpload.clear();
     });
   }
 
@@ -374,14 +416,41 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   restoreVersion(versionNumber: number): void {
     const current = this.note();
     if (!current) return;
-    if (!window.confirm(`Restore version ${versionNumber}? This becomes the new current version.`)) return;
 
-    this.notesApi.restoreVersion(current.id, versionNumber).subscribe((updated) => {
-      // Same note id, new content - force the sync effect to treat this as
-      // a fresh load instead of skipping it as an autosave echo.
-      this.syncedNoteId = null;
-      this.note.set(updated);
-      this.versionsLoaded.set(false);
+    this.confirmationService.confirm({
+      header: 'Restore version',
+      message: `Restore version ${versionNumber}? This becomes the new current version (the current content is kept in history).`,
+      icon: 'pi pi-history',
+      acceptButtonProps: { label: 'Restore' },
+      rejectButtonProps: { severity: 'secondary', text: true, label: 'Cancel' },
+      accept: () => {
+        this.notesApi.restoreVersion(current.id, versionNumber).subscribe((updated) => {
+          // Same note id, new content - force the sync effect to treat this
+          // as a fresh load instead of skipping it as an autosave echo.
+          this.syncedNoteId = null;
+          this.note.set(updated);
+          this.versionsLoaded.set(false);
+        });
+      },
     });
+  }
+
+  confirmDelete(): void {
+    this.confirmationService.confirm({
+      header: 'Delete note',
+      message: 'Delete this note? You can restore it from Trash later.',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonProps: { severity: 'danger', label: 'Delete' },
+      rejectButtonProps: { severity: 'secondary', text: true, label: 'Cancel' },
+      accept: () => this.deleteNote(),
+    });
+  }
+
+  exportMenuItems(): MenuItem[] {
+    return [
+      { label: 'Markdown', icon: 'pi pi-file', command: () => this.exportNote('markdown') },
+      { label: 'HTML', icon: 'pi pi-code', command: () => this.exportNote('html') },
+      { label: 'PDF', icon: 'pi pi-file-pdf', command: () => this.exportNote('pdf') },
+    ];
   }
 }

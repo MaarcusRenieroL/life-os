@@ -41,4 +41,39 @@
     color: var(--color-primary, #22c55e);
     text-decoration: underline;
   }
+  blockquote {
+    border-left: 2px solid var(--border);
+    margin: 0.4em 0;
+    padding: 0.2em 0 0.2em 0.9em;
+    color: color-mix(in oklch, var(--foreground) 70%, transparent);
+  }
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6em;
+    margin: 0.2em 0;
+
+    input[type='checkbox'] {
+      margin-top: 0.3em;
+      accent-color: var(--primary);
+    }
+  }
+}
+
+// PrimeNG's basic FileUpload renders a full-width "Choose" button by
+// default; the attachments section needs a compact icon-only trigger
+// instead. [chooseLabel]="''" alone still leaves the label element in the
+// DOM, so hide it outright rather than relying on the empty string to
+// collapse the button's width.
+::ng-deep .notes-file-upload {
+  .p-fileupload-choose-button .p-button-label {
+    display: none;
+  }
+
+  .p-fileupload-choose-button {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    border-radius: 0.3rem !important;
+  }
 }
