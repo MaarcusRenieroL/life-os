@@ -7,10 +7,13 @@ import com.lifeos.core.domains.entity.Note;
 import com.lifeos.core.domains.entity.NoteFolder;
 import com.lifeos.core.domains.entity.NoteFolderAssignment;
 import com.lifeos.core.domains.entity.NoteLink;
+import com.lifeos.core.domains.entity.NoteTag;
 import com.lifeos.core.repository.NoteFolderAssignmentRepository;
 import com.lifeos.core.repository.NoteFolderRepository;
 import com.lifeos.core.repository.NoteLinkRepository;
 import com.lifeos.core.repository.NoteRepository;
+import com.lifeos.core.repository.NoteTagRepository;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +31,7 @@ public class NoteGraphService {
   private final NoteLinkRepository noteLinkRepository;
   private final NoteFolderAssignmentRepository noteFolderAssignmentRepository;
   private final NoteFolderRepository noteFolderRepository;
+  private final NoteTagRepository noteTagRepository;
 
   public NoteGraphResponse build(UUID userId) {
     List<Note> notes = noteRepository.findAllByUserIdAndDeletedAtIsNullOrderByUpdatedAtDesc(
@@ -52,6 +56,11 @@ public class NoteGraphService {
       folderNames.put(folder.getId(), folder.getName());
     }
 
+    Map<UUID, List<UUID>> tagsByNote = new HashMap<>();
+    for (NoteTag noteTag : noteTagRepository.findAllByNoteIdIn(noteIds)) {
+      tagsByNote.computeIfAbsent(noteTag.getNoteId(), k -> new ArrayList<>()).add(noteTag.getTagId());
+    }
+
     List<GraphNodeResponse> nodes =
         notes.stream()
             .map(
@@ -64,6 +73,7 @@ public class NoteGraphService {
                       .folderId(folderId)
                       .folderName(folderId != null ? folderNames.get(folderId) : null)
                       .connectionCount(connectionCounts.getOrDefault(note.getId(), 0L).intValue())
+                      .tagIds(tagsByNote.getOrDefault(note.getId(), List.of()))
                       .build();
                 })
             .toList();

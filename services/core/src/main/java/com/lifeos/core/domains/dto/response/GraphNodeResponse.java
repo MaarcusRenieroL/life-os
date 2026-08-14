@@ -1,5 +1,6 @@
 package com.lifeos.core.domains.dto.response;
 
+import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -26,4 +27,6 @@ public class GraphNodeResponse {
   String folderName;
 
   int connectionCount;
+
+  @Builder.Default List<UUID> tagIds = List.of();
 }
