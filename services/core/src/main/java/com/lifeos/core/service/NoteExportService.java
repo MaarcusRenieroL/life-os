@@ -16,8 +16,10 @@ import com.lowagie.text.pdf.PdfWriter;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.zip.ZipEntry;
@@ -141,8 +143,9 @@ public class NoteExportService {
       List<Note> notes, String extension, Function<Note, byte[]> render, String archiveName) {
     try (ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         ZipOutputStream zip = new ZipOutputStream(buffer)) {
+      Set<String> usedNames = new HashSet<>();
       for (Note note : notes) {
-        zip.putNextEntry(new ZipEntry(fileName(note, extension)));
+        zip.putNextEntry(new ZipEntry(uniqueFileName(note, extension, usedNames)));
         zip.write(render.apply(note));
         zip.closeEntry();
       }
@@ -196,5 +199,25 @@ public class NoteExportService {
   private String fileName(Note note, String extension) {
     String slug = note.getTitle().replaceAll("[^a-zA-Z0-9-]+", "-").replaceAll("^-+|-+$", "");
     return (slug.isBlank() ? "note" : slug) + "." + extension;
+  }
+
+  // Notes with identical/blank titles slugify to the same base name (e.g. two
+  // "Untitled note"s, or duplicates from the app's own "Duplicate" action).
+  // Disambiguate within a single export batch by appending -2, -3, ... on collision.
+  private String uniqueFileName(Note note, String extension, Set<String> usedNames) {
+    String base = fileName(note, extension);
+    if (usedNames.add(base)) {
+      return base;
+    }
+
+    String stem = base.substring(0, base.length() - extension.length() - 1);
+    int counter = 2;
+    String candidate;
+    do {
+      candidate = stem + "-" + counter + "." + extension;
+      counter++;
+    } while (!usedNames.add(candidate));
+
+    return candidate;
   }
 }
