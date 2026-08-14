@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -14,6 +15,7 @@ import { NoteTemplatesApiService } from '../../../core/services/note-templates-a
 import { NoteSettings, TrashedNote } from '../../../core/models/notes.model';
 import { NOTE_TYPE_LIST } from '../shared/note-type.util';
 import { RelativeTimePipe } from '../shared/relative-time.pipe';
+import { downloadViaBlob } from '../shared/file-download.util';
 
 @Component({
   selector: 'app-notes-settings',
@@ -37,6 +39,7 @@ export class NotesSettings implements OnInit {
   private readonly notesApi = inject(NotesApiService);
   private readonly templatesApi = inject(NoteTemplatesApiService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly http = inject(HttpClient);
 
   protected readonly noteTypes = NOTE_TYPE_LIST;
 
@@ -102,7 +105,8 @@ export class NotesSettings implements OnInit {
   }
 
   exportAll(format: 'markdown' | 'pdf' | 'json'): void {
-    window.open(this.settingsApi.exportAllUrl(format), '_blank');
+    const extension = format === 'json' ? 'json' : 'zip';
+    downloadViaBlob(this.http, this.settingsApi.exportAllUrl(format), `notes-export.${extension}`);
   }
 
   restoreFromTrash(note: TrashedNote): void {

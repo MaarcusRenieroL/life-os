@@ -1,4 +1,5 @@
 import { DatePipe, SlicePipe } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component, ElementRef, OnDestroy, OnInit, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -21,6 +22,7 @@ import { NoteTagsApiService } from '../../../core/services/note-tags-api.service
 import { NotesApiService } from '../../../core/services/notes-api.service';
 import { Folder, Note, NoteModuleType, NoteType, NoteVersion, Tag } from '../../../core/models/notes.model';
 import { NOTE_TYPE_LIST, noteTypeMeta } from '../shared/note-type.util';
+import { downloadViaBlob } from '../shared/file-download.util';
 
 const MODULE_TYPES: NoteModuleType[] = ['PROJECT', 'GOAL', 'TASK', 'JOB_APPLICATION', 'HABIT'];
 
@@ -54,6 +56,7 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   private readonly foldersApi = inject(NoteFoldersApiService);
   private readonly tagsApi = inject(NoteTagsApiService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly http = inject(HttpClient);
 
   // Signal-based viewChild instead of @ViewChild: the content div only
   // exists once `note()` is non-null (it's behind an @if), so a decorator
@@ -260,7 +263,8 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   exportNote(format: 'markdown' | 'html' | 'pdf'): void {
     const current = this.note();
     if (!current) return;
-    window.open(this.notesApi.exportUrl(current.id, format), '_blank');
+    const extension = format === 'markdown' ? 'md' : format;
+    downloadViaBlob(this.http, this.notesApi.exportUrl(current.id, format), `${current.title || 'note'}.${extension}`);
   }
 
   // Tags
@@ -387,7 +391,12 @@ export class NoteEditorPage implements OnInit, OnDestroy {
   downloadAttachment(attachmentId: string): void {
     const current = this.note();
     if (!current) return;
-    window.open(this.notesApi.downloadAttachmentUrl(current.id, attachmentId), '_blank');
+    const attachment = current.attachments.find((a) => a.id === attachmentId);
+    downloadViaBlob(
+      this.http,
+      this.notesApi.downloadAttachmentUrl(current.id, attachmentId),
+      attachment?.fileName ?? 'attachment',
+    );
   }
 
   deleteAttachment(attachmentId: string): void {

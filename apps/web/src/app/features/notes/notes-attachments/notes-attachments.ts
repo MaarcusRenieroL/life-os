@@ -1,3 +1,4 @@
+import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -15,6 +16,7 @@ import { NotesApiService } from '../../../core/services/notes-api.service';
 import { GlobalAttachment, NoteSummary } from '../../../core/models/notes.model';
 import { RelativeTimePipe } from '../shared/relative-time.pipe';
 import { FileKind, fileIcon, fileKind, formatFileSize } from '../shared/file-type.util';
+import { downloadViaBlob } from '../shared/file-download.util';
 
 type TypeFilter = 'all' | 'image' | 'pdf' | 'doc';
 
@@ -41,6 +43,7 @@ export class NotesAttachments implements OnInit {
   private readonly notesApi = inject(NotesApiService);
   private readonly router = inject(Router);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly http = inject(HttpClient);
 
   protected readonly attachments = signal<GlobalAttachment[]>([]);
   protected readonly loading = signal(true);
@@ -126,7 +129,7 @@ export class NotesAttachments implements OnInit {
   }
 
   download(attachment: GlobalAttachment): void {
-    window.open(this.downloadUrl(attachment), '_blank');
+    downloadViaBlob(this.http, this.downloadUrl(attachment), attachment.fileName);
   }
 
   confirmDelete(attachment: GlobalAttachment): void {
