@@ -114,6 +114,8 @@ services:
       kafka:
         condition: service_started
 
+  # Module tile enable/disable settings only - the notes module itself now
+  # lives in its own `notes` service below.
   core:
     build:
       context: .
@@ -122,10 +124,6 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      OLLAMA_URL: http://host.docker.internal:11434
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
     ports:
@@ -133,10 +131,26 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  notes:
+    build:
+      context: .
+      dockerfile: services/notes/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+    ports:
+      - "8007:8007"
+    depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
-        condition: service_started
 
   batches:
     build:
