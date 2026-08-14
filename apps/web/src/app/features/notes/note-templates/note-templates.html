@@ -1,5 +1,5 @@
-<main class="w-full px-4 py-10 font-mono text-foreground sm:px-8">
-  <div class="mb-6 flex items-center justify-between">
+<main class="w-full px-4 py-9 font-mono text-foreground sm:px-8">
+  <div class="mb-4 flex items-end justify-between gap-3">
     <div>
       <h1 class="text-[22px] font-semibold tracking-tight">Templates</h1>
       <p class="mt-1 text-[12.5px] text-foreground/55">{{ templates().length }} {{ templates().length === 1 ? 'template' : 'templates' }}</p>
@@ -7,10 +7,16 @@
     <p-button label="+ New template" (onClick)="openCreate()" />
   </div>
 
+  @if (categoryOptions().length > 1) {
+    <div class="mb-5">
+      <p-selectButton [options]="categoryOptions()" [ngModel]="categoryFilter()" (ngModelChange)="categoryFilter.set($event)" optionLabel="label" optionValue="value" />
+    </div>
+  }
+
   @if (loading()) {
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      @for (i of [1, 2, 3]; track i) {
-        <div class="h-[128px] animate-pulse rounded-[0.6rem] border border-border/60 bg-card/60"></div>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="h-[100px] animate-pulse rounded-[0.5rem] border border-border/60 bg-card/60"></div>
       }
     </div>
   } @else if (templates().length === 0) {
@@ -25,60 +31,60 @@
       <p-button label="+ New template" (onClick)="openCreate()" />
     </div>
   } @else {
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      @for (t of templates(); track t.id) {
-        <div
-          class="group relative flex cursor-pointer flex-col gap-2 overflow-hidden rounded-[0.6rem] border border-border bg-card px-4 py-3.5 transition-all hover:-translate-y-[1px] hover:border-foreground/25 hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.25)]"
-          role="button"
-          tabindex="0"
-          (click)="openPreview(t)"
-          (keydown.enter)="openPreview(t)"
-        >
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex min-w-0 items-center gap-2">
-              <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-[0.35rem] bg-primary/10">
-                <i class="pi pi-clone text-primary" style="font-size: 11px"></i>
-              </div>
-              <h3 class="truncate text-[13.5px] font-medium">{{ t.name }}</h3>
+    <div class="flex items-start gap-5">
+      <div class="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        @for (t of filteredTemplates(); track t.id) {
+          <button
+            type="button"
+            class="flex flex-col items-start gap-2 rounded-[0.5rem] border bg-card p-4 text-left transition-colors"
+            [class.border-primary/50]="selectedTemplate()?.id === t.id"
+            [class.border-border]="selectedTemplate()?.id !== t.id"
+            (click)="select(t)"
+          >
+            <div class="flex h-[26px] w-[26px] items-center justify-center rounded-[0.35rem]" [style.background]="categoryColor(t.category) + '26'" [style.color]="categoryColor(t.category)">
+              <i class="pi" [class]="categoryIcon(t.category)" style="font-size: 12px"></i>
             </div>
+            <div class="text-[13px] font-semibold">{{ t.name }}</div>
             @if (t.category) {
-              <span class="shrink-0 rounded-full border border-border px-1.5 py-0.5 text-[10px] text-foreground/50">{{ t.category }}</span>
+              <div class="text-[10.5px] text-foreground/45">{{ t.category }}</div>
             }
+          </button>
+        }
+        <button
+          type="button"
+          class="flex min-h-[100px] flex-col items-center justify-center gap-1 rounded-[0.5rem] border border-dashed border-white/20 p-4 text-[12px] text-foreground/45 transition-colors hover:text-foreground/70"
+          (click)="openCreate()"
+        >
+          + New template
+        </button>
+      </div>
+
+      @if (selectedTemplate(); as t) {
+        <div class="sticky top-4 w-[320px] shrink-0 rounded-[0.5rem] border border-border bg-card p-5">
+          <div class="mb-3 flex items-center gap-2">
+            <div class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[0.35rem]" [style.background]="categoryColor(t.category) + '26'" [style.color]="categoryColor(t.category)">
+              <i class="pi" [class]="categoryIcon(t.category)" style="font-size: 12px"></i>
+            </div>
+            <div class="truncate text-[14px] font-semibold">{{ t.name }}</div>
           </div>
-          <p class="line-clamp-3 min-h-[3.6em] text-[12px] leading-relaxed text-foreground/55">{{ t.preview || 'No content yet' }}</p>
-          <div class="mt-1 flex items-center gap-3 border-t border-border/60 pt-2 text-[11px] text-foreground/45 opacity-0 transition-opacity group-hover:opacity-100">
-            <button type="button" class="flex items-center gap-1 hover:text-primary" (click)="$event.stopPropagation(); openUseDialog(t)"><i class="pi pi-plus-circle" style="font-size: 10px"></i> Use</button>
-            <button type="button" class="flex items-center gap-1 hover:text-primary" (click)="$event.stopPropagation(); openEdit(t)"><i class="pi pi-pencil" style="font-size: 10px"></i> Edit</button>
-            <button type="button" class="ml-auto flex items-center gap-1 hover:text-destructive" (click)="deleteTemplate(t, $event)"><i class="pi pi-trash" style="font-size: 10px"></i> Delete</button>
+
+          <div class="mb-4 max-h-[220px] overflow-y-auto whitespace-pre-wrap rounded-[0.4rem] border border-border/70 bg-background/60 p-3.5 text-[12px] leading-relaxed text-foreground/65">{{ t.preview || 'No content yet' }}</div>
+
+          <div class="flex flex-col gap-2">
+            <p-button label="Use template" styleClass="w-full" (onClick)="openUseDialog(t)" />
+            <div class="flex gap-1.5">
+              <p-button label="Edit" severity="secondary" size="small" styleClass="flex-1" (onClick)="openEdit(t)" />
+              <p-button label="Duplicate" severity="secondary" size="small" styleClass="flex-1" (onClick)="duplicate(t)" />
+              <p-button label="Delete" severity="danger" size="small" [outlined]="true" styleClass="flex-1" (onClick)="confirmDelete(t)" />
+            </div>
           </div>
         </div>
       }
     </div>
   }
 
-  <p-dialog
-    [visible]="previewTemplate() !== null && !useDialogVisible()"
-    (visibleChange)="closePreview()"
-    [modal]="true"
-    [style]="{ width: '500px' }"
-    [header]="previewTemplate()?.name ?? ''"
-  >
-    <p class="whitespace-pre-wrap text-[12.5px] text-foreground/70">{{ previewTemplate()?.preview }}</p>
-    <div class="mt-4 flex justify-end">
-      @if (previewTemplate(); as t) {
-        <p-button label="Use template" (onClick)="openUseDialog(t)" />
-      }
-    </div>
-  </p-dialog>
-
   <p-dialog [(visible)]="useDialogVisible" [modal]="true" [style]="{ width: '360px' }" header="Create note from template">
-    <input
-      [ngModel]="useTitle()"
-      (ngModelChange)="useTitle.set($event)"
-      placeholder="Note title"
-      class="w-full rounded-[0.4rem] border border-border bg-card px-3 py-2 text-[12.5px] outline-none focus:border-primary/50"
-      (keydown.enter)="confirmUse()"
-    />
+    <input pInputText [ngModel]="useTitle()" (ngModelChange)="useTitle.set($event)" placeholder="Note title" class="w-full" (keydown.enter)="confirmUse()" />
     <div class="mt-4 flex justify-end gap-2">
       <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="useDialogVisible.set(false)" />
       <p-button label="Create" (onClick)="confirmUse()" />
@@ -87,29 +93,15 @@
 
   <p-dialog [(visible)]="editorVisible" [modal]="true" [style]="{ width: '500px' }" [header]="editingId() ? 'Edit template' : 'New template'">
     <div class="flex flex-col gap-2.5">
-      <input
-        [ngModel]="draftName()"
-        (ngModelChange)="draftName.set($event)"
-        placeholder="Template name"
-        class="w-full rounded-[0.4rem] border border-border bg-card px-3 py-2 text-[12.5px] outline-none"
-      />
-      <input
-        [ngModel]="draftCategory()"
-        (ngModelChange)="draftCategory.set($event)"
-        placeholder="Category (optional)"
-        class="w-full rounded-[0.4rem] border border-border bg-card px-3 py-2 text-[12.5px] outline-none"
-      />
-      <textarea
-        [ngModel]="draftContent()"
-        (ngModelChange)="draftContent.set($event)"
-        rows="8"
-        placeholder="Template content..."
-        class="w-full rounded-[0.4rem] border border-border bg-card px-3 py-2 text-[12.5px] outline-none"
-      ></textarea>
+      <input pInputText [ngModel]="draftName()" (ngModelChange)="draftName.set($event)" placeholder="Template name" class="w-full" />
+      <input pInputText [ngModel]="draftCategory()" (ngModelChange)="draftCategory.set($event)" placeholder="Category (optional)" class="w-full" />
+      <textarea pTextarea [ngModel]="draftContent()" (ngModelChange)="draftContent.set($event)" rows="8" placeholder="Template content..." class="w-full"></textarea>
     </div>
     <div class="mt-4 flex justify-end gap-2">
       <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="editorVisible.set(false)" />
       <p-button label="Save" (onClick)="saveTemplate()" />
     </div>
   </p-dialog>
+
+  <p-confirmDialog />
 </main>
