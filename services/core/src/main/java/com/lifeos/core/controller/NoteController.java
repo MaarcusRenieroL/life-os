@@ -9,6 +9,7 @@ import com.lifeos.core.domains.dto.request.CreateNoteRequest;
 import com.lifeos.core.domains.dto.request.DuplicateNoteRequest;
 import com.lifeos.core.domains.dto.request.UpdateNoteRequest;
 import com.lifeos.core.domains.dto.response.AttachmentResponse;
+import com.lifeos.core.domains.dto.response.GlobalAttachmentResponse;
 import com.lifeos.core.domains.dto.response.NoteLinkResponse;
 import com.lifeos.core.domains.dto.response.NoteModuleLinkResponse;
 import com.lifeos.core.domains.dto.response.NoteResponse;
@@ -102,6 +103,14 @@ public class NoteController {
   public ResponseEntity<ApiResponse<List<NoteSummaryResponse>>> pinned(Authentication authentication) {
     return ResponseEntity.ok(
         ApiResponse.success(noteService.pinned(userId(authentication)), "Pinned notes fetched successfully"));
+  }
+
+  @GetMapping("/attachments")
+  public ResponseEntity<ApiResponse<List<GlobalAttachmentResponse>>> allAttachments(
+      Authentication authentication) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            noteAttachmentService.listAllForUser(userId(authentication)), "Attachments fetched successfully"));
   }
 
   @GetMapping("/by-module/{moduleType}/{moduleId}")

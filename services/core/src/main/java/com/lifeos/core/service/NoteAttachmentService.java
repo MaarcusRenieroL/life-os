@@ -1,7 +1,9 @@
 package com.lifeos.core.service;
 
 import com.lifeos.core.domains.dto.response.AttachmentResponse;
+import com.lifeos.core.domains.dto.response.GlobalAttachmentResponse;
 import com.lifeos.core.domains.entity.NoteAttachment;
+import com.lifeos.core.domains.record.AttachmentWithNote;
 import com.lifeos.core.exception.AttachmentTooLargeException;
 import com.lifeos.core.exception.NoteAttachmentNotFoundException;
 import com.lifeos.core.exception.NoteConflictException;
@@ -89,6 +91,15 @@ public class NoteAttachmentService {
         .toList();
   }
 
+  // Cross-note view for the Attachments page - deliberately unpaginated and
+  // unfiltered server-side. This is a personal note-taking tool, not a file
+  // host; the expected attachment count per user is small enough that the
+  // frontend can search/filter the full list client-side without a second
+  // query round trip per keystroke.
+  public List<GlobalAttachmentResponse> listAllForUser(UUID userId) {
+    return noteAttachmentRepository.findAllForUser(userId).stream().map(this::toGlobalResponse).toList();
+  }
+
   public NoteAttachment get(UUID userId, UUID noteId, UUID attachmentId) {
     requireOwned(userId, noteId);
     return noteAttachmentRepository
@@ -130,6 +141,18 @@ public class NoteAttachmentService {
         .fileSize(attachment.getFileSize())
         .fileType(attachment.getFileType())
         .uploadDate(attachment.getUploadDate())
+        .build();
+  }
+
+  private GlobalAttachmentResponse toGlobalResponse(AttachmentWithNote row) {
+    return GlobalAttachmentResponse.builder()
+        .id(row.id())
+        .fileName(row.fileName())
+        .fileSize(row.fileSize())
+        .fileType(row.fileType())
+        .uploadDate(row.uploadDate())
+        .noteId(row.noteId())
+        .noteTitle(row.noteTitle())
         .build();
   }
 }
