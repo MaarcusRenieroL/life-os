@@ -1,15 +1,21 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { InputTextModule } from 'primeng/inputtext';
+import { TagModule } from 'primeng/tag';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 
 import { NoteSearchApiService } from '../../../core/services/note-search-api.service';
 import { RecentSearch, SearchResult } from '../../../core/models/notes.model';
+import { RelativeTimePipe } from '../shared/relative-time.pipe';
 
 @Component({
   selector: 'app-note-search',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, IconFieldModule, InputIconModule, InputTextModule, TagModule, RelativeTimePipe],
   templateUrl: './note-search.html',
   styleUrl: './note-search.scss',
 })
@@ -17,6 +23,7 @@ export class NoteSearch implements OnInit {
   private readonly searchApi = inject(NoteSearchApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly sanitizer = inject(DomSanitizer);
 
   protected readonly query = signal('');
   protected readonly results = signal<SearchResult[]>([]);
@@ -30,7 +37,7 @@ export class NoteSearch implements OnInit {
   ngOnInit(): void {
     this.searchApi.recent().subscribe((recent) => this.recentSearches.set(recent));
 
-    this.queryChanges.pipe(debounceTime(350), distinctUntilChanged()).subscribe((q) => this.runSearch(q));
+    this.queryChanges.pipe(debounceTime(300), distinctUntilChanged()).subscribe((q) => this.runSearch(q));
 
     const initial = this.route.snapshot.queryParamMap.get('q');
     if (initial) {
@@ -73,5 +80,25 @@ export class NoteSearch implements OnInit {
 
   openNote(id: string): void {
     this.router.navigate(['/notes', id]);
+  }
+
+  // Highlights the free-text portion of the query inside the excerpt -
+  // the backend returns plain excerpt text, so this is client-side only,
+  // matching the handoff's <mark> treatment.
+  highlighted(excerpt: string): SafeHtml {
+    const term = this.query()
+      .replace(/\b(tag|folder|before|after|is):\S+/gi, '')
+      .trim();
+
+    if (!term) return this.sanitizer.bypassSecurityTrustHtml(this.escapeHtml(excerpt));
+
+    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`(${escapedTerm})`, 'ig');
+    const html = this.escapeHtml(excerpt).replace(pattern, '<mark>$1</mark>');
+    return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 }
