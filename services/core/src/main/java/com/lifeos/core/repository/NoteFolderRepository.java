@@ -19,4 +19,6 @@ public interface NoteFolderRepository extends JpaRepository<NoteFolder, UUID> {
   List<NoteFolder> findAllByParentFolderId(UUID parentFolderId);
 
   void deleteByIdAndUserId(UUID id, UUID userId);
+
+  void deleteAllByUserId(UUID userId);
 }

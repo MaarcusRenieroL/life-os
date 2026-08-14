@@ -4,7 +4,11 @@ import com.lifeos.core.domains.dto.request.UpdateNoteSettingsRequest;
 import com.lifeos.core.domains.dto.response.NoteSettingsResponse;
 import com.lifeos.core.domains.entity.NoteUserSettings;
 import com.lifeos.core.domains.enums.NoteType;
+import com.lifeos.core.repository.NoteFolderRepository;
+import com.lifeos.core.repository.NoteRepository;
+import com.lifeos.core.repository.NoteTemplateRepository;
 import com.lifeos.core.repository.NoteUserSettingsRepository;
+import com.lifeos.core.repository.TagRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,6 +22,10 @@ public class NoteSettingsService {
   private static final int DEFAULT_AUTO_ARCHIVE_DAYS = 90;
 
   private final NoteUserSettingsRepository noteUserSettingsRepository;
+  private final NoteRepository noteRepository;
+  private final NoteFolderRepository noteFolderRepository;
+  private final TagRepository tagRepository;
+  private final NoteTemplateRepository noteTemplateRepository;
 
   public NoteSettingsResponse get(UUID userId) {
     return toResponse(getOrCreate(userId));
@@ -39,6 +47,18 @@ public class NoteSettingsService {
     }
 
     return toResponse(noteUserSettingsRepository.saveAndFlush(settings));
+  }
+
+  // Danger zone: permanently deletes every note (regardless of archived or
+  // trashed state - notes' own cascading FKs clean up tags/folders
+  // assignments/links/attachments/versions), every folder, every
+  // user-created tag, and every template. Does not touch the settings row
+  // itself, so auto-archive/default-type preferences survive a wipe.
+  public void deleteAllUserData(UUID userId) {
+    noteRepository.deleteAll(noteRepository.findAllByUserId(userId));
+    noteFolderRepository.deleteAllByUserId(userId);
+    tagRepository.deleteAllByUserId(userId);
+    noteTemplateRepository.deleteAllByUserId(userId);
   }
 
   // Package-private for NoteAutoArchiveScheduler - the settings row is

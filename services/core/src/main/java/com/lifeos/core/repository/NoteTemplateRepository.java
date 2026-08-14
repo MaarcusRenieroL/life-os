@@ -19,4 +19,6 @@ public interface NoteTemplateRepository extends JpaRepository<NoteTemplate, UUID
   List<NoteTemplate> findAllByUserId(UUID userId);
 
   void deleteByIdAndUserId(UUID id, UUID userId);
+
+  void deleteAllByUserId(UUID userId);
 }

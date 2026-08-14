@@ -32,4 +32,6 @@ public interface TagRepository extends JpaRepository<Tag, UUID> {
 
     long getUsageCount();
   }
+
+  void deleteAllByUserId(UUID userId);
 }

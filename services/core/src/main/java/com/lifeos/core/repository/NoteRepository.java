@@ -58,6 +58,10 @@ public interface NoteRepository extends JpaRepository<Note, UUID>, JpaSpecificat
 
   List<Note> findAllByUserIdAndDeletedAtIsNullOrderByUpdatedAtDesc(UUID userId, Pageable pageable);
 
+  // Danger-zone wipe target - every note regardless of archived/trashed
+  // state, since "delete all notes data" means all of it.
+  List<Note> findAllByUserId(UUID userId);
+
   List<Note> findAllByUserIdAndDeletedAtIsNotNullOrderByDeletedAtDesc(UUID userId);
 
   Optional<Note> findByIdAndUserIdAndDeletedAtIsNotNull(UUID id, UUID userId);
