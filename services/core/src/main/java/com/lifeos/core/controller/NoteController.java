@@ -16,6 +16,7 @@ import com.lifeos.core.domains.dto.response.NoteResponse;
 import com.lifeos.core.domains.dto.response.NoteSummaryResponse;
 import com.lifeos.core.domains.dto.response.NoteVersionResponse;
 import com.lifeos.core.domains.dto.response.TagResponse;
+import com.lifeos.core.domains.dto.response.TrashedNoteResponse;
 import com.lifeos.core.domains.entity.NoteAttachment;
 import com.lifeos.core.domains.enums.NoteModuleType;
 import com.lifeos.core.domains.enums.NoteType;
@@ -152,6 +153,19 @@ public class NoteController {
   public ResponseEntity<ApiResponse<NoteResponse>> restore(Authentication authentication, @PathVariable UUID id) {
     return ResponseEntity.ok(
         ApiResponse.success(noteService.restore(userId(authentication), id), "Note restored successfully"));
+  }
+
+  @GetMapping("/trash")
+  public ResponseEntity<ApiResponse<List<TrashedNoteResponse>>> trash(Authentication authentication) {
+    return ResponseEntity.ok(
+        ApiResponse.success(noteService.listTrash(userId(authentication)), "Trash fetched successfully"));
+  }
+
+  @DeleteMapping("/{id}/permanent")
+  public ResponseEntity<ApiResponse<Void>> permanentlyDelete(
+      Authentication authentication, @PathVariable UUID id) {
+    noteService.permanentlyDelete(userId(authentication), id);
+    return ResponseEntity.ok(ApiResponse.success(null, "Note permanently deleted"));
   }
 
   @PostMapping("/{id}/duplicate")

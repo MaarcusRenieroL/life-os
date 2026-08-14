@@ -10,6 +10,7 @@ import com.lifeos.core.domains.dto.response.NoteResponse;
 import com.lifeos.core.domains.dto.response.NoteSummaryResponse;
 import com.lifeos.core.domains.dto.response.NoteVersionResponse;
 import com.lifeos.core.domains.dto.response.TagResponse;
+import com.lifeos.core.domains.dto.response.TrashedNoteResponse;
 import com.lifeos.core.domains.entity.Note;
 import com.lifeos.core.domains.entity.NoteModuleLink;
 import com.lifeos.core.domains.entity.NoteTag;
@@ -251,6 +252,36 @@ public class NoteService {
     note.setDeletedAt(null);
     note.setArchived(false);
     return toFull(noteRepository.saveAndFlush(note));
+  }
+
+  private static final int TRASH_RETENTION_DAYS = 30;
+
+  public List<TrashedNoteResponse> listTrash(UUID userId) {
+    return noteRepository.findAllByUserIdAndDeletedAtIsNotNullOrderByDeletedAtDesc(userId).stream()
+        .map(
+            note ->
+                TrashedNoteResponse.builder()
+                    .id(note.getId())
+                    .title(note.getTitle())
+                    .deletedAt(note.getDeletedAt())
+                    .purgesAt(note.getDeletedAt().plus(TRASH_RETENTION_DAYS, java.time.temporal.ChronoUnit.DAYS))
+                    .build())
+        .toList();
+  }
+
+  public void permanentlyDelete(UUID userId, UUID id) {
+    Note note =
+        noteRepository
+            .findByIdAndUserIdAndDeletedAtIsNotNull(id, userId)
+            .orElseThrow(() -> new NoteNotFoundException(id));
+
+    // Every child table (note_tags, note_folder_assignment, note_links,
+    // note_module_links, note_attachments, note_versions) has ON DELETE
+    // CASCADE back to notes(id), so a single delete here is enough - no
+    // orphaned rows left behind. Attachment files on disk are intentionally
+    // left as-is (matches the rest of the module - attachment blobs are
+    // never actively cleaned up on any deletion path today).
+    noteRepository.delete(note);
   }
 
   public NoteResponse duplicate(UUID userId, UUID id, DuplicateNoteRequest request) {

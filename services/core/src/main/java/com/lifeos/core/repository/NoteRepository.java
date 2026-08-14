@@ -1,6 +1,7 @@
 package com.lifeos.core.repository;
 
 import com.lifeos.core.domains.entity.Note;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -56,4 +57,16 @@ public interface NoteRepository extends JpaRepository<Note, UUID>, JpaSpecificat
   }
 
   List<Note> findAllByUserIdAndDeletedAtIsNullOrderByUpdatedAtDesc(UUID userId, Pageable pageable);
+
+  List<Note> findAllByUserIdAndDeletedAtIsNotNullOrderByDeletedAtDesc(UUID userId);
+
+  Optional<Note> findByIdAndUserIdAndDeletedAtIsNotNull(UUID id, UUID userId);
+
+  // Trash-purge scheduler target - notes soft-deleted before the retention
+  // cutoff, across all users (the job itself is what scopes/iterates users).
+  List<Note> findAllByDeletedAtBefore(Instant cutoff);
+
+  // Auto-archive scheduler target for a single user.
+  List<Note> findAllByUserIdAndIsArchivedFalseAndDeletedAtIsNullAndUpdatedAtBefore(
+      UUID userId, Instant cutoff);
 }
