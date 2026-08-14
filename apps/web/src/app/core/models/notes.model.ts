@@ -174,3 +174,16 @@ export interface NoteTemplate {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface NoteSettings {
+  defaultNoteType: NoteType;
+  autoArchiveEnabled: boolean;
+  autoArchiveDays: number;
+}
+
+export interface TrashedNote {
+  id: string;
+  title: string;
+  deletedAt: string;
+  purgesAt: string;
+}

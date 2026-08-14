@@ -14,9 +14,10 @@ import { TagModule } from 'primeng/tag';
 import { concatMap, from, toArray } from 'rxjs';
 
 import { NoteFoldersApiService } from '../../../core/services/note-folders-api.service';
+import { NoteSettingsApiService } from '../../../core/services/note-settings-api.service';
 import { NoteTagsApiService } from '../../../core/services/note-tags-api.service';
 import { NotesApiService } from '../../../core/services/notes-api.service';
-import { Folder, NoteSummary, Tag } from '../../../core/models/notes.model';
+import { Folder, NoteSummary, NoteType, Tag } from '../../../core/models/notes.model';
 import { FolderManager } from '../folder-manager/folder-manager';
 import { RelativeTimePipe } from '../shared/relative-time.pipe';
 import { noteTypeMeta } from '../shared/note-type.util';
@@ -47,7 +48,10 @@ export class NotesList implements OnInit {
   private readonly notesApi = inject(NotesApiService);
   private readonly foldersApi = inject(NoteFoldersApiService);
   private readonly tagsApi = inject(NoteTagsApiService);
+  private readonly settingsApi = inject(NoteSettingsApiService);
   private readonly router = inject(Router);
+
+  protected readonly defaultNoteType = signal<NoteType | null>(null);
 
   protected readonly notes = signal<NoteSummary[]>([]);
   protected readonly folders = signal<Folder[]>([]);
@@ -95,6 +99,7 @@ export class NotesList implements OnInit {
     this.loadFolders();
     this.loadTags();
     this.loadNotes();
+    this.settingsApi.get().subscribe((settings) => this.defaultNoteType.set(settings.defaultNoteType));
   }
 
   private loadFolders(): void {
@@ -200,7 +205,11 @@ export class NotesList implements OnInit {
 
   createNote(): void {
     this.notesApi
-      .create({ title: 'Untitled note', folderId: this.selectedFolderId() ?? undefined })
+      .create({
+        title: 'Untitled note',
+        folderId: this.selectedFolderId() ?? undefined,
+        noteType: this.defaultNoteType() ?? undefined,
+      })
       .subscribe((note) => this.router.navigate(['/notes', note.id]));
   }
 

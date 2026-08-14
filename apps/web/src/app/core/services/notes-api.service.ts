@@ -12,6 +12,7 @@ import {
   NoteSummary,
   NoteVersion,
   PageResponse,
+  TrashedNote,
   UpdateNoteRequest,
 } from '../models/notes.model';
 
@@ -80,6 +81,16 @@ export class NotesApiService {
     return this.http
       .post<ApiResponse<Note>>(`${this.baseUrl}/${id}/restore`, {})
       .pipe(map((response) => response.data));
+  }
+
+  trash(): Observable<TrashedNote[]> {
+    return this.http
+      .get<ApiResponse<TrashedNote[]>>(`${this.baseUrl}/trash`)
+      .pipe(map((response) => response.data));
+  }
+
+  permanentlyDelete(id: string): Observable<void> {
+    return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/${id}/permanent`).pipe(map(() => undefined));
   }
 
   duplicate(id: string, newTitle?: string): Observable<Note> {
