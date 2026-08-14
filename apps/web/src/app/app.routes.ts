@@ -78,6 +78,12 @@ export const routes: Routes = [
         data: { module: 'NT', tab: 'notes/templates' },
       },
       {
+        path: 'notes/attachments',
+        loadComponent: () =>
+          import('./features/notes/notes-attachments/notes-attachments').then((m) => m.NotesAttachments),
+        data: { module: 'NT', tab: 'notes/attachments' },
+      },
+      {
         path: 'notes/:id',
         loadComponent: () => import('./features/notes/note-editor/note-editor').then((m) => m.NoteEditorPage),
         data: { module: 'NT', tab: 'notes' },

@@ -1,0 +1,119 @@
+<main class="flex h-full w-full gap-5 px-4 py-9 font-mono text-foreground sm:px-8">
+  <div class="min-w-0 flex-1">
+    <div class="mb-4 flex items-end justify-between gap-3">
+      <div>
+        <h1 class="text-[22px] font-semibold tracking-tight">Attachments</h1>
+        <p class="mt-1 text-[12.5px] text-foreground/55">
+          {{ attachments().length }} {{ attachments().length === 1 ? 'file' : 'files' }} across all notes
+          &middot; {{ formatFileSize(totalSize()) }} used
+        </p>
+      </div>
+      <p-button label="+ Upload" (onClick)="openUploadDialog()" />
+    </div>
+
+    <div class="mb-4 flex flex-wrap items-center gap-2.5">
+      <p-iconField>
+        <p-inputIcon class="pi pi-search" />
+        <input pInputText [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" placeholder="search attachments..." class="w-[220px]" />
+      </p-iconField>
+      <p-selectButton [options]="typeOptions" [ngModel]="typeFilter()" (ngModelChange)="typeFilter.set($event)" optionLabel="label" optionValue="value" />
+      <div class="ml-auto">
+        <p-select [options]="sortOptions" [ngModel]="sort()" (ngModelChange)="sort.set($event)" optionLabel="label" optionValue="value" styleClass="w-[160px]" />
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="flex flex-col gap-1.5">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="h-[52px] animate-pulse rounded-[0.4rem] border border-border/60 bg-card/60"></div>
+        }
+      </div>
+    } @else if (filtered().length === 0) {
+      <div class="surface-panel flex flex-col items-center gap-3 px-6 py-20 text-center">
+        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+          <i class="pi pi-paperclip text-xl text-primary/70"></i>
+        </div>
+        <p class="text-[13.5px] font-medium text-foreground/80">
+          @if (searchTerm() || typeFilter() !== 'all') {
+            No attachments match your filters
+          } @else {
+            No attachments yet
+          }
+        </p>
+        @if (!searchTerm() && typeFilter() === 'all') {
+          <p-button label="+ Upload" (onClick)="openUploadDialog()" />
+        }
+      </div>
+    } @else {
+      <div class="overflow-hidden rounded-[0.55rem] border border-border">
+        <div class="grid grid-cols-[40px_2fr_1fr_1fr_80px] items-center border-b border-border bg-card/60 px-4 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-foreground/45">
+          <div></div>
+          <div>File</div>
+          <div>Linked note</div>
+          <div>Size / Date</div>
+          <div class="text-right">Actions</div>
+        </div>
+        @for (a of filtered(); track a.id; let last = $last) {
+          <div
+            class="grid cursor-pointer grid-cols-[40px_2fr_1fr_1fr_80px] items-center px-4 py-3 text-[12.5px] transition-colors hover:bg-white/5"
+            [class.border-b]="!last"
+            [class.border-border/60]="!last"
+            [class.bg-primary/6]="selected()?.id === a.id"
+            role="button"
+            tabindex="0"
+            (click)="select(a)"
+            (keydown.enter)="select(a)"
+          >
+            <i class="pi text-foreground/50" [class]="fileIcon(a.fileName)" style="font-size: 15px"></i>
+            <div class="truncate pr-2">{{ a.fileName }}</div>
+            <button type="button" class="truncate pr-2 text-left text-primary hover:underline" (click)="$event.stopPropagation(); goToNote(a.noteId)">{{ a.noteTitle }}</button>
+            <div class="text-[11px] text-foreground/50">{{ formatFileSize(a.fileSize) }} &middot; {{ a.uploadDate | relativeTime }}</div>
+            <div class="flex justify-end gap-2 text-foreground/55">
+              <button type="button" class="hover:text-primary" title="Download" (click)="$event.stopPropagation(); download(a)"><i class="pi pi-download" style="font-size: 12px"></i></button>
+              <button type="button" class="hover:text-destructive" title="Delete" (click)="$event.stopPropagation(); confirmDelete(a)"><i class="pi pi-trash" style="font-size: 12px"></i></button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (selected(); as s) {
+    <aside class="sticky top-4 hidden w-[280px] shrink-0 self-start rounded-[0.5rem] border border-border bg-card p-4 lg:block">
+      <div class="mb-3 flex h-[150px] items-center justify-center overflow-hidden rounded-[0.4rem] border border-border/70 bg-background/60">
+        @if (isImage(s)) {
+          <img [src]="downloadUrl(s)" [alt]="s.fileName" class="h-full w-full object-contain" />
+        } @else {
+          <i class="pi text-foreground/25" [class]="fileIcon(s.fileName)" style="font-size: 32px"></i>
+        }
+      </div>
+      <div class="mb-0.5 truncate text-[13px] font-semibold">{{ s.fileName }}</div>
+      <div class="mb-3.5 text-[11px] text-foreground/50">{{ formatFileSize(s.fileSize) }} &middot; {{ s.uploadDate | relativeTime }}</div>
+      <div class="flex flex-col gap-1.5">
+        <p-button label="Download" styleClass="w-full" (onClick)="download(s)" />
+        <p-button label="Delete" severity="danger" [outlined]="true" styleClass="w-full" (onClick)="confirmDelete(s)" />
+      </div>
+    </aside>
+  }
+
+  <p-dialog [(visible)]="uploadDialogVisible" [modal]="true" [style]="{ width: '380px' }" header="Upload attachment">
+    <div class="flex flex-col gap-3">
+      <p-select
+        [options]="uploadNotes()"
+        [ngModel]="uploadNoteId()"
+        (ngModelChange)="uploadNoteId.set($event)"
+        optionLabel="title"
+        optionValue="id"
+        placeholder="Attach to note..."
+        styleClass="w-full"
+      />
+      <input type="file" (change)="onFileChosen($event)" class="text-[12px]" />
+    </div>
+    <div class="mt-4 flex justify-end gap-2">
+      <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="uploadDialogVisible.set(false)" />
+      <p-button label="Upload" [loading]="uploading()" [disabled]="!uploadNoteId() || !uploadFile()" (onClick)="confirmUpload()" />
+    </div>
+  </p-dialog>
+
+  <p-confirmDialog />
+</main>

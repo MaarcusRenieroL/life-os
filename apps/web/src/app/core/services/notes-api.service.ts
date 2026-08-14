@@ -5,6 +5,7 @@ import { Observable, map } from 'rxjs';
 import { ApiResponse } from '../models/auth.model';
 import {
   CreateNoteRequest,
+  GlobalAttachment,
   Note,
   NoteListFilters,
   NoteModuleType,
@@ -164,6 +165,12 @@ export class NotesApiService {
     return this.http
       .delete<ApiResponse<void>>(`${this.baseUrl}/${noteId}/attachments/${attachmentId}`)
       .pipe(map(() => undefined));
+  }
+
+  allAttachments(): Observable<GlobalAttachment[]> {
+    return this.http
+      .get<ApiResponse<GlobalAttachment[]>>(`${this.baseUrl}/attachments`)
+      .pipe(map((response) => response.data));
   }
 
   exportUrl(id: string, format: 'markdown' | 'html' | 'pdf'): string {

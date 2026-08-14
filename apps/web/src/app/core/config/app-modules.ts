@@ -44,6 +44,7 @@ export const APP_MODULES: AppModuleConfig[] = [
       { label: 'All Notes', path: '/notes' },
       { label: 'Search', path: '/notes/search' },
       { label: 'Templates', path: '/notes/templates' },
+      { label: 'Attachments', path: '/notes/attachments' },
     ],
   },
   { code: 'AN', name: 'Analytics', enabled: false },

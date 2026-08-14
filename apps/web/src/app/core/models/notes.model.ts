@@ -50,6 +50,11 @@ export interface Attachment {
   uploadDate: string;
 }
 
+export interface GlobalAttachment extends Attachment {
+  noteId: string;
+  noteTitle: string;
+}
+
 export interface NoteLink {
   id: string;
   title: string;
