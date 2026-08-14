@@ -187,3 +187,23 @@ export interface TrashedNote {
   deletedAt: string;
   purgesAt: string;
 }
+
+export interface GraphNode {
+  id: string;
+  title: string;
+  noteType: NoteType;
+  folderId: string | null;
+  folderName: string | null;
+  connectionCount: number;
+  tagIds: string[];
+}
+
+export interface GraphEdge {
+  sourceId: string;
+  targetId: string;
+}
+
+export interface NoteGraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
