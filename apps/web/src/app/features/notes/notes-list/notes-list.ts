@@ -1,25 +1,45 @@
-import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
+import { CheckboxModule } from 'primeng/checkbox';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { InputTextModule } from 'primeng/inputtext';
 import { MenuModule } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { SelectModule } from 'primeng/select';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { TagModule } from 'primeng/tag';
 import { concatMap, from, toArray } from 'rxjs';
 
 import { NoteFoldersApiService } from '../../../core/services/note-folders-api.service';
 import { NoteTagsApiService } from '../../../core/services/note-tags-api.service';
 import { NotesApiService } from '../../../core/services/notes-api.service';
 import { Folder, NoteSummary, Tag } from '../../../core/models/notes.model';
-import { FolderTree } from '../folder-tree/folder-tree';
+import { FolderManager } from '../folder-manager/folder-manager';
+import { RelativeTimePipe } from '../shared/relative-time.pipe';
 import { noteTypeMeta } from '../shared/note-type.util';
+
+type QuickView = 'all' | 'favorites' | 'pinned' | 'archived';
 
 @Component({
   selector: 'app-notes-list',
   standalone: true,
-  imports: [DatePipe, FormsModule, RouterLink, ButtonModule, DialogModule, MenuModule, SelectModule, FolderTree],
+  imports: [
+    FormsModule,
+    ButtonModule,
+    CheckboxModule,
+    IconFieldModule,
+    InputIconModule,
+    InputTextModule,
+    MenuModule,
+    SelectModule,
+    SelectButtonModule,
+    TagModule,
+    FolderManager,
+    RelativeTimePipe,
+  ],
   templateUrl: './notes-list.html',
   styleUrl: './notes-list.scss',
 })
@@ -39,41 +59,42 @@ export class NotesList implements OnInit {
 
   protected readonly selectedFolderId = signal<string | null>(null);
   protected readonly selectedTagId = signal<string | null>(null);
-  protected readonly quickView = signal<'all' | 'favorites' | 'pinned' | 'archived'>('all');
+  protected readonly quickView = signal<QuickView>('all');
   protected readonly searchTerm = signal('');
   protected readonly sort = signal<'title' | 'created' | 'modified'>('modified');
-  protected readonly order = signal<'asc' | 'desc'>('desc');
+  protected readonly viewMode = signal<'grid' | 'list'>('grid');
+  protected readonly selectMode = signal(false);
+  protected readonly folderManagerVisible = signal(false);
 
   protected readonly selected = signal<Set<string>>(new Set());
 
-  protected readonly folderDialogVisible = signal(false);
-  protected readonly folderDialogParent = signal<Folder | null>(null);
-  protected readonly folderDialogRenaming = signal<Folder | null>(null);
-  protected readonly folderNameDraft = signal('');
+  protected readonly typeMeta = noteTypeMeta;
+
+  protected readonly viewModeOptions = [
+    { label: 'Grid', value: 'grid' },
+    { label: 'List', value: 'list' },
+  ];
 
   protected readonly sortOptions = [
-    { label: 'Last modified', value: 'modified' },
+    { label: 'Recently edited', value: 'modified' },
     { label: 'Date created', value: 'created' },
     { label: 'Title', value: 'title' },
   ];
 
-  protected readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalElements() / this.pageSize)));
+  protected readonly tagFilterOptions = computed(() => [
+    { label: 'All tags', value: null },
+    ...this.tags().map((t) => ({ label: `#${t.name}`, value: t.id })),
+  ]);
 
-  protected readonly folderCount = computed(() => this.flatten(this.folders()).length);
+  protected readonly rootFolders = computed(() => this.folders().filter((f) => !f.parentFolderId));
+  protected readonly totalPages = computed(() => Math.max(1, Math.ceil(this.totalElements() / this.pageSize)));
   protected readonly favoriteCount = signal(0);
   protected readonly pinnedCount = signal(0);
-
-  protected readonly typeMeta = noteTypeMeta;
 
   ngOnInit(): void {
     this.loadFolders();
     this.loadTags();
     this.loadNotes();
-  }
-
-  private loadStatCounts(): void {
-    this.notesApi.favorites().subscribe((notes) => this.favoriteCount.set(notes.length));
-    this.notesApi.pinned().subscribe((notes) => this.pinnedCount.set(notes.length));
   }
 
   private loadFolders(): void {
@@ -82,6 +103,11 @@ export class NotesList implements OnInit {
 
   private loadTags(): void {
     this.tagsApi.list().subscribe((tags) => this.tags.set(tags));
+  }
+
+  private loadStatCounts(): void {
+    this.notesApi.favorites().subscribe((notes) => this.favoriteCount.set(notes.length));
+    this.notesApi.pinned().subscribe((notes) => this.pinnedCount.set(notes.length));
   }
 
   loadNotes(): void {
@@ -101,7 +127,7 @@ export class NotesList implements OnInit {
     this.notesApi
       .list({
         sort: this.sort(),
-        order: this.order(),
+        order: 'desc',
         folder: this.selectedFolderId() ?? undefined,
         tag: this.selectedTagId() ?? undefined,
         archived: this.quickView() === 'archived',
@@ -134,24 +160,16 @@ export class NotesList implements OnInit {
     );
   });
 
-  setQuickView(view: 'all' | 'favorites' | 'pinned' | 'archived'): void {
+  setQuickView(view: QuickView): void {
     this.quickView.set(view);
     this.selectedFolderId.set(null);
-    this.selectedTagId.set(null);
     this.page.set(0);
     this.loadNotes();
   }
 
-  selectFolder(folderId: string): void {
+  selectFolder(folderId: string | null): void {
     this.quickView.set('all');
     this.selectedFolderId.set(this.selectedFolderId() === folderId ? null : folderId);
-    this.page.set(0);
-    this.loadNotes();
-  }
-
-  selectTag(tagId: string): void {
-    this.quickView.set('all');
-    this.selectedTagId.set(this.selectedTagId() === tagId ? null : tagId);
     this.page.set(0);
     this.loadNotes();
   }
@@ -161,8 +179,8 @@ export class NotesList implements OnInit {
     this.loadNotes();
   }
 
-  toggleOrder(): void {
-    this.order.set(this.order() === 'asc' ? 'desc' : 'asc');
+  onTagFilterChange(): void {
+    this.page.set(0);
     this.loadNotes();
   }
 
@@ -187,15 +205,30 @@ export class NotesList implements OnInit {
   }
 
   openNote(id: string): void {
+    if (this.selectMode()) {
+      this.toggleSelect(id);
+      return;
+    }
     this.router.navigate(['/notes', id]);
+  }
+
+  toggleSelectMode(): void {
+    this.selectMode.update((v) => !v);
+    if (!this.selectMode()) {
+      this.clearSelection();
+    }
   }
 
   onDragStart(event: DragEvent, noteId: string): void {
     event.dataTransfer?.setData('text/note-id', noteId);
   }
 
-  onDropOnFolder(payload: { folderId: string; noteId: string }): void {
-    this.notesApi.assignFolder(payload.noteId, payload.folderId).subscribe(() => this.loadNotes());
+  onDropOnFolder(event: DragEvent, folderId: string): void {
+    event.preventDefault();
+    const noteId = event.dataTransfer?.getData('text/note-id');
+    if (noteId) {
+      this.notesApi.assignFolder(noteId, folderId).subscribe(() => this.loadNotes());
+    }
   }
 
   togglePin(note: NoteSummary, event: Event): void {
@@ -237,8 +270,7 @@ export class NotesList implements OnInit {
     ];
   }
 
-  toggleSelect(id: string, event: Event): void {
-    event.stopPropagation();
+  toggleSelect(id: string): void {
     this.selected.update((current) => {
       const next = new Set(current);
       if (next.has(id)) {
@@ -304,54 +336,17 @@ export class NotesList implements OnInit {
     return flatten(this.folders());
   }
 
-  openCreateFolder(parent: Folder | null): void {
-    this.folderDialogParent.set(parent);
-    this.folderDialogRenaming.set(null);
-    this.folderNameDraft.set('');
-    this.folderDialogVisible.set(true);
+  openFolderManager(): void {
+    this.folderManagerVisible.set(true);
   }
 
-  openRenameFolder(folder: Folder): void {
-    this.folderDialogRenaming.set(folder);
-    this.folderDialogParent.set(null);
-    this.folderNameDraft.set(folder.name);
-    this.folderDialogVisible.set(true);
-  }
-
-  saveFolderDialog(): void {
-    const name = this.folderNameDraft().trim();
-    if (!name) return;
-
-    const renaming = this.folderDialogRenaming();
-    if (renaming) {
-      this.foldersApi.rename(renaming.id, name).subscribe(() => {
-        this.folderDialogVisible.set(false);
-        this.loadFolders();
-      });
-      return;
-    }
-
-    this.foldersApi.create(name, this.folderDialogParent()?.id ?? null).subscribe(() => {
-      this.folderDialogVisible.set(false);
-      this.loadFolders();
-    });
-  }
-
-  deleteFolder(folder: Folder): void {
-    this.foldersApi.delete(folder.id, true).subscribe(() => {
-      if (this.selectedFolderId() === folder.id) {
-        this.selectedFolderId.set(null);
-        this.loadNotes();
-      }
-      this.loadFolders();
-    });
+  onFolderManagerClosed(): void {
+    this.folderManagerVisible.set(false);
+    this.loadFolders();
+    this.loadNotes();
   }
 
   excerpt(note: NoteSummary): string {
     return note.description ?? '';
-  }
-
-  private flatten(folders: Folder[]): Folder[] {
-    return folders.flatMap((f) => [f, ...this.flatten(f.children)]);
   }
 }

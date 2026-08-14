@@ -1,303 +1,216 @@
-<main class="flex h-full w-full font-mono text-foreground">
-  <!-- Sidebar -->
-  <aside class="hidden w-[248px] shrink-0 flex-col gap-5 overflow-y-auto border-r border-border/70 px-3.5 py-6 lg:flex">
-    <p-button label="+ New note" styleClass="w-full" (onClick)="createNote()" />
-
-    <nav class="flex flex-col gap-0.5">
-      <button
-        type="button"
-        class="flex items-center gap-2.5 rounded-[0.4rem] px-2.5 py-[7px] text-left text-[12.5px] transition-colors"
-        [class.bg-primary/12]="quickView() === 'all'"
-        [class.text-primary]="quickView() === 'all'"
-        [class.text-foreground/65]="quickView() !== 'all'"
-        [class.hover:bg-card]="quickView() !== 'all'"
-        (click)="setQuickView('all')"
-      >
-        <i class="pi pi-file w-[13px] text-center" style="font-size: 11px"></i> All notes
-        <span class="ml-auto text-[10.5px] tabular-nums opacity-50">{{ totalElements() }}</span>
-      </button>
-      <button
-        type="button"
-        class="flex items-center gap-2.5 rounded-[0.4rem] px-2.5 py-[7px] text-left text-[12.5px] transition-colors"
-        [class.bg-warning/12]="quickView() === 'favorites'"
-        [class.text-warning]="quickView() === 'favorites'"
-        [class.text-foreground/65]="quickView() !== 'favorites'"
-        [class.hover:bg-card]="quickView() !== 'favorites'"
-        (click)="setQuickView('favorites')"
-      >
-        <i class="pi pi-star w-[13px] text-center" style="font-size: 11px"></i> Favorites
-        <span class="ml-auto text-[10.5px] tabular-nums opacity-50">{{ favoriteCount() }}</span>
-      </button>
-      <button
-        type="button"
-        class="flex items-center gap-2.5 rounded-[0.4rem] px-2.5 py-[7px] text-left text-[12.5px] transition-colors"
-        [class.bg-primary/12]="quickView() === 'pinned'"
-        [class.text-primary]="quickView() === 'pinned'"
-        [class.text-foreground/65]="quickView() !== 'pinned'"
-        [class.hover:bg-card]="quickView() !== 'pinned'"
-        (click)="setQuickView('pinned')"
-      >
-        <i class="pi pi-thumbtack w-[13px] text-center" style="font-size: 11px"></i> Pinned
-        <span class="ml-auto text-[10.5px] tabular-nums opacity-50">{{ pinnedCount() }}</span>
-      </button>
-      <button
-        type="button"
-        class="flex items-center gap-2.5 rounded-[0.4rem] px-2.5 py-[7px] text-left text-[12.5px] transition-colors"
-        [class.bg-secondary]="quickView() === 'archived'"
-        [class.text-foreground]="quickView() === 'archived'"
-        [class.text-foreground/65]="quickView() !== 'archived'"
-        [class.hover:bg-card]="quickView() !== 'archived'"
-        (click)="setQuickView('archived')"
-      >
-        <i class="pi pi-inbox w-[13px] text-center" style="font-size: 11px"></i> Archived
-      </button>
-      <a routerLink="/notes/search" class="flex items-center gap-2.5 rounded-[0.4rem] px-2.5 py-[7px] text-left text-[12.5px] text-foreground/65 transition-colors hover:bg-card">
-        <i class="pi pi-search w-[13px] text-center" style="font-size: 11px"></i> Search
-      </a>
-      <a routerLink="/notes/templates" class="flex items-center gap-2.5 rounded-[0.4rem] px-2.5 py-[7px] text-left text-[12.5px] text-foreground/65 transition-colors hover:bg-card">
-        <i class="pi pi-clone w-[13px] text-center" style="font-size: 11px"></i> Templates
-      </a>
-    </nav>
-
-    <div class="h-px bg-border/60"></div>
-
+<main class="w-full px-4 py-6 font-mono text-foreground sm:px-8">
+  <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
     <div>
-      <div class="mb-1.5 flex items-center justify-between px-2">
-        <span class="text-[10px] font-semibold uppercase tracking-wider text-foreground/35">Folders</span>
-        <button type="button" class="rounded text-foreground/35 hover:bg-card hover:text-foreground" (click)="openCreateFolder(null)">
-          <i class="pi pi-plus" style="font-size: 10px"></i>
-        </button>
-      </div>
-      <app-folder-tree
-        [folders]="folders()"
-        [selectedFolderId]="selectedFolderId()"
-        (folderSelect)="selectFolder($event)"
-        (rename)="openRenameFolder($event)"
-        (remove)="deleteFolder($event)"
-        (addChild)="openCreateFolder($event)"
-        (dropNote)="onDropOnFolder($event)"
+      <h1 class="text-[22px] font-semibold tracking-tight">All notes</h1>
+      <p class="mt-1 text-[12.5px] text-foreground/55">
+        {{ totalElements() }} {{ totalElements() === 1 ? 'note' : 'notes' }} across {{ rootFolders().length }}
+        {{ rootFolders().length === 1 ? 'folder' : 'folders' }}
+      </p>
+    </div>
+    <p-button label="+ New note" (onClick)="createNote()" />
+  </div>
+
+  <!-- Folder chip row -->
+  <div class="mb-3.5 flex flex-wrap items-center gap-1.5">
+    <button
+      type="button"
+      class="rounded-full px-3 py-1.5 text-[12.5px] transition-colors"
+      [class.bg-white/10]="!selectedFolderId() && quickView() === 'all'"
+      [class.text-foreground]="!selectedFolderId() && quickView() === 'all'"
+      [class.text-foreground/65]="selectedFolderId() || quickView() !== 'all'"
+      (click)="setQuickView('all')"
+    >
+      All <span class="opacity-50">{{ totalElements() }}</span>
+    </button>
+    @for (folder of rootFolders(); track folder.id) {
+      <button
+        type="button"
+        class="rounded-full px-3 py-1.5 text-[12.5px] transition-colors"
+        [class.bg-primary/12]="selectedFolderId() === folder.id"
+        [class.text-primary]="selectedFolderId() === folder.id"
+        [class.text-foreground/65]="selectedFolderId() !== folder.id"
+        (click)="selectFolder(folder.id)"
+        (dragover)="$event.preventDefault()"
+        (drop)="onDropOnFolder($event, folder.id)"
+      >
+        {{ folder.name }} <span class="opacity-50">{{ folder.noteCount }}</span>
+      </button>
+    }
+    <button
+      type="button"
+      class="rounded-full border border-dashed border-white/20 px-3 py-1.5 text-[12px] text-foreground/40 transition-colors hover:text-foreground/70"
+      (click)="openFolderManager()"
+    >
+      + Manage folders
+    </button>
+  </div>
+
+  <!-- Filter row -->
+  <div class="mb-4 flex flex-wrap items-center gap-2.5">
+    <p-iconField>
+      <p-inputIcon class="pi pi-search" />
+      <input
+        pInputText
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="search notes..."
+        class="w-[220px]"
       />
-      @if (folders().length === 0) {
-        <p class="px-2 text-[11px] text-foreground/35">No folders yet</p>
+    </p-iconField>
+
+    <p-select [options]="sortOptions" [ngModel]="sort()" (ngModelChange)="sort.set($event); onSortChange()" optionLabel="label" optionValue="value" styleClass="w-[168px]" />
+
+    <p-select
+      [options]="tagFilterOptions()"
+      [ngModel]="selectedTagId()"
+      (ngModelChange)="selectedTagId.set($event); onTagFilterChange()"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="All tags"
+      styleClass="w-[140px]"
+    />
+
+    <p-button
+      [label]="selectMode() ? 'Cancel select' : 'Select'"
+      severity="secondary"
+      [outlined]="!selectMode()"
+      size="small"
+      (onClick)="toggleSelectMode()"
+    />
+
+    <div class="ml-auto">
+      <p-selectButton [options]="viewModeOptions" [ngModel]="viewMode()" (ngModelChange)="viewMode.set($event)" optionLabel="label" optionValue="value" />
+    </div>
+  </div>
+
+  @if (selectMode() && selected().size > 0) {
+    <div class="surface-panel mb-4 flex items-center gap-3 px-3.5 py-2.5 text-[12px]">
+      <span class="font-medium text-primary">{{ selected().size }} selected</span>
+      <p-button label="Archive" size="small" severity="secondary" [text]="true" (onClick)="bulkArchive()" />
+      <p-button label="Move to folder" size="small" severity="secondary" [text]="true" (onClick)="bulkFolderMenu.toggle($event)" />
+      <p-menu #bulkFolderMenu [model]="bulkFolderMenuItems()" [popup]="true" />
+      <p-button label="Delete" size="small" severity="danger" [text]="true" (onClick)="bulkDelete()" />
+      <button type="button" class="ml-auto text-foreground/50 hover:text-foreground" (click)="clearSelection()">Clear</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="h-[150px] animate-pulse rounded-[0.5rem] border border-border/60 bg-card/60"></div>
       }
     </div>
-
-    <div>
-      <span class="mb-1.5 block px-2 text-[10px] font-semibold uppercase tracking-wider text-foreground/35">Tags</span>
-      <div class="flex flex-wrap gap-1.5 px-2">
-        @for (tag of tags(); track tag.id) {
-          <button
-            type="button"
-            class="flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition-colors"
-            [class.border-primary/40]="selectedTagId() === tag.id"
-            [class.bg-primary/12]="selectedTagId() === tag.id"
-            [class.text-primary]="selectedTagId() === tag.id"
-            [class.border-border]="selectedTagId() !== tag.id"
-            [class.text-foreground/55]="selectedTagId() !== tag.id"
-            (click)="selectTag(tag.id)"
-          >
-            <span class="h-[6px] w-[6px] shrink-0 rounded-full" [style.background]="tag.color || 'var(--muted-foreground)'"></span>
-            {{ tag.name }} <span class="opacity-50">{{ tag.usageCount }}</span>
-          </button>
-        }
-        @if (tags().length === 0) {
-          <p class="text-[11px] text-foreground/35">No tags yet</p>
-        }
+  } @else if (filteredNotes().length === 0) {
+    <div class="surface-panel flex flex-col items-center gap-3 px-6 py-20 text-center">
+      <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+        <i class="pi pi-file text-xl text-primary/70"></i>
       </div>
+      <p class="text-[13.5px] font-medium text-foreground/80">
+        @if (searchTerm()) {
+          No notes match "{{ searchTerm() }}"
+        } @else if (selectedFolderId() || quickView() !== 'all') {
+          Nothing here yet
+        } @else {
+          No notes yet
+        }
+      </p>
+      @if (quickView() === 'all' && !searchTerm() && !selectedFolderId()) {
+        <p-button label="+ New note" (onClick)="createNote()" />
+      }
     </div>
-  </aside>
+  } @else if (viewMode() === 'grid') {
+    <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+      @for (note of filteredNotes(); track note.id) {
+        <div
+          class="group relative flex min-h-[150px] cursor-pointer flex-col gap-2.5 overflow-hidden rounded-[0.5rem] border border-border bg-card p-4 transition-all hover:-translate-y-[1px] hover:border-foreground/25 hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.25)]"
+          role="button"
+          tabindex="0"
+          draggable="true"
+          (dragstart)="onDragStart($event, note.id)"
+          (click)="openNote(note.id)"
+          (keydown.enter)="openNote(note.id)"
+        >
+          <span class="absolute left-0 top-0 h-full w-[3px]" [style.background]="typeMeta(note.noteType).colorVar"></span>
 
-  <!-- Main -->
-  <section class="flex-1 overflow-y-auto px-4 py-7 sm:px-8 sm:py-10">
-    <div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 class="text-[22px] font-semibold tracking-tight">Notes</h1>
-        <p class="mt-1 text-[12.5px] text-foreground/55">
-          {{ totalElements() }} {{ totalElements() === 1 ? 'note' : 'notes' }}
-          @if (selectedFolderId()) {
-            &middot; filtered by folder
-          }
-          @if (selectedTagId()) {
-            &middot; filtered by tag
-          }
-        </p>
-      </div>
-      <div class="flex flex-wrap items-center gap-2.5">
-        <div class="relative">
-          <i class="pi pi-filter absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] text-foreground/35"></i>
-          <input
-            [(ngModel)]="searchTerm"
-            placeholder="Filter this view..."
-            class="w-full rounded-[0.45rem] border border-border bg-card py-2 pl-7 pr-3 text-[12.5px] text-foreground outline-none transition-colors focus:border-primary/50 sm:w-[220px]"
-          />
-        </div>
-        <p-select [options]="sortOptions" [(ngModel)]="sort" (onChange)="onSortChange()" optionLabel="label" optionValue="value" styleClass="w-[160px]" />
-        <button type="button" class="rounded-[0.45rem] border border-border bg-card px-2.5 py-2 text-foreground/60 transition-colors hover:border-foreground/25 hover:text-foreground" (click)="toggleOrder()">
-          <i class="pi" [class.pi-sort-amount-down]="order() === 'desc'" [class.pi-sort-amount-up]="order() === 'asc'"></i>
-        </button>
-      </div>
-    </div>
-
-    @if (!loading() && quickView() === 'all' && !selectedFolderId() && !selectedTagId()) {
-      <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div class="rounded-[0.5rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-foreground/25">
-          <div class="text-xl font-semibold tabular-nums">{{ totalElements() }}</div>
-          <div class="mt-0.5 text-[11px] text-foreground/55">total notes</div>
-        </div>
-        <div class="rounded-[0.5rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-warning/50">
-          <div class="text-xl font-semibold text-warning tabular-nums">{{ favoriteCount() }}</div>
-          <div class="mt-0.5 text-[11px] text-foreground/55">favorites</div>
-        </div>
-        <div class="rounded-[0.5rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-primary/50">
-          <div class="text-xl font-semibold text-primary tabular-nums">{{ pinnedCount() }}</div>
-          <div class="mt-0.5 text-[11px] text-foreground/55">pinned</div>
-        </div>
-        <div class="rounded-[0.5rem] border border-border bg-card px-4 py-3.5 transition-colors hover:border-foreground/25">
-          <div class="text-xl font-semibold tabular-nums">{{ folderCount() }}</div>
-          <div class="mt-0.5 text-[11px] text-foreground/55">folders</div>
-        </div>
-      </div>
-    }
-
-    @if (selected().size > 0) {
-      <div class="surface-panel mb-4 flex items-center gap-3 px-3.5 py-2.5 text-[12px]">
-        <span class="font-medium text-primary">{{ selected().size }} selected</span>
-        <p-button label="Archive" size="small" severity="secondary" (onClick)="bulkArchive()" />
-        <p-button [label]="'Move to folder'" size="small" severity="secondary" [text]="true" (onClick)="bulkFolderMenu.toggle($event)" />
-        <p-menu #bulkFolderMenu [model]="bulkFolderMenuItems()" [popup]="true" />
-        <p-button label="Delete" size="small" severity="danger" (onClick)="bulkDelete()" />
-        <button type="button" class="ml-auto text-foreground/50 hover:text-foreground" (click)="clearSelection()">Clear</button>
-      </div>
-    }
-
-    @if (loading()) {
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-          <div class="h-[126px] animate-pulse rounded-[0.6rem] border border-border/60 bg-card/60"></div>
-        }
-      </div>
-    } @else if (filteredNotes().length === 0) {
-      <div class="surface-panel flex flex-col items-center gap-3 px-6 py-20 text-center">
-        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-          <i class="pi pi-file text-xl text-primary/70"></i>
-        </div>
-        <p class="text-[13.5px] font-medium text-foreground/80">
-          @if (searchTerm()) {
-            No notes match "{{ searchTerm() }}"
-          } @else if (quickView() !== 'all') {
-            Nothing here yet
-          } @else {
-            No notes yet
-          }
-        </p>
-        <p class="max-w-xs text-[12px] text-foreground/50">
-          @if (!searchTerm() && quickView() === 'all') {
-            Create your first note to start capturing ideas, meeting minutes, and research.
-          }
-        </p>
-        @if (quickView() === 'all' && !searchTerm()) {
-          <p-button label="+ New note" (onClick)="createNote()" />
-        }
-      </div>
-    } @else {
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        @for (note of filteredNotes(); track note.id) {
-          <div
-            class="group relative cursor-pointer overflow-hidden rounded-[0.6rem] border border-border bg-card pl-4 pr-3.5 py-3.5 transition-all hover:-translate-y-[1px] hover:border-foreground/25 hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.25)]"
-            role="button"
-            tabindex="0"
-            draggable="true"
-            (dragstart)="onDragStart($event, note.id)"
-            (click)="openNote(note.id)"
-            (keydown.enter)="openNote(note.id)"
-          >
-            <span class="absolute left-0 top-0 h-full w-[3px]" [style.background]="typeMeta(note.noteType).colorVar"></span>
-
-            <div class="mb-2 flex items-start justify-between gap-2">
-              <div class="flex min-w-0 items-center gap-2">
-                <span
-                  class="peer relative inline-flex h-[15px] w-[15px] shrink-0 cursor-pointer items-center justify-center rounded-[3px] border transition-colors"
-                  [class.border-primary]="selected().has(note.id)"
-                  [class.bg-primary]="selected().has(note.id)"
-                  [class.border-border]="!selected().has(note.id)"
-                  role="checkbox"
-                  tabindex="0"
-                  [attr.aria-checked]="selected().has(note.id)"
-                  (click)="toggleSelect(note.id, $event)"
-                  (keydown.enter)="toggleSelect(note.id, $event)"
-                  (keydown.space)="toggleSelect(note.id, $event)"
-                >
-                  @if (selected().has(note.id)) {
-                    <i class="pi pi-check text-primary-foreground" style="font-size: 9px"></i>
-                  }
-                </span>
-                <i class="pi shrink-0" [class]="typeMeta(note.noteType).icon" [style.color]="typeMeta(note.noteType).colorVar" style="font-size: 11px"></i>
-                <h3 class="truncate text-[13.5px] font-medium">{{ note.title || 'Untitled note' }}</h3>
-              </div>
-              <div class="flex shrink-0 items-center gap-1.5 text-foreground/35">
-                @if (note.isPinned) {
-                  <button type="button" class="text-primary" title="Pinned" (click)="togglePin(note, $event)">
-                    <i class="pi pi-thumbtack" style="font-size: 10px"></i>
-                  </button>
-                }
-                @if (note.isFavorite) {
-                  <button type="button" class="text-warning" title="Favorite" (click)="toggleFavorite(note, $event)">
-                    <i class="pi pi-star-fill" style="font-size: 10px"></i>
-                  </button>
-                }
-                <button type="button" class="opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100" (click)="$event.stopPropagation(); rowMenu.toggle($event)">
-                  <i class="pi pi-ellipsis-h" style="font-size: 11px"></i>
-                </button>
-                <p-menu #rowMenu [model]="rowMenuItems(note)" [popup]="true" />
-              </div>
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex min-w-0 items-center gap-2">
+              @if (selectMode()) {
+                <p-checkbox [ngModel]="selected().has(note.id)" (onChange)="toggleSelect(note.id)" [binary]="true" (click)="$event.stopPropagation()" />
+              }
+              <i class="pi shrink-0" [class]="typeMeta(note.noteType).icon" [style.color]="typeMeta(note.noteType).colorVar" style="font-size: 11px"></i>
+              <h3 class="truncate text-[13.5px] font-semibold">{{ note.title || 'Untitled note' }}</h3>
             </div>
-
-            <p class="mb-3 line-clamp-2 min-h-[2.6em] text-[12px] leading-relaxed text-foreground/55">
-              {{ excerpt(note) || 'No content yet' }}
-            </p>
-
-            <div class="flex items-center justify-between gap-2 text-[10.5px] text-foreground/40">
-              <div class="flex min-w-0 flex-wrap gap-1">
-                @for (tag of note.tags.slice(0, 3); track tag.id) {
-                  <span class="flex items-center gap-1 rounded-full border border-border/70 px-1.5 py-0.5">
-                    <span class="h-[5px] w-[5px] shrink-0 rounded-full" [style.background]="tag.color || 'var(--muted-foreground)'"></span>
-                    {{ tag.name }}
-                  </span>
-                }
-                @if (note.tags.length > 3) {
-                  <span class="px-1 py-0.5">+{{ note.tags.length - 3 }}</span>
-                }
-              </div>
-              <span class="shrink-0 tabular-nums">{{ note.updatedAt | date: 'MMM d' }}</span>
+            <div class="flex shrink-0 items-center gap-1.5 text-foreground/35">
+              @if (note.isPinned) {
+                <button type="button" class="text-primary" title="Pinned" (click)="togglePin(note, $event)"><i class="pi pi-thumbtack" style="font-size: 10px"></i></button>
+              }
+              @if (note.isFavorite) {
+                <button type="button" class="text-warning" title="Favorite" (click)="toggleFavorite(note, $event)"><i class="pi pi-star-fill" style="font-size: 10px"></i></button>
+              }
+              <button type="button" class="opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100" (click)="$event.stopPropagation(); rowMenu.toggle($event)">
+                <i class="pi pi-ellipsis-h" style="font-size: 11px"></i>
+              </button>
+              <p-menu #rowMenu [model]="rowMenuItems(note)" [popup]="true" />
             </div>
           </div>
-        }
-      </div>
 
-      @if (quickView() === 'all' && totalPages() > 1) {
-        <div class="mt-6 flex items-center justify-center gap-4 text-[12px] text-foreground/60">
-          <button type="button" class="flex items-center gap-1 rounded-[0.4rem] px-2 py-1 transition-colors hover:bg-card disabled:opacity-30" [disabled]="page() === 0" (click)="prevPage()">
-            <i class="pi pi-angle-left" style="font-size: 10px"></i> Prev
-          </button>
-          <span class="tabular-nums text-foreground/40">Page {{ page() + 1 }} of {{ totalPages() }}</span>
-          <button type="button" class="flex items-center gap-1 rounded-[0.4rem] px-2 py-1 transition-colors hover:bg-card disabled:opacity-30" [disabled]="page() + 1 >= totalPages()" (click)="nextPage()">
-            Next <i class="pi pi-angle-right" style="font-size: 10px"></i>
-          </button>
+          <p class="line-clamp-2 flex-1 text-[11.5px] leading-relaxed text-foreground/55">{{ excerpt(note) || 'No content yet' }}</p>
+
+          <div class="flex flex-wrap gap-1.5">
+            @for (tag of note.tags.slice(0, 3); track tag.id) {
+              <p-tag [rounded]="true" [value]="tag.name" [style]="{ background: (tag.color || 'var(--muted-foreground)') + '26', color: tag.color || 'var(--muted-foreground)' }" />
+            }
+          </div>
+
+          <div class="flex items-center justify-end text-[10.5px] text-foreground/40">
+            <span class="shrink-0">{{ note.updatedAt | relativeTime }}</span>
+          </div>
         </div>
       }
-    }
-  </section>
-
-  <p-dialog [(visible)]="folderDialogVisible" [modal]="true" [style]="{ width: '360px' }" [header]="folderDialogRenaming() ? 'Rename folder' : 'New folder'">
-    <input
-      [(ngModel)]="folderNameDraft"
-      placeholder="Folder name"
-      class="w-full rounded-[0.45rem] border border-border bg-card px-3 py-2 text-[12.5px] outline-none focus:border-primary/50"
-      (keydown.enter)="saveFolderDialog()"
-    />
-    <div class="mt-4 flex justify-end gap-2">
-      <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="folderDialogVisible.set(false)" />
-      <p-button label="Save" (onClick)="saveFolderDialog()" />
     </div>
-  </p-dialog>
+  } @else {
+    <div class="flex flex-col overflow-hidden rounded-[0.5rem] border border-border">
+      @for (note of filteredNotes(); track note.id; let last = $last) {
+        <div
+          class="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-white/5"
+          [class.border-b]="!last"
+          [class.border-border/60]="!last"
+          role="button"
+          tabindex="0"
+          (click)="openNote(note.id)"
+          (keydown.enter)="openNote(note.id)"
+        >
+          @if (selectMode()) {
+            <p-checkbox [ngModel]="selected().has(note.id)" (onChange)="toggleSelect(note.id)" [binary]="true" (click)="$event.stopPropagation()" />
+          }
+          <i class="pi shrink-0" [class]="typeMeta(note.noteType).icon" [style.color]="typeMeta(note.noteType).colorVar" style="font-size: 12px"></i>
+          <span class="w-[220px] shrink-0 truncate text-[13px] font-medium">{{ note.title || 'Untitled note' }}</span>
+          <span class="min-w-0 flex-1 truncate text-[11.5px] text-foreground/50">{{ excerpt(note) || 'No content yet' }}</span>
+          <div class="flex shrink-0 gap-1">
+            @for (tag of note.tags.slice(0, 2); track tag.id) {
+              <p-tag [rounded]="true" [value]="tag.name" [style]="{ background: (tag.color || 'var(--muted-foreground)') + '26', color: tag.color || 'var(--muted-foreground)' }" />
+            }
+          </div>
+          @if (note.isPinned) {
+            <i class="pi pi-thumbtack shrink-0 text-primary" style="font-size: 10px"></i>
+          }
+          <span class="w-[70px] shrink-0 text-right text-[10.5px] text-foreground/40">{{ note.updatedAt | relativeTime }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  @if (quickView() === 'all' && totalPages() > 1 && !searchTerm()) {
+    <div class="mt-6 flex items-center justify-center gap-4 text-[12px] text-foreground/60">
+      <button type="button" class="flex items-center gap-1 rounded-[0.4rem] px-2 py-1 transition-colors hover:bg-card disabled:opacity-30" [disabled]="page() === 0" (click)="prevPage()">
+        <i class="pi pi-angle-left" style="font-size: 10px"></i> Prev
+      </button>
+      <span class="tabular-nums text-foreground/40">Page {{ page() + 1 }} of {{ totalPages() }}</span>
+      <button type="button" class="flex items-center gap-1 rounded-[0.4rem] px-2 py-1 transition-colors hover:bg-card disabled:opacity-30" [disabled]="page() + 1 >= totalPages()" (click)="nextPage()">
+        Next <i class="pi pi-angle-right" style="font-size: 10px"></i>
+      </button>
+    </div>
+  }
 </main>
+
+<app-folder-manager [folders]="folders()" [visible]="folderManagerVisible()" (closed)="onFolderManagerClosed()" />
