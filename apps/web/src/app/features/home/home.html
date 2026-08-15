@@ -123,20 +123,11 @@
   <div class="mb-3 text-xs font-semibold tracking-[0.03em] text-foreground/55">EXPLORE MORE MODULES</div>
   <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
     @for (module of exploreModules(); track module.code) {
-      @if (module.enabled && module.path) {
-        <a
-          [routerLink]="module.path"
-          class="block rounded-[0.45rem] border border-dashed border-primary/40 bg-background/40 p-3 text-[11px] text-primary no-underline transition-colors hover:border-primary/70 hover:bg-primary/5"
-        >
-          {{ module.name }}
-        </a>
-      } @else {
-        <div
-          class="rounded-[0.45rem] border border-dashed border-border/85 bg-background/40 p-3 text-[11px] text-foreground/45 transition-colors hover:border-foreground/25 hover:text-foreground/65"
-        >
-          {{ module.name }}
-        </div>
-      }
+      <div
+        class="rounded-[0.45rem] border border-dashed border-border/85 bg-background/40 p-3 text-[11px] text-foreground/45 transition-colors hover:border-foreground/25 hover:text-foreground/65"
+      >
+        {{ module.name }}
+      </div>
     }
   </div>
 </main>
