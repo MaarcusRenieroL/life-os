@@ -6,6 +6,7 @@ import { APP_MODULES, AppModuleConfig } from '../../core/config/app-modules';
 import { HealthSummary, VaultEntrySummary } from '../../core/models/vault.model';
 import { AuthApiService } from '../../core/services/auth-api.service';
 import { CurrentUserService } from '../../core/services/current-user.service';
+import { NotesApiService } from '../../core/services/notes-api.service';
 import { TokenService } from '../../core/services/token.service';
 import { VaultApiService } from '../../core/services/vault-api.service';
 import { finalize } from 'rxjs';
@@ -43,7 +44,10 @@ export class Home implements OnInit {
   private readonly tokenService = inject(TokenService);
   private readonly currentUserService = inject(CurrentUserService);
   private readonly vaultApi = inject(VaultApiService);
+  private readonly notesApi = inject(NotesApiService);
   private readonly router = inject(Router);
+
+  protected readonly noteCount = signal<number | null>(null);
 
   protected readonly user = this.currentUserService.user;
   protected readonly today = new Date();
@@ -73,14 +77,25 @@ export class Home implements OnInit {
   protected readonly interviewsThisWeek: number | null = null;
   protected readonly offersPending: number | null = null;
 
+  // Built, working modules (PM, NT, ...) sort ahead of not-yet-built ones so
+  // the visible "YOUR MODULES" grid always leads with something clickable -
+  // previously this was a plain APP_MODULES.slice(0, 4), which put Notes
+  // (declared later in the array, but fully working) behind three disabled
+  // placeholders and left it with no way to reach it from Home at all.
+  private readonly orderedModules = computed<AppModuleConfig[]>(() => {
+    const enabled = APP_MODULES.filter((m) => m.enabled);
+    const disabled = APP_MODULES.filter((m) => !m.enabled);
+    return [...enabled, ...disabled];
+  });
+
   protected readonly homeModuleTiles = computed<ModuleTile[]>(() => {
     const entries = this.entries();
     const actionRequired = this.vaultActionRequiredCount();
 
-    return APP_MODULES.slice(0, 4).map((module) => this.toModuleTile(module, entries.length, actionRequired));
+    return this.orderedModules().slice(0, 4).map((module) => this.toModuleTile(module, entries.length, actionRequired));
   });
 
-  protected readonly exploreModules = computed<AppModuleConfig[]>(() => APP_MODULES.slice(4));
+  protected readonly exploreModules = computed<AppModuleConfig[]>(() => this.orderedModules().slice(4));
 
   // TODO(backend): needs a real cross-module activity feed; this is static mock data
   // matching the design handoff's tone until that endpoint exists.
@@ -132,6 +147,11 @@ export class Home implements OnInit {
       next: (summary) => this.healthSummary.set(summary),
       error: () => undefined,
     });
+
+    this.notesApi.list({ page: 0, size: 1 }).subscribe({
+      next: (page) => this.noteCount.set(page.totalElements),
+      error: () => this.noteCount.set(0),
+    });
   }
 
   logout(): void {
@@ -159,6 +179,16 @@ export class Home implements OnInit {
       return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
     }
 
-    return { code: module.code, name: module.name, enabled: false, subtitle: 'not set up yet' };
+    if (module.code === 'NT') {
+      const count = this.noteCount();
+      const subtitle = count === null ? 'loading…' : `${count} ${count === 1 ? 'note' : 'notes'}`;
+      return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
+    }
+
+    if (!module.enabled) {
+      return { code: module.code, name: module.name, enabled: false, subtitle: 'not set up yet' };
+    }
+
+    return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle: 'open module' };
   }
 }

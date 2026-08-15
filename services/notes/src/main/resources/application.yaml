@@ -1,0 +1,30 @@
+server:
+  port: 8007
+
+spring:
+  application:
+    name: notes
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    schemas: notes_schema
+    default-schema: notes_schema
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+jwt:
+  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+
+internal:
+  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+
+notes:
+  attachments:
+    storage-path: ${NOTE_ATTACHMENTS_PATH:./data/note-attachments}
