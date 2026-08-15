@@ -56,9 +56,6 @@ jobs:
       - name: Run Core Tests
         run: cd services/core && mvn clean test
 
-      - name: Run Notes Tests
-        run: cd services/notes && mvn clean test
-
   lint-and-build:
     runs-on: ubuntu-latest
 

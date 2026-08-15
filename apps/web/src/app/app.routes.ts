@@ -61,44 +61,6 @@ export const routes: Routes = [
         canActivate: [vaultUnlockGuard],
         data: { module: 'PM', tab: 'vault' },
       },
-      {
-        path: 'notes',
-        loadComponent: () => import('./features/notes/notes-list/notes-list').then((m) => m.NotesList),
-        data: { module: 'NT', tab: 'notes' },
-      },
-      {
-        path: 'notes/search',
-        loadComponent: () => import('./features/notes/note-search/note-search').then((m) => m.NoteSearch),
-        data: { module: 'NT', tab: 'notes/search' },
-      },
-      {
-        path: 'notes/templates',
-        loadComponent: () =>
-          import('./features/notes/note-templates/note-templates').then((m) => m.NoteTemplates),
-        data: { module: 'NT', tab: 'notes/templates' },
-      },
-      {
-        path: 'notes/attachments',
-        loadComponent: () =>
-          import('./features/notes/notes-attachments/notes-attachments').then((m) => m.NotesAttachments),
-        data: { module: 'NT', tab: 'notes/attachments' },
-      },
-      {
-        path: 'notes/graph',
-        loadComponent: () => import('./features/notes/notes-graph/notes-graph').then((m) => m.NotesGraph),
-        data: { module: 'NT', tab: 'notes/graph' },
-      },
-      {
-        path: 'notes/settings',
-        loadComponent: () =>
-          import('./features/notes/notes-settings/notes-settings').then((m) => m.NotesSettings),
-        data: { module: 'NT', tab: 'notes/settings' },
-      },
-      {
-        path: 'notes/:id',
-        loadComponent: () => import('./features/notes/note-editor/note-editor').then((m) => m.NoteEditorPage),
-        data: { module: 'NT', tab: 'notes' },
-      },
     ],
   },
   { path: '**', redirectTo: 'login' },
