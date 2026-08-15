@@ -14,13 +14,28 @@
     "secure": false,
     "changeOrigin": true
   },
-  "/v1/batches": {
-    "target": "http://localhost:8005",
+  "/v1/notes": {
+    "target": "http://localhost:8007",
     "secure": false,
     "changeOrigin": true
   },
-  "/v1/finance": {
-    "target": "http://localhost:8006",
+  "/v1/folders": {
+    "target": "http://localhost:8007",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/v1/tags": {
+    "target": "http://localhost:8007",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/v1/templates": {
+    "target": "http://localhost:8007",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/v1/batches": {
+    "target": "http://localhost:8005",
     "secure": false,
     "changeOrigin": true
   }

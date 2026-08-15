@@ -62,67 +62,42 @@ export const routes: Routes = [
         data: { module: 'PM', tab: 'vault' },
       },
       {
-        path: 'finance/dashboard',
-        loadComponent: () => import('./features/finance/dashboard/dashboard').then((m) => m.FinanceDashboard),
-        data: { module: 'FN', tab: 'finance' },
+        path: 'notes',
+        loadComponent: () => import('./features/notes/notes-list/notes-list').then((m) => m.NotesList),
+        data: { module: 'NT', tab: 'notes' },
       },
       {
-        path: 'finance/transactions',
+        path: 'notes/search',
+        loadComponent: () => import('./features/notes/note-search/note-search').then((m) => m.NoteSearch),
+        data: { module: 'NT', tab: 'notes/search' },
+      },
+      {
+        path: 'notes/templates',
         loadComponent: () =>
-          import('./features/finance/transactions/transactions').then((m) => m.FinanceTransactions),
-        data: { module: 'FN', tab: 'finance' },
+          import('./features/notes/note-templates/note-templates').then((m) => m.NoteTemplates),
+        data: { module: 'NT', tab: 'notes/templates' },
       },
       {
-        path: 'finance/transactions/:id',
+        path: 'notes/attachments',
         loadComponent: () =>
-          import('./features/finance/transaction-detail/transaction-detail').then((m) => m.TransactionDetail),
-        data: { module: 'FN', tab: 'finance' },
+          import('./features/notes/notes-attachments/notes-attachments').then((m) => m.NotesAttachments),
+        data: { module: 'NT', tab: 'notes/attachments' },
       },
       {
-        path: 'finance/subscriptions',
+        path: 'notes/graph',
+        loadComponent: () => import('./features/notes/notes-graph/notes-graph').then((m) => m.NotesGraph),
+        data: { module: 'NT', tab: 'notes/graph' },
+      },
+      {
+        path: 'notes/settings',
         loadComponent: () =>
-          import('./features/finance/subscriptions/subscriptions').then((m) => m.FinanceSubscriptions),
-        data: { module: 'FN', tab: 'finance' },
+          import('./features/notes/notes-settings/notes-settings').then((m) => m.NotesSettings),
+        data: { module: 'NT', tab: 'notes/settings' },
       },
       {
-        path: 'finance/budgets',
-        loadComponent: () => import('./features/finance/budgets/budgets').then((m) => m.FinanceBudgets),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/analytics',
-        loadComponent: () => import('./features/finance/analytics/analytics').then((m) => m.FinanceAnalytics),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/import',
-        loadComponent: () => import('./features/finance/import/import').then((m) => m.FinanceImport),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/rules',
-        loadComponent: () => import('./features/finance/rules/rules').then((m) => m.FinanceRules),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/report',
-        loadComponent: () => import('./features/finance/report/report').then((m) => m.FinanceReport),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/accounts',
-        loadComponent: () => import('./features/finance/accounts/accounts').then((m) => m.FinanceAccounts),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/categories',
-        loadComponent: () => import('./features/finance/categories/categories').then((m) => m.FinanceCategories),
-        data: { module: 'FN', tab: 'finance' },
-      },
-      {
-        path: 'finance/merchants',
-        loadComponent: () => import('./features/finance/merchants/merchants').then((m) => m.FinanceMerchants),
-        data: { module: 'FN', tab: 'finance' },
+        path: 'notes/:id',
+        loadComponent: () => import('./features/notes/note-editor/note-editor').then((m) => m.NoteEditorPage),
+        data: { module: 'NT', tab: 'notes' },
       },
     ],
   },

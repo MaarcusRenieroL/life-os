@@ -1,0 +1,13 @@
+:host {
+  display: block;
+  height: 100%;
+  overflow-y: auto;
+}
+
+// [innerHTML]-rendered <mark> tags never get Angular's scoping attribute.
+::ng-deep mark {
+  background: color-mix(in oklch, var(--primary) 25%, transparent);
+  color: var(--primary);
+  border-radius: 2px;
+  padding: 0 1px;
+}

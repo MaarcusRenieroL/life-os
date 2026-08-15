@@ -21,10 +21,3 @@ jwt:
 
 internal:
   api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
-
-# vault doesn't use com.lifeos.common's EncryptionService (it has its own
-# master-password-derived encryption instead), but that bean is still
-# component-scanned in via VaultApplication's @ComponentScan and its
-# constructor requires this property to be resolvable at startup.
-encryption:
-  secret: ${ENCRYPTION_SECRET:wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
