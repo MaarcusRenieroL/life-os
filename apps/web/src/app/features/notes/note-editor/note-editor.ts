@@ -302,6 +302,16 @@ export class NoteEditorPage implements OnInit, OnDestroy {
     });
   }
 
+  // Fallback for anything that isn't an Enter keypress (Tab, clicking away):
+  // still commit whatever's typed instead of silently discarding it.
+  commitTagInput(): void {
+    const value = this.tagInput();
+    if (value.trim()) {
+      this.addTagByName(value);
+    }
+    this.addingTag.set(false);
+  }
+
   removeTag(tagId: string): void {
     const current = this.note();
     if (!current) return;
