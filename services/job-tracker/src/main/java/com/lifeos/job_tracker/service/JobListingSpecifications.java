@@ -7,6 +7,10 @@ import java.math.BigDecimal;
 import java.util.UUID;
 import org.springframework.data.jpa.domain.Specification;
 
+/**
+ * Spring Data JPA 4's {@code Specification.allOf(...)} rejects null elements, so an inactive filter
+ * returns {@link Specification#unrestricted()} rather than {@code null}.
+ */
 public final class JobListingSpecifications {
 
   private JobListingSpecifications() {}
@@ -17,7 +21,7 @@ public final class JobListingSpecifications {
 
   public static Specification<JobListing> textLike(String q) {
     if (q == null || q.isBlank()) {
-      return null;
+      return Specification.unrestricted();
     }
     String pattern = "%" + q.trim().toLowerCase() + "%";
     return (root, query, cb) ->
@@ -28,7 +32,7 @@ public final class JobListingSpecifications {
 
   public static Specification<JobListing> locationLike(String location) {
     if (location == null || location.isBlank()) {
-      return null;
+      return Specification.unrestricted();
     }
     return (root, query, cb) ->
         cb.like(cb.lower(root.get("location")), "%" + location.trim().toLowerCase() + "%");
@@ -36,29 +40,33 @@ public final class JobListingSpecifications {
 
   public static Specification<JobListing> salaryAtLeast(BigDecimal min) {
     if (min == null) {
-      return null;
+      return Specification.unrestricted();
     }
     return (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("salaryMax"), min);
   }
 
   public static Specification<JobListing> workModel(WorkModel workModel) {
-    return workModel == null ? null : (root, query, cb) -> cb.equal(root.get("workModel"), workModel);
+    return workModel == null
+        ? Specification.unrestricted()
+        : (root, query, cb) -> cb.equal(root.get("workModel"), workModel);
   }
 
   public static Specification<JobListing> seniority(SeniorityLevel level) {
-    return level == null ? null : (root, query, cb) -> cb.equal(root.get("seniorityLevel"), level);
+    return level == null
+        ? Specification.unrestricted()
+        : (root, query, cb) -> cb.equal(root.get("seniorityLevel"), level);
   }
 
   public static Specification<JobListing> source(String source) {
     if (source == null || source.isBlank()) {
-      return null;
+      return Specification.unrestricted();
     }
     return (root, query, cb) -> cb.equal(root.get("source"), source);
   }
 
   public static Specification<JobListing> minScore(Integer minScore) {
     return minScore == null
-        ? null
+        ? Specification.unrestricted()
         : (root, query, cb) -> cb.greaterThanOrEqualTo(root.get("fitScore"), minScore);
   }
 
