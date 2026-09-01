@@ -8,4 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface OfferRepository extends JpaRepository<Offer, UUID> {
 
   Optional<Offer> findByApplicationId(UUID applicationId);
+
+  java.util.List<Offer> findAllByApplicationIdIn(java.util.Collection<UUID> applicationIds);
 }
