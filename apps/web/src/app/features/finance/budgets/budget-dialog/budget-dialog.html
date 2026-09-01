@@ -1,0 +1,65 @@
+<p-dialog
+  [(visible)]="visible"
+  [header]="editing() ? 'Edit budget' : 'New budget'"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '26rem' }"
+  styleClass="font-mono"
+  (onShow)="onShow()"
+>
+  <form class="flex flex-col gap-3.5" [formGroup]="form" (ngSubmit)="submit()">
+    <div>
+      <label for="budgetCategory" class="mb-1.5 block text-[11px] text-foreground/55">CATEGORY</label>
+      <p-select
+        inputId="budgetCategory"
+        formControlName="categoryId"
+        [options]="categories()"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Select a category"
+        styleClass="w-full"
+        appendTo="body"
+      />
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label for="budgetAmount" class="mb-1.5 block text-[11px] text-foreground/55">CAP AMOUNT</label>
+        <p-inputnumber
+          inputId="budgetAmount"
+          formControlName="budgetAmount"
+          mode="currency"
+          currency="INR"
+          locale="en-IN"
+          [minFractionDigits]="0"
+          styleClass="w-full"
+          inputStyleClass="w-full"
+        />
+      </div>
+      <div>
+        <label for="budgetPeriod" class="mb-1.5 block text-[11px] text-foreground/55">PERIOD</label>
+        <p-select
+          inputId="budgetPeriod"
+          formControlName="period"
+          [options]="periodOptions"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+    </div>
+
+    <div>
+      <span class="mb-2.5 block text-[11px] text-foreground/55">
+        ALERT THRESHOLD - {{ form.controls.alertThreshold.value }}%
+      </span>
+      <p-slider formControlName="alertThreshold" [min]="0" [max]="100" />
+    </div>
+
+    <div class="mt-2 flex justify-end gap-2.5">
+      <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
+      <p-button type="submit" [label]="editing() ? 'Save changes' : 'Create budget'" />
+    </div>
+  </form>
+</p-dialog>

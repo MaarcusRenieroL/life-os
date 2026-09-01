@@ -1,0 +1,70 @@
+<main class="w-full px-4 py-9 font-mono text-foreground sm:px-11 sm:py-9 xl:px-11">
+  <div class="mb-6 flex items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Accounts</h1>
+      <p class="mt-1.5 text-[12.5px] text-foreground/55">
+        {{ accounts().length }} linked account{{ accounts().length === 1 ? '' : 's' }} —
+        {{ totalBalance() | currency: 'INR' : 'symbol' : '1.0-0' : 'en-IN' }} total
+      </p>
+    </div>
+    <button
+      type="button"
+      (click)="openCreate()"
+      class="rounded-[0.45rem] bg-primary px-[18px] py-2.5 text-[12.5px] font-semibold text-primary-foreground"
+    >
+      + Add account
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="mb-4 rounded-[0.45rem] border border-destructive/35 bg-destructive/10 px-4 py-3 text-[12.5px] text-destructive">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="text-[12.5px] text-foreground/50">Loading accounts…</p>
+  } @else if (accounts().length === 0) {
+    <div class="rounded-[0.5rem] border border-border bg-card p-8 text-center text-[12.5px] text-foreground/45">
+      No accounts yet — add one to start tracking balances and importing statements.
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      @for (a of accounts(); track a.id) {
+        <div class="rounded-[0.5rem] border border-border bg-card p-5">
+          <div class="mb-3.5 flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-2 text-[13.5px] font-semibold">
+                {{ accountLabel(a) }}
+                @if (a.isPrimary) {
+                  <span class="rounded-2xl bg-primary/15 px-2 py-0.5 text-[10px] text-primary">primary</span>
+                }
+              </div>
+              <div class="mt-0.5 text-[11px] text-foreground/45">
+                {{ accountSubLabel(a) }} — {{ typeLabel(a.accountType) }}
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-[17px] font-semibold">{{ a.currentBalance | currency: 'INR' : 'symbol' : '1.0-0' : 'en-IN' }}</div>
+              <div class="text-[10.5px] text-foreground/40">{{ a.currencyCode }}</div>
+            </div>
+          </div>
+          <div class="flex justify-end gap-3.5 border-t border-border/70 pt-3 text-[11px]">
+            <button type="button" class="cursor-pointer text-primary" (click)="openReconcile(a)">Reconcile</button>
+            <button type="button" class="cursor-pointer text-primary" (click)="openEdit(a)">Edit</button>
+            <button type="button" class="cursor-pointer text-destructive" (click)="deleteAccount(a)">Delete</button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</main>
+
+<app-account-dialog
+  [(visible)]="dialogVisible"
+  [editing]="editingAccount()"
+  (created)="createAccount($event)"
+  (updated)="updateAccount($event)"
+/>
+
+<app-reconcile-dialog [(visible)]="reconcileDialogVisible" [account]="reconcileTarget()" (reconciled)="reconcile($event)" />

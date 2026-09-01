@@ -1,0 +1,67 @@
+<p-dialog
+  [(visible)]="visible"
+  [header]="editing() ? 'Edit rule' : 'New rule'"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '26rem' }"
+  styleClass="font-mono"
+  (onShow)="onShow()"
+>
+  <form class="flex flex-col gap-3.5" [formGroup]="form" (ngSubmit)="submit()">
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label for="ruleMatchField" class="mb-1.5 block text-[11px] text-foreground/55">MATCH FIELD</label>
+        <p-select
+          inputId="ruleMatchField"
+          formControlName="matchField"
+          [options]="matchFieldOptions"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+      <div>
+        <label for="ruleMatchType" class="mb-1.5 block text-[11px] text-foreground/55">MATCH TYPE</label>
+        <p-select
+          inputId="ruleMatchType"
+          formControlName="matchType"
+          [options]="matchTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label for="ruleMatchValue" class="mb-1.5 block text-[11px] text-foreground/55">PATTERN</label>
+      <input pInputText id="ruleMatchValue" formControlName="matchValue" placeholder="e.g. SWIGGY" class="w-full" />
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label for="ruleCategory" class="mb-1.5 block text-[11px] text-foreground/55">CATEGORY</label>
+        <p-select
+          inputId="ruleCategory"
+          formControlName="categoryId"
+          [options]="categories()"
+          optionLabel="name"
+          optionValue="id"
+          styleClass="w-full"
+          appendTo="body"
+        />
+      </div>
+      <div>
+        <label for="rulePriority" class="mb-1.5 block text-[11px] text-foreground/55">PRIORITY</label>
+        <p-inputnumber inputId="rulePriority" formControlName="priority" [min]="1" styleClass="w-full" inputStyleClass="w-full" />
+      </div>
+    </div>
+
+    <div class="mt-2 flex justify-end gap-2.5">
+      <p-button type="button" label="Cancel" severity="secondary" (onClick)="cancel()" />
+      <p-button type="submit" [label]="editing() ? 'Save changes' : 'Create rule'" />
+    </div>
+  </form>
+</p-dialog>
