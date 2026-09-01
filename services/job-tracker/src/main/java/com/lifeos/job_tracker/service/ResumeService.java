@@ -10,10 +10,10 @@ import com.lifeos.job_tracker.exception.InvalidRequestException;
 import com.lifeos.job_tracker.exception.ResourceNotFoundException;
 import com.lifeos.job_tracker.integration.AiAssistant;
 import com.lifeos.job_tracker.integration.PdfTextExtractor;
+import com.lifeos.job_tracker.integration.ResumePdfWriter;
 import com.lifeos.job_tracker.integration.ResumeStorageService;
 import com.lifeos.job_tracker.repository.JobListingRepository;
 import com.lifeos.job_tracker.repository.ResumeRepository;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,6 +34,7 @@ public class ResumeService {
   private final JobListingRepository jobListingRepository;
   private final ResumeStorageService storage;
   private final PdfTextExtractor pdfTextExtractor;
+  private final ResumePdfWriter pdfWriter;
   private final AiAssistant ai;
   private final SkillService skillService;
   private final ObjectMapper objectMapper;
@@ -116,7 +117,7 @@ public class ResumeService {
   }
 
   @Transactional
-  public TailoredResume tailor(UUID userId, UUID resumeId, UUID jobListingId) {
+  public TailoredResume tailor(UUID userId, UUID resumeId, UUID jobListingId, String instruction) {
     Resume base = get(userId, resumeId);
     if (base.getRawText() == null || base.getRawText().isBlank()) {
       throw new InvalidRequestException("Base resume has no extracted text to tailor from");
@@ -130,21 +131,23 @@ public class ResumeService {
       throw new InvalidRequestException("Job listing has no description to tailor against");
     }
 
-    String markdown = ai.generateTailoredResume(base.getRawText(), job.getJobDescriptionText());
-    byte[] content = markdown.getBytes(StandardCharsets.UTF_8);
+    String markdown =
+        ai.generateTailoredResume(base.getRawText(), job.getJobDescriptionText(), instruction);
+    byte[] pdf = pdfWriter.fromMarkdown(markdown);
 
-    String key = storage.storeBytes(userId, content, "md");
+    String key = storage.storeBytes(userId, pdf, "pdf");
     Resume tailored =
         resumeRepository.save(
             Resume.builder()
                 .userId(userId)
                 .label("Tailored for " + job.getTitle() + " @ " + job.getCompany())
                 .fileKey(key)
-                .fileName("resume-" + jobListingId + ".md")
-                .fileSize(content.length)
-                .contentType("text/markdown")
+                .fileName("resume-" + jobListingId + ".pdf")
+                .fileSize(pdf.length)
+                .contentType("application/pdf")
                 .extractionStatus(ProcessingStatus.COMPLETED)
                 .rawText(markdown)
+                .sourceInstruction(instruction)
                 .base(false)
                 .build());
 

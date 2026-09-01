@@ -20,6 +20,7 @@ import com.lifeos.job_tracker.repository.ApplicationRepository;
 import com.lifeos.job_tracker.repository.ApplicationStatusHistoryRepository;
 import com.lifeos.job_tracker.repository.InterviewRoundRepository;
 import com.lifeos.job_tracker.repository.JobListingRepository;
+import com.lifeos.job_tracker.repository.EmailMessageRepository;
 import com.lifeos.job_tracker.repository.OfferRepository;
 import com.lifeos.job_tracker.repository.ReferralRepository;
 import com.lifeos.job_tracker.repository.ResumeRepository;
@@ -43,6 +44,7 @@ class ApplicationServiceTest {
   @Mock private InterviewRoundRepository interviewRoundRepository;
   @Mock private ReferralRepository referralRepository;
   @Mock private OfferRepository offerRepository;
+  @Mock private EmailMessageRepository emailMessageRepository;
   @Mock private JobEventProducer eventProducer;
 
   private ApplicationService applicationService;
@@ -61,6 +63,7 @@ class ApplicationServiceTest {
             interviewRoundRepository,
             referralRepository,
             offerRepository,
+            emailMessageRepository,
             eventProducer,
             new JobTrackerProperties(new JobTrackerProperties.Storage("/tmp"), new JobTrackerProperties.FollowUp(7)));
   }

@@ -1,6 +1,7 @@
 package com.lifeos.job_tracker.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.lifeos.job_tracker.domains.record.EmailClassification;
 import com.lifeos.job_tracker.domains.record.ParsedJobDescription;
 import com.lifeos.job_tracker.domains.record.ParsedResume;
 import java.util.ArrayList;
@@ -59,13 +60,35 @@ public class AiAssistant {
         ParsedJobDescription.class);
   }
 
-  public String generateTailoredResume(String baseResumeText, String jobDescription) {
+  public EmailClassification classifyEmail(String fromAddress, String subject, String body) {
+    return claude.completeJson(
+        "You classify job-search emails. Reply with ONLY a JSON object, no prose.",
+        """
+        Classify this email. Shape:
+        {
+          "category": one of RECRUITER_OUTREACH|INTERVIEW_INVITE|REJECTION|CONFIRMATION|OFFER|OTHER,
+          "company": string, "recruiterName": string, "jobTitle": string, "jobUrl": string,
+          "interviewDate": ISO-8601 instant or null, "meetingLink": string, "salary": string
+        }
+        Omit fields you cannot determine.
+
+        FROM: %s
+        SUBJECT: %s
+        BODY:
+        %s
+        """
+            .formatted(fromAddress, subject, body),
+        EmailClassification.class);
+  }
+
+  public String generateTailoredResume(String baseResumeText, String jobDescription, String instruction) {
     return claude.complete(
         "You are an expert resume writer. Output the tailored resume as clean Markdown only.",
         """
         Rewrite the base resume to target the job description: reorder experience by
         relevance, weave in the job's keywords truthfully, and calibrate tone to the
         seniority. Do not invent experience.
+        %s
 
         === BASE RESUME ===
         %s
@@ -73,7 +96,12 @@ public class AiAssistant {
         === TARGET JOB ===
         %s
         """
-            .formatted(baseResumeText, jobDescription));
+            .formatted(
+                instruction == null || instruction.isBlank()
+                    ? ""
+                    : "Additional instruction from the candidate: " + instruction,
+                baseResumeText,
+                jobDescription));
   }
 
   public String generateColdEmail(

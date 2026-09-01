@@ -79,7 +79,8 @@ public class ResumeController extends AuthenticatedController {
       @PathVariable UUID resumeId,
       @Valid @RequestBody TailorResumeRequest request) {
     TailoredResume result =
-        resumeService.tailor(userId(authentication), resumeId, request.jobListingId());
+        resumeService.tailor(
+            userId(authentication), resumeId, request.jobListingId(), request.instruction());
     Map<String, Object> body =
         Map.of("resume", ResumeResponse.from(result.resume()), "markdown", result.markdown());
     return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(body, "Tailored resume generated"));
