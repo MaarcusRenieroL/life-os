@@ -1,0 +1,28 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <h1 class="text-[22px] font-semibold tracking-tight">Application Pipeline</h1>
+  <p class="mt-1 text-[12.5px] text-foreground/55">{{ applications().length }} applications</p>
+
+  @if (loading()) {
+    <p class="mt-4 text-[12.5px] text-foreground/55">Loading…</p>
+  } @else {
+    <div class="mt-5 flex gap-3 overflow-x-auto pb-3">
+      @for (status of columns; track status) {
+        <div class="w-[220px] shrink-0">
+          <h2 class="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-foreground/55">
+            {{ status }} ({{ column(status).length }})
+          </h2>
+          <ul class="flex flex-col gap-2">
+            @for (application of column(status); track application.id) {
+              <li class="rounded-[0.5rem] border border-border bg-card px-3 py-2">
+                <a [routerLink]="['/applications', application.id]" class="text-[12.5px] font-semibold hover:underline">
+                  {{ application.jobListingId.slice(0, 8) }}
+                </a>
+                <p class="mt-1 text-[11px] text-foreground/45">{{ daysInStatus(application) }}d in status</p>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </div>
+  }
+</main>
