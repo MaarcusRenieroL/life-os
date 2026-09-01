@@ -15,8 +15,11 @@
             @for (application of column(status); track application.id) {
               <li class="rounded-[0.5rem] border border-border bg-card px-3 py-2">
                 <a [routerLink]="['/applications', application.id]" class="text-[12.5px] font-semibold hover:underline">
-                  {{ application.jobListingId.slice(0, 8) }}
+                  {{ application.company || 'Untitled' }}
                 </a>
+                @if (application.jobTitle) {
+                  <p class="text-[11px] text-foreground/55">{{ application.jobTitle }}</p>
+                }
                 <p class="mt-1 text-[11px] text-foreground/45">{{ daysInStatus(application) }}d in status</p>
               </li>
             }

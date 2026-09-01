@@ -60,10 +60,7 @@ public class ApplicationController extends AuthenticatedController {
   public ResponseEntity<ApiResponse<List<ApplicationResponse>>> list(
       Authentication authentication, @RequestParam(required = false) String status) {
     ApplicationStatus parsed = status == null ? null : ApplicationStatus.fromValue(status);
-    List<ApplicationResponse> body =
-        applicationService.list(userId(authentication), parsed).stream()
-            .map(ApplicationResponse::from)
-            .toList();
+    List<ApplicationResponse> body = applicationService.listWithJobs(userId(authentication), parsed);
     return ResponseEntity.ok(ApiResponse.success(body, "Applications fetched"));
   }
 
