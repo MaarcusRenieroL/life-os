@@ -111,6 +111,12 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESUME_STORAGE_DIR: /data/resumes
+    volumes:
+      - job_tracker_resumes:/data/resumes
     ports:
       - "8003:8003"
     depends_on:
@@ -215,3 +221,4 @@ services:
 
 volumes:
   postgres_data:
+  job_tracker_resumes:
