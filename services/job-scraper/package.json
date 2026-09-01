@@ -1,0 +1,23 @@
+{
+  "name": "job-scraper",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Life OS job-scraper microservice - fetches and normalises job postings for the job-tracker service",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "node-cron": "^3.0.3"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.49.1"
+  }
+}
