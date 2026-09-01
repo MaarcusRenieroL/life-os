@@ -1,0 +1,148 @@
+package com.lifeos.job_tracker.integration;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.lifeos.job_tracker.domains.record.ParsedJobDescription;
+import com.lifeos.job_tracker.domains.record.ParsedResume;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+/** Domain-shaped prompts on top of {@link ClaudeApiClient}. */
+@Component
+@RequiredArgsConstructor
+public class AiAssistant {
+
+  private final ClaudeApiClient claude;
+
+  public boolean available() {
+    return claude.isConfigured();
+  }
+
+  public ParsedResume parseResume(String resumeText) {
+    return claude.completeJson(
+        "You are a resume parser. Reply with ONLY a JSON object, no prose.",
+        """
+        Extract structured data from the resume below. Use this exact shape:
+        {
+          "name": string, "email": string, "phone": string,
+          "experience": [{"title","company","startDate","endDate","description"}],
+          "education": [{"degree","school","field","graduationYear"}],
+          "skills": [{"name","category","proficiency","yearsOfExperience","confidence"}],
+          "certifications": [string], "achievements": [string]
+        }
+        category is one of LANGUAGE, FRAMEWORK, PLATFORM, DATABASE, TOOL, SOFT, OTHER.
+        proficiency is one of BEGINNER, INTERMEDIATE, ADVANCED, EXPERT.
+        confidence is 0..1. Omit unknown scalar fields rather than guessing.
+
+        RESUME:
+        """
+            + resumeText,
+        ParsedResume.class);
+  }
+
+  public ParsedJobDescription parseJobDescription(String jobDescription) {
+    return claude.completeJson(
+        "You parse job descriptions. Reply with ONLY a JSON object, no prose.",
+        """
+        Extract this shape from the job description:
+        {
+          "requiredSkills": [string], "niceToHaveSkills": [string],
+          "seniorityLevel": one of INTERN|JUNIOR|MID|SENIOR|STAFF|LEAD|PRINCIPAL,
+          "workModel": one of ONSITE|HYBRID|REMOTE,
+          "industry": string, "techStack": [string]
+        }
+
+        JOB DESCRIPTION:
+        """
+            + jobDescription,
+        ParsedJobDescription.class);
+  }
+
+  public String generateTailoredResume(String baseResumeText, String jobDescription) {
+    return claude.complete(
+        "You are an expert resume writer. Output the tailored resume as clean Markdown only.",
+        """
+        Rewrite the base resume to target the job description: reorder experience by
+        relevance, weave in the job's keywords truthfully, and calibrate tone to the
+        seniority. Do not invent experience.
+
+        === BASE RESUME ===
+        %s
+
+        === TARGET JOB ===
+        %s
+        """
+            .formatted(baseResumeText, jobDescription));
+  }
+
+  public String generateColdEmail(
+      String recruiterName,
+      String jobTitle,
+      String company,
+      List<String> matchingSkills,
+      String jobHighlights) {
+    return claude.complete(
+        "You write concise, professional recruiter outreach emails. Output the email body only.",
+        """
+        Write a short cold email (120 words max) to %s about the %s role at %s.
+        Mention 2-3 of these matching skills: %s.
+        Reference this aspect of the role: %s.
+        Sign off as "[Your name]".
+        """
+            .formatted(
+                recruiterName == null ? "the hiring team" : recruiterName,
+                jobTitle,
+                company,
+                String.join(", ", matchingSkills),
+                jobHighlights == null ? "the team's work" : jobHighlights));
+  }
+
+  public String generateLinkedInMessage(
+      String personName, String jobTitle, String company, List<String> matchingSkills) {
+    return claude.complete(
+        "You write friendly, brief LinkedIn outreach messages (60-80 words). Output the message only.",
+        """
+        Write a LinkedIn message to %s about the %s role at %s.
+        Mention these skills naturally: %s.
+        """
+            .formatted(
+                personName == null ? "the hiring manager" : personName,
+                jobTitle,
+                company,
+                String.join(", ", matchingSkills)));
+  }
+
+  public String generateReferralMessage(
+      String contactName, String jobTitle, String company, List<String> matchingSkills) {
+    return claude.complete(
+        "You write warm, casual referral-request messages to people the sender already knows."
+            + " Output the message only.",
+        """
+        Write a short message to %s asking if they'd be open to referring me for the
+        %s role at %s. Mention my background in %s. Keep it low-pressure.
+        """
+            .formatted(
+                contactName, jobTitle, company, String.join(", ", matchingSkills)));
+  }
+
+  public List<String> generateInterviewTopics(String jobDescription, String interviewType) {
+    JsonNode node =
+        claude.completeJson(
+            "You prepare interview topic checklists. Reply with ONLY a JSON array of strings.",
+            """
+            List 6-10 concrete topics to prepare for a %s interview, given this job
+            description. Return a JSON array of short strings.
+
+            JOB DESCRIPTION:
+            %s
+            """
+                .formatted(interviewType, jobDescription));
+
+    List<String> topics = new ArrayList<>();
+    if (node.isArray()) {
+      node.forEach(element -> topics.add(element.asText()));
+    }
+    return topics;
+  }
+}
