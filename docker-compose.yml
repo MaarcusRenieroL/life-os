@@ -115,6 +115,7 @@ services:
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESUME_STORAGE_DIR: /data/resumes
+      SCRAPER_BASE_URL: http://job-scraper:8010
     volumes:
       - job_tracker_resumes:/data/resumes
     ports:
@@ -123,6 +124,21 @@ services:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_started
+
+  job-scraper:
+    build:
+      context: .
+      dockerfile: services/job-scraper/Dockerfile
+    environment:
+      PORT: 8010
+      JOB_TRACKER_BASE_URL: http://job-tracker:8003
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      USE_PLAYWRIGHT: "false"
+    ports:
+      - "8010:8010"
+    depends_on:
+      job-tracker:
         condition: service_started
 
   # Module tile enable/disable settings only - the notes module itself now

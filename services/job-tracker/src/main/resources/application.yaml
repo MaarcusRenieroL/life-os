@@ -45,3 +45,5 @@ job-tracker:
     resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}
   follow-up:
     default-lead-days: 7
+  scraper:
+    base-url: ${SCRAPER_BASE_URL:http://localhost:8010}
