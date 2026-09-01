@@ -36,6 +36,20 @@ public class ResumeStorageService {
     return key;
   }
 
+  public String storeBytes(UUID userId, byte[] content, String extension) {
+    String key = userId + "/" + UUID.randomUUID() + "." + extension;
+    Path target = root().resolve(key);
+
+    try {
+      Files.createDirectories(target.getParent());
+      Files.write(target, content);
+    } catch (IOException exception) {
+      throw new UncheckedIOException("Failed to store generated resume", exception);
+    }
+
+    return key;
+  }
+
   public byte[] read(String fileKey) {
     try {
       return Files.readAllBytes(root().resolve(fileKey));
