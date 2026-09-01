@@ -31,6 +31,7 @@ import com.lifeos.job_tracker.repository.ResumeRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -56,6 +57,23 @@ public class ApplicationService {
     return status == null
         ? applicationRepository.findAllByUserIdOrderByCreatedAtDesc(userId)
         : applicationRepository.findAllByUserIdAndStatusOrderByApplicationDateDesc(userId, status);
+  }
+
+  /** Applications paired with their job listing so callers can render company/title without N+1. */
+  @Transactional(readOnly = true)
+  public List<ApplicationResponse> listWithJobs(UUID userId, ApplicationStatus status) {
+    return withJobs(list(userId, status));
+  }
+
+  private List<ApplicationResponse> withJobs(List<Application> applications) {
+    Map<UUID, JobListing> jobs =
+        jobListingRepository
+            .findAllById(applications.stream().map(Application::getJobListingId).toList())
+            .stream()
+            .collect(java.util.stream.Collectors.toMap(JobListing::getId, job -> job));
+    return applications.stream()
+        .map(application -> ApplicationResponse.from(application, jobs.get(application.getJobListingId())))
+        .toList();
   }
 
   @Transactional(readOnly = true)

@@ -62,6 +62,8 @@ export interface Application {
   id: string;
   jobListingId: string;
   resumeId: string | null;
+  company: string | null;
+  jobTitle: string | null;
   status: ApplicationStatus;
   applicationMethod: string | null;
   applicationDate: string | null;
