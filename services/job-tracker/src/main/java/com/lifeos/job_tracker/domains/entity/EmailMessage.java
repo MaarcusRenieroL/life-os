@@ -1,6 +1,7 @@
 package com.lifeos.job_tracker.domains.entity;
 
-import com.lifeos.job_tracker.domains.enums.ProcessingStatus;
+import com.lifeos.job_tracker.domains.enums.EmailCategory;
+import com.lifeos.job_tracker.domains.enums.EmailDirection;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,7 +21,6 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
 @Data
@@ -29,8 +29,8 @@ import org.hibernate.type.SqlTypes;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
-@Table(name = "resumes", schema = "job_tracker_schema")
-public class Resume {
+@Table(name = "email_messages", schema = "job_tracker_schema")
+public class EmailMessage {
 
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
@@ -39,50 +39,39 @@ public class Resume {
   @Column(name = "user_id")
   UUID userId;
 
-  String label;
-
-  @Column(name = "file_key")
-  String fileKey;
-
-  @Column(name = "file_name")
-  String fileName;
-
-  @Column(name = "file_size")
-  long fileSize;
-
-  @Column(name = "content_type")
-  String contentType;
+  @Column(name = "application_id")
+  UUID applicationId;
 
   @Enumerated(EnumType.STRING)
-  @Column(name = "extraction_status")
-  ProcessingStatus extractionStatus;
+  EmailDirection direction;
 
-  @Column(name = "extraction_error")
-  String extractionError;
+  @Column(name = "external_message_id")
+  String externalMessageId;
 
-  @Column(name = "raw_text")
-  String rawText;
+  @Column(name = "thread_id")
+  String threadId;
 
-  /** Claude's structured extraction: contact block, work history, education, skills. */
+  @Column(name = "from_address")
+  String fromAddress;
+
+  @Column(name = "to_address")
+  String toAddress;
+
+  String subject;
+
+  String body;
+
+  @Enumerated(EnumType.STRING)
+  EmailCategory category;
+
+  @Column(name = "received_at")
+  Instant receivedAt;
+
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "parsed_json")
   Map<String, Object> parsedJson;
 
-  @Column(name = "is_base")
-  boolean base;
-
-  @Column(name = "tailored_for_application_id")
-  UUID tailoredForApplicationId;
-
-  /** The free-text instruction used when regenerating a tailored variant ("make it more technical"). */
-  @Column(name = "source_instruction")
-  String sourceInstruction;
-
   @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;
-
-  @UpdateTimestamp
-  @Column(name = "updated_at")
-  Instant updatedAt;
 }

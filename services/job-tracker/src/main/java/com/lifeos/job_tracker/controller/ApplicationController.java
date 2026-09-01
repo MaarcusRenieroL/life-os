@@ -2,6 +2,7 @@ package com.lifeos.job_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.job_tracker.domains.dto.request.CreateApplicationRequest;
+import com.lifeos.job_tracker.domains.dto.request.CreateInterviewPrepRequest;
 import com.lifeos.job_tracker.domains.dto.request.CreateInterviewRoundRequest;
 import com.lifeos.job_tracker.domains.dto.request.CreateReferralRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateApplicationRequest;
@@ -10,13 +11,17 @@ import com.lifeos.job_tracker.domains.dto.request.UpdateInterviewRoundRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateReferralRequest;
 import com.lifeos.job_tracker.domains.dto.response.ApplicationDetailResponse;
 import com.lifeos.job_tracker.domains.dto.response.ApplicationResponse;
+import com.lifeos.job_tracker.domains.dto.response.InterviewPrepResponse;
 import com.lifeos.job_tracker.domains.dto.response.InterviewRoundResponse;
+import com.lifeos.job_tracker.domains.dto.response.OutreachAttemptResponse;
 import com.lifeos.job_tracker.domains.dto.response.ReferralResponse;
 import com.lifeos.job_tracker.domains.dto.response.ReferralSuggestionResponse;
 import com.lifeos.job_tracker.domains.enums.ApplicationStatus;
 import com.lifeos.job_tracker.service.ApplicationService;
 import com.lifeos.job_tracker.service.ContactService;
+import com.lifeos.job_tracker.service.InterviewPrepService;
 import com.lifeos.job_tracker.service.InterviewService;
+import com.lifeos.job_tracker.service.OutreachService;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -41,7 +46,9 @@ public class ApplicationController extends AuthenticatedController {
 
   private final ApplicationService applicationService;
   private final InterviewService interviewService;
+  private final InterviewPrepService interviewPrepService;
   private final ContactService contactService;
+  private final OutreachService outreachService;
 
   @GetMapping
   public ResponseEntity<ApiResponse<List<ApplicationResponse>>> list(
@@ -177,5 +184,81 @@ public class ApplicationController extends AuthenticatedController {
         ReferralResponse.from(
             contactService.updateReferral(userId(authentication), applicationId, referralId, request));
     return ResponseEntity.ok(ApiResponse.success(body, "Referral updated"));
+  }
+
+  // --- multi-channel outreach ------------------------------------------
+
+  @GetMapping("/{applicationId}/outreach")
+  public ResponseEntity<ApiResponse<List<OutreachAttemptResponse>>> outreach(
+      Authentication authentication, @PathVariable UUID applicationId) {
+    List<OutreachAttemptResponse> body =
+        outreachService.list(userId(authentication), applicationId).stream()
+            .map(OutreachAttemptResponse::from)
+            .toList();
+    return ResponseEntity.ok(ApiResponse.success(body, "Outreach fetched"));
+  }
+
+  @PostMapping("/{applicationId}/outreach/plan")
+  public ResponseEntity<ApiResponse<List<OutreachAttemptResponse>>> planOutreach(
+      Authentication authentication, @PathVariable UUID applicationId) {
+    List<OutreachAttemptResponse> body =
+        outreachService.planOutreach(userId(authentication), applicationId).stream()
+            .map(OutreachAttemptResponse::from)
+            .toList();
+    return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(body, "Outreach planned"));
+  }
+
+  @PostMapping("/{applicationId}/outreach/{attemptId}/response")
+  public ResponseEntity<ApiResponse<OutreachAttemptResponse>> markOutreachResponse(
+      Authentication authentication,
+      @PathVariable UUID applicationId,
+      @PathVariable UUID attemptId,
+      @RequestParam(required = false) Boolean opened,
+      @RequestParam(required = false) Boolean clicked,
+      @RequestParam(required = false) Boolean replied) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            OutreachAttemptResponse.from(
+                outreachService.markResponse(userId(authentication), attemptId, opened, clicked, replied)),
+            "Outreach updated"));
+  }
+
+  // --- interview prep checklist ---------------------------------------
+
+  @GetMapping("/{applicationId}/interviews/{roundId}/prep")
+  public ResponseEntity<ApiResponse<List<InterviewPrepResponse>>> prep(
+      Authentication authentication, @PathVariable UUID applicationId, @PathVariable UUID roundId) {
+    List<InterviewPrepResponse> body =
+        interviewPrepService.list(userId(authentication), applicationId, roundId).stream()
+            .map(InterviewPrepResponse::from)
+            .toList();
+    return ResponseEntity.ok(ApiResponse.success(body, "Prep checklist fetched"));
+  }
+
+  @PostMapping("/{applicationId}/interviews/{roundId}/prep")
+  public ResponseEntity<ApiResponse<InterviewPrepResponse>> addPrep(
+      Authentication authentication,
+      @PathVariable UUID applicationId,
+      @PathVariable UUID roundId,
+      @Valid @RequestBody CreateInterviewPrepRequest request) {
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(
+            ApiResponse.success(
+                InterviewPrepResponse.from(
+                    interviewPrepService.addItem(userId(authentication), applicationId, roundId, request)),
+                "Prep item added"));
+  }
+
+  @PostMapping("/{applicationId}/interviews/{roundId}/prep/{prepId}/toggle")
+  public ResponseEntity<ApiResponse<InterviewPrepResponse>> togglePrep(
+      Authentication authentication,
+      @PathVariable UUID applicationId,
+      @PathVariable UUID roundId,
+      @PathVariable UUID prepId) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            InterviewPrepResponse.from(
+                interviewPrepService.toggle(userId(authentication), applicationId, roundId, prepId)),
+            "Prep item toggled"));
   }
 }
