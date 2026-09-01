@@ -11,4 +11,6 @@ public interface InterviewRoundRepository extends JpaRepository<InterviewRound, 
   List<InterviewRound> findAllByApplicationIdOrderByScheduledDateAsc(UUID applicationId);
 
   Optional<InterviewRound> findByIdAndApplicationId(UUID id, UUID applicationId);
+
+  List<InterviewRound> findAllByApplicationIdIn(java.util.Collection<UUID> applicationIds);
 }

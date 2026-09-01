@@ -9,10 +9,12 @@ import com.lifeos.job_tracker.domains.dto.request.UpdateApplicationRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateApplicationStatusRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateInterviewRoundRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateReferralRequest;
+import com.lifeos.job_tracker.domains.dto.request.UpsertOfferRequest;
 import com.lifeos.job_tracker.domains.dto.response.ApplicationDetailResponse;
 import com.lifeos.job_tracker.domains.dto.response.ApplicationResponse;
 import com.lifeos.job_tracker.domains.dto.response.InterviewPrepResponse;
 import com.lifeos.job_tracker.domains.dto.response.InterviewRoundResponse;
+import com.lifeos.job_tracker.domains.dto.response.OfferResponse;
 import com.lifeos.job_tracker.domains.dto.response.OutreachAttemptResponse;
 import com.lifeos.job_tracker.domains.dto.response.ReferralResponse;
 import com.lifeos.job_tracker.domains.dto.response.ReferralSuggestionResponse;
@@ -21,6 +23,7 @@ import com.lifeos.job_tracker.service.ApplicationService;
 import com.lifeos.job_tracker.service.ContactService;
 import com.lifeos.job_tracker.service.InterviewPrepService;
 import com.lifeos.job_tracker.service.InterviewService;
+import com.lifeos.job_tracker.service.OfferService;
 import com.lifeos.job_tracker.service.OutreachService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -34,6 +37,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -49,6 +53,7 @@ public class ApplicationController extends AuthenticatedController {
   private final InterviewPrepService interviewPrepService;
   private final ContactService contactService;
   private final OutreachService outreachService;
+  private final OfferService offerService;
 
   @GetMapping
   public ResponseEntity<ApiResponse<List<ApplicationResponse>>> list(
@@ -260,5 +265,33 @@ public class ApplicationController extends AuthenticatedController {
             InterviewPrepResponse.from(
                 interviewPrepService.toggle(userId(authentication), applicationId, roundId, prepId)),
             "Prep item toggled"));
+  }
+
+  // --- offer ------------------------------------------------------------
+
+  @GetMapping("/{applicationId}/offer")
+  public ResponseEntity<ApiResponse<OfferResponse>> getOffer(
+      Authentication authentication, @PathVariable UUID applicationId) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            OfferResponse.from(offerService.get(userId(authentication), applicationId)), "Offer fetched"));
+  }
+
+  @PutMapping("/{applicationId}/offer")
+  public ResponseEntity<ApiResponse<OfferResponse>> upsertOffer(
+      Authentication authentication,
+      @PathVariable UUID applicationId,
+      @RequestBody UpsertOfferRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            OfferResponse.from(offerService.upsert(userId(authentication), applicationId, request)),
+            "Offer saved"));
+  }
+
+  @DeleteMapping("/{applicationId}/offer")
+  public ResponseEntity<ApiResponse<Void>> deleteOffer(
+      Authentication authentication, @PathVariable UUID applicationId) {
+    offerService.delete(userId(authentication), applicationId);
+    return ResponseEntity.ok(ApiResponse.success(null, "Offer removed"));
   }
 }
