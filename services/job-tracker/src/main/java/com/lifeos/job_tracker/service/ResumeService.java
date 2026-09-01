@@ -118,6 +118,10 @@ public class ResumeService {
 
   @Transactional
   public TailoredResume tailor(UUID userId, UUID resumeId, UUID jobListingId, String instruction) {
+    if (!ai.available()) {
+      throw new InvalidRequestException(
+          "Resume tailoring needs Claude; set ANTHROPIC_API_KEY to enable it");
+    }
     Resume base = get(userId, resumeId);
     if (base.getRawText() == null || base.getRawText().isBlank()) {
       throw new InvalidRequestException("Base resume has no extracted text to tailor from");

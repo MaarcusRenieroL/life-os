@@ -330,10 +330,12 @@ public class EmailIngestionService {
       return null;
     }
     String host = email.substring(email.indexOf('@') + 1).toLowerCase(Locale.ROOT);
-    host = host.replaceAll("\\.(com|io|co|net|org|ai|dev)(\\.[a-z]{2})?$", "");
+    host = host.replaceAll("\\.(com|io|co|net|org|ai|dev|app|xyz|example|test|invalid|localhost)(\\.[a-z]{2})?$", "");
     int dot = host.lastIndexOf('.');
     String label = dot >= 0 ? host.substring(dot + 1) : host;
-    if (label.isBlank() || List.of("gmail", "outlook", "yahoo", "hotmail", "icloud", "proton").contains(label)) {
+    if (label.isBlank()
+        || List.of("gmail", "outlook", "yahoo", "hotmail", "icloud", "proton", "example", "test")
+            .contains(label)) {
       return null;
     }
     return Character.toUpperCase(label.charAt(0)) + label.substring(1);

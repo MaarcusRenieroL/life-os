@@ -99,17 +99,21 @@ public class AnalyticsService {
             .filter(a -> !roundsByApp.getOrDefault(a.getId(), List.of()).isEmpty() || isPastInterview(a.getStatus()))
             .count();
     long reachedOffer =
-        applications.stream()
-            .filter(a -> a.getStatus() == ApplicationStatus.OFFER)
-            .count()
-            + offers.size();
+        Math.min(
+            total,
+            applications.stream()
+                    .filter(
+                        a ->
+                            a.getStatus() == ApplicationStatus.OFFER
+                                || offers.stream().anyMatch(o -> o.getApplicationId().equals(a.getId())))
+                    .count());
     Map<String, Object> map = new LinkedHashMap<>();
     map.put("totalApplications", total);
     map.put("reachedInterview", reachedInterview);
-    map.put("reachedOffer", Math.min(reachedOffer, total));
+    map.put("reachedOffer", reachedOffer);
     map.put("applicationToInterviewRate", pct(reachedInterview, total));
-    map.put("interviewToOfferRate", pct(Math.min(reachedOffer, total), reachedInterview));
-    map.put("overallOfferRate", pct(Math.min(reachedOffer, total), total));
+    map.put("interviewToOfferRate", Math.min(100.0, pct(reachedOffer, Math.max(reachedInterview, reachedOffer))));
+    map.put("overallOfferRate", pct(reachedOffer, total));
     return map;
   }
 
@@ -257,7 +261,7 @@ public class AnalyticsService {
     }
     for (Application application : applications) {
       Instant when = application.getApplicationDate() == null ? application.getCreatedAt() : application.getApplicationDate();
-      long weeksAgo = ChronoUnit.WEEKS.between(when, now);
+      long weeksAgo = ChronoUnit.DAYS.between(when, now) / 7;
       if (weeksAgo >= 0 && weeksAgo <= 7) {
         weeks.merge("week-" + weeksAgo, 1L, Long::sum);
       }
