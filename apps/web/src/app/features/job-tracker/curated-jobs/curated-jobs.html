@@ -1,0 +1,57 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-[22px] font-semibold tracking-tight">Curated Jobs</h1>
+      <p class="mt-1 text-[12.5px] text-foreground/55">
+        {{ jobs().length }} jobs · avg fit {{ averageScore() }}%
+      </p>
+    </div>
+    <div class="flex items-center gap-2.5">
+      <select
+        [(ngModel)]="sortKey"
+        class="rounded-[0.45rem] border border-border bg-card px-3 py-2 text-[12.5px]"
+      >
+        <option value="score">Sort: fit score</option>
+        <option value="salary">Sort: salary</option>
+        <option value="posted">Sort: posted date</option>
+      </select>
+      <button
+        type="button"
+        (click)="applyToSelected()"
+        [disabled]="!selected().size || applying()"
+        class="rounded-[0.45rem] bg-primary px-3 py-2 text-[12.5px] text-primary-foreground disabled:opacity-40"
+      >
+        Apply to selected ({{ selected().size }})
+      </button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p class="text-[12.5px] text-foreground/55">Loading…</p>
+  } @else if (!jobs().length) {
+    <p class="text-[12.5px] text-foreground/55">No curated jobs yet. Add jobs manually to get started.</p>
+  } @else {
+    <ul class="flex flex-col gap-2">
+      @for (job of sortedJobs(); track job.id) {
+        <li class="flex items-center gap-3 rounded-[0.55rem] border border-border bg-card px-4 py-3">
+          <input type="checkbox" [checked]="isSelected(job.id)" (change)="toggle(job.id)" />
+          <div class="min-w-0 flex-1">
+            <a [routerLink]="['/jobs', job.id]" class="text-[13.5px] font-semibold hover:underline">
+              {{ job.title }}
+            </a>
+            <p class="truncate text-[12px] text-foreground/55">
+              {{ job.company }}
+              @if (job.location) { · {{ job.location }} }
+              @if (job.salaryMin || job.salaryMax) {
+                · {{ job.currency }} {{ job.salaryMin }}–{{ job.salaryMax }}
+              }
+            </p>
+          </div>
+          <span class="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[12px] text-primary">
+            {{ job.fitScore ?? '—' }}%
+          </span>
+        </li>
+      }
+    </ul>
+  }
+</main>

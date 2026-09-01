@@ -1,0 +1,36 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <h1 class="text-[22px] font-semibold tracking-tight">Resumes &amp; Skills</h1>
+  <p class="mt-1 text-[12.5px] text-foreground/55">Upload a PDF — it's parsed and skills extracted automatically.</p>
+
+  <label class="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-[0.45rem] border border-border px-3 py-2 text-[12.5px]">
+    <input type="file" accept="application/pdf" class="hidden" (change)="onFile($event)" />
+    {{ uploading() ? 'Uploading…' : 'Upload resume PDF' }}
+  </label>
+  @if (error()) {
+    <p class="mt-2 text-[12px] text-destructive">{{ error() }}</p>
+  }
+
+  <section class="mt-6">
+    <h2 class="text-[13.5px] font-semibold">Versions ({{ resumes().length }})</h2>
+    <ul class="mt-2 flex flex-col gap-2">
+      @for (resume of resumes(); track resume.id) {
+        <li class="rounded-[0.5rem] border border-border bg-card px-3 py-2 text-[12.5px]">
+          {{ resume.label || resume.fileName }}
+          <span class="text-foreground/45">· {{ resume.extractionStatus }}</span>
+          @if (resume.base) { <span class="text-primary">· base</span> }
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="mt-6">
+    <h2 class="text-[13.5px] font-semibold">Extracted skills ({{ skills().length }})</h2>
+    <div class="mt-2 flex flex-wrap gap-1.5">
+      @for (skill of skills(); track skill.id) {
+        <span class="rounded-full bg-primary/10 px-2.5 py-1 text-[11.5px] text-primary">
+          {{ skill.name }}<span class="text-primary/60"> · {{ skill.proficiency }}</span>
+        </span>
+      }
+    </div>
+  </section>
+</main>

@@ -1,0 +1,49 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <a routerLink="/applications" class="text-[12px] text-foreground/55 hover:underline">← Pipeline</a>
+
+  @if (loading()) {
+    <p class="mt-4 text-[12.5px] text-foreground/55">Loading…</p>
+  } @else if (detail(); as detail) {
+    <h1 class="mt-3 text-[22px] font-semibold tracking-tight">{{ detail.job.title }}</h1>
+    <p class="mt-1 text-[13px] text-foreground/55">{{ detail.job.company }} · {{ detail.application.status }}</p>
+
+    <section class="mt-6">
+      <h2 class="text-[13.5px] font-semibold">Status history</h2>
+      <ul class="mt-2 flex flex-col gap-1.5">
+        @for (entry of detail.statusHistory; track entry.id) {
+          <li class="text-[12px] text-foreground/70">
+            {{ entry.changedAt }} — {{ entry.oldStatus || 'start' }} → {{ entry.newStatus }}
+            @if (entry.note) { <span class="text-foreground/45">({{ entry.note }})</span> }
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="mt-6">
+      <h2 class="text-[13.5px] font-semibold">Interviews ({{ detail.interviews.length }})</h2>
+      <ul class="mt-2 flex flex-col gap-1.5">
+        @for (round of detail.interviews; track round.id) {
+          <li class="text-[12px] text-foreground/70">{{ round.type }} — {{ round.actualStatus }}</li>
+        }
+      </ul>
+    </section>
+
+    <section class="mt-6">
+      <h2 class="text-[13.5px] font-semibold">Referrals ({{ detail.referrals.length }})</h2>
+      <ul class="mt-2 flex flex-col gap-1.5">
+        @for (referral of detail.referrals; track referral.id) {
+          <li class="text-[12px] text-foreground/70">{{ referral.contactId.slice(0, 8) }} — {{ referral.referralStatus }}</li>
+        }
+      </ul>
+    </section>
+
+    @if (detail.offer; as offer) {
+      <section class="mt-6">
+        <h2 class="text-[13.5px] font-semibold">Offer</h2>
+        <p class="mt-2 text-[12.5px] text-foreground/70">{{ offer.currency }} {{ offer.salary }} — accepted: {{ offer.accepted }}</p>
+      </section>
+    }
+  } @else {
+    <p class="mt-4 text-[12.5px] text-foreground/55">Application not found.</p>
+  }
+</main>

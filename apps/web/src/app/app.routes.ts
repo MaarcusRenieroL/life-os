@@ -13,6 +13,11 @@ import { SecurityPage } from './features/security/security-page/security-page';
 import { AuditLogPage } from './features/audit-log/audit-log/audit-log';
 import { DataManagementPage } from './features/data-management/data-management/data-management';
 import { GlobalSettings } from './features/global-settings/global-settings/global-settings';
+import { CuratedJobs } from './features/job-tracker/curated-jobs/curated-jobs';
+import { JobDetail } from './features/job-tracker/job-detail/job-detail';
+import { ApplicationPipeline } from './features/job-tracker/application-pipeline/application-pipeline';
+import { ApplicationDetailPage } from './features/job-tracker/application-detail/application-detail';
+import { ResumeUploader } from './features/job-tracker/resume-uploader/resume-uploader';
 
 export const routes: Routes = [
   { path: 'login', component: Login },
@@ -24,6 +29,11 @@ export const routes: Routes = [
       { path: '', redirectTo: 'home', pathMatch: 'full' },
       { path: 'home', component: Home, data: { module: 'home' } },
       { path: 'settings', component: GlobalSettings, data: { module: 'home' } },
+      { path: 'jobs', component: CuratedJobs, data: { module: 'JT', tab: 'jobs' } },
+      { path: 'jobs/resumes', component: ResumeUploader, data: { module: 'JT', tab: 'resumes' } },
+      { path: 'jobs/:jobId', component: JobDetail, data: { module: 'JT', tab: 'jobs' } },
+      { path: 'applications', component: ApplicationPipeline, data: { module: 'JT', tab: 'applications' } },
+      { path: 'applications/:applicationId', component: ApplicationDetailPage, data: { module: 'JT', tab: 'applications' } },
       { path: 'vault', component: VaultUnlock, data: { module: 'PM' } },
       {
         path: 'vault/entries',
