@@ -20,12 +20,38 @@
     </section>
 
     <section class="mt-6">
-      <h2 class="text-[13.5px] font-semibold">Interviews ({{ detail.interviews.length }})</h2>
+      <div class="flex items-center justify-between">
+        <h2 class="text-[13.5px] font-semibold">Outreach ({{ outreach().length }})</h2>
+        <button type="button" (click)="planOutreach()" class="text-[11.5px] text-primary hover:underline">Plan multi-channel outreach</button>
+      </div>
       <ul class="mt-2 flex flex-col gap-1.5">
-        @for (round of detail.interviews; track round.id) {
-          <li class="text-[12px] text-foreground/70">{{ round.type }} — {{ round.actualStatus }}</li>
+        @for (attempt of outreach(); track attempt.id) {
+          <li class="text-[12px] text-foreground/70">
+            <span class="font-semibold">{{ attempt.channel }}</span> — {{ attempt.status }}
+            @if (attempt.replied) { · replied } @else if (attempt.opened) { · opened }
+          </li>
         }
       </ul>
+    </section>
+
+    <section class="mt-6">
+      <h2 class="text-[13.5px] font-semibold">Interviews ({{ detail.interviews.length }})</h2>
+      @for (round of detail.interviews; track round.id) {
+        <div class="mt-2 rounded-[0.5rem] border border-border bg-card p-3">
+          <p class="text-[12.5px] font-semibold">{{ round.type }} — {{ round.actualStatus }}</p>
+          <ul class="mt-1.5 flex flex-col gap-1">
+            @for (item of prep(round.id); track item.id) {
+              <li class="flex items-start gap-2 text-[12px]">
+                <input type="checkbox" [checked]="item.completed" (change)="togglePrep(round.id, item)" />
+                <span [class.line-through]="item.completed" [class.text-foreground/45]="item.completed">
+                  {{ item.title }}
+                  @if (item.resourceLink) { <a [href]="item.resourceLink" class="text-primary hover:underline">↗</a> }
+                </span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
     </section>
 
     <section class="mt-6">
@@ -37,12 +63,29 @@
       </ul>
     </section>
 
-    @if (detail.offer; as offer) {
-      <section class="mt-6">
-        <h2 class="text-[13.5px] font-semibold">Offer</h2>
+    <section class="mt-6">
+      <h2 class="text-[13.5px] font-semibold">Email thread ({{ emails().length }})</h2>
+      <ul class="mt-2 flex flex-col gap-1.5">
+        @for (email of emails(); track email.id) {
+          <li class="text-[12px] text-foreground/70">
+            <span class="text-foreground/45">{{ email.direction }} · {{ email.category }}</span> — {{ email.subject }}
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="mt-6">
+      <h2 class="text-[13.5px] font-semibold">Offer</h2>
+      @if (detail.offer; as offer) {
         <p class="mt-2 text-[12.5px] text-foreground/70">{{ offer.currency }} {{ offer.salary }} — accepted: {{ offer.accepted }}</p>
-      </section>
-    }
+      } @else {
+        <div class="mt-2 flex flex-wrap items-center gap-2">
+          <input type="number" [(ngModel)]="offerSalary" placeholder="salary" class="w-32 rounded-[0.45rem] border border-border bg-card px-3 py-2 text-[12.5px]" />
+          <input [(ngModel)]="offerCurrency" class="w-20 rounded-[0.45rem] border border-border bg-card px-3 py-2 text-[12.5px]" />
+          <button type="button" (click)="saveOffer()" class="rounded-[0.45rem] border border-border px-3 py-2 text-[12.5px]">Record offer</button>
+        </div>
+      }
+    </section>
   } @else {
     <p class="mt-4 text-[12.5px] text-foreground/55">Application not found.</p>
   }

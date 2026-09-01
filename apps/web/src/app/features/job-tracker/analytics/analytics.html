@@ -1,0 +1,76 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <h1 class="text-[22px] font-semibold tracking-tight">Job-Search Analytics</h1>
+
+  @if (loading()) {
+    <p class="mt-4 text-[12.5px] text-foreground/55">Crunching numbers…</p>
+  } @else if (!data()) {
+    <p class="mt-4 text-[12.5px] text-foreground/55">No data yet.</p>
+  } @else {
+    <div class="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      @for (group of ['pipeline', 'conversion', 'timeMetrics', 'outreachPerformance', 'seniorityDistribution', 'weeklyVolume']; track group) {
+        <section class="rounded-[0.55rem] border border-border bg-card p-4">
+          <h2 class="text-[12px] font-semibold uppercase tracking-wide text-foreground/55">{{ group }}</h2>
+          <dl class="mt-2 space-y-1">
+            @for (kv of section(group) | keyvalue; track kv.key) {
+              <div class="flex justify-between text-[12.5px]">
+                <dt class="text-foreground/60">{{ kv.key }}</dt>
+                <dd class="font-semibold">{{ kv.value }}</dd>
+              </div>
+            }
+          </dl>
+        </section>
+      }
+    </div>
+
+    <section class="mt-6">
+      <h2 class="text-[13.5px] font-semibold">Source performance</h2>
+      <table class="mt-2 w-full text-[12.5px]">
+        <thead class="text-foreground/55">
+          <tr><th class="text-left">Source</th><th>Apps</th><th>Interviews</th><th>Offers</th><th>Offer rate</th></tr>
+        </thead>
+        <tbody>
+          @for (row of rows('sourcePerformance'); track row['source']) {
+            <tr class="border-t border-border">
+              <td class="py-1">{{ row['source'] }}</td>
+              <td class="text-center">{{ row['applications'] }}</td>
+              <td class="text-center">{{ row['interviews'] }}</td>
+              <td class="text-center">{{ row['offers'] }}</td>
+              <td class="text-center">{{ row['offerRate'] }}%</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+
+    <section class="mt-6">
+      <h2 class="text-[13.5px] font-semibold">Top missing skills (from rejections)</h2>
+      <ul class="mt-2 flex flex-wrap gap-1.5">
+        @for (row of rows('skillGaps'); track row['skill']) {
+          <li class="rounded-full bg-destructive/10 px-2.5 py-1 text-[11.5px] text-destructive">
+            {{ row['skill'] }} · {{ row['shareOfRejections'] }}%
+          </li>
+        }
+      </ul>
+    </section>
+
+    @if (offers().length) {
+      <section class="mt-6">
+        <h2 class="text-[13.5px] font-semibold">Offer comparison</h2>
+        <table class="mt-2 w-full text-[12.5px]">
+          <thead class="text-foreground/55">
+            <tr><th class="text-left">Company</th><th>Salary</th><th>Score</th></tr>
+          </thead>
+          <tbody>
+            @for (offer of offers(); track offer['applicationId']) {
+              <tr class="border-t border-border">
+                <td class="py-1">{{ offer['company'] }} — {{ offer['title'] }}</td>
+                <td class="text-center">{{ offer['currency'] }} {{ offer['salary'] }}</td>
+                <td class="text-center font-semibold">{{ offer['score'] }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
+  }
+</main>

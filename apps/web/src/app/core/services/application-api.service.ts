@@ -74,4 +74,76 @@ export class ApplicationApiService {
       .post<ApiResponse<Referral>>(`${this.baseUrl}/${applicationId}/referrals`, { contactId, generateMessage })
       .pipe(map((response) => response.data));
   }
+
+  outreach(applicationId: string): Observable<OutreachAttempt[]> {
+    return this.http
+      .get<ApiResponse<OutreachAttempt[]>>(`${this.baseUrl}/${applicationId}/outreach`)
+      .pipe(map((response) => response.data));
+  }
+
+  planOutreach(applicationId: string): Observable<OutreachAttempt[]> {
+    return this.http
+      .post<ApiResponse<OutreachAttempt[]>>(`${this.baseUrl}/${applicationId}/outreach/plan`, {})
+      .pipe(map((response) => response.data));
+  }
+
+  prep(applicationId: string, roundId: string): Observable<InterviewPrepItem[]> {
+    return this.http
+      .get<ApiResponse<InterviewPrepItem[]>>(`${this.baseUrl}/${applicationId}/interviews/${roundId}/prep`)
+      .pipe(map((response) => response.data));
+  }
+
+  togglePrep(applicationId: string, roundId: string, prepId: string): Observable<InterviewPrepItem> {
+    return this.http
+      .post<ApiResponse<InterviewPrepItem>>(
+        `${this.baseUrl}/${applicationId}/interviews/${roundId}/prep/${prepId}/toggle`,
+        {},
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  emails(applicationId: string): Observable<EmailMessage[]> {
+    return this.http
+      .get<ApiResponse<EmailMessage[]>>(`${this.baseUrl}/${applicationId}/emails`)
+      .pipe(map((response) => response.data));
+  }
+
+  upsertOffer(applicationId: string, payload: Record<string, unknown>): Observable<unknown> {
+    return this.http
+      .put<ApiResponse<unknown>>(`${this.baseUrl}/${applicationId}/offer`, payload)
+      .pipe(map((response) => response.data));
+  }
+}
+
+export interface OutreachAttempt {
+  id: string;
+  channel: string;
+  recipient: string | null;
+  subject: string | null;
+  messageBody: string | null;
+  status: string;
+  scheduledFor: string | null;
+  sentAt: string | null;
+  opened: boolean;
+  clicked: boolean;
+  replied: boolean;
+}
+
+export interface InterviewPrepItem {
+  id: string;
+  interviewRoundId: string;
+  title: string;
+  description: string | null;
+  resourceLink: string | null;
+  completed: boolean;
+}
+
+export interface EmailMessage {
+  id: string;
+  direction: string;
+  fromAddress: string | null;
+  subject: string | null;
+  body: string | null;
+  category: string;
+  receivedAt: string | null;
 }

@@ -77,4 +77,43 @@ export class JobApiService {
       .get<ApiResponse<JobFitResult>>(`${this.baseUrl}/${jobId}/fit-score`)
       .pipe(map((response) => response.data));
   }
+
+  listSources(): Observable<JobSource[]> {
+    return this.http
+      .get<ApiResponse<JobSource[]>>(`${this.baseUrl}/sources`)
+      .pipe(map((response) => response.data));
+  }
+
+  createSource(payload: Partial<JobSource>): Observable<JobSource> {
+    return this.http
+      .post<ApiResponse<JobSource>>(`${this.baseUrl}/sources`, payload)
+      .pipe(map((response) => response.data));
+  }
+
+  deleteSource(sourceId: string): Observable<void> {
+    return this.http
+      .delete<ApiResponse<void>>(`${this.baseUrl}/sources/${sourceId}`)
+      .pipe(map(() => undefined));
+  }
+
+  runScrape(): Observable<Record<string, unknown>> {
+    return this.http
+      .post<ApiResponse<Record<string, unknown>>>(`${this.baseUrl}/scrape`, {})
+      .pipe(map((response) => response.data));
+  }
+
+  importJobs(jobs: unknown[]): Observable<Record<string, unknown>> {
+    return this.http
+      .post<ApiResponse<Record<string, unknown>>>(`${this.baseUrl}/import`, jobs)
+      .pipe(map((response) => response.data));
+  }
+}
+
+export interface JobSource {
+  id: string;
+  name: string;
+  url: string | null;
+  scrapeFrequency: string | null;
+  lastScraped: string | null;
+  active: boolean;
 }
