@@ -19,8 +19,10 @@ import com.lifeos.job_tracker.exception.DuplicateResourceException;
 import com.lifeos.job_tracker.exception.ResourceNotFoundException;
 import com.lifeos.job_tracker.kafka.JobEventProducer;
 import com.lifeos.job_tracker.kafka.JobEventTopics;
+import com.lifeos.job_tracker.domains.entity.EmailMessage;
 import com.lifeos.job_tracker.repository.ApplicationRepository;
 import com.lifeos.job_tracker.repository.ApplicationStatusHistoryRepository;
+import com.lifeos.job_tracker.repository.EmailMessageRepository;
 import com.lifeos.job_tracker.repository.InterviewRoundRepository;
 import com.lifeos.job_tracker.repository.JobListingRepository;
 import com.lifeos.job_tracker.repository.OfferRepository;
@@ -45,6 +47,7 @@ public class ApplicationService {
   private final InterviewRoundRepository interviewRoundRepository;
   private final ReferralRepository referralRepository;
   private final OfferRepository offerRepository;
+  private final EmailMessageRepository emailMessageRepository;
   private final JobEventProducer eventProducer;
   private final JobTrackerProperties properties;
 
@@ -65,6 +68,12 @@ public class ApplicationService {
   @Transactional(readOnly = true)
   public List<Application> needingFollowUp(UUID userId) {
     return applicationRepository.findNeedingFollowUp(userId, Instant.now());
+  }
+
+  @Transactional(readOnly = true)
+  public List<EmailMessage> emails(UUID userId, UUID applicationId) {
+    get(userId, applicationId);
+    return emailMessageRepository.findAllByApplicationIdOrderByReceivedAtAsc(applicationId);
   }
 
   @Transactional

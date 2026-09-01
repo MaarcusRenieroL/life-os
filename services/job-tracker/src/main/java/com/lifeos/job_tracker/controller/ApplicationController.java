@@ -12,6 +12,7 @@ import com.lifeos.job_tracker.domains.dto.request.UpdateReferralRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpsertOfferRequest;
 import com.lifeos.job_tracker.domains.dto.response.ApplicationDetailResponse;
 import com.lifeos.job_tracker.domains.dto.response.ApplicationResponse;
+import com.lifeos.job_tracker.domains.dto.response.EmailMessageResponse;
 import com.lifeos.job_tracker.domains.dto.response.InterviewPrepResponse;
 import com.lifeos.job_tracker.domains.dto.response.InterviewRoundResponse;
 import com.lifeos.job_tracker.domains.dto.response.OfferResponse;
@@ -293,5 +294,15 @@ public class ApplicationController extends AuthenticatedController {
       Authentication authentication, @PathVariable UUID applicationId) {
     offerService.delete(userId(authentication), applicationId);
     return ResponseEntity.ok(ApiResponse.success(null, "Offer removed"));
+  }
+
+  @GetMapping("/{applicationId}/emails")
+  public ResponseEntity<ApiResponse<List<EmailMessageResponse>>> emails(
+      Authentication authentication, @PathVariable UUID applicationId) {
+    List<EmailMessageResponse> body =
+        applicationService.emails(userId(authentication), applicationId).stream()
+            .map(EmailMessageResponse::from)
+            .toList();
+    return ResponseEntity.ok(ApiResponse.success(body, "Email thread fetched"));
   }
 }
