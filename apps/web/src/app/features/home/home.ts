@@ -6,10 +6,12 @@ import { APP_MODULES, AppModuleConfig } from '../../core/config/app-modules';
 import { HealthSummary, VaultEntrySummary } from '../../core/models/vault.model';
 import { AuthApiService } from '../../core/services/auth-api.service';
 import { CurrentUserService } from '../../core/services/current-user.service';
+import { FinanceAccountApiService } from '../../core/services/finance-account-api.service';
+import { FinanceTransactionApiService } from '../../core/services/finance-transaction-api.service';
 import { NotesApiService } from '../../core/services/notes-api.service';
 import { TokenService } from '../../core/services/token.service';
 import { VaultApiService } from '../../core/services/vault-api.service';
-import { finalize } from 'rxjs';
+import { catchError, finalize, of } from 'rxjs';
 
 interface ModuleTile {
   code: string;
@@ -45,9 +47,13 @@ export class Home implements OnInit {
   private readonly currentUserService = inject(CurrentUserService);
   private readonly vaultApi = inject(VaultApiService);
   private readonly notesApi = inject(NotesApiService);
+  private readonly financeAccountApi = inject(FinanceAccountApiService);
+  private readonly financeTransactionApi = inject(FinanceTransactionApiService);
   private readonly router = inject(Router);
 
   protected readonly noteCount = signal<number | null>(null);
+  protected readonly financeTotalBalance = signal<number | null>(null);
+  protected readonly financeNeedsReviewCount = signal(0);
 
   protected readonly user = this.currentUserService.user;
   protected readonly today = new Date();
@@ -91,6 +97,9 @@ export class Home implements OnInit {
   protected readonly homeModuleTiles = computed<ModuleTile[]>(() => {
     const entries = this.entries();
     const actionRequired = this.vaultActionRequiredCount();
+    // Read so this tile list recomputes once finance data resolves.
+    this.financeTotalBalance();
+    this.financeNeedsReviewCount();
 
     return this.orderedModules().slice(0, 4).map((module) => this.toModuleTile(module, entries.length, actionRequired));
   });
@@ -152,6 +161,26 @@ export class Home implements OnInit {
       next: (page) => this.noteCount.set(page.totalElements),
       error: () => this.noteCount.set(0),
     });
+
+    this.financeAccountApi
+      .getAccounts()
+      .pipe(catchError(() => of(null)))
+      .subscribe((accounts) => {
+        if (accounts) {
+          this.financeTotalBalance.set(accounts.reduce((sum, a) => sum + a.currentBalance, 0));
+        }
+      });
+
+    this.financeTransactionApi
+      .getTransactions(0, 50)
+      .pipe(catchError(() => of(null)))
+      .subscribe((page) => {
+        if (page) {
+          this.financeNeedsReviewCount.set(
+            page.content.filter((t) => t.categoryId === null && t.type !== 'CREDIT').length,
+          );
+        }
+      });
   }
 
   logout(): void {
@@ -182,6 +211,18 @@ export class Home implements OnInit {
     if (module.code === 'NT') {
       const count = this.noteCount();
       const subtitle = count === null ? 'loading…' : `${count} ${count === 1 ? 'note' : 'notes'}`;
+      return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
+    }
+
+    if (module.code === 'FN') {
+      const balance = this.financeTotalBalance();
+      const needsReview = this.financeNeedsReviewCount();
+      const subtitle =
+        balance === null
+          ? 'loading…'
+          : needsReview > 0
+            ? `₹${balance.toLocaleString('en-IN')} balance · ${needsReview} need review`
+            : `₹${balance.toLocaleString('en-IN')} balance`;
       return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
     }
 

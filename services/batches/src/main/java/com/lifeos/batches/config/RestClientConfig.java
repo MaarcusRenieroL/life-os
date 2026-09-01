@@ -12,4 +12,10 @@ public class RestClientConfig {
   public RestClient vaultRestClient(@Value("${vault.internal-base-url}") String baseUrl) {
     return RestClient.builder().baseUrl(baseUrl).build();
   }
+
+  @Bean
+  public RestClient financeTrackerRestClient(
+      @Value("${finance.internal-base-url}") String baseUrl) {
+    return RestClient.builder().baseUrl(baseUrl).build();
+  }
 }
