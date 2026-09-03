@@ -57,7 +57,11 @@ export class CuratedJobs implements OnInit {
 
   protected toggle(jobId: string): void {
     const next = new Set(this.selected());
-    next.has(jobId) ? next.delete(jobId) : next.add(jobId);
+    if (next.has(jobId)) {
+      next.delete(jobId);
+    } else {
+      next.add(jobId);
+    }
     this.selected.set(next);
   }
 

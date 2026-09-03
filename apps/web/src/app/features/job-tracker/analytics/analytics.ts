@@ -13,7 +13,7 @@ export class JobAnalytics implements OnInit {
   private readonly api = inject(JobTrackerExtrasApiService);
 
   protected readonly data = signal<Record<string, unknown> | null>(null);
-  protected readonly offers = signal<Array<Record<string, unknown>>>([]);
+  protected readonly offers = signal<Record<string, unknown>[]>([]);
   protected readonly loading = signal(true);
 
   ngOnInit(): void {
@@ -31,8 +31,8 @@ export class JobAnalytics implements OnInit {
     return (this.data()?.[key] as Record<string, unknown>) ?? {};
   }
 
-  protected rows(key: string): Array<Record<string, unknown>> {
+  protected rows(key: string): Record<string, unknown>[] {
     const value = this.data()?.[key];
-    return Array.isArray(value) ? (value as Array<Record<string, unknown>>) : [];
+    return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
   }
 }

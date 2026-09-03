@@ -35,17 +35,19 @@
     </div>
     <ul class="mt-2 flex flex-col gap-2">
       @for (notification of notifications(); track notification.id) {
-        <li
-          class="rounded-[0.5rem] border border-border px-3 py-2"
-          [class.bg-card]="notification.read"
-          [class.bg-primary]="false"
-          [class.border-primary]="!notification.read"
-          (click)="markRead(notification)"
-        >
-          <p class="text-[12.5px] font-semibold">{{ notification.title }}</p>
-          @if (notification.body) {
-            <p class="text-[11.5px] text-foreground/55">{{ notification.body }}</p>
-          }
+        <li>
+          <button
+            type="button"
+            class="w-full rounded-[0.5rem] border border-border px-3 py-2 text-left"
+            [class.bg-card]="notification.read"
+            [class.border-primary]="!notification.read"
+            (click)="markRead(notification)"
+          >
+            <span class="block text-[12.5px] font-semibold">{{ notification.title }}</span>
+            @if (notification.body) {
+              <span class="block text-[11.5px] text-foreground/55">{{ notification.body }}</span>
+            }
+          </button>
         </li>
       }
     </ul>

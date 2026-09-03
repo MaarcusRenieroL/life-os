@@ -38,9 +38,9 @@ export class JobTrackerExtrasApiService {
       .pipe(map((response) => response.data));
   }
 
-  offerComparison(): Observable<Array<Record<string, unknown>>> {
+  offerComparison(): Observable<Record<string, unknown>[]> {
     return this.http
-      .get<ApiResponse<Array<Record<string, unknown>>>>('/v1/analytics/offer-comparison')
+      .get<ApiResponse<Record<string, unknown>[]>>('/v1/analytics/offer-comparison')
       .pipe(map((response) => response.data));
   }
 
