@@ -59,6 +59,8 @@ services:
       - vault
       - job-tracker
       - core
+      - notes
+      - finance-tracker
 
   auth:
     build:
@@ -169,12 +171,46 @@ services:
       VAULT_INTERNAL_BASE_URL: http://vault:8002
       OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
       BACKUP_CRON: ${BACKUP_CRON:-0 0 3 * * *}
+      GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
+      GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
+      GMAIL_REDIRECT_URI: ${GMAIL_REDIRECT_URI:-http://localhost:8005/v1/batches/gmail/callback}
+      GMAIL_ENCRYPTION_SECRET: ${GMAIL_ENCRYPTION_SECRET:-zjQIMjy7Pp+dEPaXnwwFqETV64YQSQBYJYelXbSi5qc=}
+      GMAIL_ALERT_SENDERS: ${GMAIL_ALERT_SENDERS:-canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
+      GMAIL_POLL_CRON: ${GMAIL_POLL_CRON:-0 0 9,15,21 * * *}
+      FINANCE_INTERNAL_BASE_URL: ${FINANCE_INTERNAL_BASE_URL:-http://finance-tracker:8006}
     ports:
       - "8005:8005"
     depends_on:
       kafka:
         condition: service_started
       postgres:
+        condition: service_healthy
+
+  finance-tracker:
+    build:
+      context: .
+      dockerfile: services/finance-tracker/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      FINANCE_ENCRYPTION_SECRET: ${FINANCE_ENCRYPTION_SECRET:-wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
+      OLLAMA_URL: http://host.docker.internal:11434
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "8006:8006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      redis:
         condition: service_healthy
 
 volumes:

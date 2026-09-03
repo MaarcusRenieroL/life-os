@@ -38,5 +38,10 @@
     "target": "http://localhost:8005",
     "secure": false,
     "changeOrigin": true
+  },
+  "/v1/finance": {
+    "target": "http://localhost:8006",
+    "secure": false,
+    "changeOrigin": true
   }
 }

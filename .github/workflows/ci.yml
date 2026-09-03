@@ -59,6 +59,9 @@ jobs:
       - name: Run Notes Tests
         run: cd services/notes && mvn clean test
 
+      - name: Run Finance Tracker Tests
+        run: cd services/finance-tracker && mvn clean test
+
   lint-and-build:
     runs-on: ubuntu-latest
 
