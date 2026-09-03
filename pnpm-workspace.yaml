@@ -1,5 +1,8 @@
 packages:
   - "services/*"
+  # job-scraper is a standalone Dockerised Node service; it manages its own
+  # dependencies in its Dockerfile and is not part of the pnpm workspace.
+  - "!services/job-scraper"
   - "apps/*"
   - "packages/*"
 allowBuilds:
