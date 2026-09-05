@@ -29,7 +29,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT, PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -61,6 +61,7 @@ services:
       - core
       - notes
       - finance-tracker
+      - batches
 
   auth:
     build:
@@ -111,12 +112,34 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESUME_STORAGE_DIR: /data/resumes
+      SCRAPER_BASE_URL: http://job-scraper:8010
+    volumes:
+      - job_tracker_resumes:/data/resumes
     ports:
       - "8003:8003"
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_started
+
+  job-scraper:
+    build:
+      context: .
+      dockerfile: services/job-scraper/Dockerfile
+    environment:
+      PORT: 8010
+      JOB_TRACKER_BASE_URL: http://job-tracker:8003
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      USE_PLAYWRIGHT: "false"
+    ports:
+      - "8010:8010"
+    depends_on:
+      job-tracker:
         condition: service_started
 
   # Module tile enable/disable settings only - the notes module itself now
@@ -178,6 +201,11 @@ services:
       GMAIL_ALERT_SENDERS: ${GMAIL_ALERT_SENDERS:-canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
       GMAIL_POLL_CRON: ${GMAIL_POLL_CRON:-0 0 9,15,21 * * *}
       FINANCE_INTERNAL_BASE_URL: ${FINANCE_INTERNAL_BASE_URL:-http://finance-tracker:8006}
+      JOB_TRACKER_INTERNAL_BASE_URL: ${JOB_TRACKER_INTERNAL_BASE_URL:-http://job-tracker:8003}
+      JOB_EMAIL_POLL_CRON: ${JOB_EMAIL_POLL_CRON:-0 30 9,15,21 * * *}
+      # JOB_EMAIL_KEYWORDS / JOB_EMAIL_SENDERS deliberately not set here - leave
+      # them unset on the host to keep application.yaml's own sensible default,
+      # or export them to override it (comma-separated, no spaces around commas).
     ports:
       - "8005:8005"
     depends_on:
@@ -185,6 +213,8 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
+      job-tracker:
+        condition: service_started
 
   finance-tracker:
     build:
@@ -215,3 +245,4 @@ services:
 
 volumes:
   postgres_data:
+  job_tracker_resumes:

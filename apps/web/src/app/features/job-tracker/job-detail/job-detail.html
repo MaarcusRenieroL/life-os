@@ -1,0 +1,40 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <a routerLink="/jobs" class="text-[12px] text-foreground/55 hover:underline">← Curated jobs</a>
+
+  @if (loading()) {
+    <p class="mt-4 text-[12.5px] text-foreground/55">Loading…</p>
+  } @else if (job(); as job) {
+    <h1 class="mt-3 text-[22px] font-semibold tracking-tight">{{ job.title }}</h1>
+    <p class="mt-1 text-[13px] text-foreground/55">
+      {{ job.company }} · {{ job.location || 'Location n/a' }} · {{ job.workModel || '—' }}
+    </p>
+
+    <div class="mt-4 flex gap-2.5">
+      <button type="button" (click)="apply()" class="rounded-[0.45rem] bg-primary px-3 py-2 text-[12.5px] text-primary-foreground">
+        Apply
+      </button>
+      <button type="button" (click)="save()" class="rounded-[0.45rem] border border-border px-3 py-2 text-[12.5px]">
+        {{ job.saved ? 'Saved ✓' : 'Save' }}
+      </button>
+    </div>
+    @if (message()) {
+      <p class="mt-2 text-[12px] text-primary">{{ message() }}</p>
+    }
+
+    @if (fit(); as fit) {
+      <section class="mt-6 rounded-[0.55rem] border border-border bg-card p-4">
+        <h2 class="text-[13.5px] font-semibold">Fit score: {{ fit.score }}%</h2>
+        <pre class="mt-2 overflow-x-auto text-[11.5px] text-foreground/70">{{ fit.explanation | json }}</pre>
+      </section>
+    }
+
+    <section class="mt-6">
+      <h2 class="text-[13.5px] font-semibold">Description</h2>
+      <p class="mt-2 whitespace-pre-wrap text-[12.5px] text-foreground/75">
+        {{ job.jobDescriptionText || 'No description on file.' }}
+      </p>
+    </section>
+  } @else {
+    <p class="mt-4 text-[12.5px] text-foreground/55">Job not found.</p>
+  }
+</main>

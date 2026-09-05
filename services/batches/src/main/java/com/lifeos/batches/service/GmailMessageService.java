@@ -8,6 +8,7 @@ import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartHeader;
 import com.lifeos.batches.domains.record.RawAlertEmail;
+import com.lifeos.batches.domains.record.RawEmail;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -49,11 +50,25 @@ public class GmailMessageService {
   }
 
   private List<RawAlertEmail> fetchAlerts(String dateRestriction) throws IOException {
-    Gmail gmail = buildGmailClient();
-
     List<String> senderAddresses = List.of(alertSendersConfig.split(","));
     String senderClause = "(from:" + String.join(" OR from:", senderAddresses) + ")";
-    String query = dateRestriction == null ? senderClause : dateRestriction + " " + senderClause;
+
+    return fetchByQuery(senderClause, dateRestriction).stream()
+        .map(
+            email ->
+                new RawAlertEmail(
+                    email.messageId(), email.fromAddress(), email.subject(), email.body(), email.receivedAt()))
+        .toList();
+  }
+
+  /**
+   * Generic search, for consumers other than the bank-alert pipeline (e.g. job-search email sync)
+   * that need their own query clause rather than the fixed sender allowlist above.
+   */
+  public List<RawEmail> fetchByQuery(String searchClause, String dateRestriction) throws IOException {
+    Gmail gmail = buildGmailClient();
+
+    String query = dateRestriction == null ? searchClause : dateRestriction + " " + searchClause;
 
     log.info("Gmail search query: {}", query);
 
@@ -82,12 +97,12 @@ public class GmailMessageService {
                 Message message =
                     gmail.users().messages().get("me", messageStub.getId()).setFormat("full").execute();
 
-                return toRawAlertEmail(message);
+                return toRawEmail(message);
               } catch (Exception e) {
                 // One malformed/unexpected message (odd MIME structure, missing
                 // header, etc.) shouldn't take down the whole poll - skip it and
-                // keep going. This is the same senders' mailing-list/marketing
-                // mail mixed in with real alerts, not just clean transaction emails.
+                // keep going. Real mailboxes mix in mailing-list/marketing mail
+                // alongside whatever this query is actually looking for.
                 log.warn("Skipping Gmail message {}: {}", messageStub.getId(), e.getMessage());
 
                 return null;
@@ -97,23 +112,32 @@ public class GmailMessageService {
         .toList();
   }
 
-  private RawAlertEmail toRawAlertEmail(Message message) {
+  private RawEmail toRawEmail(Message message) {
     MessagePart payload = message.getPayload();
 
     String fromAddress = header(payload, "From");
+    String toAddress = headerOrNull(payload, "To");
     String subject = header(payload, "Subject");
     String body = decodeBody(payload);
     Instant receivedAt = Instant.ofEpochMilli(message.getInternalDate());
 
-    return new RawAlertEmail(message.getId(), fromAddress, subject, body, receivedAt);
+    return new RawEmail(message.getId(), message.getThreadId(), fromAddress, toAddress, subject, body, receivedAt);
   }
 
   private String header(MessagePart payload, String name) {
+    String value = headerOrNull(payload, name);
+    if (value == null) {
+      throw new IllegalStateException("Missing header: " + name);
+    }
+    return value;
+  }
+
+  private String headerOrNull(MessagePart payload, String name) {
     return payload.getHeaders().stream()
         .filter(header -> header.getName().equals(name))
         .findFirst()
         .map(MessagePartHeader::getValue)
-        .orElseThrow(() -> new IllegalStateException("Missing header: " + name));
+        .orElse(null);
   }
 
   private String decodeBody(MessagePart payload) {

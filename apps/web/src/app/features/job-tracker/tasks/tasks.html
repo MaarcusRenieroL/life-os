@@ -1,0 +1,55 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <h1 class="text-[22px] font-semibold tracking-tight">Follow-ups &amp; Notifications</h1>
+
+  <section class="mt-5">
+    <h2 class="text-[13.5px] font-semibold">Open follow-ups ({{ tasks().length }})</h2>
+    @if (loading()) {
+      <p class="mt-2 text-[12.5px] text-foreground/55">Loading…</p>
+    } @else if (!tasks().length) {
+      <p class="mt-2 text-[12.5px] text-foreground/55">Nothing due. Nice.</p>
+    } @else {
+      <ul class="mt-2 flex flex-col gap-2">
+        @for (task of tasks(); track task.id) {
+          <li class="flex items-center gap-3 rounded-[0.5rem] border border-border bg-card px-3 py-2">
+            <span
+              class="h-2 w-2 shrink-0 rounded-full"
+              [class.bg-destructive]="overdue(task)"
+              [class.bg-primary]="!overdue(task)"
+            ></span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-[12.5px] font-semibold">{{ task.title }}</p>
+              <p class="text-[11px] text-foreground/45">{{ task.type }} · due {{ task.dueDate }}</p>
+            </div>
+            <button type="button" (click)="complete(task)" class="text-[11.5px] text-primary hover:underline">Done</button>
+            <button type="button" (click)="dismiss(task)" class="text-[11.5px] text-foreground/45 hover:underline">Dismiss</button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section class="mt-7">
+    <div class="flex items-center justify-between">
+      <h2 class="text-[13.5px] font-semibold">Notifications</h2>
+      <button type="button" (click)="markAllRead()" class="text-[11.5px] text-primary hover:underline">Mark all read</button>
+    </div>
+    <ul class="mt-2 flex flex-col gap-2">
+      @for (notification of notifications(); track notification.id) {
+        <li>
+          <button
+            type="button"
+            class="w-full rounded-[0.5rem] border border-border px-3 py-2 text-left"
+            [class.bg-card]="notification.read"
+            [class.border-primary]="!notification.read"
+            (click)="markRead(notification)"
+          >
+            <span class="block text-[12.5px] font-semibold">{{ notification.title }}</span>
+            @if (notification.body) {
+              <span class="block text-[11.5px] text-foreground/55">{{ notification.body }}</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+</main>

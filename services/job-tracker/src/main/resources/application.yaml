@@ -7,6 +7,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
   flyway:
     schemas: job_tracker_schema
     default-schema: job_tracker_schema
@@ -15,9 +19,31 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: job-tracker
+      auto-offset-reset: earliest
 
 jwt:
   secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
 
 internal:
   api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+
+anthropic:
+  base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-sonnet-4-6}
+  version: "2023-06-01"
+  max-tokens: 2048
+
+resend:
+  api-key: ${RESEND_API_KEY:}
+  from: ${RESEND_FROM:jobs@life-os.local}
+
+job-tracker:
+  storage:
+    resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}
+  follow-up:
+    default-lead-days: 7
+  scraper:
+    base-url: ${SCRAPER_BASE_URL:http://localhost:8010}

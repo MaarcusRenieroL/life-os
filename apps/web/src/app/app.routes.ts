@@ -24,6 +24,63 @@ export const routes: Routes = [
       { path: '', redirectTo: 'home', pathMatch: 'full' },
       { path: 'home', component: Home, data: { module: 'home' } },
       { path: 'settings', component: GlobalSettings, data: { module: 'home' } },
+      {
+        path: 'jobs',
+        loadComponent: () =>
+          import('./features/job-tracker/curated-jobs/curated-jobs').then((m) => m.CuratedJobs),
+        data: { module: 'JT', tab: 'jobs' },
+      },
+      {
+        path: 'jobs/resumes',
+        loadComponent: () =>
+          import('./features/job-tracker/resume-uploader/resume-uploader').then((m) => m.ResumeUploader),
+        data: { module: 'JT', tab: 'resumes' },
+      },
+      {
+        path: 'jobs/resume-builder',
+        loadComponent: () =>
+          import('./features/job-tracker/resume-builder/resume-builder').then((m) => m.ResumeBuilder),
+        data: { module: 'JT', tab: 'resume-builder' },
+      },
+      {
+        path: 'jobs/discovery',
+        loadComponent: () =>
+          import('./features/job-tracker/discovery/discovery').then((m) => m.JobDiscovery),
+        data: { module: 'JT', tab: 'discovery' },
+      },
+      {
+        path: 'jobs/analytics',
+        loadComponent: () =>
+          import('./features/job-tracker/analytics/analytics').then((m) => m.JobAnalytics),
+        data: { module: 'JT', tab: 'analytics' },
+      },
+      {
+        path: 'jobs/tasks',
+        loadComponent: () => import('./features/job-tracker/tasks/tasks').then((m) => m.JobTasks),
+        data: { module: 'JT', tab: 'tasks' },
+      },
+      {
+        path: 'jobs/:jobId',
+        loadComponent: () =>
+          import('./features/job-tracker/job-detail/job-detail').then((m) => m.JobDetail),
+        data: { module: 'JT', tab: 'jobs' },
+      },
+      {
+        path: 'applications',
+        loadComponent: () =>
+          import('./features/job-tracker/application-pipeline/application-pipeline').then(
+            (m) => m.ApplicationPipeline,
+          ),
+        data: { module: 'JT', tab: 'applications' },
+      },
+      {
+        path: 'applications/:applicationId',
+        loadComponent: () =>
+          import('./features/job-tracker/application-detail/application-detail').then(
+            (m) => m.ApplicationDetailPage,
+          ),
+        data: { module: 'JT', tab: 'applications' },
+      },
       { path: 'vault', component: VaultUnlock, data: { module: 'PM' } },
       {
         path: 'vault/entries',
