@@ -98,4 +98,39 @@ public class KafkaConfig {
   public NewTopic followUpDueTopic() {
     return TopicBuilder.name(JobEventTopics.FOLLOW_UP_DUE).partitions(1).replicas(1).build();
   }
+
+  @Bean
+  public NewTopic resumeVariantCreatedTopic() {
+    return TopicBuilder.name(JobEventTopics.RESUME_VARIANT_CREATED).partitions(1).replicas(1).build();
+  }
+
+  @Bean
+  public NewTopic resumeSectionUpdatedTopic() {
+    return TopicBuilder.name(JobEventTopics.RESUME_SECTION_UPDATED).partitions(1).replicas(1).build();
+  }
+
+  @Bean
+  public NewTopic resumeTailoredTopic() {
+    return TopicBuilder.name(JobEventTopics.RESUME_TAILORED).partitions(1).replicas(1).build();
+  }
+
+  @Bean
+  public NewTopic coverLetterGeneratedTopic() {
+    return TopicBuilder.name(JobEventTopics.COVER_LETTER_GENERATED).partitions(1).replicas(1).build();
+  }
+
+  @Bean
+  public NewTopic coverLetterCustomizedTopic() {
+    return TopicBuilder.name(JobEventTopics.COVER_LETTER_CUSTOMIZED).partitions(1).replicas(1).build();
+  }
+
+  @Bean
+  public NewTopic accomplishmentAddedTopic() {
+    return TopicBuilder.name(JobEventTopics.ACCOMPLISHMENT_ADDED).partitions(1).replicas(1).build();
+  }
+
+  @Bean
+  public NewTopic resumeKeywordsAnalyzedTopic() {
+    return TopicBuilder.name(JobEventTopics.RESUME_KEYWORDS_ANALYZED).partitions(1).replicas(1).build();
+  }
 }
