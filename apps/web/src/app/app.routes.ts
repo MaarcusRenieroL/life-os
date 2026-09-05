@@ -37,6 +37,12 @@ export const routes: Routes = [
         data: { module: 'JT', tab: 'resumes' },
       },
       {
+        path: 'jobs/resume-builder',
+        loadComponent: () =>
+          import('./features/job-tracker/resume-builder/resume-builder').then((m) => m.ResumeBuilder),
+        data: { module: 'JT', tab: 'resume-builder' },
+      },
+      {
         path: 'jobs/discovery',
         loadComponent: () =>
           import('./features/job-tracker/discovery/discovery').then((m) => m.JobDiscovery),

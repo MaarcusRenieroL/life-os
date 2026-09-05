@@ -35,6 +35,7 @@ export const APP_MODULES: AppModuleConfig[] = [
       { label: 'Curated Jobs', path: '/jobs' },
       { label: 'Applications', path: '/applications' },
       { label: 'Resumes', path: '/jobs/resumes' },
+      { label: 'Resume Builder', path: '/jobs/resume-builder' },
       { label: 'Discovery', path: '/jobs/discovery' },
       { label: 'Follow-ups', path: '/jobs/tasks' },
       { label: 'Analytics', path: '/jobs/analytics' },
