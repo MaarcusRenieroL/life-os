@@ -61,6 +61,7 @@ services:
       - core
       - notes
       - finance-tracker
+      - batches
 
   auth:
     build:
@@ -200,6 +201,11 @@ services:
       GMAIL_ALERT_SENDERS: ${GMAIL_ALERT_SENDERS:-canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
       GMAIL_POLL_CRON: ${GMAIL_POLL_CRON:-0 0 9,15,21 * * *}
       FINANCE_INTERNAL_BASE_URL: ${FINANCE_INTERNAL_BASE_URL:-http://finance-tracker:8006}
+      JOB_TRACKER_INTERNAL_BASE_URL: ${JOB_TRACKER_INTERNAL_BASE_URL:-http://job-tracker:8003}
+      JOB_EMAIL_POLL_CRON: ${JOB_EMAIL_POLL_CRON:-0 30 9,15,21 * * *}
+      # JOB_EMAIL_KEYWORDS / JOB_EMAIL_SENDERS deliberately not set here - leave
+      # them unset on the host to keep application.yaml's own sensible default,
+      # or export them to override it (comma-separated, no spaces around commas).
     ports:
       - "8005:8005"
     depends_on:
@@ -207,6 +213,8 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
+      job-tracker:
+        condition: service_started
 
   finance-tracker:
     build:

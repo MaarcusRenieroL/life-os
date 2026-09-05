@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { JobApiService, JobSource } from '../../../core/services/job-api.service';
+import { GmailApiService, GmailConnectionStatus } from '../../../core/services/gmail-api.service';
 
 @Component({
   selector: 'app-job-discovery',
@@ -11,10 +12,13 @@ import { JobApiService, JobSource } from '../../../core/services/job-api.service
 })
 export class JobDiscovery implements OnInit {
   private readonly jobApi = inject(JobApiService);
+  private readonly gmailApi = inject(GmailApiService);
 
   protected readonly sources = signal<JobSource[]>([]);
   protected readonly result = signal<string>('');
   protected readonly busy = signal(false);
+  protected readonly gmailStatus = signal<GmailConnectionStatus | null>(null);
+  protected readonly gmailConnectUrl = this.gmailApi.connectUrl;
 
   protected newName = '';
   protected newUrl = '';
@@ -22,6 +26,22 @@ export class JobDiscovery implements OnInit {
 
   ngOnInit(): void {
     this.refresh();
+    this.gmailApi.status().subscribe({ next: (status) => this.gmailStatus.set(status) });
+  }
+
+  protected syncJobEmails(all: boolean): void {
+    this.busy.set(true);
+    const sync = all ? this.gmailApi.syncAllJobEmails() : this.gmailApi.syncRecentJobEmails();
+    sync.subscribe({
+      next: (count) => {
+        this.busy.set(false);
+        this.result.set(`Synced ${count} job-search emails from Gmail.`);
+      },
+      error: (err) => {
+        this.busy.set(false);
+        this.result.set(err?.error?.message ?? 'Gmail sync failed');
+      },
+    });
   }
 
   private refresh(): void {

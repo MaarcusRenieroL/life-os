@@ -49,3 +49,12 @@ gmail:
 
 finance:
   internal-base-url: ${FINANCE_INTERNAL_BASE_URL:http://finance-tracker:8006}
+
+job-tracker:
+  internal-base-url: ${JOB_TRACKER_INTERNAL_BASE_URL:http://job-tracker:8003}
+
+job-email:
+  keywords: ${JOB_EMAIL_KEYWORDS:interview,application,thank you for applying,offer,not moving forward,other candidates,regret to inform,recruiter,hiring team,next steps,phone screen,technical assessment}
+  senders: ${JOB_EMAIL_SENDERS:linkedin.com,indeed.com,indeedemail.com,glassdoor.com,greenhouse.io,lever.co,ashbyhq.com,myworkday.com,smartrecruiters.com}
+  poll:
+    cron: ${JOB_EMAIL_POLL_CRON:0 30 9,15,21 * * *}
