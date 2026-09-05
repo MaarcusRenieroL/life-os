@@ -18,4 +18,9 @@ public class RestClientConfig {
       @Value("${finance.internal-base-url}") String baseUrl) {
     return RestClient.builder().baseUrl(baseUrl).build();
   }
+
+  @Bean
+  public RestClient jobTrackerRestClient(@Value("${job-tracker.internal-base-url}") String baseUrl) {
+    return RestClient.builder().baseUrl(baseUrl).build();
+  }
 }

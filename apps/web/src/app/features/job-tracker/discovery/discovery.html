@@ -42,4 +42,30 @@
   @if (result()) {
     <pre class="mt-4 overflow-x-auto rounded-[0.45rem] border border-border bg-card p-3 text-[11.5px]">{{ result() }}</pre>
   }
+
+  <section class="mt-8 rounded-[0.5rem] border border-border bg-card p-4">
+    <h2 class="text-[13.5px] font-semibold">Gmail sync</h2>
+    <p class="mt-1 text-[12px] text-foreground/55">
+      Scans your inbox for interview invites, application confirmations, rejections and offers, and
+      feeds them straight into the pipeline (auto status changes, new applications, follow-up tasks).
+    </p>
+
+    @if (gmailStatus(); as status) {
+      @if (status.connected) {
+        <p class="mt-2 text-[12px] text-primary">Connected · last refreshed {{ status.lastRefreshedAt }}</p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button type="button" (click)="syncJobEmails(false)" [disabled]="busy()" class="rounded-[0.45rem] bg-primary px-3 py-1.5 text-[12px] text-primary-foreground disabled:opacity-40">
+            Sync last 2 days
+          </button>
+          <button type="button" (click)="syncJobEmails(true)" [disabled]="busy()" class="rounded-[0.45rem] border border-border px-3 py-1.5 text-[12px] disabled:opacity-40">
+            Full history sync
+          </button>
+        </div>
+      } @else {
+        <a [href]="gmailConnectUrl" class="mt-2 inline-block rounded-[0.45rem] bg-primary px-3 py-1.5 text-[12px] text-primary-foreground">
+          Connect Gmail
+        </a>
+      }
+    }
+  </section>
 </main>
