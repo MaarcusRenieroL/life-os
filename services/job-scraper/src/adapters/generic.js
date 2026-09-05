@@ -53,5 +53,11 @@ export async function scrapeGeneric(source) {
   if (!source.url) return [];
   const usePlaywright = String(process.env.USE_PLAYWRIGHT).toLowerCase() === 'true';
   const html = usePlaywright ? await renderHtml(source.url) : await fetchHtml(source.url);
-  return extractJsonLd(html).map((posting) => ({ ...posting, source: source.name || 'generic' }));
+  // JobPosting JSON-LD describes the role, not the page it's embedded on, so
+  // it never carries its own URL - fall back to the page we actually fetched.
+  return extractJsonLd(html).map((posting) => ({
+    url: source.url,
+    ...posting,
+    source: source.name || 'generic',
+  }));
 }
