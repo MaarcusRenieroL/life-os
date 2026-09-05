@@ -37,6 +37,7 @@ public class ResumeService {
   private final ResumePdfWriter pdfWriter;
   private final AiAssistant ai;
   private final SkillService skillService;
+  private final ResumeVariantService resumeVariantService;
   private final ObjectMapper objectMapper;
 
   public record TailoredResume(Resume resume, String markdown) {}
@@ -101,9 +102,10 @@ public class ResumeService {
       return resumeRepository.save(resume);
     }
 
+    ParsedResume parsed = null;
     try {
       resume.setExtractionStatus(ProcessingStatus.PROCESSING);
-      ParsedResume parsed = ai.parseResume(rawText);
+      parsed = ai.parseResume(rawText);
       resume.setParsedJson(objectMapper.convertValue(parsed, new TypeReference<Map<String, Object>>() {}));
       resume.setExtractionStatus(ProcessingStatus.COMPLETED);
       skillService.mergeExtracted(userId, parsed.skills());
@@ -113,7 +115,17 @@ public class ResumeService {
       resume.setExtractionError(exception.getMessage());
     }
 
-    return resumeRepository.save(resume);
+    Resume saved = resumeRepository.save(resume);
+
+    if (parsed != null) {
+      try {
+        resumeVariantService.createFromParsedResume(userId, saved, parsed);
+      } catch (RuntimeException exception) {
+        log.warn("failed to create resume variant for resume {}: {}", saved.getId(), exception.getMessage());
+      }
+    }
+
+    return saved;
   }
 
   @Transactional
