@@ -3,11 +3,14 @@
   <p class="mt-1 text-[12.5px] text-foreground/55">Upload a PDF — it's parsed and skills extracted automatically.</p>
 
   <label class="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-[0.45rem] border border-border px-3 py-2 text-[12.5px]">
-    <input type="file" accept="application/pdf" class="hidden" (change)="onFile($event)" />
+    <input type="file" accept="application/pdf,.pdf" class="hidden" (change)="onFile($event)" />
     {{ uploading() ? 'Uploading…' : 'Upload resume PDF' }}
   </label>
   @if (error()) {
     <p class="mt-2 text-[12px] text-destructive">{{ error() }}</p>
+  }
+  @if (lastUploadNote()) {
+    <p class="mt-2 text-[12px] text-foreground/55">{{ lastUploadNote() }}</p>
   }
 
   <section class="mt-6">
@@ -16,7 +19,7 @@
       @for (resume of resumes(); track resume.id) {
         <li class="rounded-[0.5rem] border border-border bg-card px-3 py-2 text-[12.5px]">
           {{ resume.label || resume.fileName }}
-          <span class="text-foreground/45">· {{ resume.extractionStatus }}</span>
+          <span class="text-foreground/45">· {{ statusLabel(resume.extractionStatus) }}</span>
           @if (resume.base) { <span class="text-primary">· base</span> }
         </li>
       }

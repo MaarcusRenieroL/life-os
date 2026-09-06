@@ -16,6 +16,20 @@ export class ResumeUploader implements OnInit {
   protected readonly skills = signal<Skill[]>([]);
   protected readonly uploading = signal(false);
   protected readonly error = signal('');
+  protected readonly lastUploadNote = signal('');
+
+  protected statusLabel(status: string | null): string {
+    switch (status) {
+      case 'COMPLETED':
+        return 'parsed';
+      case 'PROCESSING':
+        return 'parsing…';
+      case 'FAILED':
+        return 'stored, not auto-parsed';
+      default:
+        return (status ?? 'pending').toLowerCase();
+    }
+  }
 
   ngOnInit(): void {
     this.refresh();
@@ -34,9 +48,16 @@ export class ResumeUploader implements OnInit {
     }
     this.uploading.set(true);
     this.error.set('');
+    this.lastUploadNote.set('');
     this.resumeApi.upload(file, file.name, this.resumes().length === 0).subscribe({
-      next: () => {
+      next: (resume) => {
         this.uploading.set(false);
+        if (resume.extractionStatus === 'FAILED') {
+          this.lastUploadNote.set(
+            'Uploaded. ' + (resume.extractionError ?? 'Text could not be auto-extracted') +
+              ' You can still tailor it and edit sections in Resume Builder.',
+          );
+        }
         this.refresh();
         this.resumeApi.skillLibrary().subscribe({ next: (skills) => this.skills.set(skills) });
       },
