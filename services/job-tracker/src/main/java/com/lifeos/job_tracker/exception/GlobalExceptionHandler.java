@@ -27,6 +27,11 @@ public class GlobalExceptionHandler {
     return ResponseEntity.badRequest().body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(JobLinkUnreadableException.class)
+  public ResponseEntity<ApiResponse<Void>> handleUnreadableLink(JobLinkUnreadableException exception) {
+    return ResponseEntity.unprocessableEntity().body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(ClaudeUnavailableException.class)
   public ResponseEntity<ApiResponse<Void>> handleClaude(ClaudeUnavailableException exception) {
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)

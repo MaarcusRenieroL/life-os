@@ -67,8 +67,7 @@ class ApplicationServiceTest {
             eventProducer,
             new JobTrackerProperties(
                 new JobTrackerProperties.Storage("/tmp"),
-                new JobTrackerProperties.FollowUp(7),
-                new JobTrackerProperties.Scraper("http://localhost:8010")));
+                new JobTrackerProperties.FollowUp(7)));
   }
 
   @Test

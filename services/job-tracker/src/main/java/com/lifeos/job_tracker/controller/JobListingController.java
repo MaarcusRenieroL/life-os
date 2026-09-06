@@ -2,6 +2,7 @@ package com.lifeos.job_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.job_tracker.domains.dto.request.CreateJobListingRequest;
+import com.lifeos.job_tracker.domains.dto.request.FromLinkRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobListingRequest;
 import com.lifeos.job_tracker.domains.dto.response.JobListingResponse;
 import com.lifeos.job_tracker.domains.enums.SeniorityLevel;
@@ -88,6 +89,22 @@ public class JobListingController extends AuthenticatedController {
     JobListingResponse body =
         JobListingResponse.from(jobListingService.create(userId(authentication), request));
     return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(body, "Job created"));
+  }
+
+  /**
+   * Add a job from a pasted link (LinkedIn, Naukri, a company careers page, …). The URL is fetched
+   * and parsed by Claude, then fit-scored. Returns 422 when the site blocked the read - the client
+   * then resubmits with {@code jobDescriptionText}.
+   */
+  @PostMapping("/from-link")
+  public ResponseEntity<ApiResponse<JobListingResponse>> fromLink(
+      Authentication authentication, @RequestBody FromLinkRequest request) {
+    JobListingResponse body =
+        JobListingResponse.from(
+            jobListingService.createFromLink(
+                userId(authentication), request.url(), request.jobDescriptionText()));
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(ApiResponse.success(body, "Job added from link"));
   }
 
   @PatchMapping("/{jobId}")

@@ -10,8 +10,12 @@ import com.lifeos.job_tracker.domains.enums.SeniorityLevel;
 import com.lifeos.job_tracker.domains.enums.VisaSponsorship;
 import com.lifeos.job_tracker.domains.enums.WorkModel;
 import com.lifeos.job_tracker.domains.record.ParsedJobDescription;
+import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
+import com.lifeos.job_tracker.exception.InvalidRequestException;
+import com.lifeos.job_tracker.exception.JobLinkUnreadableException;
 import com.lifeos.job_tracker.exception.ResourceNotFoundException;
 import com.lifeos.job_tracker.integration.AiAssistant;
+import com.lifeos.job_tracker.integration.JobLinkFetcher;
 import com.lifeos.job_tracker.kafka.JobEventProducer;
 import com.lifeos.job_tracker.kafka.JobEventTopics;
 import com.lifeos.job_tracker.repository.CompanyRepository;
@@ -43,6 +47,7 @@ public class JobListingService {
   private final AiAssistant ai;
   private final JobMatchingService jobMatchingService;
   private final JobEventProducer eventProducer;
+  private final JobLinkFetcher jobLinkFetcher;
 
   @Transactional(readOnly = true)
   public JobListing get(UUID userId, UUID jobId) {
@@ -132,6 +137,109 @@ public class JobListingService {
         Map.of("jobId", job.getId().toString(), "title", job.getTitle(), "company", job.getCompany()));
 
     return jobListingRepository.save(job);
+  }
+
+  /**
+   * Turns a pasted job URL (or pasted description text, when the site blocks server reads) into a
+   * scored {@link JobListing}. The URL is fetched server-side, reduced to text, structured by
+   * Claude, then run through the same fit scoring as a manual entry.
+   */
+  @Transactional
+  public JobListing createFromLink(UUID userId, String url, String pastedText) {
+    String sourceUrl = (url == null || url.isBlank()) ? null : url.trim();
+    boolean hasText = pastedText != null && !pastedText.isBlank();
+
+    if (sourceUrl != null) {
+      var existing = jobListingRepository.findByUserIdAndUrl(userId, sourceUrl);
+      if (existing.isPresent()) {
+        return existing.get();
+      }
+    }
+
+    String rawContent;
+    if (hasText) {
+      rawContent = "--- PAGE TEXT ---\n" + pastedText.trim();
+    } else if (sourceUrl != null) {
+      if (!sourceUrl.startsWith("http://") && !sourceUrl.startsWith("https://")) {
+        throw new InvalidRequestException("Enter a full job URL starting with http:// or https://");
+      }
+      rawContent = jobLinkFetcher.fetch(sourceUrl).content();
+    } else {
+      throw new InvalidRequestException("Provide a job link or paste the job description text");
+    }
+
+    if (!ai.available()) {
+      throw new InvalidRequestException(
+          "Parsing a job link needs Claude; set ANTHROPIC_API_KEY to enable it");
+    }
+
+    ParsedJobPosting parsed;
+    try {
+      parsed = ai.parseJobPosting(rawContent);
+    } catch (RuntimeException exception) {
+      throw new JobLinkUnreadableException(
+          "Couldn't read a job posting from that page (" + exception.getMessage() + "). Paste the"
+              + " job description text instead.");
+    }
+    if (parsed == null
+        || (isBlank(parsed.title()) && isBlank(parsed.jobDescriptionText()))) {
+      throw new JobLinkUnreadableException(
+          "That didn't look like a job posting. Paste the job description text instead.");
+    }
+
+    String company = isBlank(parsed.company()) ? "Unknown company" : parsed.company().trim();
+    Company companyEntity = resolveCompany(userId, company);
+    String descriptionText =
+        !isBlank(parsed.jobDescriptionText())
+            ? parsed.jobDescriptionText()
+            : (hasText ? pastedText.trim() : null);
+
+    JobListing job =
+        jobListingRepository.save(
+            JobListing.builder()
+                .userId(userId)
+                .companyId(companyEntity == null ? null : companyEntity.getId())
+                .title(isBlank(parsed.title()) ? "Untitled role" : parsed.title().trim())
+                .company(company)
+                .location(parsed.location())
+                .workModel(parseEnum(WorkModel.class, parsed.workModel()))
+                .seniorityLevel(parseEnum(SeniorityLevel.class, parsed.seniorityLevel()))
+                .industry(parsed.industry())
+                .salaryMin(parsed.salaryMin())
+                .salaryMax(parsed.salaryMax())
+                .currency(parsed.currency())
+                .url(sourceUrl)
+                .jobDescriptionText(descriptionText)
+                .requiredSkills(parsed.requiredSkills())
+                .niceToHaveSkills(parsed.niceToHaveSkills())
+                .source("link")
+                .ingestedBy(IngestSource.LINK)
+                .visaSponsorship(VisaSponsorship.UNKNOWN)
+                .parseStatus(ProcessingStatus.PENDING)
+                .build());
+
+    if (job.getRequiredSkills() != null && !job.getRequiredSkills().isEmpty()) {
+      job.setParseStatus(ProcessingStatus.COMPLETED);
+      try {
+        JobFitResult result = jobMatchingService.score(userId, job);
+        job.setFitScore(result.score());
+        job.setFitExplanation(result.explanation());
+      } catch (RuntimeException exception) {
+        log.warn("scoring linked job {} failed: {}", job.getId(), exception.getMessage());
+      }
+    } else {
+      parseAndScore(userId, job);
+    }
+
+    eventProducer.emit(
+        JobEventTopics.JOB_DISCOVERED,
+        userId,
+        Map.of("jobId", job.getId().toString(), "title", job.getTitle(), "company", job.getCompany()));
+    return jobListingRepository.save(job);
+  }
+
+  private static boolean isBlank(String s) {
+    return s == null || s.isBlank();
   }
 
   @Transactional
