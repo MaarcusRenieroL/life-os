@@ -63,6 +63,13 @@ public class Resume {
   @Column(name = "raw_text")
   String rawText;
 
+  /**
+   * LaTeX source for this resume. On a base resume it's the candidate's own template (content +
+   * layout, as pasted); on a tailored copy it's the job-tailored LaTeX that rendered its PDF.
+   */
+  @Column(name = "latex_source")
+  String latexSource;
+
   /** Claude's structured extraction: contact block, work history, education, skills. */
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "parsed_json")

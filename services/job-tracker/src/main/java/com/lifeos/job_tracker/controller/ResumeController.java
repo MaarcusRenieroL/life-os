@@ -1,6 +1,7 @@
 package com.lifeos.job_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.job_tracker.domains.dto.request.LatexSourceRequest;
 import com.lifeos.job_tracker.domains.dto.request.TailorResumeRequest;
 import com.lifeos.job_tracker.domains.dto.response.ResumeResponse;
 import com.lifeos.job_tracker.domains.dto.response.SkillResponse;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -81,9 +83,32 @@ public class ResumeController extends AuthenticatedController {
     TailoredResume result =
         resumeService.tailor(
             userId(authentication), resumeId, request.jobListingId(), request.instruction());
-    Map<String, Object> body =
-        Map.of("resume", ResumeResponse.from(result.resume()), "markdown", result.markdown());
+    Map<String, Object> body = new java.util.HashMap<>();
+    body.put("resume", ResumeResponse.from(result.resume()));
+    body.put("markdown", result.markdown());
+    body.put("latex", result.latex());
     return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(body, "Tailored resume generated"));
+  }
+
+  /** The candidate's LaTeX template - stored on a base resume so tailoring re-renders on it. */
+  @GetMapping("/{resumeId}/latex")
+  public ResponseEntity<ApiResponse<Map<String, Object>>> getLatex(
+      Authentication authentication, @PathVariable UUID resumeId) {
+    String source = resumeService.get(userId(authentication), resumeId).getLatexSource();
+    Map<String, Object> body = new java.util.HashMap<>();
+    body.put("source", source);
+    return ResponseEntity.ok(ApiResponse.success(body, "LaTeX template fetched"));
+  }
+
+  @PutMapping("/{resumeId}/latex")
+  public ResponseEntity<ApiResponse<ResumeResponse>> putLatex(
+      Authentication authentication,
+      @PathVariable UUID resumeId,
+      @RequestBody LatexSourceRequest request) {
+    ResumeResponse body =
+        ResumeResponse.from(
+            resumeService.saveLatexSource(userId(authentication), resumeId, request.source()));
+    return ResponseEntity.ok(ApiResponse.success(body, "LaTeX template saved"));
   }
 
   @GetMapping("/{resumeId}/download")

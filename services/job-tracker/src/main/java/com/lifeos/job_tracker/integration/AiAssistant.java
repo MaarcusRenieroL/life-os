@@ -117,6 +117,46 @@ public class AiAssistant {
         EmailClassification.class);
   }
 
+  /**
+   * Rewrites the human-readable content of a LaTeX resume to target a job, leaving every LaTeX
+   * command, the preamble, and the document structure byte-for-byte intact. Returns a full,
+   * compilable {@code .tex} document.
+   */
+  public String tailorLatexResume(String latexSource, String jobDescription, String instruction) {
+    return claude.complete(
+        "You edit LaTeX resumes. You return ONLY a complete LaTeX document - no prose, no"
+            + " markdown fences, no explanation.",
+        """
+        Below is a candidate's resume as a complete LaTeX document, followed by a target job
+        description. Rewrite ONLY the human-readable content to target the job:
+        - Reorder and rephrase bullet points, the summary, and skill lists so the most relevant
+          experience and keywords come first; weave in the job's real terminology truthfully.
+        - Do NOT invent experience, employers, dates, degrees, or skills the candidate doesn't have.
+        - The input resume is exactly ONE page. Your output MUST also fit on ONE page: do not add
+          bullets or lines, keep each rewritten bullet no longer than the original, and if one
+          section grows, shorten or drop the least-relevant bullet elsewhere to compensate. Aim
+          for slightly fewer total words than the input.
+        Preserve EXACTLY, with no changes: the preamble, every command and custom macro
+        (\\resumeItem, \\resumeSubheading, \\section, \\begin/\\end, etc.), the document structure,
+        and the ordering of \\section blocks. Only the text arguments to those macros may change.
+        %s
+        Return the full modified LaTeX document, starting at \\documentclass and ending at
+        \\end{document}.
+
+        === RESUME (LaTeX) ===
+        %s
+
+        === TARGET JOB ===
+        %s
+        """
+            .formatted(
+                instruction == null || instruction.isBlank()
+                    ? ""
+                    : "Additional instruction from the candidate: " + instruction,
+                latexSource,
+                jobDescription));
+  }
+
   public String generateTailoredResume(String baseResumeText, String jobDescription, String instruction) {
     return claude.complete(
         "You are an expert resume writer. Output the tailored resume as clean Markdown only.",

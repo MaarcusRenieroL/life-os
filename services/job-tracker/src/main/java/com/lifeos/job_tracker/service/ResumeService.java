@@ -9,6 +9,7 @@ import com.lifeos.job_tracker.domains.record.ParsedResume;
 import com.lifeos.job_tracker.exception.InvalidRequestException;
 import com.lifeos.job_tracker.exception.ResourceNotFoundException;
 import com.lifeos.job_tracker.integration.AiAssistant;
+import com.lifeos.job_tracker.integration.LatexCompiler;
 import com.lifeos.job_tracker.integration.PdfTextExtractor;
 import com.lifeos.job_tracker.integration.ResumePdfWriter;
 import com.lifeos.job_tracker.integration.ResumeStorageService;
@@ -35,12 +36,13 @@ public class ResumeService {
   private final ResumeStorageService storage;
   private final PdfTextExtractor pdfTextExtractor;
   private final ResumePdfWriter pdfWriter;
+  private final LatexCompiler latexCompiler;
   private final AiAssistant ai;
   private final SkillService skillService;
   private final ResumeVariantService resumeVariantService;
   private final ObjectMapper objectMapper;
 
-  public record TailoredResume(Resume resume, String markdown) {}
+  public record TailoredResume(Resume resume, String markdown, String latex) {}
 
   public record ResumeDownload(String fileName, String contentType, byte[] content) {}
 
@@ -162,7 +164,8 @@ public class ResumeService {
           "Resume tailoring needs Claude; set ANTHROPIC_API_KEY to enable it");
     }
     Resume base = get(userId, resumeId);
-    if (base.getRawText() == null || base.getRawText().isBlank()) {
+    boolean hasLatex = base.getLatexSource() != null && !base.getLatexSource().isBlank();
+    if (!hasLatex && (base.getRawText() == null || base.getRawText().isBlank())) {
       throw new InvalidRequestException("Base resume has no extracted text to tailor from");
     }
 
@@ -174,9 +177,38 @@ public class ResumeService {
       throw new InvalidRequestException("Job listing has no description to tailor against");
     }
 
-    String markdown =
-        ai.generateTailoredResume(base.getRawText(), job.getJobDescriptionText(), instruction);
-    byte[] pdf = pdfWriter.fromMarkdown(markdown);
+    String markdown;
+    String latex = null;
+    byte[] pdf;
+    if (hasLatex) {
+      // Re-render on the candidate's own template: Claude rewrites the content inside the
+      // LaTeX, tectonic compiles it back to a pixel-identical PDF. If it overflows one page,
+      // ask once more with a hard "cut it down" instruction.
+      latex =
+          stripCodeFences(
+              ai.tailorLatexResume(
+                  base.getLatexSource(), job.getJobDescriptionText(), instruction));
+      pdf = latexCompiler.compile(latex);
+      if (latexCompiler.pageCount(pdf) > 1) {
+        String tighten =
+            (instruction == null || instruction.isBlank() ? "" : instruction + " ")
+                + "The previous attempt ran onto a second page. Cut content - shorten bullets and"
+                + " drop the least-relevant ones - so it fits on exactly one page.";
+        String retry =
+            stripCodeFences(
+                ai.tailorLatexResume(base.getLatexSource(), job.getJobDescriptionText(), tighten));
+        byte[] retryPdf = latexCompiler.compile(retry);
+        if (latexCompiler.pageCount(retryPdf) <= latexCompiler.pageCount(pdf)) {
+          latex = retry;
+          pdf = retryPdf;
+        }
+      }
+      markdown = latex;
+    } else {
+      markdown =
+          ai.generateTailoredResume(base.getRawText(), job.getJobDescriptionText(), instruction);
+      pdf = pdfWriter.fromMarkdown(markdown);
+    }
 
     String key = storage.storeBytes(userId, pdf, "pdf");
     Resume tailored =
@@ -190,11 +222,37 @@ public class ResumeService {
                 .contentType("application/pdf")
                 .extractionStatus(ProcessingStatus.COMPLETED)
                 .rawText(markdown)
+                .latexSource(latex)
                 .sourceInstruction(instruction)
                 .base(false)
                 .build());
 
-    return new TailoredResume(tailored, markdown);
+    return new TailoredResume(tailored, markdown, latex);
+  }
+
+  /** Saves (or clears, when {@code source} is blank) the LaTeX template on a base resume. */
+  @Transactional
+  public Resume saveLatexSource(UUID userId, UUID resumeId, String source) {
+    Resume resume = get(userId, resumeId);
+    String trimmed = source == null ? null : source.strip();
+    if (trimmed != null && !trimmed.isBlank() && !trimmed.contains("\\documentclass")) {
+      throw new InvalidRequestException(
+          "That doesn't look like a LaTeX document (no \\documentclass)");
+    }
+    resume.setLatexSource(trimmed == null || trimmed.isBlank() ? null : trimmed);
+    return resumeRepository.save(resume);
+  }
+
+  private static String stripCodeFences(String text) {
+    String s = text.strip();
+    if (s.startsWith("```")) {
+      int firstNl = s.indexOf('\n');
+      int lastFence = s.lastIndexOf("```");
+      if (firstNl > 0 && lastFence > firstNl) {
+        s = s.substring(firstNl + 1, lastFence).strip();
+      }
+    }
+    return s;
   }
 
   @Transactional(readOnly = true)
