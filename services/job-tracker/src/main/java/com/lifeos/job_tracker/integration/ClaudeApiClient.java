@@ -51,7 +51,10 @@ public class ClaudeApiClient {
             "messages", List.of(Map.of("role", "user", "content", userPrompt)));
 
     try {
-      JsonNode response =
+      // Read the body as a String and parse with our own ObjectMapper - a bare
+      // RestClient.builder() in Spring Boot 4 has no Jackson converter wired for
+      // JsonNode, which fails with "Type definition error: ... JsonNode".
+      String raw =
           restClient
               .post()
               .uri("/v1/messages")
@@ -60,16 +63,28 @@ public class ClaudeApiClient {
               .header("content-type", "application/json")
               .body(body)
               .retrieve()
-              .body(JsonNode.class);
+              .body(String.class);
+
+      JsonNode response = raw == null ? null : objectMapper.readTree(raw);
 
       if (response == null || !response.has("content") || response.get("content").isEmpty()) {
         throw new ClaudeUnavailableException("Anthropic API returned an empty response");
       }
 
-      return response.get("content").get(0).path("text").asText();
+      // The content array may lead with a "thinking" block (extended thinking is
+      // on by default for newer models) - pick the first "text" block, not [0].
+      for (JsonNode block : response.get("content")) {
+        if ("text".equals(block.path("type").asText()) && !block.path("text").asText().isBlank()) {
+          return block.get("text").asText();
+        }
+      }
+      throw new ClaudeUnavailableException("Anthropic API response had no text block");
     } catch (RestClientException exception) {
       log.warn("Anthropic API call failed: {}", exception.getMessage());
       throw new ClaudeUnavailableException("Anthropic API call failed: " + exception.getMessage(), exception);
+    } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+      throw new ClaudeUnavailableException(
+          "Could not read Anthropic response body: " + exception.getMessage(), exception);
     }
   }
 
@@ -86,11 +101,21 @@ public class ClaudeApiClient {
   }
 
   public <T> T completeJson(String systemPrompt, String userPrompt, Class<T> type) {
+    JsonNode json = completeJson(systemPrompt, userPrompt);
     try {
-      return objectMapper.treeToValue(completeJson(systemPrompt, userPrompt), type);
+      return objectMapper.treeToValue(json, type);
     } catch (Exception exception) {
+      log.warn(
+          "Could not map Anthropic response to {}: {} -- payload was: {}",
+          type.getSimpleName(),
+          exception.getMessage(),
+          json.toString());
       throw new ClaudeUnavailableException(
-          "Could not map Anthropic response to " + type.getSimpleName(), exception);
+          "Could not map Anthropic response to "
+              + type.getSimpleName()
+              + ": "
+              + exception.getMessage(),
+          exception);
     }
   }
 
