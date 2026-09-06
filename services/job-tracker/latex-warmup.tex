@@ -1,0 +1,27 @@
+% Compiled once during the Docker build so tectonic caches the packages the
+% resume templates need - keeps the first real tailor request from doing a
+% cold package download. Mirrors the common "sb2nov / Jake Gutierrez" preamble.
+\documentclass[letterpaper,10pt]{article}
+\makeatletter\let\@noitemerr\relax\makeatother
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\titleformat{\section}{\vspace{-4pt}\scshape\raggedright\large}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+\begin{document}
+\begin{center}\textbf{\Huge \scshape Warmup} \\ \small warmup@example.com\end{center}
+\section{Section}
+\begin{itemize}[leftmargin=0.15in, label={}]
+  \begin{itemize}
+    \item\small{A bullet.}
+  \end{itemize}
+\end{itemize}
+\begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}\textbf{A} & B \\\end{tabular*}
+\end{document}
