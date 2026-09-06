@@ -63,14 +63,35 @@ public class ResumeService {
    */
   @Transactional
   public Resume upload(UUID userId, MultipartFile file, String label, boolean base) {
-    String contentType = file.getContentType();
-    if (contentType != null && !contentType.contains("pdf")) {
-      throw new InvalidRequestException("Only PDF resumes are supported");
+    if (file == null || file.isEmpty()) {
+      throw new InvalidRequestException("No file was uploaded");
     }
 
     String fileKey = storage.store(userId, file);
     byte[] bytes = storage.read(fileKey);
-    String rawText = pdfTextExtractor.extract(bytes);
+
+    // Validate by the actual bytes, not the browser-supplied content type -
+    // browsers on some systems send a valid PDF as application/octet-stream.
+    boolean looksLikePdf =
+        bytes.length >= 4 && bytes[0] == '%' && bytes[1] == 'P' && bytes[2] == 'D' && bytes[3] == 'F';
+    boolean namedPdf =
+        file.getOriginalFilename() != null && file.getOriginalFilename().toLowerCase().endsWith(".pdf");
+    if (!looksLikePdf && !namedPdf) {
+      storage.delete(fileKey);
+      throw new InvalidRequestException("Only PDF resumes are supported");
+    }
+
+    // Text extraction failing (image-only/scanned resume, an encrypted PDF, odd
+    // font encoding PDFBox can't map) must NOT reject the upload - the PDF is
+    // the thing worth keeping. Store it, mark extraction FAILED, move on.
+    String rawText = null;
+    String extractionError = null;
+    try {
+      rawText = pdfTextExtractor.extract(bytes);
+    } catch (RuntimeException exception) {
+      extractionError = exception.getMessage();
+      log.warn("PDF text extraction failed for {}: {}", file.getOriginalFilename(), exception.getMessage());
+    }
 
     if (base) {
       resumeRepository
@@ -95,6 +116,12 @@ public class ResumeService {
                 .rawText(rawText)
                 .base(base)
                 .build());
+
+    if (extractionError != null) {
+      resume.setExtractionStatus(ProcessingStatus.FAILED);
+      resume.setExtractionError("Could not read text from this PDF (" + extractionError + "). File stored; add sections manually in Resume Builder.");
+      return resumeRepository.save(resume);
+    }
 
     if (!ai.available()) {
       resume.setExtractionStatus(ProcessingStatus.FAILED);
