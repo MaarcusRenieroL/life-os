@@ -78,42 +78,13 @@ export class JobApiService {
       .pipe(map((response) => response.data));
   }
 
-  listSources(): Observable<JobSource[]> {
+  /**
+   * Add a job from a pasted URL. Pass `jobDescriptionText` on the retry when the first call
+   * returned 422 (the site blocked a server-side read).
+   */
+  fromLink(url: string, jobDescriptionText?: string): Observable<JobListing> {
     return this.http
-      .get<ApiResponse<JobSource[]>>(`${this.baseUrl}/sources`)
+      .post<ApiResponse<JobListing>>(`${this.baseUrl}/from-link`, { url, jobDescriptionText })
       .pipe(map((response) => response.data));
   }
-
-  createSource(payload: Partial<JobSource>): Observable<JobSource> {
-    return this.http
-      .post<ApiResponse<JobSource>>(`${this.baseUrl}/sources`, payload)
-      .pipe(map((response) => response.data));
-  }
-
-  deleteSource(sourceId: string): Observable<void> {
-    return this.http
-      .delete<ApiResponse<void>>(`${this.baseUrl}/sources/${sourceId}`)
-      .pipe(map(() => undefined));
-  }
-
-  runScrape(): Observable<Record<string, unknown>> {
-    return this.http
-      .post<ApiResponse<Record<string, unknown>>>(`${this.baseUrl}/scrape`, {})
-      .pipe(map((response) => response.data));
-  }
-
-  importJobs(jobs: unknown[]): Observable<Record<string, unknown>> {
-    return this.http
-      .post<ApiResponse<Record<string, unknown>>>(`${this.baseUrl}/import`, jobs)
-      .pipe(map((response) => response.data));
-  }
-}
-
-export interface JobSource {
-  id: string;
-  name: string;
-  url: string | null;
-  scrapeFrequency: string | null;
-  lastScraped: string | null;
-  active: boolean;
 }
