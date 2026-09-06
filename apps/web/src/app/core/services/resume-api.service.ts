@@ -40,9 +40,27 @@ export class ResumeApiService {
       .pipe(map((response) => response.data));
   }
 
-  tailor(resumeId: string, jobListingId: string): Observable<{ resume: Resume; markdown: string }> {
+  tailor(
+    resumeId: string,
+    jobListingId: string,
+  ): Observable<{ resume: Resume; markdown: string; latex: string | null }> {
     return this.http
-      .post<ApiResponse<{ resume: Resume; markdown: string }>>(`${this.baseUrl}/${resumeId}/tailor`, { jobListingId })
+      .post<ApiResponse<{ resume: Resume; markdown: string; latex: string | null }>>(
+        `${this.baseUrl}/${resumeId}/tailor`,
+        { jobListingId },
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  getLatexTemplate(resumeId: string): Observable<string | null> {
+    return this.http
+      .get<ApiResponse<{ source: string | null }>>(`${this.baseUrl}/${resumeId}/latex`)
+      .pipe(map((response) => response.data.source));
+  }
+
+  saveLatexTemplate(resumeId: string, source: string): Observable<Resume> {
+    return this.http
+      .put<ApiResponse<Resume>>(`${this.baseUrl}/${resumeId}/latex`, { source })
       .pipe(map((response) => response.data));
   }
 

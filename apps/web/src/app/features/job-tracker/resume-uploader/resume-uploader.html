@@ -21,9 +21,42 @@
           {{ resume.label || resume.fileName }}
           <span class="text-foreground/45">· {{ statusLabel(resume.extractionStatus) }}</span>
           @if (resume.base) { <span class="text-primary">· base</span> }
+          @if (resume.hasLatexTemplate) { <span class="text-primary">· LaTeX</span> }
         </li>
       }
     </ul>
+  </section>
+
+  <section class="mt-8 rounded-[0.5rem] border border-border bg-card p-4">
+    <h2 class="text-[13.5px] font-semibold">Resume template (LaTeX)</h2>
+    <p class="mt-1 text-[12px] text-foreground/55">
+      Paste your resume's LaTeX source. When set, "Tailor my resume for this job" rewrites the
+      content into <em>this</em> template and compiles it — the tailored PDF looks exactly like
+      your own resume, not a generic layout.
+      @if (baseResume(); as b) {
+        <span class="text-foreground/45"> Attached to: {{ b.label || b.fileName }}.</span>
+      }
+    </p>
+    <textarea
+      [(ngModel)]="latexSource"
+      rows="12"
+      spellcheck="false"
+      placeholder="\documentclass[letterpaper,10pt]{article} …"
+      class="mt-2 w-full rounded-[0.45rem] border border-border bg-background px-3 py-2 font-mono text-[11.5px]"
+    ></textarea>
+    <div class="mt-2 flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        (click)="saveLatex()"
+        [disabled]="latexSaving()"
+        class="rounded-[0.45rem] bg-primary px-3 py-2 text-[12.5px] text-primary-foreground disabled:opacity-40"
+      >
+        {{ latexSaving() ? 'Saving…' : 'Save template' }}
+      </button>
+      @if (latexNote()) {
+        <span class="text-[12px] text-foreground/55">{{ latexNote() }}</span>
+      }
+    </div>
   </section>
 
   <section class="mt-6">

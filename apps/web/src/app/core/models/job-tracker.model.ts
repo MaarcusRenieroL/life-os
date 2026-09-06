@@ -140,6 +140,7 @@ export interface Resume {
   extractionStatus: string | null;
   extractionError: string | null;
   base: boolean;
+  hasLatexTemplate: boolean;
   tailoredForApplicationId: string | null;
   parsed: Record<string, unknown> | null;
   createdAt: string;

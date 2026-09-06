@@ -117,7 +117,11 @@ export class JobDiscovery implements OnInit {
     this.resumeApi.tailor(this.baseResume.id, job.id).subscribe({
       next: (result) => {
         this.tailoring.set(false);
-        this.tailorNote.set('Tailored resume ready — downloading…');
+        this.tailorNote.set(
+          result.latex
+            ? 'Tailored on your LaTeX template — downloading…'
+            : 'Tailored resume ready — downloading…',
+        );
         downloadViaBlob(
           this.http,
           `/v1/resumes/${result.resume.id}/download`,
