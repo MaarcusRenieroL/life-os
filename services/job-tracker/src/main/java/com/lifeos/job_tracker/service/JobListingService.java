@@ -4,6 +4,7 @@ import com.lifeos.job_tracker.domains.dto.request.CreateJobListingRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobListingRequest;
 import com.lifeos.job_tracker.domains.entity.Company;
 import com.lifeos.job_tracker.domains.entity.JobListing;
+import com.lifeos.job_tracker.domains.enums.IngestSource;
 import com.lifeos.job_tracker.domains.enums.ProcessingStatus;
 import com.lifeos.job_tracker.domains.enums.SeniorityLevel;
 import com.lifeos.job_tracker.domains.enums.VisaSponsorship;
@@ -105,6 +106,7 @@ public class JobListingService {
                 .workModel(request.workModel())
                 .url(request.url())
                 .source(request.source() == null ? "manual" : request.source())
+                .ingestedBy(IngestSource.MANUAL)
                 .jobDescriptionText(request.jobDescriptionText())
                 .salaryMin(request.salaryMin())
                 .salaryMax(request.salaryMax())
