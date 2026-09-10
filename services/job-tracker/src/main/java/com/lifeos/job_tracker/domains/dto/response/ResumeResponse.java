@@ -12,12 +12,8 @@ public record ResumeResponse(
     long fileSize,
     String extractionStatus,
     String extractionError,
-    boolean base,
-    boolean hasLatexTemplate,
-    UUID tailoredForApplicationId,
     Map<String, Object> parsed,
-    Instant createdAt,
-    Instant updatedAt) {
+    Instant createdAt) {
 
   public static ResumeResponse from(Resume resume) {
     return new ResumeResponse(
@@ -27,27 +23,7 @@ public record ResumeResponse(
         resume.getFileSize(),
         resume.getExtractionStatus() == null ? null : resume.getExtractionStatus().name(),
         resume.getExtractionError(),
-        resume.isBase(),
-        resume.getLatexSource() != null && !resume.getLatexSource().isBlank(),
-        resume.getTailoredForApplicationId(),
         resume.getParsedJson(),
-        resume.getCreatedAt(),
-        resume.getUpdatedAt());
-  }
-
-  public static ResumeResponse summary(Resume resume) {
-    return new ResumeResponse(
-        resume.getId(),
-        resume.getLabel(),
-        resume.getFileName(),
-        resume.getFileSize(),
-        resume.getExtractionStatus() == null ? null : resume.getExtractionStatus().name(),
-        resume.getExtractionError(),
-        resume.isBase(),
-        resume.getLatexSource() != null && !resume.getLatexSource().isBlank(),
-        resume.getTailoredForApplicationId(),
-        null,
-        resume.getCreatedAt(),
-        resume.getUpdatedAt());
+        resume.getCreatedAt());
   }
 }

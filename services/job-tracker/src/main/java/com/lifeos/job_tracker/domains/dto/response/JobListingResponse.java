@@ -34,8 +34,7 @@ public record JobListingResponse(
     String parseStatus,
     Integer fitScore,
     Map<String, Object> fitExplanation,
-    boolean saved,
-    boolean dismissed,
+    String status,
     Instant createdAt) {
 
   public static JobListingResponse from(JobListing job) {
@@ -65,8 +64,7 @@ public record JobListingResponse(
         job.getParseStatus() == null ? null : job.getParseStatus().name(),
         job.getFitScore(),
         job.getFitExplanation(),
-        job.isSaved(),
-        job.isDismissed(),
+        job.getStatus() == null ? null : job.getStatus().name(),
         job.getCreatedAt());
   }
 }

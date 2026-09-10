@@ -1,7 +1,6 @@
 package com.lifeos.job_tracker.domains.dto.request;
 
-import java.util.List;
+import com.lifeos.job_tracker.domains.enums.JobStatus;
 
-/** Partial update; null fields are left unchanged. */
-public record UpdateJobListingRequest(
-    Boolean saved, Boolean dismissed, List<String> tags, String notes) {}
+/** Move a tracked job to a new pipeline stage. */
+public record UpdateJobListingRequest(JobStatus status) {}

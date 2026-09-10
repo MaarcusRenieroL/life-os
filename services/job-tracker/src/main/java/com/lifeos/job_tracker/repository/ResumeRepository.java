@@ -8,9 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ResumeRepository extends JpaRepository<Resume, UUID> {
 
-  List<Resume> findAllByUserIdOrderByCreatedAtDesc(UUID userId);
-
   Optional<Resume> findByIdAndUserId(UUID id, UUID userId);
 
-  Optional<Resume> findFirstByUserIdAndBaseIsTrueOrderByCreatedAtDesc(UUID userId);
+  List<Resume> findAllByUserId(UUID userId);
+
+  Optional<Resume> findFirstByUserIdOrderByCreatedAtDesc(UUID userId);
 }

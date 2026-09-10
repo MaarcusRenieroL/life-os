@@ -1,17 +1,9 @@
 package com.lifeos.job_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
-import com.lifeos.job_tracker.domains.dto.request.LatexSourceRequest;
-import com.lifeos.job_tracker.domains.dto.request.TailorResumeRequest;
 import com.lifeos.job_tracker.domains.dto.response.ResumeResponse;
-import com.lifeos.job_tracker.domains.dto.response.SkillResponse;
 import com.lifeos.job_tracker.service.ResumeService;
 import com.lifeos.job_tracker.service.ResumeService.ResumeDownload;
-import com.lifeos.job_tracker.service.ResumeService.TailoredResume;
-import com.lifeos.job_tracker.service.SkillService;
-import jakarta.validation.Valid;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
@@ -24,11 +16,9 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -38,77 +28,23 @@ import org.springframework.web.multipart.MultipartFile;
 public class ResumeController extends AuthenticatedController {
 
   private final ResumeService resumeService;
-  private final SkillService skillService;
 
+  /** The candidate's current (only) resume, or 404 if none uploaded yet. */
   @GetMapping
-  public ResponseEntity<ApiResponse<List<ResumeResponse>>> list(Authentication authentication) {
-    List<ResumeResponse> body =
-        resumeService.list(userId(authentication)).stream().map(ResumeResponse::summary).toList();
-    return ResponseEntity.ok(ApiResponse.success(body, "Resumes fetched"));
+  public ResponseEntity<ApiResponse<ResumeResponse>> current(Authentication authentication) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            ResumeResponse.from(resumeService.getCurrent(userId(authentication))), "Resume fetched"));
   }
 
   @PostMapping(path = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ApiResponse<ResumeResponse>> upload(
       Authentication authentication,
       @RequestPart("file") MultipartFile file,
-      @RequestParam(required = false) String label,
-      @RequestParam(defaultValue = "false") boolean base) {
+      @RequestParam(required = false) String label) {
     ResumeResponse body =
-        ResumeResponse.from(resumeService.upload(userId(authentication), file, label, base));
+        ResumeResponse.from(resumeService.upload(userId(authentication), file, label));
     return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(body, "Resume uploaded"));
-  }
-
-  @GetMapping("/{resumeId}")
-  public ResponseEntity<ApiResponse<ResumeResponse>> get(
-      Authentication authentication, @PathVariable UUID resumeId) {
-    return ResponseEntity.ok(
-        ApiResponse.success(
-            ResumeResponse.from(resumeService.get(userId(authentication), resumeId)), "Resume fetched"));
-  }
-
-  @GetMapping("/{resumeId}/skills")
-  public ResponseEntity<ApiResponse<List<SkillResponse>>> skills(
-      Authentication authentication, @PathVariable UUID resumeId) {
-    resumeService.get(userId(authentication), resumeId); // ownership check
-    List<SkillResponse> body =
-        skillService.list(userId(authentication)).stream().map(SkillResponse::from).toList();
-    return ResponseEntity.ok(ApiResponse.success(body, "Skills fetched"));
-  }
-
-  @PostMapping("/{resumeId}/tailor")
-  public ResponseEntity<ApiResponse<Map<String, Object>>> tailor(
-      Authentication authentication,
-      @PathVariable UUID resumeId,
-      @Valid @RequestBody TailorResumeRequest request) {
-    TailoredResume result =
-        resumeService.tailor(
-            userId(authentication), resumeId, request.jobListingId(), request.instruction());
-    Map<String, Object> body = new java.util.HashMap<>();
-    body.put("resume", ResumeResponse.from(result.resume()));
-    body.put("markdown", result.markdown());
-    body.put("latex", result.latex());
-    return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(body, "Tailored resume generated"));
-  }
-
-  /** The candidate's LaTeX template - stored on a base resume so tailoring re-renders on it. */
-  @GetMapping("/{resumeId}/latex")
-  public ResponseEntity<ApiResponse<Map<String, Object>>> getLatex(
-      Authentication authentication, @PathVariable UUID resumeId) {
-    String source = resumeService.get(userId(authentication), resumeId).getLatexSource();
-    Map<String, Object> body = new java.util.HashMap<>();
-    body.put("source", source);
-    return ResponseEntity.ok(ApiResponse.success(body, "LaTeX template fetched"));
-  }
-
-  @PutMapping("/{resumeId}/latex")
-  public ResponseEntity<ApiResponse<ResumeResponse>> putLatex(
-      Authentication authentication,
-      @PathVariable UUID resumeId,
-      @RequestBody LatexSourceRequest request) {
-    ResumeResponse body =
-        ResumeResponse.from(
-            resumeService.saveLatexSource(userId(authentication), resumeId, request.source()));
-    return ResponseEntity.ok(ApiResponse.success(body, "LaTeX template saved"));
   }
 
   @GetMapping("/{resumeId}/download")

@@ -17,37 +17,8 @@ RUN mvn -f services/job-tracker/pom.xml dependency:go-offline
 COPY services/job-tracker/src services/job-tracker/src
 RUN mvn -f services/job-tracker/pom.xml clean package -DskipTests
 
-# ---------------------------------------------------------------------------
-# tectonic: single self-contained LaTeX engine used to re-render a candidate's
-# resume on their own template. Fetched per target arch, then warmed once so
-# the first real compile isn't a cold package download.
-# ---------------------------------------------------------------------------
-FROM eclipse-temurin:21-jre-alpine AS tex
-
-ARG TARGETARCH
-ARG TECTONIC_VERSION=0.15.0
-ENV XDG_CACHE_HOME=/var/cache
-RUN apk add --no-cache curl ca-certificates \
-    && case "$TARGETARCH" in \
-         arm64) TT_ARCH=aarch64-unknown-linux-musl ;; \
-         amd64) TT_ARCH=x86_64-unknown-linux-musl ;; \
-         *) echo "unsupported arch $TARGETARCH" && exit 1 ;; \
-       esac \
-    && curl -fsSL "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-${TT_ARCH}.tar.gz" \
-       | tar -xz -C /usr/local/bin tectonic \
-    && chmod +x /usr/local/bin/tectonic
-
-COPY services/job-tracker/latex-warmup.tex /tmp/warmup/warmup.tex
-RUN cd /tmp/warmup && tectonic -X compile warmup.tex --outdir . && rm -rf /tmp/warmup
-
-# ---------------------------------------------------------------------------
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-
-ENV XDG_CACHE_HOME=/var/cache
-RUN apk add --no-cache ca-certificates fontconfig
-COPY --from=tex /usr/local/bin/tectonic /usr/local/bin/tectonic
-COPY --from=tex /var/cache/Tectonic /var/cache/Tectonic
 
 COPY --from=builder /app/services/job-tracker/target/*.jar app.jar
 

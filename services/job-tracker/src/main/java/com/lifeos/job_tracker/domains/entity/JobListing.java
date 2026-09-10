@@ -3,6 +3,7 @@ package com.lifeos.job_tracker.domains.entity;
 import com.lifeos.job_tracker.domains.enums.CompanySize;
 import com.lifeos.job_tracker.domains.enums.GrowthStage;
 import com.lifeos.job_tracker.domains.enums.IngestSource;
+import com.lifeos.job_tracker.domains.enums.JobStatus;
 import com.lifeos.job_tracker.domains.enums.ProcessingStatus;
 import com.lifeos.job_tracker.domains.enums.SeniorityLevel;
 import com.lifeos.job_tracker.domains.enums.VisaSponsorship;
@@ -130,6 +131,11 @@ public class JobListing {
 
   @Column(name = "is_dismissed")
   boolean dismissed;
+
+  /** The candidate's own pipeline stage for this job. */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "status")
+  JobStatus status;
 
   @Column(name = "recruiter_email")
   String recruiterEmail;

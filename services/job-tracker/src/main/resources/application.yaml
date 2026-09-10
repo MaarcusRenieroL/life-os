@@ -14,14 +14,6 @@ spring:
   flyway:
     schemas: job_tracker_schema
     default-schema: job_tracker_schema
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-    consumer:
-      group-id: job-tracker
-      auto-offset-reset: earliest
 
 jwt:
   secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
@@ -40,17 +32,8 @@ anthropic:
   api-key: ${ANTHROPIC_API_KEY:}
   model: ${ANTHROPIC_MODEL:claude-sonnet-5}
   version: "2023-06-01"
-  max-tokens: ${ANTHROPIC_MAX_TOKENS:8192}
-
-resend:
-  api-key: ${RESEND_API_KEY:}
-  from: ${RESEND_FROM:jobs@life-os.local}
+  max-tokens: ${ANTHROPIC_MAX_TOKENS:4096}
 
 job-tracker:
   storage:
     resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}
-  follow-up:
-    default-lead-days: 7
-  latex:
-    tectonic-bin: ${TECTONIC_BIN:tectonic}
-    timeout-seconds: ${LATEX_TIMEOUT_SECONDS:90}
