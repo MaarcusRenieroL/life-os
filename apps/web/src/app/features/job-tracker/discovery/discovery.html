@@ -1,8 +1,8 @@
 <main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
   <h1 class="text-[22px] font-semibold tracking-tight">Add a Job</h1>
   <p class="mt-1 text-[12.5px] text-foreground/55">
-    Paste a job link (LinkedIn, Naukri, a company careers page). It's parsed, scored against your
-    resume, and you can tailor your resume to it in one click.
+    Paste a job link (LinkedIn, Naukri, Indeed, a company careers page). It's parsed and scored
+    against your saved resume, then added to your Jobs list.
   </p>
 
   <section class="mt-5 flex flex-col gap-2">
@@ -79,45 +79,10 @@
       }
 
       <div class="mt-4 flex flex-wrap gap-2">
-        <button type="button" (click)="tailorResume()" [disabled]="tailoring()" class="rounded-[0.45rem] bg-primary px-3 py-2 text-[12.5px] text-primary-foreground disabled:opacity-40">
-          {{ tailoring() ? 'Tailoring…' : 'Tailor my resume for this' }}
-        </button>
         <button type="button" (click)="openJob()" class="rounded-[0.45rem] border border-border px-3 py-2 text-[12.5px]">
           Open job
         </button>
       </div>
-      @if (tailorNote()) {
-        <p class="mt-2 text-[12px] text-foreground/55">{{ tailorNote() }}</p>
-      }
     </section>
   }
-
-  <section class="mt-8 rounded-[0.5rem] border border-border bg-card p-4">
-    <h2 class="text-[13.5px] font-semibold">Gmail sync</h2>
-    <p class="mt-1 text-[12px] text-foreground/55">
-      Scans your inbox for interview invites, application confirmations, rejections and offers, and
-      feeds them straight into the pipeline.
-    </p>
-
-    @if (gmailStatus(); as status) {
-      @if (status.connected) {
-        <p class="mt-2 text-[12px] text-primary">Connected · last refreshed {{ status.lastRefreshedAt }}</p>
-        <div class="mt-2 flex flex-wrap gap-2">
-          <button type="button" (click)="syncGmail(false)" [disabled]="busy()" class="rounded-[0.45rem] bg-primary px-3 py-1.5 text-[12px] text-primary-foreground disabled:opacity-40">
-            Sync last 2 days
-          </button>
-          <button type="button" (click)="syncGmail(true)" [disabled]="busy()" class="rounded-[0.45rem] border border-border px-3 py-1.5 text-[12px] disabled:opacity-40">
-            Full history sync
-          </button>
-        </div>
-      } @else {
-        <a [href]="gmailConnectUrl" class="mt-2 inline-block rounded-[0.45rem] bg-primary px-3 py-1.5 text-[12px] text-primary-foreground">
-          Connect Gmail
-        </a>
-      }
-    }
-    @if (gmailNote()) {
-      <p class="mt-2 text-[12px] text-foreground/55">{{ gmailNote() }}</p>
-    }
-  </section>
 </main>

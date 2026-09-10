@@ -1,5 +1,15 @@
 // Job Tracker module - response shapes from the job-tracker service
-// (/v1/jobs, /v1/applications, /v1/resumes, /v1/skills, /v1/contacts).
+// (/v1/jobs, /v1/resumes, /v1/skills).
+
+export type JobStatus = 'INTERESTED' | 'APPLIED' | 'INTERVIEWING' | 'REJECTED' | 'OFFER';
+
+export const JOB_STATUSES: JobStatus[] = [
+  'INTERESTED',
+  'APPLIED',
+  'INTERVIEWING',
+  'REJECTED',
+  'OFFER',
+];
 
 export interface JobListing {
   id: string;
@@ -27,109 +37,13 @@ export interface JobListing {
   parseStatus: string | null;
   fitScore: number | null;
   fitExplanation: Record<string, unknown> | null;
-  saved: boolean;
-  dismissed: boolean;
+  status: JobStatus | null;
   createdAt: string;
-}
-
-export interface PageResponse<T> {
-  content: T[];
-  page: number;
-  size: number;
-  totalElements: number;
-  totalPages: number;
 }
 
 export interface JobFitResult {
   score: number;
   explanation: Record<string, unknown>;
-}
-
-export type ApplicationStatus =
-  | 'Discovered'
-  | 'Saved'
-  | 'Applied'
-  | 'Recruiter Contacted'
-  | 'Screening'
-  | 'Technical Interview'
-  | 'System Design Interview'
-  | 'Final Interview'
-  | 'Offer'
-  | 'Rejected'
-  | 'Withdrawn';
-
-export interface Application {
-  id: string;
-  jobListingId: string;
-  resumeId: string | null;
-  company: string | null;
-  jobTitle: string | null;
-  status: ApplicationStatus;
-  applicationMethod: string | null;
-  applicationDate: string | null;
-  followUpReminderDate: string | null;
-  rejectionReason: string | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface StatusHistoryEntry {
-  id: string;
-  oldStatus: string | null;
-  newStatus: string;
-  note: string | null;
-  changedBy: string | null;
-  changedAt: string;
-}
-
-export interface InterviewRound {
-  id: string;
-  applicationId: string;
-  type: string;
-  scheduledDate: string | null;
-  interviewerName: string | null;
-  meetingLink: string | null;
-  durationMinutes: number | null;
-  topics: string[] | null;
-  preparationNotes: string | null;
-  actualStatus: string | null;
-  selfAssessmentScore: number | null;
-  postInterviewNotes: string | null;
-  completedAt: string | null;
-}
-
-export interface Referral {
-  id: string;
-  applicationId: string;
-  contactId: string;
-  outreachDate: string | null;
-  messageSent: string | null;
-  responseReceived: boolean;
-  responseDate: string | null;
-  referralStatus: string;
-  followUpDate: string | null;
-  notes: string | null;
-}
-
-export interface Offer {
-  id: string;
-  applicationId: string;
-  salary: number | null;
-  currency: string | null;
-  benefits: string[] | null;
-  startDate: string | null;
-  notes: string | null;
-  accepted: boolean | null;
-}
-
-export interface ApplicationDetail {
-  application: Application;
-  job: JobListing;
-  statusHistory: StatusHistoryEntry[];
-  interviews: InterviewRound[];
-  referrals: Referral[];
-  offer: Offer | null;
 }
 
 export interface Resume {
@@ -139,12 +53,8 @@ export interface Resume {
   fileSize: number;
   extractionStatus: string | null;
   extractionError: string | null;
-  base: boolean;
-  hasLatexTemplate: boolean;
-  tailoredForApplicationId: string | null;
   parsed: Record<string, unknown> | null;
   createdAt: string;
-  updatedAt: string;
 }
 
 export interface Skill {
@@ -155,19 +65,4 @@ export interface Skill {
   yearsOfExperience: number | null;
   confidenceScore: number | null;
   source: string | null;
-}
-
-export interface Contact {
-  id: string;
-  companyId: string | null;
-  name: string;
-  role: string | null;
-  email: string | null;
-  phone: string | null;
-  linkedinUrl: string | null;
-  relationshipType: string | null;
-  vip: boolean;
-  lastInteractionDate: string | null;
-  notes: string | null;
-  createdAt: string;
 }

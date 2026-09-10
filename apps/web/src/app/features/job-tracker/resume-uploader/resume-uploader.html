@@ -1,62 +1,31 @@
 <main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
-  <h1 class="text-[22px] font-semibold tracking-tight">Resumes &amp; Skills</h1>
-  <p class="mt-1 text-[12.5px] text-foreground/55">Upload a PDF — it's parsed and skills extracted automatically.</p>
+  <h1 class="text-[22px] font-semibold tracking-tight">Resume</h1>
+  <p class="mt-1 text-[12.5px] text-foreground/55">
+    Upload a PDF. Its skills are extracted and used to score every job you add. Uploading a new one
+    replaces the old.
+  </p>
 
   <label class="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-[0.45rem] border border-border px-3 py-2 text-[12.5px]">
     <input type="file" accept="application/pdf,.pdf" class="hidden" (change)="onFile($event)" />
-    {{ uploading() ? 'Uploading…' : 'Upload resume PDF' }}
+    {{ uploading() ? 'Uploading…' : resume() ? 'Replace resume PDF' : 'Upload resume PDF' }}
   </label>
   @if (error()) {
     <p class="mt-2 text-[12px] text-destructive">{{ error() }}</p>
   }
-  @if (lastUploadNote()) {
-    <p class="mt-2 text-[12px] text-foreground/55">{{ lastUploadNote() }}</p>
+  @if (note()) {
+    <p class="mt-2 text-[12px] text-foreground/55">{{ note() }}</p>
   }
 
   <section class="mt-6">
-    <h2 class="text-[13.5px] font-semibold">Versions ({{ resumes().length }})</h2>
-    <ul class="mt-2 flex flex-col gap-2">
-      @for (resume of resumes(); track resume.id) {
-        <li class="rounded-[0.5rem] border border-border bg-card px-3 py-2 text-[12.5px]">
-          {{ resume.label || resume.fileName }}
-          <span class="text-foreground/45">· {{ statusLabel(resume.extractionStatus) }}</span>
-          @if (resume.base) { <span class="text-primary">· base</span> }
-          @if (resume.hasLatexTemplate) { <span class="text-primary">· LaTeX</span> }
-        </li>
-      }
-    </ul>
-  </section>
-
-  <section class="mt-8 rounded-[0.5rem] border border-border bg-card p-4">
-    <h2 class="text-[13.5px] font-semibold">Resume template (LaTeX)</h2>
-    <p class="mt-1 text-[12px] text-foreground/55">
-      Paste your resume's LaTeX source. When set, "Tailor my resume for this job" rewrites the
-      content into <em>this</em> template and compiles it — the tailored PDF looks exactly like
-      your own resume, not a generic layout.
-      @if (baseResume(); as b) {
-        <span class="text-foreground/45"> Attached to: {{ b.label || b.fileName }}.</span>
-      }
-    </p>
-    <textarea
-      [(ngModel)]="latexSource"
-      rows="12"
-      spellcheck="false"
-      placeholder="\documentclass[letterpaper,10pt]{article} …"
-      class="mt-2 w-full rounded-[0.45rem] border border-border bg-background px-3 py-2 font-mono text-[11.5px]"
-    ></textarea>
-    <div class="mt-2 flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        (click)="saveLatex()"
-        [disabled]="latexSaving()"
-        class="rounded-[0.45rem] bg-primary px-3 py-2 text-[12.5px] text-primary-foreground disabled:opacity-40"
-      >
-        {{ latexSaving() ? 'Saving…' : 'Save template' }}
-      </button>
-      @if (latexNote()) {
-        <span class="text-[12px] text-foreground/55">{{ latexNote() }}</span>
-      }
-    </div>
+    <h2 class="text-[13.5px] font-semibold">Current resume</h2>
+    @if (resume(); as r) {
+      <div class="mt-2 rounded-[0.5rem] border border-border bg-card px-3 py-2 text-[12.5px]">
+        {{ r.label || r.fileName }}
+        <span class="text-foreground/45">· {{ statusLabel(r.extractionStatus) }}</span>
+      </div>
+    } @else {
+      <p class="mt-2 text-[12.5px] text-foreground/55">No resume uploaded yet.</p>
+    }
   </section>
 
   <section class="mt-6">

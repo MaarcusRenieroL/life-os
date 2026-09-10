@@ -10,58 +10,28 @@ export class ResumeApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = '/v1/resumes';
 
-  list(): Observable<Resume[]> {
-    return this.http
-      .get<ApiResponse<Resume[]>>(this.baseUrl)
-      .pipe(map((response) => response.data));
+  /** The single saved resume, or null (404) if none uploaded yet. */
+  current(): Observable<Resume | null> {
+    return this.http.get<ApiResponse<Resume>>(this.baseUrl).pipe(
+      map((response) => response.data),
+    );
   }
 
-  get(resumeId: string): Observable<Resume> {
-    return this.http
-      .get<ApiResponse<Resume>>(`${this.baseUrl}/${resumeId}`)
-      .pipe(map((response) => response.data));
-  }
-
-  upload(file: File, label?: string, base = false): Observable<Resume> {
+  upload(file: File, label?: string): Observable<Resume> {
     const form = new FormData();
     form.append('file', file);
     if (label) {
       form.append('label', label);
     }
-    form.append('base', String(base));
     return this.http
       .post<ApiResponse<Resume>>(`${this.baseUrl}/upload`, form)
       .pipe(map((response) => response.data));
   }
 
-  skills(resumeId: string): Observable<Skill[]> {
+  delete(resumeId: string): Observable<void> {
     return this.http
-      .get<ApiResponse<Skill[]>>(`${this.baseUrl}/${resumeId}/skills`)
-      .pipe(map((response) => response.data));
-  }
-
-  tailor(
-    resumeId: string,
-    jobListingId: string,
-  ): Observable<{ resume: Resume; markdown: string; latex: string | null }> {
-    return this.http
-      .post<ApiResponse<{ resume: Resume; markdown: string; latex: string | null }>>(
-        `${this.baseUrl}/${resumeId}/tailor`,
-        { jobListingId },
-      )
-      .pipe(map((response) => response.data));
-  }
-
-  getLatexTemplate(resumeId: string): Observable<string | null> {
-    return this.http
-      .get<ApiResponse<{ source: string | null }>>(`${this.baseUrl}/${resumeId}/latex`)
-      .pipe(map((response) => response.data.source));
-  }
-
-  saveLatexTemplate(resumeId: string, source: string): Observable<Resume> {
-    return this.http
-      .put<ApiResponse<Resume>>(`${this.baseUrl}/${resumeId}/latex`, { source })
-      .pipe(map((response) => response.data));
+      .delete<ApiResponse<void>>(`${this.baseUrl}/${resumeId}`)
+      .pipe(map(() => undefined));
   }
 
   skillLibrary(): Observable<Skill[]> {

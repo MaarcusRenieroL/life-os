@@ -1,5 +1,5 @@
 <main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
-  <a routerLink="/jobs" class="text-[12px] text-foreground/55 hover:underline">← Curated jobs</a>
+  <a routerLink="/jobs" class="text-[12px] text-foreground/55 hover:underline">← Jobs</a>
 
   @if (loading()) {
     <p class="mt-4 text-[12.5px] text-foreground/55">Loading…</p>
@@ -7,24 +7,44 @@
     <h1 class="mt-3 text-[22px] font-semibold tracking-tight">{{ job.title }}</h1>
     <p class="mt-1 text-[13px] text-foreground/55">
       {{ job.company }} · {{ job.location || 'Location n/a' }} · {{ job.workModel || '—' }}
+      @if (job.url) {
+        · <a [href]="job.url" target="_blank" rel="noopener" class="text-primary hover:underline">source</a>
+      }
     </p>
 
-    <div class="mt-4 flex gap-2.5">
-      <button type="button" (click)="apply()" class="rounded-[0.45rem] bg-primary px-3 py-2 text-[12.5px] text-primary-foreground">
-        Apply
-      </button>
-      <button type="button" (click)="save()" class="rounded-[0.45rem] border border-border px-3 py-2 text-[12.5px]">
-        {{ job.saved ? 'Saved ✓' : 'Save' }}
+    <div class="mt-4 flex flex-wrap items-center gap-2.5">
+      <span class="text-[12px] text-foreground/55">Status</span>
+      <select
+        [ngModel]="job.status"
+        (ngModelChange)="setStatus($event)"
+        class="rounded-[0.4rem] border border-border bg-background px-2 py-1.5 text-[12px]"
+      >
+        @for (s of statuses; track s) {
+          <option [value]="s">{{ s }}</option>
+        }
+      </select>
+      <button type="button" (click)="rescore()" class="rounded-[0.45rem] border border-border px-3 py-1.5 text-[12px]">
+        Re-score
       </button>
     </div>
-    @if (message()) {
-      <p class="mt-2 text-[12px] text-primary">{{ message() }}</p>
-    }
 
     @if (fit(); as fit) {
       <section class="mt-6 rounded-[0.55rem] border border-border bg-card p-4">
-        <h2 class="text-[13.5px] font-semibold">Fit score: {{ fit.score }}%</h2>
-        <pre class="mt-2 overflow-x-auto text-[11.5px] text-foreground/70">{{ fit.explanation | json }}</pre>
+        <h2 class="text-[13.5px] font-semibold">
+          Fit score: {{ fit.score ?? '—' }}<span class="text-[11px] text-foreground/45">/100</span>
+        </h2>
+        @if (fit.strong.length) {
+          <p class="mt-2 text-[12px]"><span class="text-primary">Strong match:</span> {{ fit.strong.join(', ') }}</p>
+        }
+        @if (fit.partial.length) {
+          <p class="mt-1 text-[12px]"><span class="text-foreground/60">Partial:</span> {{ fit.partial.join(', ') }}</p>
+        }
+        @if (fit.missing.length) {
+          <p class="mt-1 text-[12px]"><span class="text-destructive">Missing:</span> {{ fit.missing.join(', ') }}</p>
+        }
+        @if (fit.redFlags.length) {
+          <p class="mt-1 text-[12px] text-foreground/55">⚠ {{ fit.redFlags.join(' · ') }}</p>
+        }
       </section>
     }
 
