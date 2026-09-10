@@ -109,12 +109,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESUME_STORAGE_DIR: /data/resumes
     volumes:
       - job_tracker_resumes:/data/resumes
@@ -123,8 +121,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      kafka:
-        condition: service_started
 
   # Module tile enable/disable settings only - the notes module itself now
   # lives in its own `notes` service below.
@@ -185,11 +181,6 @@ services:
       GMAIL_ALERT_SENDERS: ${GMAIL_ALERT_SENDERS:-canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
       GMAIL_POLL_CRON: ${GMAIL_POLL_CRON:-0 0 9,15,21 * * *}
       FINANCE_INTERNAL_BASE_URL: ${FINANCE_INTERNAL_BASE_URL:-http://finance-tracker:8006}
-      JOB_TRACKER_INTERNAL_BASE_URL: ${JOB_TRACKER_INTERNAL_BASE_URL:-http://job-tracker:8003}
-      JOB_EMAIL_POLL_CRON: ${JOB_EMAIL_POLL_CRON:-0 30 9,15,21 * * *}
-      # JOB_EMAIL_KEYWORDS / JOB_EMAIL_SENDERS deliberately not set here - leave
-      # them unset on the host to keep application.yaml's own sensible default,
-      # or export them to override it (comma-separated, no spaces around commas).
     ports:
       - "8005:8005"
     depends_on:
@@ -197,8 +188,6 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
-      job-tracker:
-        condition: service_started
 
   finance-tracker:
     build:
