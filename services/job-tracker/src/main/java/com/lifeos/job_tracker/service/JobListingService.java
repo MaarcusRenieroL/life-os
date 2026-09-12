@@ -2,6 +2,7 @@ package com.lifeos.job_tracker.service;
 
 import com.lifeos.job_tracker.domains.entity.Company;
 import com.lifeos.job_tracker.domains.entity.JobListing;
+import com.lifeos.job_tracker.domains.entity.Resume;
 import com.lifeos.job_tracker.domains.enums.IngestSource;
 import com.lifeos.job_tracker.domains.enums.JobStatus;
 import com.lifeos.job_tracker.domains.enums.ProcessingStatus;
@@ -9,6 +10,7 @@ import com.lifeos.job_tracker.domains.enums.SeniorityLevel;
 import com.lifeos.job_tracker.domains.enums.VisaSponsorship;
 import com.lifeos.job_tracker.domains.enums.WorkModel;
 import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
+import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
 import com.lifeos.job_tracker.exception.InvalidRequestException;
 import com.lifeos.job_tracker.exception.JobLinkUnreadableException;
 import com.lifeos.job_tracker.exception.ResourceNotFoundException;
@@ -36,6 +38,7 @@ public class JobListingService {
   private final AiAssistant ai;
   private final JobMatchingService jobMatchingService;
   private final JobLinkFetcher jobLinkFetcher;
+  private final ResumeService resumeService;
 
   @Transactional(readOnly = true)
   public List<JobListing> list(UUID userId) {
@@ -147,6 +150,46 @@ public class JobListingService {
     job.setFitExplanation(result.explanation());
     jobListingRepository.save(job);
     return result;
+  }
+
+  /**
+   * Scores the saved resume against one job listing's real requirements, then asks Claude for
+   * concrete resume-improvement points and a full LaTeX resume tailored to that job, ready to paste
+   * into Overleaf.
+   */
+  @Transactional(readOnly = true)
+  public ResumeTailoringResult tailorResume(UUID userId, UUID jobId) {
+    JobListing job = get(userId, jobId);
+    if (job.getJobDescriptionText() == null || job.getJobDescriptionText().isBlank()) {
+      throw new InvalidRequestException("This job has no description text to tailor a resume against");
+    }
+
+    Resume resume = resumeService.getCurrent(userId);
+    if (resume.getRawText() == null || resume.getRawText().isBlank()) {
+      throw new InvalidRequestException("Upload a resume with readable text before tailoring it");
+    }
+
+    if (!ai.available()) {
+      throw new InvalidRequestException(
+          "Tailoring a resume needs Claude; set ANTHROPIC_API_KEY to enable it");
+    }
+
+    JobFitResult fit = jobMatchingService.score(userId, job);
+    @SuppressWarnings("unchecked")
+    List<String> missingSkills =
+        (List<String>) fit.explanation().getOrDefault("missingSkills", List.of());
+    @SuppressWarnings("unchecked")
+    List<String> partialSkills =
+        (List<String>) fit.explanation().getOrDefault("partialMatches", List.of());
+
+    return ai.tailorResume(
+        job.getTitle(),
+        job.getCompany(),
+        job.getJobDescriptionText(),
+        job.getRequiredSkills(),
+        missingSkills,
+        partialSkills,
+        resume.getRawText());
   }
 
   @Transactional

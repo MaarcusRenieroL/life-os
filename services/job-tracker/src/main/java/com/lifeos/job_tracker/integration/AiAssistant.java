@@ -2,6 +2,8 @@ package com.lifeos.job_tracker.integration;
 
 import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
 import com.lifeos.job_tracker.domains.record.ParsedResume;
+import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -67,5 +69,77 @@ public class AiAssistant {
         """
             + rawPageContent,
         ParsedJobPosting.class);
+  }
+
+  /**
+   * Scores the candidate's resume prose against one job posting, then returns concrete
+   * improvement points and a full LaTeX resume the candidate can paste into Overleaf. Claude is
+   * told to only rephrase/reorganise/emphasise the candidate's real, stated experience - never to
+   * invent skills or history the resume doesn't support - and to weave in the missing/partial
+   * keywords only where the resume text actually backs them up.
+   */
+  public ResumeTailoringResult tailorResume(
+      String jobTitle,
+      String company,
+      String jobDescriptionText,
+      List<String> requiredSkills,
+      List<String> missingSkills,
+      List<String> partialSkills,
+      String resumeText) {
+    return claude.completeJson(
+        "You are a resume coach and LaTeX typesetter. Reply with ONLY a JSON object, no prose, no"
+            + " markdown fence.",
+        """
+        Compare the candidate's resume against the job below and produce tailoring output. Shape:
+        {
+          "improvementPoints": [string],
+          "latexResume": string
+        }
+
+        Rules:
+        - "improvementPoints" is 4-8 short, concrete, actionable bullets telling the candidate what
+          to change on their resume for THIS job - e.g. which existing bullet to reword, which
+          already-demonstrated-but-unstated skill to surface, what to quantify, what to cut. Do not
+          suggest claiming a skill or experience the resume gives no evidence of; if a required
+          skill is genuinely absent from their background, say so plainly instead of inventing a way
+          to fake it.
+        - "latexResume" is a complete, compilable LaTeX document (\\documentclass through
+          \\end{document}) using a clean single-column article-style resume layout (no exotic
+          packages beyond geometry/enumitem/titlesec/hyperref) built ONLY from the candidate's real
+          resume content below - reorganised, reworded and re-prioritised toward this job's required
+          skills, but never fabricating employers, titles, dates, or skills absent from the source
+          resume. Escape LaTeX special characters (&, %%, $, #, _, {, }) found in the candidate's own
+          text. Escape the document as a valid JSON string (escape backslashes as \\\\ and newlines
+          as \\n).
+
+        JOB:
+        Title: %s
+        Company: %s
+        Required skills: %s
+        Skills the candidate is missing: %s
+        Skills the candidate partially matches: %s
+        Description:
+        %s
+
+        CANDIDATE RESUME (verbatim extracted text):
+        %s
+        """
+            .formatted(
+                blank(jobTitle),
+                blank(company),
+                String.join(", ", safe(requiredSkills)),
+                String.join(", ", safe(missingSkills)),
+                String.join(", ", safe(partialSkills)),
+                blank(jobDescriptionText),
+                blank(resumeText)),
+        ResumeTailoringResult.class);
+  }
+
+  private static String blank(String value) {
+    return value == null || value.isBlank() ? "(not provided)" : value;
+  }
+
+  private static List<String> safe(List<String> list) {
+    return list == null ? List.of() : list;
   }
 }

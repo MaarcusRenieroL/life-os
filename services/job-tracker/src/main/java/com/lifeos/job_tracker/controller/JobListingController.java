@@ -4,6 +4,7 @@ import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.job_tracker.domains.dto.request.FromLinkRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobListingRequest;
 import com.lifeos.job_tracker.domains.dto.response.JobListingResponse;
+import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
 import com.lifeos.job_tracker.service.JobListingService;
 import com.lifeos.job_tracker.service.JobMatchingService.JobFitResult;
 import java.util.List;
@@ -78,6 +79,18 @@ public class JobListingController extends AuthenticatedController {
     return ResponseEntity.ok(
         ApiResponse.success(
             jobListingService.rescore(userId(authentication), jobId), "Fit score recomputed"));
+  }
+
+  /**
+   * Scores the saved resume against this job, then returns concrete improvement points and a full
+   * LaTeX resume tailored to it, ready to paste into Overleaf.
+   */
+  @PostMapping("/{jobId}/tailor-resume")
+  public ResponseEntity<ApiResponse<ResumeTailoringResult>> tailorResume(
+      Authentication authentication, @PathVariable UUID jobId) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            jobListingService.tailorResume(userId(authentication), jobId), "Resume tailored"));
   }
 
   @DeleteMapping("/{jobId}")
