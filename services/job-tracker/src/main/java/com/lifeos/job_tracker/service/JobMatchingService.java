@@ -14,6 +14,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -160,8 +161,49 @@ public class JobMatchingService {
     return list == null ? List.of() : list;
   }
 
+  // Separators that different sources spell a skill name with, e.g. "Next JS", "Next-JS",
+  // "Next.js" and "NextJS" should all be treated as the same skill.
+  private static final Pattern SEPARATORS = Pattern.compile("[\\s._/-]+");
+
+  // Skill spellings that don't collapse to the same string by separator-stripping alone
+  // (abbreviations, "*JS" framework names, etc). Keys and values are already
+  // separator-stripped + lowercased; extend as new mismatches turn up.
+  private static final Map<String, String> SKILL_ALIASES =
+      Map.ofEntries(
+          Map.entry("js", "javascript"),
+          Map.entry("ts", "typescript"),
+          Map.entry("reactjs", "react"),
+          Map.entry("vuejs", "vue"),
+          Map.entry("angularjs", "angular"),
+          Map.entry("nodejs", "node"),
+          Map.entry("nextjs", "next"),
+          Map.entry("nuxtjs", "nuxt"),
+          Map.entry("expressjs", "express"),
+          Map.entry("golang", "go"),
+          Map.entry("k8s", "kubernetes"),
+          Map.entry("postgres", "postgresql"),
+          Map.entry("mongo", "mongodb"),
+          Map.entry("dotnet", "net"),
+          Map.entry("aspnet", "net"),
+          Map.entry("csharp", "c#"),
+          Map.entry("cpp", "c++"),
+          Map.entry("objectivec", "objective-c"),
+          Map.entry("restapi", "rest"),
+          Map.entry("ci", "cicd"),
+          Map.entry("cd", "cicd"));
+
+  /**
+   * Canonicalises a skill name for comparison: trims, lowercases, strips common separators
+   * (spaces, dots, hyphens, slashes, underscores) so "Next JS", "NextJS" and "next.js" all
+   * collapse to the same token, then applies a small alias table for spellings that don't
+   * collapse via stripping alone (e.g. "JS" vs "JavaScript", "k8s" vs "Kubernetes").
+   */
   private static String normalise(String value) {
-    return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    if (value == null) {
+      return "";
+    }
+    String stripped = SEPARATORS.matcher(value.trim().toLowerCase(Locale.ROOT)).replaceAll("");
+    return SKILL_ALIASES.getOrDefault(stripped, stripped);
   }
 
   private static double round(double value) {

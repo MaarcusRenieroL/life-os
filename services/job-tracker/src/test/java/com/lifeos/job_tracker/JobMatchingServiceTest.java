@@ -59,6 +59,22 @@ class JobMatchingServiceTest {
     assertThat(strings(result, "redFlags")).contains("No visa sponsorship");
   }
 
+  @Test
+  void matchesSkillsAcrossCasingSpacingAndAbbreviationVariants() {
+    when(skillRepository.findAllByUserIdOrderByNameAsc(userId))
+        .thenReturn(List.of(skill("NextJS"), skill("Node.js"), skill("JavaScript"), skill("Kubernetes")));
+
+    JobListing job = new JobListing();
+    job.setRequiredSkills(List.of("Next JS", "node js", "JS", "k8s"));
+    job.setJobDescriptionText("Full-stack role");
+
+    JobFitResult result = jobMatchingService.score(userId, job);
+
+    assertThat(strings(result, "missingSkills")).isEmpty();
+    assertThat(strings(result, "strongMatches"))
+        .containsExactlyInAnyOrder("Next JS", "node js", "JS", "k8s");
+  }
+
   @SuppressWarnings("unchecked")
   private static List<String> strings(JobFitResult result, String key) {
     return (List<String>) result.explanation().get(key);
