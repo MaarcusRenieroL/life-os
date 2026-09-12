@@ -3,7 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { JobApiService } from '../../../core/services/job-api.service';
-import { JobListing, JobStatus, JOB_STATUSES } from '../../../core/models/job-tracker.model';
+import {
+  JobListing,
+  JobStatus,
+  JOB_STATUSES,
+  ResumeTailoringResult,
+} from '../../../core/models/job-tracker.model';
 
 interface FitView {
   score: number | null;
@@ -27,6 +32,11 @@ export class JobDetail implements OnInit {
   protected readonly fit = signal<FitView | null>(null);
   protected readonly loading = signal(true);
   protected readonly statuses = JOB_STATUSES;
+
+  protected readonly tailoring = signal(false);
+  protected readonly tailorResult = signal<ResumeTailoringResult | null>(null);
+  protected readonly tailorError = signal<string | null>(null);
+  protected readonly latexCopied = signal(false);
 
   ngOnInit(): void {
     const jobId = this.route.snapshot.paramMap.get('jobId');
@@ -66,6 +76,39 @@ export class JobDetail implements OnInit {
           missing: this.list(result.explanation, 'missingSkills'),
           redFlags: this.list(result.explanation, 'redFlags'),
         }),
+    });
+  }
+
+  protected tailorResume(): void {
+    const job = this.job();
+    if (!job || this.tailoring()) {
+      return;
+    }
+    this.tailoring.set(true);
+    this.tailorError.set(null);
+    this.tailorResult.set(null);
+    this.jobApi.tailorResume(job.id).subscribe({
+      next: (result) => {
+        this.tailorResult.set(result);
+        this.tailoring.set(false);
+      },
+      error: (err) => {
+        this.tailorError.set(
+          err?.error?.message || 'Could not tailor a resume for this job. Try again.',
+        );
+        this.tailoring.set(false);
+      },
+    });
+  }
+
+  protected copyLatex(): void {
+    const result = this.tailorResult();
+    if (!result) {
+      return;
+    }
+    navigator.clipboard.writeText(result.latexResume).then(() => {
+      this.latexCopied.set(true);
+      setTimeout(() => this.latexCopied.set(false), 2000);
     });
   }
 

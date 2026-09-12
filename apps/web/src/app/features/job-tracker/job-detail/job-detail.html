@@ -45,6 +45,45 @@
         @if (fit.redFlags.length) {
           <p class="mt-1 text-[12px] text-foreground/55">⚠ {{ fit.redFlags.join(' · ') }}</p>
         }
+
+        <button
+          type="button"
+          (click)="tailorResume()"
+          [disabled]="tailoring()"
+          class="mt-3 rounded-[0.45rem] border border-border px-3 py-1.5 text-[12px] disabled:opacity-50"
+        >
+          {{ tailoring() ? 'Tailoring resume…' : 'Tailor resume for this job' }}
+        </button>
+
+        @if (tailorError(); as error) {
+          <p class="mt-2 text-[12px] text-destructive">{{ error }}</p>
+        }
+
+        @if (tailorResult(); as result) {
+          <div class="mt-4 border-t border-border pt-4">
+            <h3 class="text-[12.5px] font-semibold">Improve your resume for this role</h3>
+            <ul class="mt-2 list-disc space-y-1 pl-4 text-[12px] text-foreground/75">
+              @for (point of result.improvementPoints; track point) {
+                <li>{{ point }}</li>
+              }
+            </ul>
+
+            <div class="mt-3 flex items-center justify-between">
+              <h3 class="text-[12.5px] font-semibold">LaTeX resume (paste into Overleaf)</h3>
+              <button
+                type="button"
+                (click)="copyLatex()"
+                class="rounded-[0.4rem] border border-border px-2.5 py-1 text-[11px]"
+              >
+                {{ latexCopied() ? 'Copied ✓' : 'Copy .tex' }}
+              </button>
+            </div>
+            <pre
+              class="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-[0.45rem] border border-border bg-background p-3 text-[11px] text-foreground/80"
+              >{{ result.latexResume }}</pre
+            >
+          </div>
+        }
       </section>
     }
 

@@ -46,6 +46,11 @@ export interface JobFitResult {
   explanation: Record<string, unknown>;
 }
 
+export interface ResumeTailoringResult {
+  improvementPoints: string[];
+  latexResume: string;
+}
+
 export interface Resume {
   id: string;
   label: string | null;

@@ -3,7 +3,12 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 
 import { ApiResponse } from '../models/auth.model';
-import { JobFitResult, JobListing, JobStatus } from '../models/job-tracker.model';
+import {
+  JobFitResult,
+  JobListing,
+  JobStatus,
+  ResumeTailoringResult,
+} from '../models/job-tracker.model';
 
 @Injectable({ providedIn: 'root' })
 export class JobApiService {
@@ -41,6 +46,12 @@ export class JobApiService {
   rescore(jobId: string): Observable<JobFitResult> {
     return this.http
       .post<ApiResponse<JobFitResult>>(`${this.baseUrl}/${jobId}/rescore`, {})
+      .pipe(map((response) => response.data));
+  }
+
+  tailorResume(jobId: string): Observable<ResumeTailoringResult> {
+    return this.http
+      .post<ApiResponse<ResumeTailoringResult>>(`${this.baseUrl}/${jobId}/tailor-resume`, {})
       .pipe(map((response) => response.data));
   }
 
