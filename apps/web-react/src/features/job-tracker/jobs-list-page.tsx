@@ -42,8 +42,8 @@ export function JobsListPage() {
         <h1 className="text-2xl font-semibold tracking-tight">
           Jobs <span className="text-muted-foreground">({jobs?.length ?? 0})</span>
         </h1>
-        <Button render={<Link to="/jobs/discovery" />}>
-          <Plus /> Add a job
+        <Button asChild>
+          <Link to="/jobs/discovery"><Plus /> Add a job</Link>
         </Button>
       </div>
 

@@ -63,15 +63,17 @@ export function ResumePage() {
         one replaces the old.
       </p>
 
-      <Button render={<label className="cursor-pointer" />} variant="outline" className="mt-4">
-        <input
-          ref={fileInput}
-          type="file"
-          accept="application/pdf,.pdf"
-          className="hidden"
-          onChange={(e) => void onFile(e)}
-        />
-        {uploading ? 'Uploading…' : resume ? 'Replace resume PDF' : 'Upload resume PDF'}
+      <Button asChild variant="outline" className="mt-4">
+        <label className="cursor-pointer">
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/pdf,.pdf"
+            className="hidden"
+            onChange={(e) => void onFile(e)}
+          />
+          {uploading ? 'Uploading…' : resume ? 'Replace resume PDF' : 'Upload resume PDF'}
+        </label>
       </Button>
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       {note && <p className="mt-2 text-sm text-muted-foreground">{note}</p>}

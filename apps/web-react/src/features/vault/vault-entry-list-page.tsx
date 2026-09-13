@@ -241,7 +241,9 @@ export function VaultEntryListPage() {
                 Copy
               </button>
               <DropdownMenu>
-                <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>⋯</DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm">⋯</Button>
+                </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => openEdit(entry.id)}>Edit</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => void duplicateEntry(entry)}>Duplicate</DropdownMenuItem>

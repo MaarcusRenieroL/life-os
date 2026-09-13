@@ -161,8 +161,8 @@ export function FinanceDashboardPage() {
           )}
         </div>
         <div className="flex gap-2">
-          <Button render={<Link to="/finance/import" />} variant="outline" size="sm">Upload statement</Button>
-          <Button render={<Link to="/finance/transactions" />} size="sm">+ Add transaction</Button>
+          <Button asChild variant="outline" size="sm"><Link to="/finance/import">Upload statement</Link></Button>
+          <Button asChild size="sm"><Link to="/finance/transactions">+ Add transaction</Link></Button>
         </div>
       </div>
 

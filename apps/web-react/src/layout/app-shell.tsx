@@ -63,12 +63,14 @@ export function AppShell() {
                   <SidebarMenuItem key={item.to}>
                     {item.enabled ? (
                       <SidebarMenuButton
-                        render={<NavLink to={item.to} />}
+                        asChild
                         isActive={location.pathname.startsWith(item.to)}
                         tooltip={item.label}
                       >
-                        <item.icon />
-                        <span>{item.label}</span>
+                        <NavLink to={item.to}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </NavLink>
                       </SidebarMenuButton>
                     ) : (
                       <SidebarMenuButton disabled tooltip={`${item.label} - coming soon`}>
@@ -86,12 +88,14 @@ export function AppShell() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                render={<NavLink to="/settings" />}
+                asChild
                 isActive={location.pathname.startsWith('/settings')}
                 tooltip="Settings"
               >
-                <Settings />
-                <span>Settings</span>
+                <NavLink to="/settings">
+                  <Settings />
+                  <span>Settings</span>
+                </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>

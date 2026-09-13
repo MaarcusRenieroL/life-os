@@ -1,11 +1,12 @@
-import { Switch as SwitchPrimitive } from "@base-ui/react/switch"
+import * as React from "react"
 import { cn } from "cn"
+import { Switch as SwitchPrimitive } from "radix-ui"
 
 function Switch({
   className,
   size = "default",
   ...props
-}: SwitchPrimitive.Root.Props & {
+}: React.ComponentProps<typeof SwitchPrimitive.Root> & {
   size?: "sm" | "default"
 }) {
   return (
