@@ -11,6 +11,8 @@ interface AuthContextValue {
   loading: boolean;
   login: (request: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
+  /** Saves the profile name and reflects it locally without a round-trip GET /me. */
+  updateProfileName: (name: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -45,8 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateProfileName = useCallback(async (name: string) => {
+    const updated = await authApi.updateProfile(name);
+    setUser(updated);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateProfileName }}>
       {children}
     </AuthContext.Provider>
   );
