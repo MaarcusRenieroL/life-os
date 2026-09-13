@@ -68,6 +68,9 @@ export function NoteEditorPage() {
 
   useEffect(() => {
     if (note) setTitle(note.title);
+    // Deliberately keyed on note.id only - re-syncing on every `note` update would
+    // stomp on what the user is currently typing with the last saved value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id]);
 
   useEffect(() => {

@@ -60,7 +60,11 @@ export function NoteTemplatesPage() {
     queryClient.invalidateQueries({ queryKey: ['notes', 'templates'] });
   }
 
-  async function useTemplate() {
+  // Named createNoteFromTemplate, not useTemplate - a name starting with "use"
+  // reads as a hook to React's tooling (and its own rules-of-hooks lint rule),
+  // which flagged this exact false positive when it was called from a plain
+  // onClick handler.
+  async function createNoteFromTemplate() {
     if (!selected || !useTitle.trim()) return;
     const note = await templatesApi.use(selected.id, useTitle.trim());
     navigate(`/notes/${note.id}`);
@@ -113,7 +117,7 @@ export function NoteTemplatesPage() {
           <DialogHeader><DialogTitle>New note from "{selected?.name}"</DialogTitle></DialogHeader>
           <Input value={useTitle} onChange={(e) => setUseTitle(e.target.value)} placeholder="Note title" />
           <DialogFooter>
-            <Button onClick={() => void useTemplate()} disabled={!useTitle.trim()}>Create note</Button>
+            <Button onClick={() => void createNoteFromTemplate()} disabled={!useTitle.trim()}>Create note</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
