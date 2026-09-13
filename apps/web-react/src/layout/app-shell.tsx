@@ -1,5 +1,5 @@
 import { Briefcase, Home as HomeIcon, LogOut, Settings } from 'lucide-react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/features/auth/auth-context';
 import {
@@ -33,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function AppShell() {
   const { user, logout } = useAuth();
+  const location = useLocation();
 
   return (
     <SidebarProvider>
@@ -48,16 +49,13 @@ export function AppShell() {
                 {NAV_ITEMS.map((item) => (
                   <SidebarMenuItem key={item.to}>
                     {item.enabled ? (
-                      <SidebarMenuButton asChild tooltip={item.label}>
-                        <NavLink
-                          to={item.to}
-                          className={({ isActive }) =>
-                            isActive ? 'font-medium text-sidebar-accent-foreground' : undefined
-                          }
-                        >
-                          <item.icon />
-                          <span>{item.label}</span>
-                        </NavLink>
+                      <SidebarMenuButton
+                        render={<NavLink to={item.to} />}
+                        isActive={location.pathname.startsWith(item.to)}
+                        tooltip={item.label}
+                      >
+                        <item.icon />
+                        <span>{item.label}</span>
                       </SidebarMenuButton>
                     ) : (
                       <SidebarMenuButton disabled tooltip={`${item.label} - coming soon`}>
@@ -74,11 +72,13 @@ export function AppShell() {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Settings">
-                <NavLink to="/settings">
-                  <Settings />
-                  <span>Settings</span>
-                </NavLink>
+              <SidebarMenuButton
+                render={<NavLink to="/settings" />}
+                isActive={location.pathname.startsWith('/settings')}
+                tooltip="Settings"
+              >
+                <Settings />
+                <span>Settings</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
