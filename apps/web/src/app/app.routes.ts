@@ -24,6 +24,30 @@ export const routes: Routes = [
       { path: '', redirectTo: 'home', pathMatch: 'full' },
       { path: 'home', component: Home, data: { module: 'home' } },
       { path: 'settings', component: GlobalSettings, data: { module: 'home' } },
+      {
+        path: 'jobs',
+        loadComponent: () =>
+          import('./features/job-tracker/curated-jobs/curated-jobs').then((m) => m.CuratedJobs),
+        data: { module: 'JT', tab: 'jobs' },
+      },
+      {
+        path: 'jobs/resumes',
+        loadComponent: () =>
+          import('./features/job-tracker/resume-uploader/resume-uploader').then((m) => m.ResumeUploader),
+        data: { module: 'JT', tab: 'resumes' },
+      },
+      {
+        path: 'jobs/discovery',
+        loadComponent: () =>
+          import('./features/job-tracker/discovery/discovery').then((m) => m.JobDiscovery),
+        data: { module: 'JT', tab: 'discovery' },
+      },
+      {
+        path: 'jobs/:jobId',
+        loadComponent: () =>
+          import('./features/job-tracker/job-detail/job-detail').then((m) => m.JobDetail),
+        data: { module: 'JT', tab: 'jobs' },
+      },
       { path: 'vault', component: VaultUnlock, data: { module: 'PM' } },
       {
         path: 'vault/entries',

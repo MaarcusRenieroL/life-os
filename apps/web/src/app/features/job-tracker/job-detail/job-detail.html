@@ -1,0 +1,99 @@
+<main class="w-full px-4 py-7 font-mono text-foreground sm:px-8 sm:py-10 xl:px-14">
+  <a routerLink="/jobs" class="text-[12px] text-foreground/55 hover:underline">← Jobs</a>
+
+  @if (loading()) {
+    <p class="mt-4 text-[12.5px] text-foreground/55">Loading…</p>
+  } @else if (job(); as job) {
+    <h1 class="mt-3 text-[22px] font-semibold tracking-tight">{{ job.title }}</h1>
+    <p class="mt-1 text-[13px] text-foreground/55">
+      {{ job.company }} · {{ job.location || 'Location n/a' }} · {{ job.workModel || '—' }}
+      @if (job.url) {
+        · <a [href]="job.url" target="_blank" rel="noopener" class="text-primary hover:underline">source</a>
+      }
+    </p>
+
+    <div class="mt-4 flex flex-wrap items-center gap-2.5">
+      <span class="text-[12px] text-foreground/55">Status</span>
+      <select
+        [ngModel]="job.status"
+        (ngModelChange)="setStatus($event)"
+        class="rounded-[0.4rem] border border-border bg-background px-2 py-1.5 text-[12px]"
+      >
+        @for (s of statuses; track s) {
+          <option [value]="s">{{ s }}</option>
+        }
+      </select>
+      <button type="button" (click)="rescore()" class="rounded-[0.45rem] border border-border px-3 py-1.5 text-[12px]">
+        Re-score
+      </button>
+    </div>
+
+    @if (fit(); as fit) {
+      <section class="mt-6 rounded-[0.55rem] border border-border bg-card p-4">
+        <h2 class="text-[13.5px] font-semibold">
+          Fit score: {{ fit.score ?? '—' }}<span class="text-[11px] text-foreground/45">/100</span>
+        </h2>
+        @if (fit.strong.length) {
+          <p class="mt-2 text-[12px]"><span class="text-primary">Strong match:</span> {{ fit.strong.join(', ') }}</p>
+        }
+        @if (fit.partial.length) {
+          <p class="mt-1 text-[12px]"><span class="text-foreground/60">Partial:</span> {{ fit.partial.join(', ') }}</p>
+        }
+        @if (fit.missing.length) {
+          <p class="mt-1 text-[12px]"><span class="text-destructive">Missing:</span> {{ fit.missing.join(', ') }}</p>
+        }
+        @if (fit.redFlags.length) {
+          <p class="mt-1 text-[12px] text-foreground/55">⚠ {{ fit.redFlags.join(' · ') }}</p>
+        }
+
+        <button
+          type="button"
+          (click)="tailorResume()"
+          [disabled]="tailoring()"
+          class="mt-3 rounded-[0.45rem] border border-border px-3 py-1.5 text-[12px] disabled:opacity-50"
+        >
+          {{ tailoring() ? 'Tailoring resume…' : 'Tailor resume for this job' }}
+        </button>
+
+        @if (tailorError(); as error) {
+          <p class="mt-2 text-[12px] text-destructive">{{ error }}</p>
+        }
+
+        @if (tailorResult(); as result) {
+          <div class="mt-4 border-t border-border pt-4">
+            <h3 class="text-[12.5px] font-semibold">Improve your resume for this role</h3>
+            <ul class="mt-2 list-disc space-y-1 pl-4 text-[12px] text-foreground/75">
+              @for (point of result.improvementPoints; track point) {
+                <li>{{ point }}</li>
+              }
+            </ul>
+
+            <div class="mt-3 flex items-center justify-between">
+              <h3 class="text-[12.5px] font-semibold">LaTeX resume (paste into Overleaf)</h3>
+              <button
+                type="button"
+                (click)="copyLatex()"
+                class="rounded-[0.4rem] border border-border px-2.5 py-1 text-[11px]"
+              >
+                {{ latexCopied() ? 'Copied ✓' : 'Copy .tex' }}
+              </button>
+            </div>
+            <pre
+              class="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-[0.45rem] border border-border bg-background p-3 text-[11px] text-foreground/80"
+              >{{ result.latexResume }}</pre
+            >
+          </div>
+        }
+      </section>
+    }
+
+    <section class="mt-6">
+      <h2 class="text-[13.5px] font-semibold">Description</h2>
+      <p class="mt-2 whitespace-pre-wrap text-[12.5px] text-foreground/75">
+        {{ job.jobDescriptionText || 'No description on file.' }}
+      </p>
+    </section>
+  } @else {
+    <p class="mt-4 text-[12.5px] text-foreground/55">Job not found.</p>
+  }
+</main>
