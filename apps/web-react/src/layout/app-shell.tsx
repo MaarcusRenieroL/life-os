@@ -1,4 +1,4 @@
-import { Briefcase, Home as HomeIcon, LogOut, Settings, ShieldCheck, StickyNote } from 'lucide-react';
+import { Briefcase, Home as HomeIcon, LogOut, Settings, ShieldCheck, StickyNote, Wallet } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/features/auth/auth-context';
@@ -31,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Job Tracker', to: '/jobs', icon: Briefcase, enabled: true },
   { label: 'Notes', to: '/notes', icon: StickyNote, enabled: true },
   { label: 'Vault', to: '/vault', icon: ShieldCheck, enabled: true },
+  { label: 'Finance', to: '/finance', icon: Wallet, enabled: true },
 ];
 
 export function AppShell() {

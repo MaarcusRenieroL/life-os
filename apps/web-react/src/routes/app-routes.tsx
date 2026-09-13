@@ -5,6 +5,19 @@ import { LoginPage } from '@/features/auth/login-page';
 import { ProtectedRoute } from '@/features/auth/protected-route';
 import { CardListPage } from '@/features/cards/card-list-page';
 import { DataManagementPage } from '@/features/data-management/data-management-page';
+import { AccountsPage } from '@/features/finance/accounts-page';
+import { AnalyticsPage } from '@/features/finance/analytics-page';
+import { BudgetsPage } from '@/features/finance/budgets-page';
+import { CategoriesPage } from '@/features/finance/categories-page';
+import { FinanceDashboardPage } from '@/features/finance/dashboard-page';
+import { FinanceLayout } from '@/features/finance/finance-layout';
+import { ImportPage } from '@/features/finance/import-page';
+import { MerchantsPage } from '@/features/finance/merchants-page';
+import { ReportPage } from '@/features/finance/report-page';
+import { RulesPage } from '@/features/finance/rules-page';
+import { SubscriptionsPage } from '@/features/finance/subscriptions-page';
+import { TransactionDetailPage } from '@/features/finance/transaction-detail-page';
+import { TransactionsPage } from '@/features/finance/transactions-page';
 import { HomePage } from '@/features/home/home-page';
 import { AddJobPage } from '@/features/job-tracker/add-job-page';
 import { JobDetailPage } from '@/features/job-tracker/job-detail-page';
@@ -85,6 +98,26 @@ export const router = createBrowserRouter([
           },
           // Must stay after the static notes/* subpaths above so it doesn't shadow them.
           { path: 'notes/:id', element: <NoteEditorPage /> },
+          {
+            path: 'finance',
+            element: <FinanceLayout />,
+            children: [
+              { index: true, element: <Navigate to="/finance/dashboard" replace /> },
+              { path: 'dashboard', element: <FinanceDashboardPage /> },
+              { path: 'transactions', element: <TransactionsPage /> },
+              { path: 'subscriptions', element: <SubscriptionsPage /> },
+              { path: 'budgets', element: <BudgetsPage /> },
+              { path: 'analytics', element: <AnalyticsPage /> },
+              { path: 'report', element: <ReportPage /> },
+              { path: 'import', element: <ImportPage /> },
+              { path: 'rules', element: <RulesPage /> },
+              { path: 'accounts', element: <AccountsPage /> },
+              { path: 'categories', element: <CategoriesPage /> },
+              { path: 'merchants', element: <MerchantsPage /> },
+            ],
+          },
+          // Must stay after the static finance/* subpaths above so it doesn't shadow them.
+          { path: 'finance/transactions/:id', element: <TransactionDetailPage /> },
         ],
       },
     ],
