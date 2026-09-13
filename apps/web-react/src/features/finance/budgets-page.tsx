@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
+import { SectionHeading } from '@/components/section-heading';
 import { BudgetDialog } from './budget-dialog';
 import { budgetApi } from './budget-api';
 import { categoryApi } from './category-api';
@@ -115,7 +116,7 @@ export function BudgetsPage() {
 
       {uncapped.length > 0 && (
         <section className="mt-6">
-          <h2 className="text-sm font-semibold">Uncapped spend</h2>
+          <SectionHeading>Uncapped spend</SectionHeading>
           <ul className="mt-2 flex flex-col gap-1.5">
             {uncapped.map((c) => (
               <li key={c.categoryId} className="flex justify-between rounded-lg border bg-card px-3 py-2 text-sm">

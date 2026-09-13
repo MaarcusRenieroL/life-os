@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { auditLogApi } from '@/features/audit-log/audit-log-api';
 import { DeleteAccountDialog } from '@/features/settings/delete-account-dialog';
@@ -80,7 +81,7 @@ export function DataManagementPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Data management</h1>
 
       <section className="mt-6 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Export vault</h2>
+        <SectionHeading>Export vault</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">Downloads every entry and card, fully decrypted, as JSON.</p>
         <Button size="sm" variant="outline" className="mt-3" onClick={() => void exportVault()}>
           Export vault
@@ -88,7 +89,7 @@ export function DataManagementPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Import from another manager</h2>
+        <SectionHeading>Import from another manager</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">
           CSV with at least a "title" column. "url", "username", "password" are matched by header name if present.
         </p>
@@ -122,7 +123,7 @@ export function DataManagementPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Backup & recovery</h2>
+        <SectionHeading>Backup &amp; recovery</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">
           Last backup: {latestBackup ? new Date(latestBackup.createdAt).toLocaleString() : 'No backups yet'}
         </p>
@@ -132,13 +133,13 @@ export function DataManagementPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Encryption</h2>
+        <SectionHeading>Encryption</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">AES-256, zero-knowledge — only you hold the key.</p>
         <span className="mt-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">active</span>
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Download everything</h2>
+        <SectionHeading>Download everything</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">Vault entries, cards, and audit log in one file.</p>
         <Button size="sm" variant="outline" className="mt-3" onClick={() => void downloadEverything()}>
           Download everything
@@ -146,7 +147,7 @@ export function DataManagementPage() {
       </section>
 
       <section className="mt-4 rounded-lg border border-destructive/35 bg-card p-5">
-        <h2 className="text-sm font-semibold text-destructive">Danger zone</h2>
+        <SectionHeading tone="destructive">Danger zone</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">
           Permanently deletes your vault and account. This cannot be undone.
         </p>

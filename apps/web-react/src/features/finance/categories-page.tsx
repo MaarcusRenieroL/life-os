@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { SectionHeading } from '@/components/section-heading';
 import { CategoryDialog } from './category-dialog';
 import { categoryApi } from './category-api';
 import { CATEGORY_TYPES } from './types';
@@ -57,7 +58,7 @@ export function CategoriesPage() {
             (group) =>
               group.items.length > 0 && (
                 <section key={group.type}>
-                  <h2 className="text-sm font-semibold">{GROUP_LABELS[group.type]}</h2>
+                  <SectionHeading>{GROUP_LABELS[group.type]}</SectionHeading>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {group.items.map((c) => (
                       <span key={c.id} className="flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs">

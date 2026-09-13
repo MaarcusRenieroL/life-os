@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -87,7 +88,7 @@ export function RulesPage() {
       </div>
 
       <section className="mt-4 rounded-lg border bg-card p-4">
-        <h2 className="text-sm font-semibold">Test a pattern</h2>
+        <SectionHeading>Test a pattern</SectionHeading>
         <div className="mt-2 flex gap-2">
           <Input value={testText} onChange={(e) => setTestText(e.target.value)} placeholder="e.g. SWIGGY BANGALORE" />
           <Button variant="outline" onClick={runTest} disabled={!testText.trim()}>Test</Button>
@@ -153,7 +154,7 @@ function RuleTable({
 }) {
   return (
     <section>
-      <h2 className="text-sm font-semibold">{title}</h2>
+      <SectionHeading>{title}</SectionHeading>
       {subtitle && <p className="mt-1 text-[11px] text-muted-foreground">{subtitle}</p>}
       <div className="mt-2 overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -147,7 +148,7 @@ export function SettingsPage() {
 
         <div className="flex flex-col gap-4">
           <section id="profile" className="rounded-lg border bg-card p-5">
-            <div className="mb-3.5 text-sm font-semibold">Profile</div>
+            <SectionHeading className="mb-3.5">Profile</SectionHeading>
 
             <div className="mb-4 flex items-center gap-3.5">
               <div className="flex h-12 w-12 items-center justify-center rounded-full border bg-background text-sm text-primary">
@@ -183,7 +184,7 @@ export function SettingsPage() {
           </section>
 
           <section id="modules" className="rounded-lg border bg-card p-5">
-            <div className="mb-3.5 text-sm font-semibold">Modules</div>
+            <SectionHeading className="mb-3.5">Modules</SectionHeading>
             {modulesError && <p className="mb-3 text-[11px] text-destructive">{modulesError}</p>}
             <div className="flex flex-col">
               {modules.map((module) => (
@@ -203,7 +204,7 @@ export function SettingsPage() {
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <section id="appearance" className="rounded-lg border bg-card p-5">
-              <div className="mb-3.5 text-sm font-semibold">Appearance</div>
+              <SectionHeading className="mb-3.5">Appearance</SectionHeading>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-foreground/75">Theme</span>
                 <Select value={theme} onValueChange={(v) => setTheme(v as ThemePreference)}>
@@ -222,7 +223,7 @@ export function SettingsPage() {
             </section>
 
             <section id="notifications" className="rounded-lg border bg-card p-5">
-              <div className="mb-1.5 text-sm font-semibold">Notifications</div>
+              <SectionHeading className="mb-1.5">Notifications</SectionHeading>
               <div className="text-[11px] text-muted-foreground">
                 Email and push notification preferences are coming soon — there's no notifications
                 backend yet.
@@ -230,7 +231,7 @@ export function SettingsPage() {
             </section>
 
             <section id="integrations" className="rounded-lg border bg-card p-5">
-              <div className="mb-1.5 text-sm font-semibold">Integrations</div>
+              <SectionHeading className="mb-1.5">Integrations</SectionHeading>
               <div className="text-[11px] text-muted-foreground">
                 Connect third-party services (calendars, job boards, banks) once those integrations
                 exist.
@@ -238,7 +239,7 @@ export function SettingsPage() {
             </section>
 
             <section id="data-privacy" className="rounded-lg border bg-card p-5">
-              <div className="mb-1.5 text-sm font-semibold">Data &amp; privacy</div>
+              <SectionHeading className="mb-1.5">Data &amp; privacy</SectionHeading>
               <div className="text-[11px] text-muted-foreground">
                 Export, import and backup live on the{' '}
                 <Link to="/vault/data" className="text-primary hover:underline">
@@ -250,7 +251,7 @@ export function SettingsPage() {
           </div>
 
           <section id="danger-zone" className="rounded-lg border border-destructive/35 bg-card p-5">
-            <div className="mb-1.5 text-sm font-semibold text-destructive">Danger zone</div>
+            <SectionHeading className="mb-1.5" tone="destructive">Danger zone</SectionHeading>
             <div className="mb-3.5 text-[11px] text-muted-foreground">
               Permanently deletes your vault and account. This cannot be undone.
             </div>

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -199,7 +200,7 @@ export function FinanceDashboardPage() {
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
         <section className="rounded-lg border bg-card p-5">
-          <h2 className="text-sm font-semibold">Spending trend</h2>
+          <SectionHeading>Spending trend</SectionHeading>
           {trendBars.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">Not enough history yet.</p>
           ) : (
@@ -218,7 +219,7 @@ export function FinanceDashboardPage() {
         </section>
 
         <section className="rounded-lg border bg-card p-5">
-          <h2 className="text-sm font-semibold">Needs your attention</h2>
+          <SectionHeading>Needs your attention</SectionHeading>
           <ul className="mt-2 flex flex-col gap-2">
             {attentionItems.map((item, i) => (
               <li key={i}>
@@ -232,7 +233,7 @@ export function FinanceDashboardPage() {
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <section className="rounded-lg border bg-card p-5">
-          <h2 className="text-sm font-semibold">Top spend categories</h2>
+          <SectionHeading>Top spend categories</SectionHeading>
           {categorySpend.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No categorized spend yet.</p>
           ) : (
@@ -248,7 +249,7 @@ export function FinanceDashboardPage() {
         </section>
 
         <section className="rounded-lg border bg-card p-5">
-          <h2 className="text-sm font-semibold">Budgets</h2>
+          <SectionHeading>Budgets</SectionHeading>
           {budgetRows.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No budgets set up yet.</p>
           ) : (

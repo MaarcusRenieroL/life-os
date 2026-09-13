@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
+import { SectionHeading } from '@/components/section-heading';
+
 import { vaultApi } from './vault-api';
 
 function scoreLabel(score: number): string {
@@ -60,7 +62,7 @@ export function VaultHealthPage() {
       </div>
 
       <section className="mt-6">
-        <h2 className="text-sm font-semibold">Password age</h2>
+        <SectionHeading>Password age</SectionHeading>
         <div className="mt-2 flex h-32 items-end gap-3">
           {health.ageBuckets.map((bucket) => (
             <div key={bucket.label} className="flex flex-1 flex-col items-center gap-1">
@@ -76,7 +78,7 @@ export function VaultHealthPage() {
       </section>
 
       <section className="mt-6">
-        <h2 className="text-sm font-semibold">Action required</h2>
+        <SectionHeading>Action required</SectionHeading>
         <ul className="mt-2 flex flex-col gap-1.5">
           {health.actionRequired.map((item) => {
             const isWeak = item.issue.toLowerCase().includes('weak');

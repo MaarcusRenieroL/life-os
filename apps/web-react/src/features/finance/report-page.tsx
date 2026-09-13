@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -87,7 +88,7 @@ export function ReportPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Report</h1>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Monthly report</h2>
+        <SectionHeading>Monthly report</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">Full breakdown for the current calendar month, as a PDF.</p>
         <Button size="sm" variant="outline" className="mt-3" onClick={() => void exportPdf()} disabled={exporting}>
           Export PDF
@@ -95,7 +96,7 @@ export function ReportPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Tax report</h2>
+        <SectionHeading>Tax report</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">
           Full financial-year transaction CSV (1 Apr {taxYear} – 31 Mar {taxYear + 1}) for ITR filing.
         </p>
@@ -108,7 +109,7 @@ export function ReportPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Expense breakdown</h2>
+        <SectionHeading>Expense breakdown</SectionHeading>
         {expenseSegments.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">No categorized spend yet.</p>
         ) : (
@@ -130,7 +131,7 @@ export function ReportPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Budget performance</h2>
+        <SectionHeading>Budget performance</SectionHeading>
         <ul className="mt-2 flex flex-col gap-1.5 text-sm">
           {budgetPerformance.map((b) => (
             <li key={b.name} className="flex justify-between"><span>{b.name}</span><span>{b.text}</span></li>
@@ -140,7 +141,7 @@ export function ReportPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Month over month</h2>
+        <SectionHeading>Month over month</SectionHeading>
         <table className="mt-2 w-full text-sm">
           <thead className="text-left text-xs text-muted-foreground">
             <tr><th>Category</th><th>This month</th><th>Last month</th></tr>

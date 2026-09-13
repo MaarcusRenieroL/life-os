@@ -14,6 +14,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -372,7 +373,7 @@ export function NoteEditorPage() {
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <section>
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Module links</h3>
+            <SectionHeading>Module links</SectionHeading>
             <Button size="sm" variant="ghost" onClick={() => setModuleLinkDialogOpen(true)}>+ Link</Button>
           </div>
           <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
@@ -388,7 +389,7 @@ export function NoteEditorPage() {
 
         <section>
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Note links</h3>
+            <SectionHeading>Note links</SectionHeading>
             <Button size="sm" variant="ghost" onClick={() => setNoteLinkDialogOpen(true)}>+ Link</Button>
           </div>
           <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
@@ -415,7 +416,7 @@ export function NoteEditorPage() {
 
         <section>
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Attachments</h3>
+            <SectionHeading>Attachments</SectionHeading>
             <label className="cursor-pointer text-xs text-primary hover:underline">
               + Upload
               <input
@@ -447,7 +448,7 @@ export function NoteEditorPage() {
 
         <section>
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Versions</h3>
+            <SectionHeading>Versions</SectionHeading>
             <Button size="sm" variant="ghost" onClick={() => void loadVersions()}>
               {versions ? 'Refresh' : 'Load history'}
             </Button>

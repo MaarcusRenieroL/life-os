@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+import { SectionHeading } from '@/components/section-heading';
 import { analyticsApi } from './analytics-api';
 import { categoryApi } from './category-api';
 import { formatINR } from './utils';
@@ -78,7 +79,7 @@ export function AnalyticsPage() {
       </div>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Spending trend</h2>
+        <SectionHeading>Spending trend</SectionHeading>
         {trendBars.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">Not enough history yet.</p>
         ) : (
@@ -94,7 +95,7 @@ export function AnalyticsPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Category trends</h2>
+        <SectionHeading>Category trends</SectionHeading>
         {categoryRows.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">No categorized spend yet.</p>
         ) : (
@@ -120,7 +121,7 @@ export function AnalyticsPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Top merchants</h2>
+        <SectionHeading>Top merchants</SectionHeading>
         {merchants.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">No merchant data yet.</p>
         ) : (
@@ -136,7 +137,7 @@ export function AnalyticsPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Insights</h2>
+        <SectionHeading>Insights</SectionHeading>
         {insights.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">Not enough data yet for insights.</p>
         ) : (

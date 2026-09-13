@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -77,7 +78,7 @@ export function ImportPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Import</h1>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Upload a statement</h2>
+        <SectionHeading>Upload a statement</SectionHeading>
         {accounts.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">Add an account first — statements need to be linked to one.</p>
         ) : (
@@ -133,7 +134,7 @@ export function ImportPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Gmail sync</h2>
+        <SectionHeading>Gmail sync</SectionHeading>
         {gmailStatus?.connected ? (
           <div className="mt-2 text-sm">
             <p className="text-primary">Connected {gmailStatus.connectedAt ? `since ${new Date(gmailStatus.connectedAt).toLocaleDateString()}` : ''}</p>

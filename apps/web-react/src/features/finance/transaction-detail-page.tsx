@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -122,7 +123,7 @@ export function TransactionDetailPage() {
       </p>
 
       <section className="mt-6">
-        <h2 className="text-sm font-semibold">Categories</h2>
+        <SectionHeading>Categories</SectionHeading>
         {tx.categoryManuallySet && (
           <p className="mt-1 text-[11px] text-muted-foreground">
             Manually categorized - saving here also teaches a rule for similar future transactions.
@@ -138,14 +139,14 @@ export function TransactionDetailPage() {
       </section>
 
       <section className="mt-4">
-        <h2 className="text-sm font-semibold">Notes</h2>
+        <SectionHeading>Notes</SectionHeading>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2" />
       </section>
 
       <Button className="mt-4" onClick={() => void save()} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
 
       <section className="mt-6 rounded-lg border bg-card p-4">
-        <h2 className="text-sm font-semibold">Details</h2>
+        <SectionHeading>Details</SectionHeading>
         <dl className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
           <dt>Status</dt><dd className="text-foreground">{tx.status}</dd>
           <dt>Recurring</dt><dd className="text-foreground">{tx.isRecurring ? 'Yes' : 'No'}</dd>
@@ -155,7 +156,7 @@ export function TransactionDetailPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-4">
-        <h2 className="text-sm font-semibold">History</h2>
+        <SectionHeading>History</SectionHeading>
         <dl className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
           {tx.importedAt && (<><dt>Imported</dt><dd className="text-foreground">{new Date(tx.importedAt).toLocaleString()}</dd></>)}
           <dt>Created</dt><dd className="text-foreground">{new Date(tx.createdAt).toLocaleString()}</dd>
@@ -166,7 +167,7 @@ export function TransactionDetailPage() {
 
       {similar.length > 0 && (
         <section className="mt-4">
-          <h2 className="text-sm font-semibold">Similar transactions</h2>
+          <SectionHeading>Similar transactions</SectionHeading>
           <ul className="mt-2 flex flex-col gap-1">
             {similar.map((t) => (
               <li key={t.id}>

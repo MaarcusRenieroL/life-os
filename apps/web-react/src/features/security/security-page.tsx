@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/features/auth/auth-api';
 import { vaultApi } from '@/features/vault/vault-api';
@@ -65,7 +66,7 @@ export function SecurityPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Security</h1>
 
       <section className="mt-6 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Master password</h2>
+        <SectionHeading>Master password</SectionHeading>
         {vaultStatus?.masterPasswordStrength && (
           <>
             <div className="mt-2 h-2 w-full rounded-full bg-muted">
@@ -87,7 +88,7 @@ export function SecurityPage() {
 
       <section className="mt-4 rounded-lg border bg-card p-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Active sessions</h2>
+          <SectionHeading>Active sessions</SectionHeading>
           {otherDevices.length > 0 && (
             <button className="text-xs text-destructive hover:underline" onClick={() => void signOutAllOthers()}>
               Sign out all other sessions

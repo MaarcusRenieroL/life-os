@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,7 +65,7 @@ export function NotesSettingsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Notes settings</h1>
 
       <section className="mt-6 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Default note type</h2>
+        <SectionHeading>Default note type</SectionHeading>
         <RadioGroup
           value={settings?.defaultNoteType}
           onValueChange={(v) => void setDefaultType(v as NoteType)}
@@ -81,7 +82,7 @@ export function NotesSettingsPage() {
 
       <section className="mt-4 rounded-lg border bg-card p-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Auto-archive</h2>
+          <SectionHeading>Auto-archive</SectionHeading>
           <Switch checked={settings?.autoArchiveEnabled ?? false} onCheckedChange={(v) => void toggleAutoArchive(v)} />
         </div>
         {settings?.autoArchiveEnabled && (
@@ -102,7 +103,7 @@ export function NotesSettingsPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Templates</h2>
+        <SectionHeading>Templates</SectionHeading>
         <p className="mt-1 text-sm text-muted-foreground">
           {templatePage?.totalElements ?? 0} templates —{' '}
           <Link to="/notes/templates" className="text-primary hover:underline">manage them</Link>
@@ -110,7 +111,7 @@ export function NotesSettingsPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Export all notes</h2>
+        <SectionHeading>Export all notes</SectionHeading>
         <div className="mt-2 flex gap-2 text-xs">
           <a className="text-primary hover:underline" href={noteSettingsApi.exportAllUrl('markdown')}>Markdown (.zip)</a>
           <a className="text-primary hover:underline" href={noteSettingsApi.exportAllUrl('pdf')}>PDF (.zip)</a>
@@ -119,7 +120,7 @@ export function NotesSettingsPage() {
       </section>
 
       <section className="mt-4 rounded-lg border bg-card p-5">
-        <h2 className="text-sm font-semibold">Trash</h2>
+        <SectionHeading>Trash</SectionHeading>
         <p className="mt-1 text-[11px] text-muted-foreground">Emptied automatically after 30 days.</p>
         <ul className="mt-2 flex flex-col gap-1.5">
           {trash.map((t) => (
@@ -136,7 +137,7 @@ export function NotesSettingsPage() {
       </section>
 
       <section className="mt-4 rounded-lg border border-destructive/35 bg-card p-5">
-        <h2 className="text-sm font-semibold text-destructive">Danger zone</h2>
+        <SectionHeading tone="destructive">Danger zone</SectionHeading>
         <p className="mt-1 text-[11px] text-muted-foreground">
           Permanently deletes every note, folder, tag, and template. Attachments and version history go with
           them. This cannot be undone.

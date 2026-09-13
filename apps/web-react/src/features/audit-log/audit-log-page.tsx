@@ -1,6 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 import { auditLogApi } from './audit-log-api';
 import type { AuditEventResponse, AuditEventType } from './types';
 
@@ -84,34 +94,29 @@ export function AuditLogPage() {
     <div className="mx-auto max-w-2xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Audit log</h1>
-        <button className="text-xs text-primary hover:underline" onClick={exportCsv}>Export CSV</button>
+        <Button variant="ghost" size="sm" onClick={exportCsv}>Export CSV</Button>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search…"
-          className="rounded-md border bg-background px-3 py-1.5 text-sm"
-        />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" className="max-w-xs" />
         {FILTER_CHIPS.map((chip) => (
-          <button
+          <Button
             key={chip.type}
+            size="sm"
+            variant={typeFilter === chip.type ? 'secondary' : 'ghost'}
             onClick={() => setTypeFilter(chip.type)}
-            className={`rounded-full px-3 py-1 text-xs ${typeFilter === chip.type ? 'bg-secondary font-medium' : 'text-muted-foreground'}`}
           >
             {chip.label}
-          </button>
+          </Button>
         ))}
-        <select
-          value={dateRange}
-          onChange={(e) => setDateRange(Number(e.target.value) as 7 | 30 | 9999)}
-          className="rounded-md border bg-background px-2 py-1 text-xs"
-        >
-          <option value={7}>Last 7 days</option>
-          <option value={30}>Last 30 days</option>
-          <option value={9999}>All time</option>
-        </select>
+        <Select value={String(dateRange)} onValueChange={(v) => setDateRange(Number(v) as 7 | 30 | 9999)}>
+          <SelectTrigger size="sm" className="text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7">Last 7 days</SelectItem>
+            <SelectItem value="30">Last 30 days</SelectItem>
+            <SelectItem value="9999">All time</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <ul className="mt-4 flex flex-col gap-0.5">
