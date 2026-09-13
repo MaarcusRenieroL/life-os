@@ -1,6 +1,20 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+  type VisibilityState,
+} from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
+import { DataTablePagination } from '@/components/data-table/data-table-pagination';
+import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
 import { Input } from '@/components/ui/input';
 
 import { categoryApi } from './category-api';
@@ -15,16 +29,10 @@ export function MerchantsPage() {
   const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
 
   const [query, setQuery] = useState('');
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MerchantResponse | null>(null);
-
-  const filtered = useMemo(
-    () =>
-      merchants
-        .filter((m) => m.name.toLowerCase().includes(query.toLowerCase()))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [merchants, query],
-  );
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['finance', 'merchants'] });
@@ -36,42 +44,84 @@ export function MerchantsPage() {
     invalidate();
   }
 
+  function openEdit(merchant: MerchantResponse) {
+    setEditing(merchant);
+    setDialogOpen(true);
+  }
+
+  const columns = useMemo<ColumnDef<MerchantResponse>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Merchant" />,
+        cell: ({ row }) => (
+          <div>
+            {row.original.name}
+            {!row.original.isRecognized && <div className="text-[10px] text-muted-foreground">manually added</div>}
+          </div>
+        ),
+      },
+      {
+        id: 'category',
+        accessorFn: (m) => categories.find((c) => c.id === m.categoryId)?.name ?? '—',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Default category" />,
+      },
+      {
+        accessorKey: 'averageTransactionAmount',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Avg spend" />,
+        cell: ({ row }) => (row.original.averageTransactionAmount ? formatINR(row.original.averageTransactionAmount) : '—'),
+      },
+      {
+        accessorKey: 'transactionCount',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Txns" />,
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex gap-2 text-xs">
+            <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); openEdit(row.original); }}>
+              Edit
+            </button>
+            <button className="text-destructive hover:underline" onClick={(e) => { e.stopPropagation(); void remove(row.original); }}>
+              Delete
+            </button>
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [categories],
+  );
+
+  const table = useReactTable({
+    data: merchants,
+    columns,
+    state: { sorting, columnVisibility, globalFilter: query },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    onGlobalFilterChange: setQuery,
+    globalFilterFn: (row, _id, filter) => row.original.name.toLowerCase().includes(String(filter).toLowerCase()),
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
+
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">Merchants</h1>
-      <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search merchants…" className="mt-4 max-w-xs" />
 
-      <div className="mt-4 overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2">Merchant</th>
-              <th className="px-3 py-2">Default category</th>
-              <th className="px-3 py-2">Avg spend</th>
-              <th className="px-3 py-2">Txns</th>
-              <th className="px-3 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((m) => (
-              <tr key={m.id} className="border-b last:border-b-0">
-                <td className="px-3 py-2">
-                  {m.name}
-                  {!m.isRecognized && <div className="text-[10px] text-muted-foreground">manually added</div>}
-                </td>
-                <td className="px-3 py-2">{categories.find((c) => c.id === m.categoryId)?.name ?? '—'}</td>
-                <td className="px-3 py-2">{m.averageTransactionAmount ? formatINR(m.averageTransactionAmount) : '—'}</td>
-                <td className="px-3 py-2">{m.transactionCount}</td>
-                <td className="px-3 py-2 text-xs">
-                  <button className="text-primary hover:underline" onClick={() => { setEditing(m); setDialogOpen(true); }}>Edit</button>
-                  <button className="ml-2 text-destructive hover:underline" onClick={() => void remove(m)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && <p className="p-4 text-sm text-muted-foreground">No merchants found.</p>}
+      <div className="mt-4 flex items-center gap-2">
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search merchants…" className="max-w-xs" />
+        <DataTableViewOptions table={table} />
       </div>
+
+      <div className="mt-3">
+        <DataTable table={table} onRowClick={openEdit} />
+      </div>
+      <DataTablePagination table={table} />
 
       <MerchantDialog open={dialogOpen} onOpenChange={setDialogOpen} editing={editing} onSaved={invalidate} />
     </div>

@@ -1,7 +1,16 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+} from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,11 +47,8 @@ export function RulesPage() {
   const [testText, setTestText] = useState('');
   const [testResult, setTestResult] = useState<{ rule: CategorizationRuleResponse; categoryName: string } | 'none' | null>(null);
 
-  // Backend matches rules in priority DESCENDING order (highest wins first).
-  const sortedRules = useMemo(() => [...rules].sort((a, b) => b.priority - a.priority), [rules]);
-  const myRules = sortedRules.filter((r) => !r.autoLearned);
-  const autoRules = sortedRules.filter((r) => r.autoLearned);
-
+  const myRules = rules.filter((r) => !r.autoLearned);
+  const autoRules = rules.filter((r) => r.autoLearned);
   const totalHits = rules.reduce((s, r) => s + r.hitCount, 0);
 
   function invalidate() {
@@ -61,7 +67,8 @@ export function RulesPage() {
   }
 
   function runTest() {
-    const active = sortedRules.filter((r) => r.isActive);
+    // Backend matches rules in priority DESCENDING order (highest wins first).
+    const active = [...rules].sort((a, b) => b.priority - a.priority).filter((r) => r.isActive);
     const match = active.find((r) => matches(r, testText));
     if (match) {
       setTestResult({ rule: match, categoryName: categories.find((c) => c.id === match.categoryId)?.name ?? 'Unknown' });
@@ -73,6 +80,56 @@ export function RulesPage() {
   function categoryName(id: string) {
     return categories.find((c) => c.id === id)?.name ?? 'Unknown';
   }
+
+  function openEdit(rule: CategorizationRuleResponse) {
+    setEditing(rule);
+    setDialogOpen(true);
+  }
+
+  const columns = useMemo<ColumnDef<CategorizationRuleResponse>[]>(
+    () => [
+      {
+        accessorKey: 'priority',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="#" />,
+      },
+      {
+        accessorKey: 'matchValue',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Pattern" />,
+        cell: ({ row }) => <span className="font-mono text-xs">{row.original.matchValue}</span>,
+      },
+      {
+        accessorKey: 'matchType',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+      },
+      {
+        accessorKey: 'matchField',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Field" />,
+      },
+      {
+        id: 'category',
+        accessorFn: (r) => categoryName(r.categoryId),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+      },
+      {
+        accessorKey: 'hitCount',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Hits" />,
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2 text-xs" onClick={(e) => e.stopPropagation()}>
+            <Switch checked={row.original.isActive} onCheckedChange={() => void toggle(row.original)} />
+            <button className="text-primary hover:underline" onClick={() => openEdit(row.original)}>Edit</button>
+            <button className="text-destructive hover:underline" onClick={() => void remove(row.original)}>Delete</button>
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [categories],
+  );
 
   return (
     <div>
@@ -102,16 +159,14 @@ export function RulesPage() {
         )}
       </section>
 
-      <RuleTable title="My rules" rules={myRules} categoryName={categoryName} onEdit={(r) => { setEditing(r); setDialogOpen(true); }} onToggle={toggle} onDelete={remove} />
+      <RuleTable title="My rules" rules={myRules} columns={columns} onEdit={openEdit} />
       <div className="mt-6">
         <RuleTable
           title="Auto-learned rules"
           subtitle="Created automatically when you correct a transaction's category. Edit or delete freely - if you create the same rule yourself, this one gets replaced by your version."
           rules={autoRules}
-          categoryName={categoryName}
-          onEdit={(r) => { setEditing(r); setDialogOpen(true); }}
-          onToggle={toggle}
-          onDelete={remove}
+          columns={columns}
+          onEdit={openEdit}
         />
       </div>
 
@@ -139,55 +194,33 @@ function RuleTable({
   title,
   subtitle,
   rules,
-  categoryName,
+  columns,
   onEdit,
-  onToggle,
-  onDelete,
 }: {
   title: string;
   subtitle?: string;
   rules: CategorizationRuleResponse[];
-  categoryName: (id: string) => string;
+  columns: ColumnDef<CategorizationRuleResponse>[];
   onEdit: (rule: CategorizationRuleResponse) => void;
-  onToggle: (rule: CategorizationRuleResponse) => void;
-  onDelete: (rule: CategorizationRuleResponse) => void;
 }) {
+  // Backend matches rules in priority DESCENDING order (highest wins first) - default sort matches.
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'priority', desc: true }]);
+
+  const table = useReactTable({
+    data: rules,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
   return (
     <section>
       <SectionHeading>{title}</SectionHeading>
       {subtitle && <p className="mt-1 text-[11px] text-muted-foreground">{subtitle}</p>}
-      <div className="mt-2 overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-            <tr>
-              <th className="px-2 py-2">#</th>
-              <th className="px-2 py-2">Pattern</th>
-              <th className="px-2 py-2">Type</th>
-              <th className="px-2 py-2">Field</th>
-              <th className="px-2 py-2">Category</th>
-              <th className="px-2 py-2">Hits</th>
-              <th className="px-2 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {rules.map((r) => (
-              <tr key={r.id} className="border-b last:border-b-0">
-                <td className="px-2 py-1.5">{r.priority}</td>
-                <td className="px-2 py-1.5 font-mono text-xs">{r.matchValue}</td>
-                <td className="px-2 py-1.5">{r.matchType}</td>
-                <td className="px-2 py-1.5">{r.matchField}</td>
-                <td className="px-2 py-1.5">{categoryName(r.categoryId)}</td>
-                <td className="px-2 py-1.5">{r.hitCount}</td>
-                <td className="flex items-center gap-2 px-2 py-1.5 text-xs">
-                  <Switch checked={r.isActive} onCheckedChange={() => onToggle(r)} />
-                  <button className="text-primary hover:underline" onClick={() => onEdit(r)}>Edit</button>
-                  <button className="text-destructive hover:underline" onClick={() => onDelete(r)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {rules.length === 0 && <p className="p-3 text-sm text-muted-foreground">No rules here.</p>}
+      <div className="mt-2">
+        <DataTable table={table} onRowClick={onEdit} emptyMessage="No rules here." />
       </div>
     </section>
   );

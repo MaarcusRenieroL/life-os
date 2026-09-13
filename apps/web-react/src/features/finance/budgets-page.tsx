@@ -1,13 +1,32 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+} from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { SectionHeading } from '@/components/section-heading';
+import { Button } from '@/components/ui/button';
+
 import { BudgetDialog } from './budget-dialog';
 import { budgetApi } from './budget-api';
 import { categoryApi } from './category-api';
 import { analyticsApi } from './analytics-api';
 import type { BudgetResponse } from './types';
 import { formatINR } from './utils';
+
+interface BudgetRow extends BudgetResponse {
+  categoryName: string;
+  spend: number;
+  pct: number;
+  status: 'over' | 'near-limit' | 'on-track';
+  statusText: string;
+}
 
 export function BudgetsPage() {
   const queryClient = useQueryClient();
@@ -22,6 +41,7 @@ export function BudgetsPage() {
     enabled: comparisonIds.length > 0,
   });
 
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BudgetResponse | null>(null);
 
@@ -35,7 +55,12 @@ export function BudgetsPage() {
     invalidate();
   }
 
-  const cards = useMemo(
+  function openEdit(budget: BudgetResponse) {
+    setEditing(budget);
+    setDialogOpen(true);
+  }
+
+  const rows = useMemo<BudgetRow[]>(
     () =>
       budgets.map((b) => {
         const spend = comparisons.find((c) => c.categoryId === b.categoryId)?.currentMonthSpend ?? 0;
@@ -48,7 +73,7 @@ export function BudgetsPage() {
           spend,
           pct: Math.min(100, pct),
           status,
-          statusText: status === 'over' ? `${formatINR(Math.abs(remaining))} over budget` : `${formatINR(remaining)} left`,
+          statusText: status === 'over' ? `${formatINR(Math.abs(remaining))} over` : `${formatINR(remaining)} left`,
         };
       }),
     [budgets, comparisons, categories],
@@ -62,55 +87,86 @@ export function BudgetsPage() {
       .map((c) => ({ ...c, name: categories.find((cat) => cat.id === c.categoryId)?.name ?? 'Unknown' }));
   }, [comparisons, budgets, categories, expenseCategoryIds]);
 
-  const totalBudgeted = cards.reduce((sum, c) => sum + c.budgetAmount, 0);
-  const totalSpent = cards.reduce((sum, c) => sum + c.spend, 0);
+  const totalBudgeted = rows.reduce((sum, c) => sum + c.budgetAmount, 0);
+  const totalSpent = rows.reduce((sum, c) => sum + c.spend, 0);
+
+  const columns = useMemo<ColumnDef<BudgetRow>[]>(
+    () => [
+      {
+        accessorKey: 'categoryName',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+      },
+      {
+        accessorKey: 'spend',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Spend / Budget" />,
+        cell: ({ row }) => `${formatINR(row.original.spend)} / ${formatINR(row.original.budgetAmount)}`,
+      },
+      {
+        accessorKey: 'pct',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Progress" />,
+        cell: ({ row }) => (
+          <div className="w-32">
+            <div className="h-1.5 rounded-full bg-muted">
+              <div
+                className={`h-1.5 rounded-full ${row.original.status === 'over' ? 'bg-destructive' : row.original.status === 'near-limit' ? 'bg-yellow-500' : 'bg-primary'}`}
+                style={{ width: `${row.original.pct}%` }}
+              />
+            </div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        cell: ({ row }) => (
+          <span className={row.original.status === 'over' ? 'text-destructive' : ''}>{row.original.statusText}</span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex gap-2 text-xs">
+            <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); openEdit(row.original); }}>Edit</button>
+            <button className="text-destructive hover:underline" onClick={(e) => { e.stopPropagation(); void remove(row.original); }}>Delete</button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: rows,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Budgets</h1>
-        <button
-          className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground"
-          onClick={() => { setEditing(null); setDialogOpen(true); }}
-        >
-          + New budget
-        </button>
+        <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>+ New budget</Button>
       </div>
 
-      {cards.length > 0 && (
+      {rows.length > 0 && (
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <SummaryTile label="Total budgeted" value={formatINR(totalBudgeted)} />
           <SummaryTile label="Total spent" value={formatINR(totalSpent)} />
-          <SummaryTile label="On track / near limit" value={`${cards.filter((c) => c.status === 'on-track').length} / ${cards.filter((c) => c.status === 'near-limit').length}`} />
-          <SummaryTile label="Over budget" value={String(cards.filter((c) => c.status === 'over').length)} />
+          <SummaryTile label="On track / near limit" value={`${rows.filter((c) => c.status === 'on-track').length} / ${rows.filter((c) => c.status === 'near-limit').length}`} />
+          <SummaryTile label="Over budget" value={String(rows.filter((c) => c.status === 'over').length)} />
         </div>
       )}
 
-      {cards.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="mt-6 text-sm text-muted-foreground">No budgets yet — set a cap on a category to start tracking it.</p>
       ) : (
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {cards.map((c) => (
-            <div key={c.id} className="rounded-lg border bg-card p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">{c.categoryName}</span>
-                <span className="flex gap-2 text-xs">
-                  <button className="text-primary hover:underline" onClick={() => { setEditing(c); setDialogOpen(true); }}>Edit</button>
-                  <button className="text-destructive hover:underline" onClick={() => void remove(c)}>Delete</button>
-                </span>
-              </div>
-              <div className="mt-2 h-1.5 rounded-full bg-muted">
-                <div
-                  className={`h-1.5 rounded-full ${c.status === 'over' ? 'bg-destructive' : c.status === 'near-limit' ? 'bg-yellow-500' : 'bg-primary'}`}
-                  style={{ width: `${c.pct}%` }}
-                />
-              </div>
-              <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                <span>{formatINR(c.spend)} / {formatINR(c.budgetAmount)}</span>
-                <span className={c.status === 'over' ? 'text-destructive' : ''}>{c.statusText}</span>
-              </div>
-            </div>
-          ))}
+        <div className="mt-4">
+          <DataTable table={table} onRowClick={openEdit} />
         </div>
       )}
 

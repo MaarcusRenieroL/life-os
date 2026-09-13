@@ -1,7 +1,21 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type RowSelectionState,
+  type SortingState,
+  type VisibilityState,
+} from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
+import { DataTablePagination } from '@/components/data-table/data-table-pagination';
+import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
+import { selectionColumn } from '@/components/data-table/selection-column';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -25,6 +39,10 @@ const PAGE_SIZE = 50;
 
 type StatusChip = 'ALL' | 'NEEDS_REVIEW' | 'CATEGORIZED' | 'DUPLICATE';
 
+function needsReview(t: TransactionResponse): boolean {
+  return t.categoryId === null && t.type !== 'CREDIT';
+}
+
 export function TransactionsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -34,7 +52,9 @@ export function TransactionsPage() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [addOpen, setAddOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<TransactionResponse | null>(null);
   const [categorizeOpen, setCategorizeOpen] = useState(false);
@@ -58,10 +78,11 @@ export function TransactionsPage() {
     queryFn: () => transactionApi.getTransactions(page, PAGE_SIZE, filters),
   });
 
-  const transactions = txPage?.content ?? [];
+  const transactions = useMemo(() => txPage?.content ?? [], [txPage]);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['finance', 'transactions'] });
+    setRowSelection({});
   }
 
   function categoryNames(t: TransactionResponse): string {
@@ -70,19 +91,6 @@ export function TransactionsPage() {
     }
     if (t.categoryId) return categories.find((c) => c.id === t.categoryId)?.name ?? t.categoryId;
     return 'Uncategorized';
-  }
-
-  function needsReview(t: TransactionResponse): boolean {
-    return t.categoryId === null && t.type !== 'CREDIT';
-  }
-
-  function toggleSelect(id: string) {
-    setSelected((s) => {
-      const next = new Set(s);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
   }
 
   function rowClick(t: TransactionResponse) {
@@ -99,32 +107,29 @@ export function TransactionsPage() {
       await transactionApi.updateCategories(id, { categoryIds });
     }
     invalidate();
-    setSelected(new Set());
   }
 
+  const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
+
   async function markDuplicate() {
-    const ids = Array.from(selected);
-    if (ids.length < 2) return;
-    await transactionApi.merge(ids[0], { duplicateTransactionIds: ids.slice(1) });
+    if (selectedIds.length < 2) return;
+    await transactionApi.merge(selectedIds[0], { duplicateTransactionIds: selectedIds.slice(1) });
     invalidate();
-    setSelected(new Set());
   }
 
   async function disputeSelected(reason: string) {
-    for (const id of selected) {
+    for (const id of selectedIds) {
       await transactionApi.dispute(id, { reason });
     }
     invalidate();
-    setSelected(new Set());
   }
 
   async function deleteSelected() {
-    if (!confirm(`Delete ${selected.size} transaction(s)?`)) return;
-    for (const id of selected) {
+    if (!confirm(`Delete ${selectedIds.length} transaction(s)?`)) return;
+    for (const id of selectedIds) {
       await transactionApi.deleteTransaction(id);
     }
     invalidate();
-    setSelected(new Set());
   }
 
   function exportCsv() {
@@ -154,6 +159,61 @@ export function TransactionsPage() {
     [transactions],
   );
 
+  const columns = useMemo<ColumnDef<TransactionResponse>[]>(
+    () => [
+      selectionColumn<TransactionResponse>(),
+      {
+        accessorKey: 'transactionDate',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+        cell: ({ row }) => row.original.transactionDate.slice(0, 10),
+      },
+      {
+        accessorKey: 'description',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Description" />,
+      },
+      {
+        id: 'category',
+        accessorFn: (t) => categoryNames(t),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+      },
+      {
+        accessorKey: 'amount',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Amount" />,
+        cell: ({ row }) => (
+          <span className={row.original.type === 'CREDIT' ? 'text-primary' : ''}>
+            {row.original.type === 'CREDIT' ? '+' : '-'}
+            {formatINR(row.original.amount)}
+          </span>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [categories],
+  );
+
+  const table = useReactTable({
+    data: transactions,
+    columns,
+    state: {
+      sorting,
+      columnVisibility,
+      rowSelection,
+      pagination: { pageIndex: page, pageSize: PAGE_SIZE },
+    },
+    getRowId: (row) => row.id,
+    manualPagination: true,
+    pageCount: txPage?.totalPages ?? -1,
+    onPaginationChange: (updater) => {
+      const next = typeof updater === 'function' ? updater({ pageIndex: page, pageSize: PAGE_SIZE }) : updater;
+      setPage(next.pageIndex);
+    },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -182,7 +242,7 @@ export function TransactionsPage() {
           </Button>
         ))}
         <Select value={categoryId ?? '__all__'} onValueChange={(v) => { setCategoryId(v === '__all__' ? null : v); setPage(0); }}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Category" /></SelectTrigger>
+          <SelectTrigger size="sm" className="w-40"><SelectValue placeholder="Category" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">All categories</SelectItem>
             {categories.map((c) => (
@@ -190,75 +250,41 @@ export function TransactionsPage() {
             ))}
           </SelectContent>
         </Select>
+        <DataTableViewOptions table={table} />
       </div>
 
-      {selected.size > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-xs">
-          <span>{selected.size} selected</span>
-          {selected.size === 1 && (
-            <button className="hover:underline" onClick={() => { setEditingTx(transactions.find((t) => selected.has(t.id))!); setAddOpen(true); }}>
+      {selectedIds.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2 text-xs">
+          <span>{selectedIds.length} selected</span>
+          {selectedIds.length === 1 && (
+            <button className="hover:underline" onClick={() => { setEditingTx(transactions.find((t) => t.id === selectedIds[0])!); setAddOpen(true); }}>
               Edit
             </button>
           )}
-          <button className="hover:underline" onClick={() => { setCategorizeTargets(Array.from(selected)); setCategorizeOpen(true); }}>
+          <button className="hover:underline" onClick={() => { setCategorizeTargets(selectedIds); setCategorizeOpen(true); }}>
             Set categories
           </button>
-          {selected.size >= 2 && <button className="hover:underline" onClick={() => void markDuplicate()}>Mark as duplicate</button>}
+          {selectedIds.length >= 2 && <button className="hover:underline" onClick={() => void markDuplicate()}>Mark as duplicate</button>}
           <button className="hover:underline" onClick={() => setDisputeOpen(true)}>Dispute</button>
           <button className="text-destructive hover:underline" onClick={() => void deleteSelected()}>Delete</button>
-          <button className="ml-auto hover:underline" onClick={() => setSelected(new Set())}>Clear</button>
+          <button className="ml-auto hover:underline" onClick={() => setRowSelection({})}>Clear</button>
         </div>
       )}
 
-      <div className="mt-3 overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
-            <tr>
-              <th className="px-2 py-2"></th>
-              <th className="px-2 py-2">Date</th>
-              <th className="px-2 py-2">Description</th>
-              <th className="px-2 py-2">Category</th>
-              <th className="px-2 py-2 text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map((t) => (
-              <tr
-                key={t.id}
-                className={`cursor-pointer border-b last:border-b-0 hover:bg-muted/30 ${needsReview(t) ? 'bg-yellow-500/5' : ''}`}
-              >
-                <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
-                  <input type="checkbox" checked={selected.has(t.id)} onChange={() => toggleSelect(t.id)} />
-                </td>
-                <td className="px-2 py-2" onClick={() => rowClick(t)}>{t.transactionDate.slice(0, 10)}</td>
-                <td className="px-2 py-2" onClick={() => rowClick(t)}>{t.description}</td>
-                <td className="px-2 py-2" onClick={() => rowClick(t)}>{categoryNames(t)}</td>
-                <td className={`px-2 py-2 text-right ${t.type === 'CREDIT' ? 'text-primary' : ''}`} onClick={() => rowClick(t)}>
-                  {t.type === 'CREDIT' ? '+' : '-'}{formatINR(t.amount)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          {transactions.length > 0 && (
-            <tfoot>
-              <tr className="border-t text-sm font-medium">
-                <td colSpan={4} className="px-2 py-2 text-right">Net</td>
-                <td className="px-2 py-2 text-right">{formatINR(netTotal)}</td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-        {isLoading && <p className="p-4 text-sm text-muted-foreground">Loading transactions…</p>}
-        {!isLoading && transactions.length === 0 && <p className="p-4 text-sm text-muted-foreground">No transactions found.</p>}
+      <div className="mt-3">
+        <DataTable
+          table={table}
+          onRowClick={rowClick}
+          emptyMessage={isLoading ? 'Loading transactions…' : 'No transactions found.'}
+        />
+        {transactions.length > 0 && (
+          <div className="mt-2 flex justify-end border-t pt-2 text-sm font-medium">
+            Net: {formatINR(netTotal)}
+          </div>
+        )}
       </div>
 
-      {txPage && txPage.totalPages > 1 && (
-        <div className="mt-3 flex items-center justify-center gap-2">
-          <Button variant="outline" size="sm" disabled={txPage.first} onClick={() => setPage((p) => p - 1)}>Previous</Button>
-          <span className="text-xs text-muted-foreground">Page {txPage.number + 1} of {txPage.totalPages}</span>
-          <Button variant="outline" size="sm" disabled={txPage.last} onClick={() => setPage((p) => p + 1)}>Next</Button>
-        </div>
-      )}
+      <DataTablePagination table={table} />
 
       <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} editing={editingTx} onSaved={invalidate} />
       <CategorizeDialog
@@ -267,7 +293,7 @@ export function TransactionsPage() {
         transactionLabel={categorizeTargets.length === 1 ? transactions.find((t) => t.id === categorizeTargets[0])?.description ?? '' : `${categorizeTargets.length} selected transactions`}
         onSave={(ids) => void saveCategories(ids)}
       />
-      <DisputeDialog open={disputeOpen} onOpenChange={setDisputeOpen} count={selected.size} onSubmit={(reason) => void disputeSelected(reason)} />
+      <DisputeDialog open={disputeOpen} onOpenChange={setDisputeOpen} count={selectedIds.length} onSubmit={(reason) => void disputeSelected(reason)} />
     </div>
   );
 }

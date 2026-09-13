@@ -1,6 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
+import {
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+  type VisibilityState,
+} from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
+import { DataTablePagination } from '@/components/data-table/data-table-pagination';
+import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,6 +29,14 @@ import type { AuditEventResponse, AuditEventType } from './types';
 
 type UiType = 'login' | 'change' | 'alert' | 'add';
 type DotTone = 'primary' | 'destructive' | 'muted';
+
+interface AuditRow {
+  type: UiType;
+  dot: DotTone;
+  text: string;
+  meta: string;
+  days: number;
+}
 
 const EVENT_TYPE_MAP: Record<AuditEventType, { type: UiType; dot: DotTone }> = {
   LOGIN_SUCCESS: { type: 'login', dot: 'muted' },
@@ -47,7 +68,7 @@ function formatMeta(occurredAt: string, metadata: Record<string, string> | null)
   return context ? `${dateLabel}, ${timeLabel} - from ${context}` : `${dateLabel}, ${timeLabel}`;
 }
 
-function toAuditEvent(response: AuditEventResponse) {
+function toAuditEvent(response: AuditEventResponse): AuditRow {
   const { type, dot } = EVENT_TYPE_MAP[response.eventType];
   const days = Math.floor((Date.now() - new Date(response.occurredAt).getTime()) / 86_400_000);
   return { type, dot, text: response.description, meta: formatMeta(response.occurredAt, response.metadata), days };
@@ -66,6 +87,8 @@ export function AuditLogPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<UiType | 'all'>('all');
   const [dateRange, setDateRange] = useState<7 | 30 | 9999>(30);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
   const rows = useMemo(() => events.map(toAuditEvent), [events]);
 
@@ -90,8 +113,44 @@ export function AuditLogPage() {
     URL.revokeObjectURL(url);
   }
 
+  const columns = useMemo<ColumnDef<AuditRow>[]>(
+    () => [
+      {
+        accessorKey: 'text',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Event" />,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <span className={`size-1.5 shrink-0 rounded-full ${DOT_CLASS[row.original.dot]}`} />
+            {row.original.text}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'type',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+      },
+      {
+        accessorKey: 'meta',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="When" />,
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.meta}</span>,
+      },
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: filtered,
+    columns,
+    state: { sorting, columnVisibility },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  });
+
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-3xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Audit log</h1>
         <Button variant="ghost" size="sm" onClick={exportCsv}>Export CSV</Button>
@@ -117,18 +176,13 @@ export function AuditLogPage() {
             <SelectItem value="9999">All time</SelectItem>
           </SelectContent>
         </Select>
+        <DataTableViewOptions table={table} />
       </div>
 
-      <ul className="mt-4 flex flex-col gap-0.5">
-        {filtered.map((event, i) => (
-          <li key={i} className="flex items-center gap-3 border-b py-2.5 last:border-b-0">
-            <span className={`size-1.5 shrink-0 rounded-full ${DOT_CLASS[event.dot]}`} />
-            <span className="flex-1 text-sm">{event.text}</span>
-            <span className="text-xs text-muted-foreground">{event.meta}</span>
-          </li>
-        ))}
-        {filtered.length === 0 && <p className="py-4 text-sm text-muted-foreground">No events match.</p>}
-      </ul>
+      <div className="mt-4">
+        <DataTable table={table} emptyMessage="No events match." />
+      </div>
+      <DataTablePagination table={table} />
     </div>
   );
 }

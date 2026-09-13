@@ -1,6 +1,17 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import {
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+  type VisibilityState,
+} from '@tanstack/react-table';
+import { useMemo, useState } from 'react';
 
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
+import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -14,6 +25,8 @@ export function AccountsPage() {
   const queryClient = useQueryClient();
   const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts });
 
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'accountName', desc: false }]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AccountResponse | null>(null);
   const [reconciling, setReconciling] = useState<AccountResponse | null>(null);
@@ -34,11 +47,71 @@ export function AccountsPage() {
     }
   }
 
+  function openEdit(account: AccountResponse) {
+    setEditing(account);
+    setDialogOpen(true);
+  }
+
+  const columns = useMemo<ColumnDef<AccountResponse>[]>(
+    () => [
+      {
+        accessorKey: 'accountName',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Account" />,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            {row.original.accountName}
+            {row.original.isPrimary && <Badge variant="secondary">Primary</Badge>}
+          </div>
+        ),
+      },
+      {
+        id: 'detail',
+        accessorFn: (a) => accountSubLabel(a),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Detail" />,
+      },
+      {
+        accessorKey: 'currentBalance',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Balance" />,
+        cell: ({ row }) => formatINR(row.original.currentBalance),
+      },
+      {
+        accessorKey: 'currencyCode',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Currency" />,
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex gap-2 text-xs">
+            <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); setReconciling(row.original); }}>Reconcile</button>
+            <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); openEdit(row.original); }}>Edit</button>
+            <button className="text-destructive hover:underline" onClick={(e) => { e.stopPropagation(); void deleteAccount(row.original); }}>Delete</button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: accounts,
+    columns,
+    state: { sorting, columnVisibility },
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
   return (
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
-        <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>+ Add account</Button>
+        <div className="flex items-center gap-2">
+          <DataTableViewOptions table={table} />
+          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>+ Add account</Button>
+        </div>
       </div>
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
@@ -47,23 +120,8 @@ export function AccountsPage() {
           No accounts yet — add one to start tracking balances and importing statements.
         </p>
       ) : (
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account) => (
-            <div key={account.id} className="rounded-lg border bg-card p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold">{account.accountName}</div>
-                {account.isPrimary && <Badge variant="secondary">Primary</Badge>}
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">{accountSubLabel(account)}</div>
-              <div className="mt-3 text-lg font-semibold">{formatINR(account.currentBalance)}</div>
-              <div className="text-[11px] text-muted-foreground">{account.currencyCode}</div>
-              <div className="mt-3 flex gap-2 text-xs">
-                <button className="text-primary hover:underline" onClick={() => setReconciling(account)}>Reconcile</button>
-                <button className="text-primary hover:underline" onClick={() => { setEditing(account); setDialogOpen(true); }}>Edit</button>
-                <button className="text-destructive hover:underline" onClick={() => void deleteAccount(account)}>Delete</button>
-              </div>
-            </div>
-          ))}
+        <div className="mt-4">
+          <DataTable table={table} onRowClick={openEdit} />
         </div>
       )}
 
