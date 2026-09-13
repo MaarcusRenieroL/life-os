@@ -3,11 +3,20 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { FitBreakdown } from './fit-breakdown';
+import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
 import { jobApi } from './job-api';
 import { JOB_STATUSES, type JobStatus, type ResumeTailoringResult } from './types';
@@ -106,18 +115,17 @@ export function JobDetailPage() {
       </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-2.5">
-        <span className="text-sm text-muted-foreground">Status</span>
-        <select
-          value={job.status ?? 'INTERESTED'}
-          onChange={(e) => void setStatus(e.target.value as JobStatus)}
-          className="rounded-md border bg-background px-2 py-1.5 text-sm"
-        >
-          {JOB_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        <span className="text-xs tracking-wide text-muted-foreground uppercase">Status</span>
+        <Select value={job.status ?? 'INTERESTED'} onValueChange={(v) => void setStatus(v as JobStatus)}>
+          <SelectTrigger size="sm" className="text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {JOB_STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button variant="outline" size="sm" onClick={() => rescoreMutation.mutate()} disabled={rescoreMutation.isPending}>
           {rescoreMutation.isPending ? 'Re-scoring…' : 'Re-score'}
         </Button>
@@ -125,10 +133,10 @@ export function JobDetailPage() {
 
       <Card className="mt-6">
         <CardContent>
-          <h2 className="text-base font-semibold">
-            Fit score: {fit.score ?? '—'}
-            <span className="text-sm font-normal text-muted-foreground">/100</span>
-          </h2>
+          <div className="flex items-center justify-between">
+            <SectionHeading>fit score</SectionHeading>
+            {fit.score !== null && <FitScoreBadge score={fit.score} />}
+          </div>
           <FitBreakdown fit={fit} />
 
           <Button
@@ -144,7 +152,7 @@ export function JobDetailPage() {
 
           {tailorResult && (
             <div className="mt-4 border-t pt-4">
-              <h3 className="text-sm font-semibold">Improve your resume for this role</h3>
+              <SectionHeading>improve your resume for this role</SectionHeading>
               <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
                 {tailorResult.improvementPoints.map((point) => (
                   <li key={point}>{point}</li>
@@ -152,7 +160,7 @@ export function JobDetailPage() {
               </ul>
 
               <div className="mt-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">LaTeX resume (paste into Overleaf)</h3>
+                <SectionHeading>latex resume (paste into overleaf)</SectionHeading>
                 <Button variant="outline" size="sm" onClick={() => void copyLatex()}>
                   {copied ? 'Copied ✓' : 'Copy .tex'}
                 </Button>
@@ -166,7 +174,7 @@ export function JobDetailPage() {
       </Card>
 
       <section className="mt-6">
-        <h2 className="text-base font-semibold">Description</h2>
+        <SectionHeading>description</SectionHeading>
         <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
           {job.jobDescriptionText || 'No description on file.'}
         </p>

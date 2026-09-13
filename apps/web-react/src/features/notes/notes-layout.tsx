@@ -1,6 +1,6 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 
-import { cn } from '@/lib/utils';
+import { TabNav } from '@/components/tab-nav';
 
 const TABS = [
   { label: 'All Notes', to: '/notes', end: true },
@@ -14,24 +14,7 @@ const TABS = [
 export function NotesLayout() {
   return (
     <div>
-      <nav className="mb-6 flex flex-wrap gap-1 border-b">
-        {TABS.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.end}
-            className={({ isActive }) =>
-              cn(
-                'border-b-2 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-                isActive && 'border-primary text-foreground',
-                !isActive && 'border-transparent',
-              )
-            }
-          >
-            {tab.label}
-          </NavLink>
-        ))}
-      </nav>
+      <TabNav tabs={TABS} />
       <Outlet />
     </div>
   );

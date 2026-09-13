@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 
+import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -76,7 +77,7 @@ export function ResumePage() {
       {note && <p className="mt-2 text-sm text-muted-foreground">{note}</p>}
 
       <section className="mt-6">
-        <h2 className="text-sm font-semibold">Current resume</h2>
+        <SectionHeading>current resume</SectionHeading>
         {resume ? (
           <div className="mt-2 rounded-lg border bg-card px-3 py-2 text-sm">
             {resume.label || resume.fileName}
@@ -88,7 +89,7 @@ export function ResumePage() {
       </section>
 
       <section className="mt-6">
-        <h2 className="text-sm font-semibold">Extracted skills ({skills.length})</h2>
+        <SectionHeading>extracted skills ({skills.length})</SectionHeading>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {skills.map((skill) => (
             <Badge key={skill.id} variant="secondary">

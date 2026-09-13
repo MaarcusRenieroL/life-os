@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 import { FitBreakdown } from './fit-breakdown';
+import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
 import { jobApi } from './job-api';
 import type { JobListing } from './types';
@@ -116,15 +117,7 @@ export function AddJobPage() {
                   {job.workModel ? ` · ${job.workModel}` : ''}
                 </p>
               </div>
-              {fit.score !== null && (
-                <div className="text-right">
-                  <div className="text-3xl font-semibold leading-none">
-                    {fit.score}
-                    <span className="text-sm text-muted-foreground">/100</span>
-                  </div>
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">fit</div>
-                </div>
-              )}
+              {fit.score !== null && <FitScoreBadge score={fit.score} />}
             </div>
 
             <FitBreakdown fit={fit} />

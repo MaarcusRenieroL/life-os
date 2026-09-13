@@ -34,6 +34,13 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Finance', to: '/finance', icon: Wallet, enabled: true },
 ];
 
+function currentModuleLabel(pathname: string): string {
+  const match = NAV_ITEMS.find((item) => pathname.startsWith(item.to));
+  if (match) return match.label;
+  if (pathname.startsWith('/settings')) return 'Settings';
+  return 'Life OS';
+}
+
 export function AppShell() {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -42,11 +49,14 @@ export function AppShell() {
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          <span className="px-2 py-1 text-sm font-semibold tracking-tight">Life OS</span>
+          <div className="flex items-center gap-2 px-2 py-1.5">
+            <span className="text-primary">■</span>
+            <span className="text-sm font-semibold tracking-widest uppercase">Life_OS</span>
+          </div>
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Modules</SidebarGroupLabel>
+            <SidebarGroupLabel className="font-mono text-[10px] tracking-widest uppercase">Modules</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {NAV_ITEMS.map((item) => (
@@ -87,15 +97,20 @@ export function AppShell() {
             <SidebarMenuItem>
               <SidebarMenuButton onClick={() => void logout()} tooltip="Log out">
                 <LogOut />
-                <span>{user?.email ?? 'Log out'}</span>
+                <span className="truncate">{user?.email ?? 'Log out'}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-12 items-center gap-2 border-b px-4">
+        <header className="flex h-12 items-center gap-3 border-b px-4">
           <SidebarTrigger />
+          <div className="h-4 w-px bg-border" />
+          <span className="font-mono text-xs tracking-wide text-muted-foreground">
+            <span className="text-primary">~/</span>
+            {currentModuleLabel(location.pathname).toLowerCase().replace(/\s+/g, '-')}
+          </span>
         </header>
         <main className="flex-1 overflow-auto p-6">
           <Outlet />

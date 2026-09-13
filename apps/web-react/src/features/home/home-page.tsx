@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
+import { SectionHeading } from '@/components/section-heading';
 import { APP_MODULES, type AppModuleConfig } from '@/config/app-modules';
 import { useAuth } from '@/features/auth/auth-context';
 import { accountApi } from '@/features/finance/account-api';
@@ -108,35 +109,40 @@ export function HomePage() {
 
   return (
     <div>
-      <div className="mb-7 flex items-start justify-between gap-4">
+      <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{greeting}, {firstName}</h1>
+          <p className="text-xs text-primary">
+            <span className="text-muted-foreground">$</span> whoami
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{greeting}, {firstName}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
             {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} — here's where things stand
           </p>
         </div>
       </div>
 
-      <div className="mb-7 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         <StatCard value={modulesActiveCount} label="modules active" />
         <StatCard value={vaultActionRequired} label="vault items need attention" destructive={vaultActionRequired > 0} />
       </div>
 
-      <div className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground">YOUR MODULES</div>
+      <SectionHeading className="mb-3">your modules</SectionHeading>
       <div className="mb-8 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         {homeModuleTiles.map((tile) =>
           tile.enabled ? (
             <Link
               key={tile.code}
               to={tile.path ?? '#'}
-              className="flex flex-col gap-2.5 rounded-lg border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40"
+              className="group flex flex-col gap-3 rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-[0_0_0_1px_var(--primary)_inset]"
             >
-              <span className="flex size-8 items-center justify-center rounded-md bg-primary/15 text-[11px] font-bold text-primary">{tile.code}</span>
+              <span className="flex size-8 items-center justify-center rounded-md bg-primary/15 text-[11px] font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                {tile.code}
+              </span>
               <span className="text-sm font-semibold">{tile.name}</span>
               <span className="text-[11px] text-muted-foreground">{tile.subtitle}</span>
             </Link>
           ) : (
-            <div key={tile.code} className="flex flex-col gap-2.5 rounded-lg border border-dashed bg-muted/20 p-4 opacity-50">
+            <div key={tile.code} className="flex flex-col gap-3 rounded-lg border border-dashed bg-muted/10 p-4 opacity-50">
               <span className="flex size-8 items-center justify-center rounded-md bg-foreground/8 text-[11px] font-bold">{tile.code}</span>
               <span className="text-sm font-semibold">{tile.name}</span>
               <span className="text-[11px] text-muted-foreground">{tile.subtitle}</span>
@@ -145,32 +151,36 @@ export function HomePage() {
         )}
       </div>
 
-      <div className="mb-7 grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
+      <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
         <div className="rounded-lg border bg-card p-5">
-          <div className="mb-3.5 text-sm font-semibold">Recent activity</div>
-          <p className="text-sm text-muted-foreground">Cross-module activity feed coming soon.</p>
+          <SectionHeading>recent activity</SectionHeading>
+          <p className="mt-3 text-sm text-muted-foreground">Cross-module activity feed coming soon.</p>
         </div>
 
         <div className="rounded-lg border bg-card p-5">
-          <div className="mb-3.5 text-sm font-semibold">Needs your attention</div>
-          <div className="flex flex-col gap-2.5">
+          <SectionHeading>needs your attention</SectionHeading>
+          <div className="mt-3 flex flex-col gap-2.5">
             {attentionItems.map((item, i) => (
-              <Link key={i} to={item.link} className="flex items-center justify-between text-sm hover:underline">
+              <Link key={i} to={item.link} className="flex items-center justify-between text-sm hover:text-primary">
                 <span>{item.title}</span>
                 <span className="text-xs text-muted-foreground">{item.meta}</span>
               </Link>
             ))}
-            {attentionItems.length === 0 && <p className="text-sm text-muted-foreground">Nothing needs attention right now.</p>}
+            {attentionItems.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                <span className="text-primary">✓</span> nothing needs attention right now
+              </p>
+            )}
           </div>
         </div>
       </div>
 
       {exploreModules.length > 0 && (
         <div>
-          <div className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground">EXPLORE</div>
+          <SectionHeading className="mb-3">explore</SectionHeading>
           <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
             {exploreModules.map((m) => (
-              <div key={m.code} className="flex flex-col gap-2.5 rounded-lg border border-dashed bg-muted/20 p-4 opacity-50">
+              <div key={m.code} className="flex flex-col gap-3 rounded-lg border border-dashed bg-muted/10 p-4 opacity-50">
                 <span className="flex size-8 items-center justify-center rounded-md bg-foreground/8 text-[11px] font-bold">{m.code}</span>
                 <span className="text-sm font-semibold">{m.name}</span>
                 <span className="text-[11px] text-muted-foreground">not set up yet</span>
@@ -186,8 +196,8 @@ export function HomePage() {
 function StatCard({ value, label, destructive }: { value: number; label: string; destructive?: boolean }) {
   return (
     <div className="rounded-lg border bg-card px-4 py-4">
-      <div className={`text-xl font-semibold tabular-nums ${destructive ? 'text-destructive' : ''}`}>{value}</div>
-      <div className="mt-0.5 text-[11px] text-muted-foreground">{label}</div>
+      <div className={`text-2xl font-semibold tabular-nums ${destructive ? 'text-destructive' : 'text-primary'}`}>{value}</div>
+      <div className="mt-0.5 text-[11px] tracking-wide text-muted-foreground uppercase">{label}</div>
     </div>
   );
 }
