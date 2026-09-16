@@ -100,6 +100,7 @@ export function ReferralTrackingSection({ jobId }: { jobId: string }) {
                         </a>
                       </>
                     )}
+                    {referral.followUpAt && ` · follow up ${new Date(referral.followUpAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1.5">

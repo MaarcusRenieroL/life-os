@@ -39,6 +39,7 @@ export function ReferralDialog({ open, onOpenChange, jobId, editing, onSaved }: 
   const [status, setStatus] = useState<ReferralStatus>('NOT_CONTACTED');
   const [notes, setNotes] = useState('');
   const [contactedAt, setContactedAt] = useState<string | null>(null);
+  const [followUpAt, setFollowUpAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -51,6 +52,7 @@ export function ReferralDialog({ open, onOpenChange, jobId, editing, onSaved }: 
     setStatus(editing?.status ?? 'NOT_CONTACTED');
     setNotes(editing?.notes ?? '');
     setContactedAt(editing?.contactedAt ?? null);
+    setFollowUpAt(editing?.followUpAt ?? null);
   }, [open, editing]);
 
   async function submit() {
@@ -66,6 +68,7 @@ export function ReferralDialog({ open, onOpenChange, jobId, editing, onSaved }: 
         status,
         notes: notes || null,
         contactedAt,
+        followUpAt,
       };
       if (editing) {
         await referralApi.update(jobId, editing.id, request);
@@ -133,6 +136,11 @@ export function ReferralDialog({ open, onOpenChange, jobId, editing, onSaved }: 
               <Label className="text-xs text-muted-foreground">Contacted on</Label>
               <DatePicker value={contactedAt} onChange={setContactedAt} />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs text-muted-foreground">Follow up on</Label>
+            <DatePicker value={followUpAt} onChange={setFollowUpAt} />
           </div>
 
           <div className="flex flex-col gap-2">

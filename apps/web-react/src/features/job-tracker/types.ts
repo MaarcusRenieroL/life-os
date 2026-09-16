@@ -76,6 +76,7 @@ export interface JobListing {
   offerDeadline: string | null;
   offerNotes: string | null;
   coverLetterText: string | null;
+  followUpAt: string | null;
 }
 
 export interface UpdateJobDetailsRequest {
@@ -85,6 +86,7 @@ export interface UpdateJobDetailsRequest {
   offerAmount: number | null;
   offerDeadline: string | null;
   offerNotes: string | null;
+  followUpAt: string | null;
 }
 
 export type InterviewRoundType =
@@ -182,6 +184,7 @@ export interface Referral {
   draftMessage: string | null;
   notes: string | null;
   contactedAt: string | null;
+  followUpAt: string | null;
   createdAt: string;
 }
 
@@ -194,6 +197,7 @@ export interface UpsertReferralRequest {
   status: ReferralStatus;
   notes: string | null;
   contactedAt: string | null;
+  followUpAt: string | null;
 }
 
 export interface JobFitResult {

@@ -132,6 +132,10 @@ export const referralApi = {
   async delete(jobId: string, referralId: string): Promise<void> {
     await api.delete(`${baseUrl}/${jobId}/referrals/${referralId}`);
   },
+
+  upcomingFollowUps(): Promise<Referral[]> {
+    return unwrap(api.get(`${baseUrl}/referrals/upcoming-follow-ups`));
+  },
 };
 
 export const jobAnalyticsApi = {

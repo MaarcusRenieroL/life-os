@@ -23,6 +23,7 @@ export function ApplicationTrackingForm({ job }: { job: JobListing }) {
   const [offerAmount, setOfferAmount] = useState(job.offerAmount?.toString() ?? '');
   const [offerDeadline, setOfferDeadline] = useState<string | null>(job.offerDeadline);
   const [offerNotes, setOfferNotes] = useState(job.offerNotes ?? '');
+  const [followUpAt, setFollowUpAt] = useState<string | null>(job.followUpAt);
   const [saving, setSaving] = useState(false);
 
   // appliedAt can change from outside this form - the status dropdown auto-stamps it when moving
@@ -44,6 +45,7 @@ export function ApplicationTrackingForm({ job }: { job: JobListing }) {
         offerAmount: offerAmount ? Number(offerAmount) : null,
         offerDeadline,
         offerNotes: offerNotes || null,
+        followUpAt,
       });
       queryClient.setQueryData(['jobs', job.id], updated);
       toast.success('Saved');
@@ -56,9 +58,15 @@ export function ApplicationTrackingForm({ job }: { job: JobListing }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div>
-        <Label className="mb-1.5 block text-[11px] text-muted-foreground">APPLIED ON</Label>
-        <DatePicker value={appliedAt} onChange={setAppliedAt} />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="mb-1.5 block text-[11px] text-muted-foreground">APPLIED ON</Label>
+          <DatePicker value={appliedAt} onChange={setAppliedAt} />
+        </div>
+        <div>
+          <Label className="mb-1.5 block text-[11px] text-muted-foreground">FOLLOW UP ON</Label>
+          <DatePicker value={followUpAt} onChange={setFollowUpAt} />
+        </div>
       </div>
 
       <div>
