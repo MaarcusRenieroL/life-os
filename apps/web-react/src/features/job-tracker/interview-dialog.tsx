@@ -84,14 +84,14 @@ export function InterviewDialog({ open, onOpenChange, jobId, editing, onSaved }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit interview' : 'Add interview'}</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="mb-1.5 block text-xs text-muted-foreground">Round</Label>
+        <div className="flex flex-col gap-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs text-muted-foreground">Round</Label>
               <Select value={roundType} onValueChange={(v) => setRoundType(v as InterviewRoundType)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -101,8 +101,8 @@ export function InterviewDialog({ open, onOpenChange, jobId, editing, onSaved }:
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label className="mb-1.5 block text-xs text-muted-foreground">Result</Label>
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs text-muted-foreground">Result</Label>
               <Select value={result} onValueChange={(v) => setResult(v as InterviewResultStatus)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -114,32 +114,32 @@ export function InterviewDialog({ open, onOpenChange, jobId, editing, onSaved }:
             </div>
           </div>
 
-          <div>
-            <Label className="mb-1.5 block text-xs text-muted-foreground">Scheduled at</Label>
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs text-muted-foreground">Scheduled at</Label>
             <DateTimePicker value={scheduledAt} onChange={setScheduledAt} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="mb-1.5 block text-xs text-muted-foreground">Interviewer</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs text-muted-foreground">Interviewer</Label>
               <Input value={interviewerName} onChange={(e) => setInterviewerName(e.target.value)} />
             </div>
-            <div>
-              <Label className="mb-1.5 block text-xs text-muted-foreground">Meeting link</Label>
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs text-muted-foreground">Meeting link</Label>
               <Input value={meetingLink} onChange={(e) => setMeetingLink(e.target.value)} />
             </div>
           </div>
 
-          <div>
-            <Label className="mb-1.5 block text-xs text-muted-foreground">Preparation notes</Label>
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs text-muted-foreground">Preparation notes</Label>
             <Textarea rows={2} value={preparationNotes} onChange={(e) => setPreparationNotes(e.target.value)} />
           </div>
-          <div>
-            <Label className="mb-1.5 block text-xs text-muted-foreground">Questions asked</Label>
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs text-muted-foreground">Questions asked</Label>
             <Textarea rows={2} value={questionsAsked} onChange={(e) => setQuestionsAsked(e.target.value)} />
           </div>
-          <div>
-            <Label className="mb-1.5 block text-xs text-muted-foreground">Performance notes</Label>
+          <div className="flex flex-col gap-2">
+            <Label className="text-xs text-muted-foreground">Performance notes</Label>
             <Textarea rows={2} value={performanceNotes} onChange={(e) => setPerformanceNotes(e.target.value)} />
           </div>
         </div>
