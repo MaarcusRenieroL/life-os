@@ -2,6 +2,7 @@ package com.lifeos.job_tracker.service;
 
 import com.lifeos.job_tracker.domains.entity.Company;
 import com.lifeos.job_tracker.domains.entity.JobListing;
+import com.lifeos.job_tracker.domains.entity.JobTailoringVersion;
 import com.lifeos.job_tracker.domains.entity.Resume;
 import com.lifeos.job_tracker.domains.enums.IngestSource;
 import com.lifeos.job_tracker.domains.enums.JobStatus;
@@ -10,6 +11,7 @@ import com.lifeos.job_tracker.domains.enums.SeniorityLevel;
 import com.lifeos.job_tracker.domains.enums.VisaSponsorship;
 import com.lifeos.job_tracker.domains.enums.WorkModel;
 import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
+import com.lifeos.job_tracker.domains.record.ParsedResume;
 import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
 import com.lifeos.job_tracker.exception.InvalidRequestException;
 import com.lifeos.job_tracker.exception.JobLinkUnreadableException;
@@ -19,6 +21,7 @@ import com.lifeos.job_tracker.integration.JobLinkFetcher;
 import com.lifeos.job_tracker.integration.LatexCompiler;
 import com.lifeos.job_tracker.repository.CompanyRepository;
 import com.lifeos.job_tracker.repository.JobListingRepository;
+import com.lifeos.job_tracker.repository.JobTailoringVersionRepository;
 import com.lifeos.job_tracker.service.JobMatchingService.JobFitResult;
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +44,8 @@ public class JobListingService {
   private final JobLinkFetcher jobLinkFetcher;
   private final ResumeService resumeService;
   private final LatexCompiler latexCompiler;
+  private final SkillService skillService;
+  private final JobTailoringVersionRepository jobTailoringVersionRepository;
 
   @Transactional(readOnly = true)
   public List<JobListing> list(UUID userId) {
@@ -218,9 +223,58 @@ public class JobListingService {
 
     job.setTailoredImprovementPoints(result.improvementPoints());
     job.setTailoredLatexResume(result.latexResume());
+
+    // The tailored resume only ever rewords/surfaces skills the candidate genuinely has (the
+    // prompt forbids inventing anything) - merging what Claude notices in it can still catch real
+    // skills the original resume parse missed, so the fit score reflects the improved wording
+    // instead of staying frozen at the pre-tailor number.
+    mergeSkillsFromTailoredResume(userId, result.latexResume());
+    JobFitResult rescored = jobMatchingService.score(userId, job);
+    job.setFitScore(rescored.score());
+    job.setFitExplanation(rescored.explanation());
+
     jobListingRepository.save(job);
+    saveVersion(userId, job, result, rescored.score());
 
     return result;
+  }
+
+  private void mergeSkillsFromTailoredResume(UUID userId, String tailoredLatexResume) {
+    try {
+      ParsedResume parsed = ai.parseResume(tailoredLatexResume);
+      skillService.mergeExtracted(userId, parsed.skills());
+    } catch (RuntimeException exception) {
+      log.warn("Could not extract skills from tailored resume: {}", exception.getMessage());
+    }
+  }
+
+  private void saveVersion(UUID userId, JobListing job, ResumeTailoringResult result, int fitScore) {
+    int nextVersion = jobTailoringVersionRepository.countByJobId(job.getId()) + 1;
+    jobTailoringVersionRepository.save(
+        JobTailoringVersion.builder()
+            .jobId(job.getId())
+            .userId(userId)
+            .version(nextVersion)
+            .improvementPoints(result.improvementPoints())
+            .latexResume(result.latexResume())
+            .fitScore(fitScore)
+            .build());
+  }
+
+  @Transactional(readOnly = true)
+  public List<JobTailoringVersion> tailoringVersions(UUID userId, UUID jobId) {
+    get(userId, jobId); // 404s if the job isn't the caller's
+    return jobTailoringVersionRepository.findByJobIdAndUserIdOrderByVersionDesc(jobId, userId);
+  }
+
+  @Transactional(readOnly = true)
+  public byte[] renderTailoringVersionPdf(UUID userId, UUID jobId, UUID versionId) {
+    get(userId, jobId);
+    JobTailoringVersion version =
+        jobTailoringVersionRepository
+            .findByIdAndUserId(versionId, userId)
+            .orElseThrow(() -> ResourceNotFoundException.of("Tailored resume version", versionId));
+    return latexCompiler.compile(version.getLatexResume());
   }
 
   /** Compiles the job's saved tailored LaTeX (from {@link #tailorResume}) to PDF bytes. */

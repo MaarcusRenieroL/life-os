@@ -4,6 +4,7 @@ import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.job_tracker.domains.dto.request.FromLinkRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobListingRequest;
 import com.lifeos.job_tracker.domains.dto.response.JobListingResponse;
+import com.lifeos.job_tracker.domains.dto.response.JobTailoringVersionResponse;
 import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
 import com.lifeos.job_tracker.service.JobListingService;
 import com.lifeos.job_tracker.service.JobMatchingService.JobFitResult;
@@ -97,6 +98,23 @@ public class JobListingController extends AuthenticatedController {
   @GetMapping("/{jobId}/tailor-resume/pdf")
   public ResponseEntity<byte[]> tailorResumePdf(Authentication authentication, @PathVariable UUID jobId) {
     byte[] pdf = jobListingService.renderTailoredResumePdf(userId(authentication), jobId);
+    return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).body(pdf);
+  }
+
+  @GetMapping("/{jobId}/tailor-resume/versions")
+  public ResponseEntity<ApiResponse<List<JobTailoringVersionResponse>>> tailoringVersions(
+      Authentication authentication, @PathVariable UUID jobId) {
+    List<JobTailoringVersionResponse> body =
+        jobListingService.tailoringVersions(userId(authentication), jobId).stream()
+            .map(JobTailoringVersionResponse::summary)
+            .toList();
+    return ResponseEntity.ok(ApiResponse.success(body, "Tailoring versions fetched"));
+  }
+
+  @GetMapping("/{jobId}/tailor-resume/versions/{versionId}/pdf")
+  public ResponseEntity<byte[]> tailoringVersionPdf(
+      Authentication authentication, @PathVariable UUID jobId, @PathVariable UUID versionId) {
+    byte[] pdf = jobListingService.renderTailoringVersionPdf(userId(authentication), jobId, versionId);
     return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).body(pdf);
   }
 
