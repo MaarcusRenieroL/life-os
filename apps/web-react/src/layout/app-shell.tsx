@@ -1,7 +1,35 @@
-import { Briefcase, Home as HomeIcon, LogOut, Settings, ShieldCheck, StickyNote, Wallet } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Briefcase,
+  ChevronsUpDown,
+  Home as HomeIcon,
+  LogOut,
+  Settings,
+  ShieldCheck,
+  StickyNote,
+  Wallet,
+} from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/features/auth/auth-context';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +43,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarSeparator,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 
@@ -30,20 +59,19 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Home', to: '/home', icon: HomeIcon, enabled: true },
   { label: 'Job Tracker', to: '/jobs', icon: Briefcase, enabled: true },
   { label: 'Notes', to: '/notes', icon: StickyNote, enabled: true },
-  { label: 'Vault', to: '/vault', icon: ShieldCheck, enabled: true },
+  { label: 'Password Manager', to: '/vault', icon: ShieldCheck, enabled: true },
   { label: 'Finance', to: '/finance', icon: Wallet, enabled: true },
 ];
 
-function currentModuleLabel(pathname: string): string {
-  const match = NAV_ITEMS.find((item) => pathname.startsWith(item.to));
-  if (match) return match.label;
-  if (pathname.startsWith('/settings')) return 'Settings';
-  return 'Life OS';
+/** The breadcrumb mirrors the real URL, not a made-up label, so it never drifts from the address bar. */
+function currentPathSegment(pathname: string): string {
+  return pathname.split('/').filter(Boolean)[0] ?? 'home';
 }
 
 export function AppShell() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   return (
     <SidebarProvider>
@@ -51,39 +79,42 @@ export function AppShell() {
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-1.5">
             <span className="text-primary">■</span>
-            <span className="text-sm font-semibold tracking-widest uppercase">Life_OS</span>
+            <span className="text-sm font-semibold tracking-widest uppercase group-data-[collapsible=icon]:hidden">
+              Life_OS
+            </span>
           </div>
         </SidebarHeader>
+        <SidebarSeparator className="mx-0" />
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupLabel className="font-mono text-[10px] tracking-widest uppercase">Modules</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {NAV_ITEMS.map((item) => (
-                  <SidebarMenuItem key={item.to}>
-                    {item.enabled ? (
-                      <SidebarMenuButton
-                        asChild
-                        isActive={location.pathname.startsWith(item.to)}
-                        tooltip={item.label}
-                      >
-                        <NavLink to={item.to}>
+                {NAV_ITEMS.map((item) => {
+                  const isActive = location.pathname.startsWith(item.to);
+                  return (
+                    <SidebarMenuItem key={item.to}>
+                      {item.enabled ? (
+                        <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                          <NavLink to={item.to}>
+                            <item.icon className={isActive ? 'text-primary' : undefined} />
+                            <span>{item.label}</span>
+                          </NavLink>
+                        </SidebarMenuButton>
+                      ) : (
+                        <SidebarMenuButton disabled tooltip={`${item.label} - coming soon`}>
                           <item.icon />
                           <span>{item.label}</span>
-                        </NavLink>
-                      </SidebarMenuButton>
-                    ) : (
-                      <SidebarMenuButton disabled tooltip={`${item.label} - coming soon`}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    )}
-                  </SidebarMenuItem>
-                ))}
+                        </SidebarMenuButton>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
+        <SidebarSeparator className="mx-0" />
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -99,10 +130,34 @@ export function AppShell() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={() => void logout()} tooltip="Log out">
-                <LogOut />
-                <span className="truncate">{user?.email ?? 'Log out'}</span>
-              </SidebarMenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton tooltip={user?.email ?? 'Account'}>
+                    <span className="flex size-4 items-center justify-center rounded-sm bg-primary/15 text-[9px] font-semibold text-primary">
+                      {(user?.email ?? '?').slice(0, 1).toUpperCase()}
+                    </span>
+                    <span className="truncate">{user?.email ?? 'Account'}</span>
+                    <ChevronsUpDown className="ml-auto size-3.5 text-muted-foreground" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" className="w-56">
+                  <DropdownMenuLabel className="font-normal text-muted-foreground">
+                    Signed in as
+                    <div className="truncate font-medium text-foreground">{user?.email}</div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      setLogoutConfirmOpen(true);
+                    }}
+                  >
+                    <LogOut />
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
@@ -113,13 +168,36 @@ export function AppShell() {
           <div className="h-4 w-px bg-border" />
           <span className="font-mono text-xs tracking-wide text-muted-foreground">
             <span className="text-primary">~/</span>
-            {currentModuleLabel(location.pathname).toLowerCase().replace(/\s+/g, '-')}
+            {currentPathSegment(location.pathname)}
           </span>
         </header>
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 p-6">
           <Outlet />
         </main>
       </SidebarInset>
+
+      <AlertDialog open={logoutConfirmOpen} onOpenChange={setLogoutConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log out of Life OS?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You'll need to sign in again to get back to your modules.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                setLogoutConfirmOpen(false);
+                void logout();
+              }}
+            >
+              Log out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarProvider>
   );
 }
