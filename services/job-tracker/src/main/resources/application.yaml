@@ -32,7 +32,10 @@ anthropic:
   api-key: ${ANTHROPIC_API_KEY:}
   model: ${ANTHROPIC_MODEL:claude-sonnet-5}
   version: "2023-06-01"
-  max-tokens: ${ANTHROPIC_MAX_TOKENS:4096}
+  # 4096 was enough for the short JSON extraction/scoring prompts this client also sends,
+  # but tailor-resume asks for a full LaTeX resume plus improvement points in one JSON
+  # reply, which routinely runs past that and gets cut off mid-string.
+  max-tokens: ${ANTHROPIC_MAX_TOKENS:8192}
 
 job-tracker:
   storage:
