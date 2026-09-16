@@ -30,7 +30,17 @@ export const APP_MODULES: AppModuleConfig[] = [
       { label: 'Data', path: '/vault/data' },
     ],
   },
-  { code: 'JT', name: 'Job Tracker', enabled: false },
+  {
+    code: 'JT',
+    name: 'Job Tracker',
+    enabled: true,
+    path: '/jobs',
+    tabs: [
+      { label: 'Jobs', path: '/jobs' },
+      { label: 'Add a Job', path: '/jobs/discovery' },
+      { label: 'Resume', path: '/jobs/resumes' },
+    ],
+  },
   { code: 'TK', name: 'Tasks', enabled: false },
   {
     code: 'FN',

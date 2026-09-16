@@ -8,6 +8,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import { accountApi } from '@/features/finance/account-api';
 import { transactionApi } from '@/features/finance/transaction-api';
 import { formatINR } from '@/features/finance/utils';
+import { jobApi } from '@/features/job-tracker/job-api';
 import { notesApi } from '@/features/notes/notes-api';
 import { vaultApi } from '@/features/vault/vault-api';
 
@@ -52,6 +53,12 @@ export function HomePage() {
     retry: false,
     throwOnError: false,
   });
+  const { data: jobs } = useQuery({
+    queryKey: ['jobs', 'list', 'home-count'],
+    queryFn: jobApi.list,
+    retry: false,
+    throwOnError: false,
+  });
 
   const vaultActionRequired = (healthSummary?.weakCount ?? 0) + (healthSummary?.duplicateCount ?? 0);
   const financeTotalBalance = accounts?.reduce((sum, a) => sum + a.currentBalance, 0) ?? null;
@@ -74,6 +81,10 @@ export function HomePage() {
     if (module.code === 'NT') {
       const count = notesPage?.totalElements;
       const subtitle = count === undefined ? 'loading…' : `${count} ${count === 1 ? 'note' : 'notes'}`;
+      return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
+    }
+    if (module.code === 'JT') {
+      const subtitle = jobs === undefined ? 'loading…' : `${jobs.length} ${jobs.length === 1 ? 'job' : 'jobs'} tracked`;
       return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
     }
     if (module.code === 'FN') {
