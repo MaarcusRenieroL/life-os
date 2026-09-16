@@ -8,7 +8,7 @@ import { useAuth } from '@/features/auth/auth-context';
 import { accountApi } from '@/features/finance/account-api';
 import { transactionApi } from '@/features/finance/transaction-api';
 import { formatINR } from '@/features/finance/utils';
-import { jobApi } from '@/features/job-tracker/job-api';
+import { aiUsageApi, jobApi } from '@/features/job-tracker/job-api';
 import { notesApi } from '@/features/notes/notes-api';
 import { vaultApi } from '@/features/vault/vault-api';
 
@@ -62,6 +62,12 @@ export function HomePage() {
   const { data: pendingJobEmails } = useQuery({
     queryKey: ['jobs', 'email-events', 'needs-review'],
     queryFn: jobApi.needsReviewEmailEvents,
+    retry: false,
+    throwOnError: false,
+  });
+  const { data: aiUsage } = useQuery({
+    queryKey: ['jobs', 'ai-usage', 'summary', 'home'],
+    queryFn: aiUsageApi.getSummary,
     retry: false,
     throwOnError: false,
   });
@@ -148,6 +154,7 @@ export function HomePage() {
       <div className="mb-8 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         <StatCard value={modulesActiveCount} label="modules active" />
         <StatCard value={vaultActionRequired} label="vault items need attention" destructive={vaultActionRequired > 0} />
+        {aiUsage && <StatCard value={`$${aiUsage.costThisMonthUsd.toFixed(2)}`} label="claude usage this month" />}
       </div>
 
       <SectionHeading className="mb-3">your modules</SectionHeading>
@@ -217,7 +224,7 @@ export function HomePage() {
   );
 }
 
-function StatCard({ value, label, destructive }: { value: number; label: string; destructive?: boolean }) {
+function StatCard({ value, label, destructive }: { value: number | string; label: string; destructive?: boolean }) {
   return (
     <div className="rounded-lg border bg-card px-4 py-4">
       <div className={`text-2xl font-semibold tabular-nums ${destructive ? 'text-destructive' : 'text-primary'}`}>{value}</div>

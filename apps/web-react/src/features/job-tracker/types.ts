@@ -311,3 +311,17 @@ export interface JobAnalytics {
   mostCommonMissingSkills: SkillFrequency[];
   averageTimeInStage: StageDwellTime[];
 }
+
+export interface AiUsageDailyCost {
+  date: string;
+  costUsd: number;
+}
+
+export interface AiUsageSummary {
+  totalCostUsd: number;
+  costThisMonthUsd: number;
+  totalCalls: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  costLast30Days: AiUsageDailyCost[];
+}

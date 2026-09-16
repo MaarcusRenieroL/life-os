@@ -1,6 +1,7 @@
 import { api, unwrap } from '@/lib/api-client';
 
 import type {
+  AiUsageSummary,
   EmailEvent,
   Interview,
   JobAnalytics,
@@ -136,5 +137,11 @@ export const referralApi = {
 export const jobAnalyticsApi = {
   get(): Promise<JobAnalytics> {
     return unwrap(api.get(`${baseUrl}/analytics`));
+  },
+};
+
+export const aiUsageApi = {
+  getSummary(): Promise<AiUsageSummary> {
+    return unwrap(api.get(`${baseUrl}/ai-usage/summary`));
   },
 };
