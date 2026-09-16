@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { FormattedText } from '@/components/formatted-text';
 import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,13 +16,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { printAsPdf } from '@/lib/print-as-pdf';
 
 import { EmailEventReviewList } from './email-event-review-list';
 import { FitBreakdown } from './fit-breakdown';
 import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
 import { jobApi } from './job-api';
-import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus, type ResumeTailoringResult } from './types';
+import { downloadLatex, LatexCodeBlock } from './latex-code-block';
+import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
 
 function formatSalary(job: JobListing): string | null {
   if (job.salaryMin == null && job.salaryMax == null) return null;
@@ -52,9 +56,8 @@ export function JobDetailPage() {
   });
   const pendingForJob = pendingEvents.filter((e) => e.matchedJobId === jobId);
 
-  const [tailorResult, setTailorResult] = useState<ResumeTailoringResult | null>(null);
   const [tailorError, setTailorError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedTab, setCopiedTab] = useState<string | null>(null);
 
   const rescoreMutation = useMutation({
     mutationFn: () => jobApi.rescore(jobId!),
@@ -68,8 +71,17 @@ export function JobDetailPage() {
   const tailorMutation = useMutation({
     mutationFn: () => jobApi.tailorResume(jobId!),
     onSuccess: (result) => {
-      setTailorResult(result);
       setTailorError(null);
+      queryClient.setQueryData(['jobs', jobId], (current: typeof job) =>
+        current
+          ? {
+              ...current,
+              tailoredImprovementPoints: result.improvementPoints,
+              tailoredLatexResume: result.latexResume,
+              tailoredPlainTextResume: result.plainTextResume,
+            }
+          : current,
+      );
     },
     onError: (err) => {
       const message =
@@ -85,12 +97,11 @@ export function JobDetailPage() {
     queryClient.setQueryData(['jobs', jobId], updated);
   }
 
-  async function copyLatex() {
-    if (!tailorResult) return;
-    await navigator.clipboard.writeText(tailorResult.latexResume);
-    setCopied(true);
-    toast.success('LaTeX copied to clipboard');
-    setTimeout(() => setCopied(false), 2000);
+  async function copyText(tab: string, text: string, label: string) {
+    await navigator.clipboard.writeText(text);
+    setCopiedTab(tab);
+    toast.success(`${label} copied to clipboard`);
+    setTimeout(() => setCopiedTab(null), 2000);
   }
 
   if (isLoading) {
@@ -164,37 +175,75 @@ export function JobDetailPage() {
 
           <Card>
             <CardContent>
-              <SectionHeading>tailor your resume</SectionHeading>
-              <Button
-                className="mt-3"
-                variant="outline"
-                onClick={() => tailorMutation.mutate()}
-                disabled={tailorMutation.isPending}
-              >
-                {tailorMutation.isPending ? 'Tailoring resume…' : 'Tailor resume for this job'}
-              </Button>
+              <div className="flex items-center justify-between">
+                <SectionHeading>tailor your resume</SectionHeading>
+                <Button variant="outline" size="sm" onClick={() => tailorMutation.mutate()} disabled={tailorMutation.isPending}>
+                  {tailorMutation.isPending ? 'Tailoring…' : job.tailoredLatexResume ? 'Re-tailor' : 'Tailor resume for this job'}
+                </Button>
+              </div>
 
               {tailorError && <p className="mt-2 text-sm text-destructive">{tailorError}</p>}
 
-              {tailorResult && (
-                <div className="mt-4 border-t pt-4">
-                  <SectionHeading>improve your resume for this role</SectionHeading>
-                  <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
-                    {tailorResult.improvementPoints.map((point) => (
-                      <li key={point}>{point}</li>
-                    ))}
-                  </ul>
+              {job.tailoredLatexResume && (
+                <Tabs defaultValue="improvements" className="mt-4">
+                  <TabsList>
+                    <TabsTrigger value="improvements">Improvements</TabsTrigger>
+                    <TabsTrigger value="text">Text</TabsTrigger>
+                    <TabsTrigger value="latex">LaTeX</TabsTrigger>
+                  </TabsList>
 
-                  <div className="mt-3 flex items-center justify-between">
-                    <SectionHeading>latex resume (paste into overleaf)</SectionHeading>
-                    <Button variant="outline" size="sm" onClick={() => void copyLatex()}>
-                      {copied ? 'Copied ✓' : 'Copy .tex'}
-                    </Button>
-                  </div>
-                  <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md border bg-background p-3 text-xs text-muted-foreground">
-                    {tailorResult.latexResume}
-                  </pre>
-                </div>
+                  <TabsContent value="improvements">
+                    <ul className="list-disc space-y-1.5 pl-4 text-sm text-muted-foreground">
+                      {(job.tailoredImprovementPoints ?? []).map((point) => (
+                        <li key={point}>{point}</li>
+                      ))}
+                    </ul>
+                  </TabsContent>
+
+                  <TabsContent value="text">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void copyText('text', job.tailoredPlainTextResume ?? '', 'Resume text')}
+                      >
+                        {copiedTab === 'text' ? 'Copied ✓' : 'Copy text'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => printAsPdf(job.tailoredPlainTextResume ?? '', `${job.title} resume`)}
+                      >
+                        Download PDF
+                      </Button>
+                    </div>
+                    <pre className="mt-2 max-h-[32rem] overflow-auto rounded-md border bg-background p-3.5 text-xs leading-relaxed whitespace-pre-wrap break-words text-muted-foreground">
+                      {job.tailoredPlainTextResume}
+                    </pre>
+                  </TabsContent>
+
+                  <TabsContent value="latex">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void copyText('latex', job.tailoredLatexResume ?? '', 'LaTeX')}
+                      >
+                        {copiedTab === 'latex' ? 'Copied ✓' : 'Copy .tex'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadLatex(job.tailoredLatexResume ?? '', `${job.title}-resume.tex`)}
+                      >
+                        Download .tex
+                      </Button>
+                    </div>
+                    <div className="mt-2">
+                      <LatexCodeBlock source={job.tailoredLatexResume} />
+                    </div>
+                  </TabsContent>
+                </Tabs>
               )}
             </CardContent>
           </Card>
@@ -202,9 +251,13 @@ export function JobDetailPage() {
           <Card>
             <CardContent>
               <SectionHeading>description</SectionHeading>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                {job.jobDescriptionText || 'No description on file.'}
-              </p>
+              <div className="mt-2">
+                {job.jobDescriptionText ? (
+                  <FormattedText text={job.jobDescriptionText} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">No description on file.</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -255,7 +308,7 @@ export function JobDetailPage() {
                     <SectionHeading className="mb-2">required skills</SectionHeading>
                     <div className="flex flex-wrap gap-1.5">
                       {job.requiredSkills.map((skill) => (
-                        <Badge key={skill} variant="outline">{skill}</Badge>
+                        <Badge key={skill} variant="outline" className="h-auto max-w-full text-left whitespace-normal">{skill}</Badge>
                       ))}
                     </div>
                   </div>
@@ -265,7 +318,7 @@ export function JobDetailPage() {
                     <SectionHeading className="mb-2">nice to have</SectionHeading>
                     <div className="flex flex-wrap gap-1.5">
                       {job.niceToHaveSkills.map((skill) => (
-                        <Badge key={skill} variant="outline" className="text-muted-foreground">{skill}</Badge>
+                        <Badge key={skill} variant="outline" className="h-auto max-w-full text-left whitespace-normal text-muted-foreground">{skill}</Badge>
                       ))}
                     </div>
                   </div>
