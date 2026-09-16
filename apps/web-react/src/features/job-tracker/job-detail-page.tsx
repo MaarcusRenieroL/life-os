@@ -27,6 +27,7 @@ import { toFitView } from './fit-view';
 import { InterviewTrackingSection } from './interview-tracking-section';
 import { jobApi } from './job-api';
 import { downloadLatex, LatexCodeBlock } from './latex-code-block';
+import { ReferralTrackingSection } from './referral-tracking-section';
 import { TailoredResumePdf } from './tailored-resume-pdf';
 import { TailoringVersionHistory } from './tailoring-version-history';
 import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
@@ -240,6 +241,13 @@ export function JobDetailPage() {
             <CardContent>
               <SectionHeading className="mb-2.5">interviews</SectionHeading>
               <InterviewTrackingSection jobId={jobId!} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <SectionHeading className="mb-2.5">referrals</SectionHeading>
+              <ReferralTrackingSection jobId={jobId!} />
             </CardContent>
           </Card>
 

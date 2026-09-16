@@ -7,9 +7,11 @@ import type {
   JobListing,
   JobStatus,
   JobTailoringVersion,
+  Referral,
   ResumeTailoringResult,
   UpdateJobDetailsRequest,
   UpsertInterviewRequest,
+  UpsertReferralRequest,
 } from './types';
 
 export interface ReviewEmailEventRequest {
@@ -105,5 +107,27 @@ export const interviewApi = {
 
   async delete(jobId: string, interviewId: string): Promise<void> {
     await api.delete(`${baseUrl}/${jobId}/interviews/${interviewId}`);
+  },
+};
+
+export const referralApi = {
+  list(jobId: string): Promise<Referral[]> {
+    return unwrap(api.get(`${baseUrl}/${jobId}/referrals`));
+  },
+
+  create(jobId: string, request: UpsertReferralRequest): Promise<Referral> {
+    return unwrap(api.post(`${baseUrl}/${jobId}/referrals`, request));
+  },
+
+  update(jobId: string, referralId: string, request: UpsertReferralRequest): Promise<Referral> {
+    return unwrap(api.put(`${baseUrl}/${jobId}/referrals/${referralId}`, request));
+  },
+
+  generateDraftMessage(jobId: string, referralId: string): Promise<Referral> {
+    return unwrap(api.post(`${baseUrl}/${jobId}/referrals/${referralId}/draft-message`, {}));
+  },
+
+  async delete(jobId: string, referralId: string): Promise<void> {
+    await api.delete(`${baseUrl}/${jobId}/referrals/${referralId}`);
   },
 };
