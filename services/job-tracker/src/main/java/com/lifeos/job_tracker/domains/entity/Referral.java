@@ -67,6 +67,9 @@ public class Referral {
   @Column(name = "contacted_at")
   LocalDate contactedAt;
 
+  @Column(name = "follow_up_at")
+  LocalDate followUpAt;
+
   @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;

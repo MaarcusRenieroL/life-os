@@ -188,6 +188,7 @@ public class JobListingService {
     job.setOfferAmount(request.offerAmount());
     job.setOfferDeadline(request.offerDeadline());
     job.setOfferNotes(request.offerNotes());
+    job.setFollowUpAt(request.followUpAt());
     return jobListingRepository.save(job);
   }
 

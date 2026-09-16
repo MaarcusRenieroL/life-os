@@ -55,6 +55,7 @@ public class ReferralService {
             .status(parseStatus(request.status()))
             .notes(request.notes())
             .contactedAt(request.contactedAt())
+            .followUpAt(request.followUpAt())
             .build();
     return referralRepository.save(referral);
   }
@@ -73,6 +74,7 @@ public class ReferralService {
     referral.setStatus(parseStatus(request.status()));
     referral.setNotes(request.notes());
     referral.setContactedAt(request.contactedAt());
+    referral.setFollowUpAt(request.followUpAt());
     return referralRepository.save(referral);
   }
 
@@ -105,6 +107,13 @@ public class ReferralService {
       referral.setStatus(ReferralStatus.MESSAGE_DRAFTED);
     }
     return referralRepository.save(referral);
+  }
+
+  /** Every referral contact with a follow-up date set, across all jobs - feeds the dashboard's
+   * "needs your attention" list. */
+  @Transactional(readOnly = true)
+  public List<Referral> upcomingFollowUps(UUID userId) {
+    return referralRepository.findByUserIdAndFollowUpAtIsNotNull(userId);
   }
 
   @Transactional

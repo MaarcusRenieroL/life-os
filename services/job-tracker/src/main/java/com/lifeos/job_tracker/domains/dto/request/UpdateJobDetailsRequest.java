@@ -11,4 +11,5 @@ public record UpdateJobDetailsRequest(
     String rejectionReason,
     BigDecimal offerAmount,
     LocalDate offerDeadline,
-    String offerNotes) {}
+    String offerNotes,
+    LocalDate followUpAt) {}

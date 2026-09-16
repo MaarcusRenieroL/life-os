@@ -17,6 +17,7 @@ public record ReferralResponse(
     String draftMessage,
     String notes,
     LocalDate contactedAt,
+    LocalDate followUpAt,
     Instant createdAt) {
 
   public static ReferralResponse from(Referral referral) {
@@ -32,6 +33,7 @@ public record ReferralResponse(
         referral.getDraftMessage(),
         referral.getNotes(),
         referral.getContactedAt(),
+        referral.getFollowUpAt(),
         referral.getCreatedAt());
   }
 }

@@ -13,4 +13,6 @@ public interface ReferralRepository extends JpaRepository<Referral, UUID> {
   Optional<Referral> findByIdAndUserId(UUID id, UUID userId);
 
   List<Referral> findByUserId(UUID userId);
+
+  List<Referral> findByUserIdAndFollowUpAtIsNotNull(UUID userId);
 }

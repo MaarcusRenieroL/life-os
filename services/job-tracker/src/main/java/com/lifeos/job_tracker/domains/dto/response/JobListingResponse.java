@@ -44,7 +44,8 @@ public record JobListingResponse(
     BigDecimal offerAmount,
     LocalDate offerDeadline,
     String offerNotes,
-    String coverLetterText) {
+    String coverLetterText,
+    LocalDate followUpAt) {
 
   public static JobListingResponse from(JobListing job) {
     return new JobListingResponse(
@@ -83,6 +84,7 @@ public record JobListingResponse(
         job.getOfferAmount(),
         job.getOfferDeadline(),
         job.getOfferNotes(),
-        job.getCoverLetterText());
+        job.getCoverLetterText(),
+        job.getFollowUpAt());
   }
 }

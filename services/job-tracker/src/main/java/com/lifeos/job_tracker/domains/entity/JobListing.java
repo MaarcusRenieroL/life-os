@@ -174,6 +174,9 @@ public class JobListing {
   @Column(name = "cover_letter_text")
   String coverLetterText;
 
+  @Column(name = "follow_up_at")
+  LocalDate followUpAt;
+
   @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;

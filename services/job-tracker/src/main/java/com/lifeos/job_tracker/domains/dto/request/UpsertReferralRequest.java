@@ -10,4 +10,5 @@ public record UpsertReferralRequest(
     String relationship,
     String status,
     String notes,
-    LocalDate contactedAt) {}
+    LocalDate contactedAt,
+    LocalDate followUpAt) {}
