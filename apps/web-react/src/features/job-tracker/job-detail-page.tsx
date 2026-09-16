@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { SectionHeading } from '@/components/section-heading';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -20,7 +21,20 @@ import { FitBreakdown } from './fit-breakdown';
 import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
 import { jobApi } from './job-api';
-import { JOB_STATUS_LABELS, JOB_STATUSES, type JobStatus, type ResumeTailoringResult } from './types';
+import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus, type ResumeTailoringResult } from './types';
+
+function formatSalary(job: JobListing): string | null {
+  if (job.salaryMin == null && job.salaryMax == null) return null;
+  const currency = job.currency ? `${job.currency} ` : '';
+  if (job.salaryMin != null && job.salaryMax != null) {
+    return `${currency}${job.salaryMin.toLocaleString()} – ${job.salaryMax.toLocaleString()}`;
+  }
+  return `${currency}${(job.salaryMin ?? job.salaryMax)!.toLocaleString()}`;
+}
+
+function titleCase(value: string): string {
+  return value.charAt(0) + value.slice(1).toLowerCase().replace(/_/g, ' ');
+}
 
 export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -81,7 +95,7 @@ export function JobDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div>
         <Skeleton className="h-6 w-24" />
         <Skeleton className="mt-4 h-8 w-2/3" />
         <Skeleton className="mt-6 h-40 w-full" />
@@ -91,7 +105,7 @@ export function JobDetailPage() {
 
   if (!job) {
     return (
-      <div className="mx-auto max-w-2xl">
+      <div>
         <Link to="/jobs" className="text-sm text-muted-foreground hover:underline">
           ← Jobs
         </Link>
@@ -101,25 +115,31 @@ export function JobDetailPage() {
   }
 
   const fit = toFitView(job.fitScore, job.fitExplanation);
+  const salary = formatSalary(job);
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <Link to="/jobs" className="text-sm text-muted-foreground hover:underline">
         ← Jobs
       </Link>
 
-      <h1 className="mt-3 text-2xl font-semibold tracking-tight">{job.title}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {job.company} · {job.location || 'Location n/a'} · {job.workModel || '—'}
-        {job.url && (
-          <>
-            {' · '}
-            <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              source
-            </a>
-          </>
-        )}
-      </p>
+      <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{job.title}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {job.company} · {job.location || 'Location n/a'} · {job.workModel ? titleCase(job.workModel) : '—'}
+            {job.url && (
+              <>
+                {' · '}
+                <a href={job.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  source
+                </a>
+              </>
+            )}
+          </p>
+        </div>
+        {fit.score !== null && <FitScoreBadge score={fit.score} />}
+      </div>
 
       {pendingForJob.length > 0 && (
         <div className="mt-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3.5">
@@ -128,71 +148,143 @@ export function JobDetailPage() {
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2.5">
-        <span className="text-xs tracking-wide text-muted-foreground uppercase">Status</span>
-        <Select value={job.status ?? 'INTERESTED'} onValueChange={(v) => void setStatus(v as JobStatus)}>
-          <SelectTrigger size="sm" className="text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {JOB_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>{JOB_STATUS_LABELS[s]}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="sm" onClick={() => rescoreMutation.mutate()} disabled={rescoreMutation.isPending}>
-          {rescoreMutation.isPending ? 'Re-scoring…' : 'Re-score'}
-        </Button>
-      </div>
-
-      <Card className="mt-6">
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <SectionHeading>fit score</SectionHeading>
-            {fit.score !== null && <FitScoreBadge score={fit.score} />}
-          </div>
-          <FitBreakdown fit={fit} />
-
-          <Button
-            className="mt-3"
-            variant="outline"
-            onClick={() => tailorMutation.mutate()}
-            disabled={tailorMutation.isPending}
-          >
-            {tailorMutation.isPending ? 'Tailoring resume…' : 'Tailor resume for this job'}
-          </Button>
-
-          {tailorError && <p className="mt-2 text-sm text-destructive">{tailorError}</p>}
-
-          {tailorResult && (
-            <div className="mt-4 border-t pt-4">
-              <SectionHeading>improve your resume for this role</SectionHeading>
-              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
-                {tailorResult.improvementPoints.map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-
-              <div className="mt-3 flex items-center justify-between">
-                <SectionHeading>latex resume (paste into overleaf)</SectionHeading>
-                <Button variant="outline" size="sm" onClick={() => void copyLatex()}>
-                  {copied ? 'Copied ✓' : 'Copy .tex'}
+      <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_320px]">
+        <div className="flex flex-col gap-5">
+          <Card>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <SectionHeading>fit score</SectionHeading>
+                <Button variant="outline" size="sm" onClick={() => rescoreMutation.mutate()} disabled={rescoreMutation.isPending}>
+                  {rescoreMutation.isPending ? 'Re-scoring…' : 'Re-score'}
                 </Button>
               </div>
-              <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md border bg-background p-3 text-xs text-muted-foreground">
-                {tailorResult.latexResume}
-              </pre>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              <FitBreakdown fit={fit} />
+            </CardContent>
+          </Card>
 
-      <section className="mt-6">
-        <SectionHeading>description</SectionHeading>
-        <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-          {job.jobDescriptionText || 'No description on file.'}
-        </p>
-      </section>
+          <Card>
+            <CardContent>
+              <SectionHeading>tailor your resume</SectionHeading>
+              <Button
+                className="mt-3"
+                variant="outline"
+                onClick={() => tailorMutation.mutate()}
+                disabled={tailorMutation.isPending}
+              >
+                {tailorMutation.isPending ? 'Tailoring resume…' : 'Tailor resume for this job'}
+              </Button>
+
+              {tailorError && <p className="mt-2 text-sm text-destructive">{tailorError}</p>}
+
+              {tailorResult && (
+                <div className="mt-4 border-t pt-4">
+                  <SectionHeading>improve your resume for this role</SectionHeading>
+                  <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+                    {tailorResult.improvementPoints.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-3 flex items-center justify-between">
+                    <SectionHeading>latex resume (paste into overleaf)</SectionHeading>
+                    <Button variant="outline" size="sm" onClick={() => void copyLatex()}>
+                      {copied ? 'Copied ✓' : 'Copy .tex'}
+                    </Button>
+                  </div>
+                  <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md border bg-background p-3 text-xs text-muted-foreground">
+                    {tailorResult.latexResume}
+                  </pre>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <SectionHeading>description</SectionHeading>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                {job.jobDescriptionText || 'No description on file.'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex flex-col gap-5">
+          <Card>
+            <CardContent>
+              <SectionHeading className="mb-2.5">status</SectionHeading>
+              <Select value={job.status ?? 'INTERESTED'} onValueChange={(v) => void setStatus(v as JobStatus)}>
+                <SelectTrigger className="w-full text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {JOB_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{JOB_STATUS_LABELS[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <SectionHeading className="mb-3">details</SectionHeading>
+              <dl className="flex flex-col gap-2.5 text-sm">
+                <DetailRow label="Company" value={job.company} />
+                <DetailRow label="Location" value={job.location} />
+                <DetailRow label="Work model" value={job.workModel ? titleCase(job.workModel) : null} />
+                <DetailRow label="Seniority" value={job.seniorityLevel ? titleCase(job.seniorityLevel) : null} />
+                <DetailRow label="Salary" value={salary} />
+                <DetailRow
+                  label="Visa sponsorship"
+                  value={job.visaSponsorship && job.visaSponsorship !== 'UNKNOWN' ? titleCase(job.visaSponsorship) : null}
+                />
+                <DetailRow label="Industry" value={job.industry} />
+                <DetailRow label="Company size" value={job.companySize ? titleCase(job.companySize) : null} />
+                <DetailRow label="Deadline" value={job.deadline} />
+                <DetailRow label="Added" value={job.createdAt.slice(0, 10)} />
+              </dl>
+            </CardContent>
+          </Card>
+
+          {(job.requiredSkills?.length || job.niceToHaveSkills?.length) && (
+            <Card>
+              <CardContent>
+                {job.requiredSkills && job.requiredSkills.length > 0 && (
+                  <div>
+                    <SectionHeading className="mb-2">required skills</SectionHeading>
+                    <div className="flex flex-wrap gap-1.5">
+                      {job.requiredSkills.map((skill) => (
+                        <Badge key={skill} variant="outline">{skill}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {job.niceToHaveSkills && job.niceToHaveSkills.length > 0 && (
+                  <div className={job.requiredSkills?.length ? 'mt-4' : undefined}>
+                    <SectionHeading className="mb-2">nice to have</SectionHeading>
+                    <div className="flex flex-wrap gap-1.5">
+                      {job.niceToHaveSkills.map((skill) => (
+                        <Badge key={skill} variant="outline" className="text-muted-foreground">{skill}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-right font-medium">{value}</dd>
     </div>
   );
 }

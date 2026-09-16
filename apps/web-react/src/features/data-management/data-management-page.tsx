@@ -77,7 +77,7 @@ export function DataManagementPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold tracking-tight">Data management</h1>
 
       <section className="mt-6 rounded-lg border bg-card p-5">

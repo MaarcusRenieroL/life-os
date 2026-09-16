@@ -221,7 +221,7 @@ export function NoteEditorPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       <div className="flex items-center justify-between">
         <Link to="/notes" className="text-sm text-muted-foreground hover:underline">
           ← Notes

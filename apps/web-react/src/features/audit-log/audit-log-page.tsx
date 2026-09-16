@@ -150,7 +150,7 @@ export function AuditLogPage() {
   });
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Audit log</h1>
         <Button variant="ghost" size="sm" onClick={exportCsv}>Export CSV</Button>

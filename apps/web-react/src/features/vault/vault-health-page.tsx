@@ -35,7 +35,7 @@ export function VaultHealthPage() {
   const ringDeg = Math.round((health.score / 100) * 360);
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold tracking-tight">Password health</h1>
 
       <div className="mt-6 flex items-center gap-6">

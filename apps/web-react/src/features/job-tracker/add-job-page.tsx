@@ -61,7 +61,7 @@ export function AddJobPage() {
   const fit = job ? toFitView(job.fitScore, job.fitExplanation) : null;
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold tracking-tight">Add a Job</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Paste a job link (LinkedIn, Naukri, Indeed, a company careers page). It's parsed and scored

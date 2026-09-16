@@ -61,7 +61,7 @@ export function NotesSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold tracking-tight">Notes settings</h1>
 
       <section className="mt-6 rounded-lg border bg-card p-5">
