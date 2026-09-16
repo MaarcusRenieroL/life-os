@@ -3,6 +3,7 @@ package com.lifeos.job_tracker.service;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobDetailsRequest;
 import com.lifeos.job_tracker.domains.entity.Company;
 import com.lifeos.job_tracker.domains.entity.JobListing;
+import com.lifeos.job_tracker.domains.entity.JobStatusHistory;
 import com.lifeos.job_tracker.domains.entity.JobTailoringVersion;
 import com.lifeos.job_tracker.domains.entity.Resume;
 import com.lifeos.job_tracker.domains.enums.IngestSource;
@@ -22,6 +23,7 @@ import com.lifeos.job_tracker.integration.JobLinkFetcher;
 import com.lifeos.job_tracker.integration.LatexCompiler;
 import com.lifeos.job_tracker.repository.CompanyRepository;
 import com.lifeos.job_tracker.repository.JobListingRepository;
+import com.lifeos.job_tracker.repository.JobStatusHistoryRepository;
 import com.lifeos.job_tracker.repository.JobTailoringVersionRepository;
 import com.lifeos.job_tracker.service.JobMatchingService.JobFitResult;
 import java.util.List;
@@ -47,6 +49,7 @@ public class JobListingService {
   private final LatexCompiler latexCompiler;
   private final SkillService skillService;
   private final JobTailoringVersionRepository jobTailoringVersionRepository;
+  private final JobStatusHistoryRepository jobStatusHistoryRepository;
 
   @Transactional(readOnly = true)
   public List<JobListing> list(UUID userId) {
@@ -140,17 +143,29 @@ public class JobListingService {
                 .build());
 
     scoreQuietly(userId, job);
-    return jobListingRepository.save(job);
+    job = jobListingRepository.save(job);
+    recordStatusChange(userId, job.getId(), null, job.getStatus());
+    return job;
   }
 
   @Transactional
   public JobListing updateStatus(UUID userId, UUID jobId, JobStatus status) {
     JobListing job = get(userId, jobId);
+    JobStatus previous = job.getStatus();
     if (status == JobStatus.APPLIED && job.getAppliedAt() == null) {
       job.setAppliedAt(java.time.LocalDate.now());
     }
     job.setStatus(status);
-    return jobListingRepository.save(job);
+    job = jobListingRepository.save(job);
+    if (previous != status) {
+      recordStatusChange(userId, jobId, previous, status);
+    }
+    return job;
+  }
+
+  private void recordStatusChange(UUID userId, UUID jobId, JobStatus from, JobStatus to) {
+    jobStatusHistoryRepository.save(
+        JobStatusHistory.builder().jobId(jobId).userId(userId).fromStatus(from).toStatus(to).build());
   }
 
   /** Stashes a rejection reason (e.g. the triggering email's snippet) without clobbering one the
