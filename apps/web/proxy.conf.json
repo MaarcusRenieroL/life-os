@@ -39,6 +39,9 @@
     "secure": false,
     "changeOrigin": true
   },
+  "/v1/jobs": { "target": "http://localhost:8003", "secure": false, "changeOrigin": true },
+  "/v1/resumes": { "target": "http://localhost:8003", "secure": false, "changeOrigin": true },
+  "/v1/skills": { "target": "http://localhost:8003", "secure": false, "changeOrigin": true },
   "/v1/finance": {
     "target": "http://localhost:8006",
     "secure": false,

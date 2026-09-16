@@ -7,17 +7,36 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
   flyway:
     schemas: job_tracker_schema
     default-schema: job_tracker_schema
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 jwt:
   secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
 
 internal:
   api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+
+# job-tracker doesn't use EncryptionService itself, but it's component-scanned
+# in from com.lifeos.common (see JobTrackerApplication's @ComponentScan) and its
+# constructor requires this property to be resolvable, so it needs a value.
+encryption:
+  secret: ${ENCRYPTION_SECRET:wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+
+anthropic:
+  base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-sonnet-5}
+  version: "2023-06-01"
+  # 4096 was enough for the short JSON extraction/scoring prompts this client also sends,
+  # but tailor-resume asks for a full LaTeX resume plus improvement points in one JSON
+  # reply, which routinely runs past that and gets cut off mid-string.
+  max-tokens: ${ANTHROPIC_MAX_TOKENS:8192}
+
+job-tracker:
+  storage:
+    resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}

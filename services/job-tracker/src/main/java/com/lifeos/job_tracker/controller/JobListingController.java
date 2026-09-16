@@ -1,0 +1,102 @@
+package com.lifeos.job_tracker.controller;
+
+import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.job_tracker.domains.dto.request.FromLinkRequest;
+import com.lifeos.job_tracker.domains.dto.request.UpdateJobListingRequest;
+import com.lifeos.job_tracker.domains.dto.response.JobListingResponse;
+import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
+import com.lifeos.job_tracker.service.JobListingService;
+import com.lifeos.job_tracker.service.JobMatchingService.JobFitResult;
+import java.util.List;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/v1/jobs")
+@RequiredArgsConstructor
+public class JobListingController extends AuthenticatedController {
+
+  private final JobListingService jobListingService;
+
+  @GetMapping
+  public ResponseEntity<ApiResponse<List<JobListingResponse>>> list(Authentication authentication) {
+    List<JobListingResponse> body =
+        jobListingService.list(userId(authentication)).stream().map(JobListingResponse::from).toList();
+    return ResponseEntity.ok(ApiResponse.success(body, "Jobs fetched"));
+  }
+
+  @GetMapping("/{jobId}")
+  public ResponseEntity<ApiResponse<JobListingResponse>> get(
+      Authentication authentication, @PathVariable UUID jobId) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            JobListingResponse.from(jobListingService.get(userId(authentication), jobId)),
+            "Job fetched"));
+  }
+
+  /**
+   * Add a job from a pasted link (LinkedIn, Naukri, Indeed, a company careers page). The URL is
+   * fetched and parsed by Claude, then scored against the saved resume. Returns 422 when the site
+   * blocked the read - the client resubmits with {@code jobDescriptionText}.
+   */
+  @PostMapping("/from-link")
+  public ResponseEntity<ApiResponse<JobListingResponse>> fromLink(
+      Authentication authentication, @RequestBody FromLinkRequest request) {
+    JobListingResponse body =
+        JobListingResponse.from(
+            jobListingService.createFromLink(
+                userId(authentication), request.url(), request.jobDescriptionText()));
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(ApiResponse.success(body, "Job added from link"));
+  }
+
+  @PatchMapping("/{jobId}")
+  public ResponseEntity<ApiResponse<JobListingResponse>> updateStatus(
+      Authentication authentication,
+      @PathVariable UUID jobId,
+      @RequestBody UpdateJobListingRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            JobListingResponse.from(
+                jobListingService.updateStatus(userId(authentication), jobId, request.status())),
+            "Status updated"));
+  }
+
+  @PostMapping("/{jobId}/rescore")
+  public ResponseEntity<ApiResponse<JobFitResult>> rescore(
+      Authentication authentication, @PathVariable UUID jobId) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            jobListingService.rescore(userId(authentication), jobId), "Fit score recomputed"));
+  }
+
+  /**
+   * Scores the saved resume against this job, then returns concrete improvement points and a full
+   * LaTeX resume tailored to it, ready to paste into Overleaf.
+   */
+  @PostMapping("/{jobId}/tailor-resume")
+  public ResponseEntity<ApiResponse<ResumeTailoringResult>> tailorResume(
+      Authentication authentication, @PathVariable UUID jobId) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            jobListingService.tailorResume(userId(authentication), jobId), "Resume tailored"));
+  }
+
+  @DeleteMapping("/{jobId}")
+  public ResponseEntity<ApiResponse<Void>> delete(
+      Authentication authentication, @PathVariable UUID jobId) {
+    jobListingService.delete(userId(authentication), jobId);
+    return ResponseEntity.ok(ApiResponse.success(null, "Job deleted"));
+  }
+}
