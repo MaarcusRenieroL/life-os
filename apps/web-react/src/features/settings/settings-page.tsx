@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { SectionHeading } from '@/components/section-heading';
@@ -64,6 +64,32 @@ export function SettingsPage() {
   // TODO: no theme-switching wired up yet, this only records the preference locally.
   const [theme, setTheme] = useState<ThemePreference>('terminal-dark');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const suppressSpyRef = useRef(false);
+
+  // Scroll-spy: highlight whichever section is currently at the top of the
+  // viewport so the nav stays in sync while the user scrolls, not just on click.
+  useEffect(() => {
+    const sections = NAV_ITEMS.map((item) => document.getElementById(item.id)).filter(
+      (el): el is HTMLElement => el !== null,
+    );
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (suppressSpyRef.current) return;
+        const topMost = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (topMost) {
+          setActiveSection(topMost.target.id);
+        }
+      },
+      { rootMargin: '-96px 0px -70% 0px', threshold: 0 },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
 
   const { data: overrides } = useQuery({
     queryKey: ['core', 'modules'],
@@ -112,7 +138,13 @@ export function SettingsPage() {
 
   function scrollTo(id: string) {
     setActiveSection(id);
+    // Ignore the scroll-spy while the smooth scroll is in flight so it doesn't
+    // fight with (and flicker away from) the section the user just clicked.
+    suppressSpyRef.current = true;
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => {
+      suppressSpyRef.current = false;
+    }, 700);
   }
 
   const initials = user ? computeInitials(user.name ?? '', user.email) : '';
@@ -128,7 +160,7 @@ export function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-[220px_1fr]">
-        <nav className="flex flex-row gap-0.5 overflow-x-auto md:flex-col md:overflow-visible">
+        <nav className="flex flex-row gap-0.5 overflow-x-auto md:sticky md:top-0 md:flex-col md:self-start md:overflow-visible">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
@@ -208,7 +240,7 @@ export function SettingsPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-foreground/75">Theme</span>
                 <Select value={theme} onValueChange={(v) => setTheme(v as ThemePreference)}>
-                  <SelectTrigger className="w-56">
+                  <SelectTrigger className="min-w-56">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
