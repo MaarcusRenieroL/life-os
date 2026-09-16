@@ -194,6 +194,28 @@ public class JobListingService {
             partialSkills,
             resume.getRawText());
 
+    // The prompt already asks for one page, but LLM length estimates are unreliable - actually
+    // compile it and, if it overflowed, retry once with a hard "cut it down" instruction rather
+    // than silently handing back a two-page resume.
+    byte[] pdf = latexCompiler.compile(result.latexResume());
+    if (latexCompiler.pageCount(pdf) > 1) {
+      ResumeTailoringResult retry =
+          ai.tailorResume(
+              job.getTitle(),
+              job.getCompany(),
+              job.getJobDescriptionText(),
+              job.getRequiredSkills(),
+              missingSkills,
+              partialSkills,
+              resume.getRawText(),
+              "The previous attempt ran onto a second page. Cut content - shorten bullets and"
+                  + " drop the least-relevant ones - so it fits on exactly one page.");
+      byte[] retryPdf = latexCompiler.compile(retry.latexResume());
+      if (latexCompiler.pageCount(retryPdf) <= latexCompiler.pageCount(pdf)) {
+        result = retry;
+      }
+    }
+
     job.setTailoredImprovementPoints(result.improvementPoints());
     job.setTailoredLatexResume(result.latexResume());
     jobListingRepository.save(job);

@@ -83,6 +83,15 @@ public class LatexCompiler {
     }
   }
 
+  /** Page count of a compiled PDF, or 1 if it can't be read. */
+  public int pageCount(byte[] pdf) {
+    try (org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.Loader.loadPDF(pdf)) {
+      return doc.getNumberOfPages();
+    } catch (IOException | RuntimeException exception) {
+      return 1;
+    }
+  }
+
   private static String sanitize(String source) {
     String s = GLYPHTOUNICODE.matcher(source).replaceAll("% (removed for XeTeX) \\\\input{glyphtounicode}");
     s = PDFGENTOUNICODE.matcher(s).replaceAll("% (removed for XeTeX) \\\\pdfgentounicode=1");

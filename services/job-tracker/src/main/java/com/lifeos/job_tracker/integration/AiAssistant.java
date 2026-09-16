@@ -101,6 +101,22 @@ public class AiAssistant {
       List<String> missingSkills,
       List<String> partialSkills,
       String resumeText) {
+    return tailorResume(jobTitle, company, jobDescriptionText, requiredSkills, missingSkills, partialSkills, resumeText, null);
+  }
+
+  /**
+   * @param tightenInstruction non-null only on the one-page retry (see JobListingService) - tells
+   *     Claude the previous attempt overflowed and to cut content, not just tighten wording.
+   */
+  public ResumeTailoringResult tailorResume(
+      String jobTitle,
+      String company,
+      String jobDescriptionText,
+      List<String> requiredSkills,
+      List<String> missingSkills,
+      List<String> partialSkills,
+      String resumeText,
+      String tightenInstruction) {
     return claude.completeJson(
         "You are a resume coach and LaTeX typesetter. Reply with ONLY a JSON object, no prose, no"
             + " markdown fence.",
@@ -127,6 +143,10 @@ public class AiAssistant {
           (\\pdfgentounicode, \\input{glyphtounicode}). Escape LaTeX special characters (&, %%, $, #,
           _, {, }) found in the candidate's own text. Escape the document as a valid JSON string
           (escape backslashes as \\\\ and newlines as \\n).
+        - The resume MUST fit on exactly ONE page. Use compact spacing (tight itemsep/topsep,
+          modest margins via geometry) and be concise - prioritise the most relevant bullets for
+          this job over including everything. Never let the layout spill onto a second page.
+        %s
 
         JOB:
         Title: %s
@@ -141,6 +161,7 @@ public class AiAssistant {
         %s
         """
             .formatted(
+                tightenInstruction == null || tightenInstruction.isBlank() ? "" : tightenInstruction,
                 blank(jobTitle),
                 blank(company),
                 String.join(", ", safe(requiredSkills)),
