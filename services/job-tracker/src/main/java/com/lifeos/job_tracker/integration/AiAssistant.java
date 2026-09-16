@@ -54,6 +54,9 @@ public class AiAssistant {
   @Value("${ai.routing.interview-prep:ollama}")
   private String interviewPrepProvider;
 
+  @Value("${ai.routing.referral-message:claude}")
+  private String referralMessageProvider;
+
   public AiAssistant(ClaudeApiClient claude, OllamaApiClient ollama, ObjectMapper objectMapper) {
     this.claude = claude;
     this.ollama = ollama;
@@ -340,6 +343,50 @@ public class AiAssistant {
                     blank(jobDescriptionText),
                     blank(resumeText)));
     return convert(json, InterviewPrepTopics.class).topics();
+  }
+
+  /** Drafts a short outreach message asking a contact for a referral - grounded only in the
+   * candidate's real resume, same never-invent constraint as {@link #generateCoverLetter}. This is
+   * always a draft the candidate reviews and sends themselves; nothing here ever contacts anyone
+   * automatically. */
+  public String generateReferralMessage(
+      String contactName,
+      String contactTitle,
+      String relationship,
+      String jobTitle,
+      String company,
+      String resumeText) {
+    return routedComplete(
+        referralMessageProvider,
+        "You draft short referral-request messages (for LinkedIn or email). Reply with ONLY the"
+            + " message text, no subject line, no prose before or after.",
+        """
+        Draft a short (3-5 sentence), warm but direct message asking %s%s for a referral for the
+        role below, using ONLY real experience from the candidate's resume - never invent
+        employers, projects, skills, or achievements. Reference 1 concrete, relevant thing from
+        the candidate's actual background. Acknowledge the relationship context naturally if given.
+        End with a clear, low-friction ask (e.g. "would you be open to referring me?"). No
+        generic filler, no placeholders left unfilled.
+
+        CONTACT: %s%s
+        RELATIONSHIP TO CANDIDATE: %s
+
+        JOB:
+        Title: %s
+        Company: %s
+
+        CANDIDATE RESUME (verbatim extracted text):
+        %s
+        """
+            .formatted(
+                blank(contactName),
+                contactTitle == null || contactTitle.isBlank() ? "" : " (" + contactTitle + ")",
+                blank(contactName),
+                contactTitle == null || contactTitle.isBlank() ? "" : ", " + contactTitle,
+                blank(relationship),
+                blank(jobTitle),
+                blank(company),
+                blank(resumeText)));
   }
 
   /** Resolves {@code providerName} to a client, calls it, and falls back to Claude if an
