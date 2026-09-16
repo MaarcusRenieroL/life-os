@@ -56,8 +56,8 @@ export function VaultUnlockPage() {
   if (hasMasterPassword === null) return null;
 
   return (
-    <div className="mx-auto max-w-sm">
-      <Card>
+    <div className="mx-auto flex min-h-[70vh] w-full max-w-sm items-center">
+      <Card className="w-full">
         <CardHeader>
           <CardTitle>{hasMasterPassword ? 'Unlock vault' : 'Set up your vault'}</CardTitle>
         </CardHeader>

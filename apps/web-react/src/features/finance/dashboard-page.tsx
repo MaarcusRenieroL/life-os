@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -171,7 +172,13 @@ export function FinanceDashboardPage() {
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span>Monthly income</span>
             {!editingIncome && (
-              <button onClick={() => { setEditingIncome(true); setIncomeInput(String(fixedMonthlyIncome ?? '')); }}>✎</button>
+              <button
+                aria-label="Edit monthly income"
+                className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => { setEditingIncome(true); setIncomeInput(String(fixedMonthlyIncome ?? '')); }}
+              >
+                <Pencil className="size-3" />
+              </button>
             )}
           </div>
           {editingIncome ? (

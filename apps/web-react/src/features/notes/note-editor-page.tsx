@@ -254,7 +254,7 @@ export function NoteEditorPage() {
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <Select value={note.noteType} onValueChange={(v) => void notesApi.update(id!, { noteType: v as NoteType }).then(invalidate)}>
-          <SelectTrigger className="h-7 w-36 text-xs">
+          <SelectTrigger className="h-7 min-w-36 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -360,7 +360,7 @@ export function NoteEditorPage() {
           );
         })}
         <Select onValueChange={(v) => void assignFolder(v as string)}>
-          <SelectTrigger className="h-7 w-40 text-xs">
+          <SelectTrigger className="h-7 min-w-40 text-xs">
             <SelectValue placeholder="+ Add to folder" />
           </SelectTrigger>
           <SelectContent>

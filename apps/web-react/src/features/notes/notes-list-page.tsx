@@ -130,7 +130,7 @@ export function NotesListPage() {
           className="max-w-xs"
         />
         <Select value={folder ?? '__all__'} onValueChange={(v) => setFolder(v === '__all__' ? null : v)}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="min-w-40">
             <SelectValue placeholder="Folder" />
           </SelectTrigger>
           <SelectContent>
@@ -143,7 +143,7 @@ export function NotesListPage() {
           </SelectContent>
         </Select>
         <Select value={tag ?? '__all__'} onValueChange={(v) => setTag(v === '__all__' ? null : v)}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="min-w-40">
             <SelectValue placeholder="Tag" />
           </SelectTrigger>
           <SelectContent>
@@ -159,7 +159,7 @@ export function NotesListPage() {
           + Manage folders
         </Button>
         <Select value={sort} onValueChange={(v) => setSort(v as NoteListFilters['sort'])}>
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="min-w-36">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

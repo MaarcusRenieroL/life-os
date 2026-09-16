@@ -57,7 +57,7 @@ export function NotesAttachmentsPage() {
       <div className="mt-4 flex flex-wrap gap-2">
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search filename…" className="max-w-xs" />
         <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as FileKind | 'all')}>
-          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="min-w-36"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All types</SelectItem>
             <SelectItem value="image">Images</SelectItem>
@@ -66,7 +66,7 @@ export function NotesAttachmentsPage() {
           </SelectContent>
         </Select>
         <Select value={sort} onValueChange={(v) => setSort(v as SortOption)}>
-          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="min-w-36"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="newest">Newest</SelectItem>
             <SelectItem value="oldest">Oldest</SelectItem>
