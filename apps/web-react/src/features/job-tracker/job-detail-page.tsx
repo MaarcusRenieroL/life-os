@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { printAsPdf } from '@/lib/print-as-pdf';
 
 import { EmailEventReviewList } from './email-event-review-list';
 import { FitBreakdown } from './fit-breakdown';
@@ -25,6 +24,7 @@ import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
 import { jobApi } from './job-api';
 import { downloadLatex, LatexCodeBlock } from './latex-code-block';
+import { TailoredResumePdf } from './tailored-resume-pdf';
 import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
 
 function formatSalary(job: JobListing): string | null {
@@ -78,7 +78,6 @@ export function JobDetailPage() {
               ...current,
               tailoredImprovementPoints: result.improvementPoints,
               tailoredLatexResume: result.latexResume,
-              tailoredPlainTextResume: result.plainTextResume,
             }
           : current,
       );
@@ -188,8 +187,8 @@ export function JobDetailPage() {
                 <Tabs defaultValue="improvements" className="mt-4">
                   <TabsList>
                     <TabsTrigger value="improvements">Improvements</TabsTrigger>
-                    <TabsTrigger value="text">Text</TabsTrigger>
                     <TabsTrigger value="latex">LaTeX</TabsTrigger>
+                    <TabsTrigger value="pdf">PDF</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="improvements">
@@ -198,28 +197,6 @@ export function JobDetailPage() {
                         <li key={point}>{point}</li>
                       ))}
                     </ul>
-                  </TabsContent>
-
-                  <TabsContent value="text">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void copyText('text', job.tailoredPlainTextResume ?? '', 'Resume text')}
-                      >
-                        {copiedTab === 'text' ? 'Copied ✓' : 'Copy text'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => printAsPdf(job.tailoredPlainTextResume ?? '', `${job.title} resume`)}
-                      >
-                        Download PDF
-                      </Button>
-                    </div>
-                    <pre className="mt-2 max-h-[32rem] overflow-auto rounded-md border bg-background p-3.5 text-xs leading-relaxed whitespace-pre-wrap break-words text-muted-foreground">
-                      {job.tailoredPlainTextResume}
-                    </pre>
                   </TabsContent>
 
                   <TabsContent value="latex">
@@ -242,6 +219,14 @@ export function JobDetailPage() {
                     <div className="mt-2">
                       <LatexCodeBlock source={job.tailoredLatexResume} />
                     </div>
+                  </TabsContent>
+
+                  <TabsContent value="pdf">
+                    <TailoredResumePdf
+                      jobId={jobId!}
+                      latexResume={job.tailoredLatexResume}
+                      fileName={`${job.title}-resume.pdf`}
+                    />
                   </TabsContent>
                 </Tabs>
               )}

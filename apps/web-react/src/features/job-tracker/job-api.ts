@@ -39,6 +39,11 @@ export const jobApi = {
     return unwrap(api.post(`${baseUrl}/${jobId}/tailor-resume`, {}));
   },
 
+  async tailorResumePdf(jobId: string): Promise<Blob> {
+    const response = await api.get(`${baseUrl}/${jobId}/tailor-resume/pdf`, { responseType: 'blob' });
+    return response.data;
+  },
+
   async delete(jobId: string): Promise<void> {
     await api.delete(`${baseUrl}/${jobId}`);
   },

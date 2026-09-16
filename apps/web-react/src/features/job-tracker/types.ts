@@ -66,7 +66,6 @@ export interface JobListing {
   createdAt: string;
   tailoredImprovementPoints: string[] | null;
   tailoredLatexResume: string | null;
-  tailoredPlainTextResume: string | null;
 }
 
 export interface JobFitResult {
@@ -77,7 +76,6 @@ export interface JobFitResult {
 export interface ResumeTailoringResult {
   improvementPoints: string[];
   latexResume: string;
-  plainTextResume: string;
 }
 
 export interface Resume {
