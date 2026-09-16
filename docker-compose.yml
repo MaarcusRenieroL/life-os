@@ -179,8 +179,11 @@ services:
       GMAIL_REDIRECT_URI: ${GMAIL_REDIRECT_URI:-http://localhost:8005/v1/batches/gmail/callback}
       GMAIL_ENCRYPTION_SECRET: ${GMAIL_ENCRYPTION_SECRET:-zjQIMjy7Pp+dEPaXnwwFqETV64YQSQBYJYelXbSi5qc=}
       GMAIL_ALERT_SENDERS: ${GMAIL_ALERT_SENDERS:-canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
+      GMAIL_JOB_SEARCH_SENDERS: ${GMAIL_JOB_SEARCH_SENDERS:-jobalerts-noreply@linkedin.com,jobs-noreply@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
+      GMAIL_JOB_SEARCH_KEYWORDS: ${GMAIL_JOB_SEARCH_KEYWORDS:-application,interview,offer,not moving forward,not selected,moving forward,thank you for applying,thanks for applying,update on your application}
       GMAIL_POLL_CRON: ${GMAIL_POLL_CRON:-0 0 9,15,21 * * *}
       FINANCE_INTERNAL_BASE_URL: ${FINANCE_INTERNAL_BASE_URL:-http://finance-tracker:8006}
+      JOB_TRACKER_INTERNAL_BASE_URL: ${JOB_TRACKER_INTERNAL_BASE_URL:-http://job-tracker:8003}
     ports:
       - "8005:8005"
     depends_on:
