@@ -59,7 +59,8 @@ export const router = createBrowserRouter([
             path: 'jobs',
             element: <JobTrackerLayout />,
             children: [
-              { index: true, lazy: page(() => import('@/features/job-tracker/jobs-list-page'), 'JobsListPage') },
+              { index: true, lazy: page(() => import('@/features/job-tracker/job-dashboard-page'), 'JobDashboardPage') },
+              { path: 'list', lazy: page(() => import('@/features/job-tracker/jobs-list-page'), 'JobsListPage') },
               { path: 'discovery', lazy: page(() => import('@/features/job-tracker/add-job-page'), 'AddJobPage') },
               { path: 'resumes', lazy: page(() => import('@/features/job-tracker/resume-page'), 'ResumePage') },
               { path: 'analytics', lazy: page(() => import('@/features/job-tracker/job-analytics-page'), 'JobAnalyticsPage') },

@@ -21,7 +21,8 @@ import { jobApi } from './job-api';
 // `enabled: false` in its module config, so it fell back to no tabs at all -
 // /jobs/resumes had no in-app link whatsoever). Fixing that here.
 const TABS = [
-  { label: 'Jobs', to: '/jobs', end: true },
+  { label: 'Dashboard', to: '/jobs', end: true },
+  { label: 'Jobs', to: '/jobs/list', end: false },
   { label: 'Add a Job', to: '/jobs/discovery', end: false },
   { label: 'Resume', to: '/jobs/resumes', end: false },
   { label: 'Analytics', to: '/jobs/analytics', end: false },

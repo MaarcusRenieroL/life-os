@@ -117,7 +117,7 @@ export function JobDetailPage() {
   if (!job) {
     return (
       <div>
-        <Link to="/jobs" className="text-sm text-muted-foreground hover:underline">
+        <Link to="/jobs/list" className="text-sm text-muted-foreground hover:underline">
           ← Jobs
         </Link>
         <p className="mt-4 text-sm text-muted-foreground">Job not found.</p>
@@ -130,7 +130,7 @@ export function JobDetailPage() {
 
   return (
     <div>
-      <Link to="/jobs" className="text-sm text-muted-foreground hover:underline">
+      <Link to="/jobs/list" className="text-sm text-muted-foreground hover:underline">
         ← Jobs
       </Link>
 
