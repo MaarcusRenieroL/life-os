@@ -31,6 +31,16 @@ export const resumeApi = {
     await api.delete(`${baseUrl}/${resumeId}`);
   },
 
+  /** Every resume ever uploaded, newest first - the first entry is the current one. */
+  history(): Promise<Resume[]> {
+    return unwrap(api.get(`${baseUrl}/history`));
+  },
+
+  async download(resumeId: string): Promise<Blob> {
+    const response = await api.get(`${baseUrl}/${resumeId}/download`, { responseType: 'blob' });
+    return response.data;
+  },
+
   skillLibrary(): Promise<Skill[]> {
     return unwrap(api.get('/v1/skills'));
   },
