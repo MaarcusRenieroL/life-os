@@ -78,6 +78,17 @@ export interface ResumeTailoringResult {
   latexResume: string;
 }
 
+/** A summary entry (no improvementPoints/latexResume) - the versions list endpoint keeps the
+ * payload light since only the PDF of a given version is ever needed, not its raw content. */
+export interface JobTailoringVersion {
+  id: string;
+  version: number;
+  improvementPoints: string[] | null;
+  latexResume: string | null;
+  fitScore: number | null;
+  createdAt: string;
+}
+
 export interface Resume {
   id: string;
   label: string | null;

@@ -25,6 +25,7 @@ import { toFitView } from './fit-view';
 import { jobApi } from './job-api';
 import { downloadLatex, LatexCodeBlock } from './latex-code-block';
 import { TailoredResumePdf } from './tailored-resume-pdf';
+import { TailoringVersionHistory } from './tailoring-version-history';
 import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
 
 function formatSalary(job: JobListing): string | null {
@@ -70,17 +71,13 @@ export function JobDetailPage() {
 
   const tailorMutation = useMutation({
     mutationFn: () => jobApi.tailorResume(jobId!),
-    onSuccess: (result) => {
+    onSuccess: () => {
       setTailorError(null);
-      queryClient.setQueryData(['jobs', jobId], (current: typeof job) =>
-        current
-          ? {
-              ...current,
-              tailoredImprovementPoints: result.improvementPoints,
-              tailoredLatexResume: result.latexResume,
-            }
-          : current,
-      );
+      // Tailoring also re-scores fit (skills the tailored wording surfaces get merged into the
+      // library) and appends a new version - refetch rather than patch individual fields so all
+      // of that comes back in sync.
+      void queryClient.invalidateQueries({ queryKey: ['jobs', jobId] });
+      void queryClient.invalidateQueries({ queryKey: ['jobs', jobId, 'tailor-resume', 'versions'] });
     },
     onError: (err) => {
       const message =
@@ -176,9 +173,12 @@ export function JobDetailPage() {
             <CardContent>
               <div className="flex items-center justify-between">
                 <SectionHeading>tailor your resume</SectionHeading>
-                <Button variant="outline" size="sm" onClick={() => tailorMutation.mutate()} disabled={tailorMutation.isPending}>
-                  {tailorMutation.isPending ? 'Tailoring…' : job.tailoredLatexResume ? 'Re-tailor' : 'Tailor resume for this job'}
-                </Button>
+                <div className="flex items-center gap-2">
+                  {job.tailoredLatexResume && <TailoringVersionHistory jobId={jobId!} jobTitle={job.title} />}
+                  <Button variant="outline" size="sm" onClick={() => tailorMutation.mutate()} disabled={tailorMutation.isPending}>
+                    {tailorMutation.isPending ? 'Tailoring…' : job.tailoredLatexResume ? 'Re-tailor' : 'Tailor resume for this job'}
+                  </Button>
+                </div>
               </div>
 
               {tailorError && <p className="mt-2 text-sm text-destructive">{tailorError}</p>}

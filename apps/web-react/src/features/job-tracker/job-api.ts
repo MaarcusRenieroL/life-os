@@ -1,6 +1,13 @@
 import { api, unwrap } from '@/lib/api-client';
 
-import type { EmailEvent, JobFitResult, JobListing, JobStatus, ResumeTailoringResult } from './types';
+import type {
+  EmailEvent,
+  JobFitResult,
+  JobListing,
+  JobStatus,
+  JobTailoringVersion,
+  ResumeTailoringResult,
+} from './types';
 
 export interface ReviewEmailEventRequest {
   action: 'APPROVE' | 'DISMISS';
@@ -41,6 +48,17 @@ export const jobApi = {
 
   async tailorResumePdf(jobId: string): Promise<Blob> {
     const response = await api.get(`${baseUrl}/${jobId}/tailor-resume/pdf`, { responseType: 'blob' });
+    return response.data;
+  },
+
+  tailoringVersions(jobId: string): Promise<JobTailoringVersion[]> {
+    return unwrap(api.get(`${baseUrl}/${jobId}/tailor-resume/versions`));
+  },
+
+  async tailoringVersionPdf(jobId: string, versionId: string): Promise<Blob> {
+    const response = await api.get(`${baseUrl}/${jobId}/tailor-resume/versions/${versionId}/pdf`, {
+      responseType: 'blob',
+    });
     return response.data;
   },
 
