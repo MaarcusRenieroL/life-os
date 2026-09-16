@@ -157,7 +157,7 @@ public class JobListingService {
    * concrete resume-improvement points and a full LaTeX resume tailored to that job, ready to paste
    * into Overleaf.
    */
-  @Transactional(readOnly = true)
+  @Transactional
   public ResumeTailoringResult tailorResume(UUID userId, UUID jobId) {
     JobListing job = get(userId, jobId);
     if (job.getJobDescriptionText() == null || job.getJobDescriptionText().isBlank()) {
@@ -182,14 +182,22 @@ public class JobListingService {
     List<String> partialSkills =
         (List<String>) fit.explanation().getOrDefault("partialMatches", List.of());
 
-    return ai.tailorResume(
-        job.getTitle(),
-        job.getCompany(),
-        job.getJobDescriptionText(),
-        job.getRequiredSkills(),
-        missingSkills,
-        partialSkills,
-        resume.getRawText());
+    ResumeTailoringResult result =
+        ai.tailorResume(
+            job.getTitle(),
+            job.getCompany(),
+            job.getJobDescriptionText(),
+            job.getRequiredSkills(),
+            missingSkills,
+            partialSkills,
+            resume.getRawText());
+
+    job.setTailoredImprovementPoints(result.improvementPoints());
+    job.setTailoredLatexResume(result.latexResume());
+    job.setTailoredPlainTextResume(result.plainTextResume());
+    jobListingRepository.save(job);
+
+    return result;
   }
 
   @Transactional

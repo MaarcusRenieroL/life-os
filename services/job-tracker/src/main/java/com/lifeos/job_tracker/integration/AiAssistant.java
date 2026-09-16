@@ -61,10 +61,24 @@ public class AiAssistant {
           "requiredSkills": [string], "niceToHaveSkills": [string], "techStack": [string],
           "jobDescriptionText": string
         }
+        "requiredSkills"/"niceToHaveSkills" are short skill or technology names (2-6 words each,
+        e.g. "REST APIs", "AWS", "Containerization") distilled from the posting's requirements -
+        never a whole requirement sentence copied verbatim. One bullet in the posting can still
+        become one skill if it's already that concise, but split a bullet into its distinct named
+        skills/technologies whenever it names more than one (e.g. "Experience with AWS, Docker,
+        and Kubernetes" -> three separate entries), and drop any bullet that's just a general trait
+        (autonomy, ownership, communication) rather than a named skill.
+
         "jobDescriptionText" must be the posting's own description prose (responsibilities,
-        requirements, about the role) with the web-page noise removed - keep it verbatim, don't
-        summarise. Omit any scalar field the page doesn't state rather than guessing. If the
-        content is clearly not a job posting, return {}.
+        requirements, about the role) with the web-page noise removed - keep the actual wording
+        verbatim, don't summarise, but DO restore real structure: a blank line between each
+        section (About the company / About the role / Requirements / Benefits / etc.), a short
+        heading line for each section, and "- " at the start of each bullet point in a list
+        (skills, responsibilities, requirements). Scraped pages often collapse all of this onto
+        one line with no punctuation between sentences - reconstruct the paragraph/heading/bullet
+        breaks a human would have seen on the actual page, don't just copy the flattened text.
+        Omit any scalar field the page doesn't state rather than guessing. If the content is
+        clearly not a job posting, return {}.
 
         RAW PAGE CONTENT:
         """
@@ -94,7 +108,8 @@ public class AiAssistant {
         Compare the candidate's resume against the job below and produce tailoring output. Shape:
         {
           "improvementPoints": [string],
-          "latexResume": string
+          "latexResume": string,
+          "plainTextResume": string
         }
 
         Rules:
@@ -104,14 +119,18 @@ public class AiAssistant {
           suggest claiming a skill or experience the resume gives no evidence of; if a required
           skill is genuinely absent from their background, say so plainly instead of inventing a way
           to fake it.
+        - "latexResume" and "plainTextResume" are the SAME tailored resume in two formats - built
+          ONLY from the candidate's real resume content below, reorganised, reworded and
+          re-prioritised toward this job's required skills, but never fabricating employers, titles,
+          dates, or skills absent from the source resume.
         - "latexResume" is a complete, compilable LaTeX document (\\documentclass through
           \\end{document}) using a clean single-column article-style resume layout (no exotic
-          packages beyond geometry/enumitem/titlesec/hyperref) built ONLY from the candidate's real
-          resume content below - reorganised, reworded and re-prioritised toward this job's required
-          skills, but never fabricating employers, titles, dates, or skills absent from the source
-          resume. Escape LaTeX special characters (&, %%, $, #, _, {, }) found in the candidate's own
-          text. Escape the document as a valid JSON string (escape backslashes as \\\\ and newlines
-          as \\n).
+          packages beyond geometry/enumitem/titlesec/hyperref). Escape LaTeX special characters (&,
+          %%, $, #, _, {, }) found in the candidate's own text.
+        - "plainTextResume" is the same content laid out for plain-text reading (section headings in
+          caps, "- " for bullets, blank lines between sections) - no LaTeX markup at all.
+        - Escape both documents as valid JSON strings (escape backslashes as \\\\ and newlines as
+          \\n).
 
         JOB:
         Title: %s

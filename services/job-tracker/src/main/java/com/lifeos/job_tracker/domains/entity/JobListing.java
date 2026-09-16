@@ -147,6 +147,16 @@ public class JobListing {
   @Column(name = "scraped_date")
   Instant scrapedDate;
 
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "tailored_improvement_points_json")
+  List<String> tailoredImprovementPoints;
+
+  @Column(name = "tailored_latex_resume")
+  String tailoredLatexResume;
+
+  @Column(name = "tailored_plain_text_resume")
+  String tailoredPlainTextResume;
+
   @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;

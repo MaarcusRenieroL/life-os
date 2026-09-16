@@ -35,7 +35,10 @@ public record JobListingResponse(
     Integer fitScore,
     Map<String, Object> fitExplanation,
     String status,
-    Instant createdAt) {
+    Instant createdAt,
+    List<String> tailoredImprovementPoints,
+    String tailoredLatexResume,
+    String tailoredPlainTextResume) {
 
   public static JobListingResponse from(JobListing job) {
     return new JobListingResponse(
@@ -65,6 +68,9 @@ public record JobListingResponse(
         job.getFitScore(),
         job.getFitExplanation(),
         job.getStatus() == null ? null : job.getStatus().name(),
-        job.getCreatedAt());
+        job.getCreatedAt(),
+        job.getTailoredImprovementPoints(),
+        job.getTailoredLatexResume(),
+        job.getTailoredPlainTextResume());
   }
 }
