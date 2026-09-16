@@ -87,6 +87,69 @@ export interface UpdateJobDetailsRequest {
   offerNotes: string | null;
 }
 
+export type InterviewRoundType =
+  | 'RECRUITER_SCREENING'
+  | 'CODING_ASSESSMENT'
+  | 'TECHNICAL'
+  | 'SYSTEM_DESIGN'
+  | 'HIRING_MANAGER'
+  | 'HR_DISCUSSION';
+
+export const INTERVIEW_ROUND_TYPES: InterviewRoundType[] = [
+  'RECRUITER_SCREENING',
+  'CODING_ASSESSMENT',
+  'TECHNICAL',
+  'SYSTEM_DESIGN',
+  'HIRING_MANAGER',
+  'HR_DISCUSSION',
+];
+
+export const INTERVIEW_ROUND_TYPE_LABELS: Record<InterviewRoundType, string> = {
+  RECRUITER_SCREENING: 'Recruiter screening',
+  CODING_ASSESSMENT: 'Coding assessment',
+  TECHNICAL: 'Technical',
+  SYSTEM_DESIGN: 'System design',
+  HIRING_MANAGER: 'Hiring manager',
+  HR_DISCUSSION: 'HR discussion',
+};
+
+export type InterviewResultStatus = 'PENDING' | 'PASSED' | 'FAILED' | 'CANCELLED';
+
+export const INTERVIEW_RESULTS: InterviewResultStatus[] = ['PENDING', 'PASSED', 'FAILED', 'CANCELLED'];
+
+export const INTERVIEW_RESULT_LABELS: Record<InterviewResultStatus, string> = {
+  PENDING: 'Pending',
+  PASSED: 'Passed',
+  FAILED: 'Failed',
+  CANCELLED: 'Cancelled',
+};
+
+export interface Interview {
+  id: string;
+  jobId: string;
+  roundType: InterviewRoundType | null;
+  scheduledAt: string | null;
+  interviewerName: string | null;
+  meetingLink: string | null;
+  topics: string[] | null;
+  preparationNotes: string | null;
+  questionsAsked: string | null;
+  performanceNotes: string | null;
+  result: InterviewResultStatus | null;
+  createdAt: string;
+}
+
+export interface UpsertInterviewRequest {
+  roundType: InterviewRoundType;
+  scheduledAt: string | null;
+  interviewerName: string | null;
+  meetingLink: string | null;
+  preparationNotes: string | null;
+  questionsAsked: string | null;
+  performanceNotes: string | null;
+  result: InterviewResultStatus;
+}
+
 export interface JobFitResult {
   score: number;
   explanation: Record<string, unknown>;

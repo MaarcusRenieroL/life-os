@@ -2,12 +2,14 @@ import { api, unwrap } from '@/lib/api-client';
 
 import type {
   EmailEvent,
+  Interview,
   JobFitResult,
   JobListing,
   JobStatus,
   JobTailoringVersion,
   ResumeTailoringResult,
   UpdateJobDetailsRequest,
+  UpsertInterviewRequest,
 } from './types';
 
 export interface ReviewEmailEventRequest {
@@ -81,5 +83,27 @@ export const jobApi = {
 
   reviewEmailEvent(eventId: string, request: ReviewEmailEventRequest): Promise<EmailEvent> {
     return unwrap(api.post(`${baseUrl}/email-events/${eventId}/review`, request));
+  },
+};
+
+export const interviewApi = {
+  list(jobId: string): Promise<Interview[]> {
+    return unwrap(api.get(`${baseUrl}/${jobId}/interviews`));
+  },
+
+  create(jobId: string, request: UpsertInterviewRequest): Promise<Interview> {
+    return unwrap(api.post(`${baseUrl}/${jobId}/interviews`, request));
+  },
+
+  update(jobId: string, interviewId: string, request: UpsertInterviewRequest): Promise<Interview> {
+    return unwrap(api.put(`${baseUrl}/${jobId}/interviews/${interviewId}`, request));
+  },
+
+  generatePrepTopics(jobId: string, interviewId: string): Promise<Interview> {
+    return unwrap(api.post(`${baseUrl}/${jobId}/interviews/${interviewId}/prep-topics`, {}));
+  },
+
+  async delete(jobId: string, interviewId: string): Promise<void> {
+    await api.delete(`${baseUrl}/${jobId}/interviews/${interviewId}`);
   },
 };

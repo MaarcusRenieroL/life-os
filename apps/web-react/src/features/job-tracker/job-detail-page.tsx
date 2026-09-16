@@ -24,6 +24,7 @@ import { EmailEventReviewList } from './email-event-review-list';
 import { FitBreakdown } from './fit-breakdown';
 import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
+import { InterviewTrackingSection } from './interview-tracking-section';
 import { jobApi } from './job-api';
 import { downloadLatex, LatexCodeBlock } from './latex-code-block';
 import { TailoredResumePdf } from './tailored-resume-pdf';
@@ -232,6 +233,13 @@ export function JobDetailPage() {
                   </TabsContent>
                 </Tabs>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <SectionHeading className="mb-2.5">interviews</SectionHeading>
+              <InterviewTrackingSection jobId={jobId!} />
             </CardContent>
           </Card>
 
