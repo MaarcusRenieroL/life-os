@@ -124,6 +124,7 @@ services:
       AI_ROUTE_JOB_PARSE: ${AI_ROUTE_JOB_PARSE:-ollama}
       AI_ROUTE_EMAIL_CLASSIFY: ${AI_ROUTE_EMAIL_CLASSIFY:-ollama}
       AI_ROUTE_TAILOR_RESUME: ${AI_ROUTE_TAILOR_RESUME:-claude}
+      AI_ROUTE_COVER_LETTER: ${AI_ROUTE_COVER_LETTER:-claude}
     volumes:
       - job_tracker_resumes:/data/resumes
     ports:

@@ -89,6 +89,9 @@ public class EmailEventService {
 
     if (autoApply) {
       jobListingService.updateStatus(userId, matched.getId(), suggested);
+      if (suggested == JobStatus.REJECTED) {
+        jobListingService.setRejectionReasonIfAbsent(userId, matched.getId(), snippet);
+      }
     }
 
     save(
@@ -124,6 +127,9 @@ public class EmailEventService {
     }
 
     jobListingService.updateStatus(userId, jobId, status);
+    if (status == JobStatus.REJECTED) {
+      jobListingService.setRejectionReasonIfAbsent(userId, jobId, event.getSnippet());
+    }
     event.setMatchedJobId(jobId);
     event.setSuggestedStatus(status);
     event.setStatus(EmailEventStatus.APPLIED_AUTOMATICALLY);

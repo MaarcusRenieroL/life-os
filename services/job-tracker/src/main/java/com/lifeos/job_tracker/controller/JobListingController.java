@@ -2,6 +2,7 @@ package com.lifeos.job_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.job_tracker.domains.dto.request.FromLinkRequest;
+import com.lifeos.job_tracker.domains.dto.request.UpdateJobDetailsRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobListingRequest;
 import com.lifeos.job_tracker.domains.dto.response.JobListingResponse;
 import com.lifeos.job_tracker.domains.dto.response.JobTailoringVersionResponse;
@@ -73,6 +74,26 @@ public class JobListingController extends AuthenticatedController {
             JobListingResponse.from(
                 jobListingService.updateStatus(userId(authentication), jobId, request.status())),
             "Status updated"));
+  }
+
+  @PatchMapping("/{jobId}/details")
+  public ResponseEntity<ApiResponse<JobListingResponse>> updateDetails(
+      Authentication authentication,
+      @PathVariable UUID jobId,
+      @RequestBody UpdateJobDetailsRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            JobListingResponse.from(jobListingService.updateDetails(userId(authentication), jobId, request)),
+            "Details updated"));
+  }
+
+  @PostMapping("/{jobId}/cover-letter")
+  public ResponseEntity<ApiResponse<JobListingResponse>> generateCoverLetter(
+      Authentication authentication, @PathVariable UUID jobId) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            JobListingResponse.from(jobListingService.generateCoverLetter(userId(authentication), jobId)),
+            "Cover letter drafted"));
   }
 
   @PostMapping("/{jobId}/rescore")

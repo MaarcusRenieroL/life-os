@@ -37,7 +37,14 @@ public record JobListingResponse(
     String status,
     Instant createdAt,
     List<String> tailoredImprovementPoints,
-    String tailoredLatexResume) {
+    String tailoredLatexResume,
+    String notes,
+    LocalDate appliedAt,
+    String rejectionReason,
+    BigDecimal offerAmount,
+    LocalDate offerDeadline,
+    String offerNotes,
+    String coverLetterText) {
 
   public static JobListingResponse from(JobListing job) {
     return new JobListingResponse(
@@ -69,6 +76,13 @@ public record JobListingResponse(
         job.getStatus() == null ? null : job.getStatus().name(),
         job.getCreatedAt(),
         job.getTailoredImprovementPoints(),
-        job.getTailoredLatexResume());
+        job.getTailoredLatexResume(),
+        job.getNotes(),
+        job.getAppliedAt(),
+        job.getRejectionReason(),
+        job.getOfferAmount(),
+        job.getOfferDeadline(),
+        job.getOfferNotes(),
+        job.getCoverLetterText());
   }
 }

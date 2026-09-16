@@ -1,5 +1,6 @@
 package com.lifeos.job_tracker.service;
 
+import com.lifeos.job_tracker.domains.dto.request.UpdateJobDetailsRequest;
 import com.lifeos.job_tracker.domains.entity.Company;
 import com.lifeos.job_tracker.domains.entity.JobListing;
 import com.lifeos.job_tracker.domains.entity.JobTailoringVersion;
@@ -145,7 +146,55 @@ public class JobListingService {
   @Transactional
   public JobListing updateStatus(UUID userId, UUID jobId, JobStatus status) {
     JobListing job = get(userId, jobId);
+    if (status == JobStatus.APPLIED && job.getAppliedAt() == null) {
+      job.setAppliedAt(java.time.LocalDate.now());
+    }
     job.setStatus(status);
+    return jobListingRepository.save(job);
+  }
+
+  /** Stashes a rejection reason (e.g. the triggering email's snippet) without clobbering one the
+   * candidate already wrote themselves. */
+  @Transactional
+  public void setRejectionReasonIfAbsent(UUID userId, UUID jobId, String reason) {
+    JobListing job = get(userId, jobId);
+    if (job.getRejectionReason() == null || job.getRejectionReason().isBlank()) {
+      job.setRejectionReason(reason);
+      jobListingRepository.save(job);
+    }
+  }
+
+  @Transactional
+  public JobListing updateDetails(UUID userId, UUID jobId, UpdateJobDetailsRequest request) {
+    JobListing job = get(userId, jobId);
+    job.setNotes(request.notes());
+    job.setAppliedAt(request.appliedAt());
+    job.setRejectionReason(request.rejectionReason());
+    job.setOfferAmount(request.offerAmount());
+    job.setOfferDeadline(request.offerDeadline());
+    job.setOfferNotes(request.offerNotes());
+    return jobListingRepository.save(job);
+  }
+
+  /** Drafts a cover letter for this job from the candidate's real resume - same "never invent
+   * experience" constraint as tailorResume, and the same one-shot-overwrite model tailoring had
+   * before versioning (no history yet; add it if this turns out to need re-drafting often). */
+  @Transactional
+  public JobListing generateCoverLetter(UUID userId, UUID jobId) {
+    JobListing job = get(userId, jobId);
+    if (job.getJobDescriptionText() == null || job.getJobDescriptionText().isBlank()) {
+      throw new InvalidRequestException("This job has no description text to draft a cover letter against");
+    }
+    Resume resume = resumeService.getCurrent(userId);
+    if (resume.getRawText() == null || resume.getRawText().isBlank()) {
+      throw new InvalidRequestException("Upload a resume with readable text before drafting a cover letter");
+    }
+    if (!ai.available()) {
+      throw new InvalidRequestException("Drafting a cover letter needs an AI provider; set ANTHROPIC_API_KEY or enable Ollama");
+    }
+
+    String letter = ai.generateCoverLetter(job.getTitle(), job.getCompany(), job.getJobDescriptionText(), resume.getRawText());
+    job.setCoverLetterText(letter);
     return jobListingRepository.save(job);
   }
 

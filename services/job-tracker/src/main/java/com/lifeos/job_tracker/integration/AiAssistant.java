@@ -47,6 +47,9 @@ public class AiAssistant {
   @Value("${ai.routing.tailor-resume:claude}")
   private String tailorResumeProvider;
 
+  @Value("${ai.routing.cover-letter:claude}")
+  private String coverLetterProvider;
+
   public AiAssistant(ClaudeApiClient claude, OllamaApiClient ollama, ObjectMapper objectMapper) {
     this.claude = claude;
     this.ollama = ollama;
@@ -268,6 +271,35 @@ public class AiAssistant {
     return convert(json, EmailClassification.class);
   }
 
+  /** Drafts a cover letter grounded only in the candidate's real resume content - same
+   * never-invent constraint as {@link #tailorResume}, since this is a document that gets sent
+   * to a real employer. */
+  public String generateCoverLetter(String jobTitle, String company, String jobDescriptionText, String resumeText) {
+    return routedComplete(
+        coverLetterProvider,
+        "You write cover letters. Reply with ONLY the letter text, no subject line, no prose"
+            + " before or after, no markdown formatting.",
+        """
+        Write a concise, specific cover letter (3-4 short paragraphs) for the candidate applying
+        to the job below, using ONLY real experience from their resume - never invent employers,
+        projects, skills, or achievements the resume doesn't support. Reference 1-2 concrete
+        things from their actual background that genuinely match what this job asks for. Avoid
+        generic filler ("I am a hard worker", "I am excited about this opportunity") - every
+        sentence should say something specific to this candidate and this job. Plain text, ready
+        to paste - no placeholders like [Your Name] left unfilled if the resume states a name.
+
+        JOB:
+        Title: %s
+        Company: %s
+        Description:
+        %s
+
+        CANDIDATE RESUME (verbatim extracted text):
+        %s
+        """
+            .formatted(blank(jobTitle), blank(company), blank(jobDescriptionText), blank(resumeText)));
+  }
+
   /** Resolves {@code providerName} to a client, calls it, and falls back to Claude if an
    * Ollama-routed call fails (server not running, model not pulled, etc.) instead of failing the
    * whole request - Claude staying reachable is what makes routing routine work to Ollama safe. */
@@ -285,6 +317,25 @@ public class AiAssistant {
       if (primary == ollama) {
         log.warn("Ollama call failed ({}), falling back to Claude", exception.getMessage());
         return claude.completeJson(systemPrompt, userPrompt);
+      }
+      throw exception;
+    }
+  }
+
+  private String routedComplete(String providerName, String systemPrompt, String userPrompt) {
+    AiClient primary = "ollama".equalsIgnoreCase(providerName) ? ollama : claude;
+
+    if (primary == ollama && !ollama.isConfigured()) {
+      log.info("Ollama routed but not enabled - using Claude instead");
+      return claude.complete(systemPrompt, userPrompt);
+    }
+
+    try {
+      return primary.complete(systemPrompt, userPrompt);
+    } catch (RuntimeException exception) {
+      if (primary == ollama) {
+        log.warn("Ollama call failed ({}), falling back to Claude", exception.getMessage());
+        return claude.complete(systemPrompt, userPrompt);
       }
       throw exception;
     }

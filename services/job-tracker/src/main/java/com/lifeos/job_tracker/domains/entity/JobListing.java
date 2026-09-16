@@ -154,6 +154,26 @@ public class JobListing {
   @Column(name = "tailored_latex_resume")
   String tailoredLatexResume;
 
+  String notes;
+
+  @Column(name = "applied_at")
+  LocalDate appliedAt;
+
+  @Column(name = "rejection_reason")
+  String rejectionReason;
+
+  @Column(name = "offer_amount")
+  BigDecimal offerAmount;
+
+  @Column(name = "offer_deadline")
+  LocalDate offerDeadline;
+
+  @Column(name = "offer_notes")
+  String offerNotes;
+
+  @Column(name = "cover_letter_text")
+  String coverLetterText;
+
   @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;
