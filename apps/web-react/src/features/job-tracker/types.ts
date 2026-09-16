@@ -87,6 +87,39 @@ export interface Resume {
   createdAt: string;
 }
 
+export type EmailEventType =
+  | 'JOB_ALERT_DIGEST'
+  | 'APPLICATION_CONFIRMATION'
+  | 'INTERVIEW_INVITE'
+  | 'REJECTION'
+  | 'OFFER'
+  | 'UNRELATED';
+
+export const EMAIL_EVENT_TYPE_LABELS: Record<EmailEventType, string> = {
+  JOB_ALERT_DIGEST: 'New job postings',
+  APPLICATION_CONFIRMATION: 'Application confirmed',
+  INTERVIEW_INVITE: 'Interview invite',
+  REJECTION: 'Rejection',
+  OFFER: 'Offer',
+  UNRELATED: 'Unrelated',
+};
+
+export interface EmailEvent {
+  id: string;
+  fromAddress: string;
+  subject: string | null;
+  snippet: string | null;
+  detectedType: EmailEventType;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  matchedJobId: string | null;
+  matchedJobTitle: string | null;
+  matchedJobCompany: string | null;
+  suggestedStatus: JobStatus | null;
+  createdJobsCount: number;
+  status: 'APPLIED_AUTOMATICALLY' | 'NEEDS_REVIEW' | 'IGNORED' | 'DISMISSED';
+  createdAt: string;
+}
+
 export interface Skill {
   id: string;
   name: string;

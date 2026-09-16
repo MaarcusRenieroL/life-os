@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 
+import { EmailEventReviewList } from './email-event-review-list';
 import { FitBreakdown } from './fit-breakdown';
 import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
@@ -30,6 +31,12 @@ export function JobDetailPage() {
     queryFn: () => jobApi.get(jobId!),
     enabled: !!jobId,
   });
+
+  const { data: pendingEvents = [] } = useQuery({
+    queryKey: ['jobs', 'email-events', 'needs-review'],
+    queryFn: jobApi.needsReviewEmailEvents,
+  });
+  const pendingForJob = pendingEvents.filter((e) => e.matchedJobId === jobId);
 
   const [tailorResult, setTailorResult] = useState<ResumeTailoringResult | null>(null);
   const [tailorError, setTailorError] = useState<string | null>(null);
@@ -113,6 +120,13 @@ export function JobDetailPage() {
           </>
         )}
       </p>
+
+      {pendingForJob.length > 0 && (
+        <div className="mt-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3.5">
+          <SectionHeading className="mb-2.5">Detected from Gmail — needs your confirmation</SectionHeading>
+          <EmailEventReviewList jobId={jobId} />
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2.5">
         <span className="text-xs tracking-wide text-muted-foreground uppercase">Status</span>

@@ -59,6 +59,12 @@ export function HomePage() {
     retry: false,
     throwOnError: false,
   });
+  const { data: pendingJobEmails } = useQuery({
+    queryKey: ['jobs', 'email-events', 'needs-review'],
+    queryFn: jobApi.needsReviewEmailEvents,
+    retry: false,
+    throwOnError: false,
+  });
 
   const vaultActionRequired = (healthSummary?.weakCount ?? 0) + (healthSummary?.duplicateCount ?? 0);
   const financeTotalBalance = accounts?.reduce((sum, a) => sum + a.currentBalance, 0) ?? null;
@@ -114,9 +120,16 @@ export function HomePage() {
     if (financeNeedsReview > 0) {
       items.push({ title: `${financeNeedsReview} transaction(s) need review`, meta: 'finance', link: '/finance/transactions' });
     }
+    if (pendingJobEmails && pendingJobEmails.length > 0) {
+      items.push({
+        title: `${pendingJobEmails.length} job email(s) detected — confirm or dismiss`,
+        meta: 'job tracker',
+        link: '/jobs',
+      });
+    }
     return items;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [healthSummary, financeNeedsReview]);
+  }, [healthSummary, financeNeedsReview, pendingJobEmails]);
 
   return (
     <div>

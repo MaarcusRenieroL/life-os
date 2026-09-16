@@ -1,6 +1,12 @@
 import { api, unwrap } from '@/lib/api-client';
 
-import type { JobFitResult, JobListing, JobStatus, ResumeTailoringResult } from './types';
+import type { EmailEvent, JobFitResult, JobListing, JobStatus, ResumeTailoringResult } from './types';
+
+export interface ReviewEmailEventRequest {
+  action: 'APPROVE' | 'DISMISS';
+  jobId?: string;
+  status?: JobStatus;
+}
 
 const baseUrl = '/v1/jobs';
 
@@ -35,5 +41,13 @@ export const jobApi = {
 
   async delete(jobId: string): Promise<void> {
     await api.delete(`${baseUrl}/${jobId}`);
+  },
+
+  needsReviewEmailEvents(): Promise<EmailEvent[]> {
+    return unwrap(api.get(`${baseUrl}/email-events/needs-review`));
+  },
+
+  reviewEmailEvent(eventId: string, request: ReviewEmailEventRequest): Promise<EmailEvent> {
+    return unwrap(api.post(`${baseUrl}/email-events/${eventId}/review`, request));
   },
 };
