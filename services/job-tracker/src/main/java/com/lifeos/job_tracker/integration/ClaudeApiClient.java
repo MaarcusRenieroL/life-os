@@ -28,10 +28,12 @@ public class ClaudeApiClient implements AiClient {
   private final AnthropicProperties properties;
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
+  private final AiUsageRecorder usageRecorder;
 
-  public ClaudeApiClient(AnthropicProperties properties, ObjectMapper objectMapper) {
+  public ClaudeApiClient(AnthropicProperties properties, ObjectMapper objectMapper, AiUsageRecorder usageRecorder) {
     this.properties = properties;
     this.objectMapper = objectMapper;
+    this.usageRecorder = usageRecorder;
     this.restClient = RestClient.builder().baseUrl(properties.baseUrl()).build();
   }
 
@@ -71,6 +73,12 @@ public class ClaudeApiClient implements AiClient {
 
       if (response == null || !response.has("content") || response.get("content").isEmpty()) {
         throw new ClaudeUnavailableException("Anthropic API returned an empty response");
+      }
+
+      if (response.has("usage")) {
+        JsonNode usage = response.get("usage");
+        usageRecorder.record(
+            properties.model(), usage.path("input_tokens").asInt(0), usage.path("output_tokens").asInt(0));
       }
 
       // The content array may lead with a "thinking" block (extended thinking is

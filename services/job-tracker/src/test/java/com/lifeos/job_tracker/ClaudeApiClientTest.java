@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lifeos.job_tracker.config.AnthropicProperties;
 import com.lifeos.job_tracker.exception.ClaudeUnavailableException;
+import com.lifeos.job_tracker.integration.AiUsageRecorder;
 import com.lifeos.job_tracker.integration.ClaudeApiClient;
+import com.lifeos.job_tracker.repository.AiUsageLogRepository;
 import org.junit.jupiter.api.Test;
 
 class ClaudeApiClientTest {
@@ -16,7 +18,8 @@ class ClaudeApiClientTest {
     ClaudeApiClient client =
         new ClaudeApiClient(
             new AnthropicProperties("https://api.anthropic.com", "", "claude-sonnet-4-6", "2023-06-01", 1024),
-            new ObjectMapper());
+            new ObjectMapper(),
+            new AiUsageRecorder(org.mockito.Mockito.mock(AiUsageLogRepository.class)));
 
     assertThat(client.isConfigured()).isFalse();
     assertThatThrownBy(() -> client.complete("sys", "user"))
