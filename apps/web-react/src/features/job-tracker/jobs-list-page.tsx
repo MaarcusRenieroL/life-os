@@ -32,7 +32,7 @@ import {
 
 import { FitScoreBadge } from './fit-score-badge';
 import { jobApi } from './job-api';
-import { JOB_STATUSES, type JobListing, type JobStatus } from './types';
+import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
 
 type StatusFilter = 'ALL' | JobStatus;
 
@@ -112,12 +112,12 @@ export function JobsListPage() {
             value={row.original.status ?? 'INTERESTED'}
             onValueChange={(v) => void setStatus(row.original, v as JobStatus)}
           >
-            <SelectTrigger size="sm" className="text-xs" onClick={(e) => e.stopPropagation()}>
+            <SelectTrigger size="sm" className="min-w-40 text-xs" onClick={(e) => e.stopPropagation()}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {JOB_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
+                <SelectItem key={s} value={s}>{JOB_STATUS_LABELS[s]}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -199,11 +199,11 @@ export function JobsListPage() {
               className="max-w-xs"
             />
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-              <SelectTrigger size="sm" className="w-40"><SelectValue /></SelectTrigger>
+              <SelectTrigger size="sm" className="min-w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All statuses</SelectItem>
                 {JOB_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>{JOB_STATUS_LABELS[s]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

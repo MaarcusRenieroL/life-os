@@ -1,14 +1,40 @@
 // Mirrors apps/web's core/models/job-tracker.model.ts.
 
-export type JobStatus = 'INTERESTED' | 'APPLIED' | 'INTERVIEWING' | 'REJECTED' | 'OFFER';
+export type JobStatus =
+  | 'INTERESTED'
+  | 'WAITING_FOR_REFERRAL'
+  | 'REFERRED'
+  | 'APPLIED'
+  | 'INTERVIEWING'
+  | 'WAITING_FOR_HR'
+  | 'OFFER_ACCEPTED'
+  | 'OFFER_REJECTED'
+  | 'REJECTED';
 
+/** Pipeline order - matches the candidate's actual flow, not alphabetical. */
 export const JOB_STATUSES: JobStatus[] = [
   'INTERESTED',
+  'WAITING_FOR_REFERRAL',
+  'REFERRED',
   'APPLIED',
   'INTERVIEWING',
+  'WAITING_FOR_HR',
+  'OFFER_ACCEPTED',
+  'OFFER_REJECTED',
   'REJECTED',
-  'OFFER',
 ];
+
+export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
+  INTERESTED: 'Interested',
+  WAITING_FOR_REFERRAL: 'Waiting for referral',
+  REFERRED: 'Referred',
+  APPLIED: 'Applied',
+  INTERVIEWING: 'Interviewing',
+  WAITING_FOR_HR: 'Waiting for HR',
+  OFFER_ACCEPTED: 'Offer accepted',
+  OFFER_REJECTED: 'Offer rejected',
+  REJECTED: 'Rejected',
+};
 
 export interface JobListing {
   id: string;

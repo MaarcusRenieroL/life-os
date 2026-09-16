@@ -19,7 +19,7 @@ import { FitBreakdown } from './fit-breakdown';
 import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
 import { jobApi } from './job-api';
-import { JOB_STATUSES, type JobStatus, type ResumeTailoringResult } from './types';
+import { JOB_STATUS_LABELS, JOB_STATUSES, type JobStatus, type ResumeTailoringResult } from './types';
 
 export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -122,7 +122,7 @@ export function JobDetailPage() {
           </SelectTrigger>
           <SelectContent>
             {JOB_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
+              <SelectItem key={s} value={s}>{JOB_STATUS_LABELS[s]}</SelectItem>
             ))}
           </SelectContent>
         </Select>
