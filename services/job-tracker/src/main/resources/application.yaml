@@ -40,3 +40,6 @@ anthropic:
 job-tracker:
   storage:
     resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}
+  latex:
+    tectonic-bin: ${TECTONIC_BIN:tectonic}
+    timeout-seconds: ${TECTONIC_TIMEOUT_SECONDS:90}

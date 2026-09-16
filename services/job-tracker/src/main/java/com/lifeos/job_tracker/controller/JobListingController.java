@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -91,6 +92,12 @@ public class JobListingController extends AuthenticatedController {
     return ResponseEntity.ok(
         ApiResponse.success(
             jobListingService.tailorResume(userId(authentication), jobId), "Resume tailored"));
+  }
+
+  @GetMapping("/{jobId}/tailor-resume/pdf")
+  public ResponseEntity<byte[]> tailorResumePdf(Authentication authentication, @PathVariable UUID jobId) {
+    byte[] pdf = jobListingService.renderTailoredResumePdf(userId(authentication), jobId);
+    return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).body(pdf);
   }
 
   @DeleteMapping("/{jobId}")

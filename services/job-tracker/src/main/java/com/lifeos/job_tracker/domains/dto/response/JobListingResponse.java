@@ -37,8 +37,7 @@ public record JobListingResponse(
     String status,
     Instant createdAt,
     List<String> tailoredImprovementPoints,
-    String tailoredLatexResume,
-    String tailoredPlainTextResume) {
+    String tailoredLatexResume) {
 
   public static JobListingResponse from(JobListing job) {
     return new JobListingResponse(
@@ -70,7 +69,6 @@ public record JobListingResponse(
         job.getStatus() == null ? null : job.getStatus().name(),
         job.getCreatedAt(),
         job.getTailoredImprovementPoints(),
-        job.getTailoredLatexResume(),
-        job.getTailoredPlainTextResume());
+        job.getTailoredLatexResume());
   }
 }

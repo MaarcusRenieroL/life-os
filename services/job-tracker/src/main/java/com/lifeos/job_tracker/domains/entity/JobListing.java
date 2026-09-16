@@ -154,9 +154,6 @@ public class JobListing {
   @Column(name = "tailored_latex_resume")
   String tailoredLatexResume;
 
-  @Column(name = "tailored_plain_text_resume")
-  String tailoredPlainTextResume;
-
   @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;

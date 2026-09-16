@@ -3,5 +3,4 @@
 
 alter table job_tracker_schema.job_listings
   add column tailored_improvement_points_json jsonb,
-  add column tailored_latex_resume text,
-  add column tailored_plain_text_resume text;
+  add column tailored_latex_resume text;

@@ -108,8 +108,7 @@ public class AiAssistant {
         Compare the candidate's resume against the job below and produce tailoring output. Shape:
         {
           "improvementPoints": [string],
-          "latexResume": string,
-          "plainTextResume": string
+          "latexResume": string
         }
 
         Rules:
@@ -119,18 +118,15 @@ public class AiAssistant {
           suggest claiming a skill or experience the resume gives no evidence of; if a required
           skill is genuinely absent from their background, say so plainly instead of inventing a way
           to fake it.
-        - "latexResume" and "plainTextResume" are the SAME tailored resume in two formats - built
-          ONLY from the candidate's real resume content below, reorganised, reworded and
-          re-prioritised toward this job's required skills, but never fabricating employers, titles,
-          dates, or skills absent from the source resume.
         - "latexResume" is a complete, compilable LaTeX document (\\documentclass through
           \\end{document}) using a clean single-column article-style resume layout (no exotic
-          packages beyond geometry/enumitem/titlesec/hyperref). Escape LaTeX special characters (&,
-          %%, $, #, _, {, }) found in the candidate's own text.
-        - "plainTextResume" is the same content laid out for plain-text reading (section headings in
-          caps, "- " for bullets, blank lines between sections) - no LaTeX markup at all.
-        - Escape both documents as valid JSON strings (escape backslashes as \\\\ and newlines as
-          \\n).
+          packages beyond geometry/enumitem/titlesec/hyperref) built ONLY from the candidate's real
+          resume content below - reorganised, reworded and re-prioritised toward this job's required
+          skills, but never fabricating employers, titles, dates, or skills absent from the source
+          resume. This gets compiled with tectonic (a XeTeX engine), so avoid pdfTeX-only primitives
+          (\\pdfgentounicode, \\input{glyphtounicode}). Escape LaTeX special characters (&, %%, $, #,
+          _, {, }) found in the candidate's own text. Escape the document as a valid JSON string
+          (escape backslashes as \\\\ and newlines as \\n).
 
         JOB:
         Title: %s

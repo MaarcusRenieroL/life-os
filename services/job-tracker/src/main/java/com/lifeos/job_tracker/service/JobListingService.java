@@ -16,6 +16,7 @@ import com.lifeos.job_tracker.exception.JobLinkUnreadableException;
 import com.lifeos.job_tracker.exception.ResourceNotFoundException;
 import com.lifeos.job_tracker.integration.AiAssistant;
 import com.lifeos.job_tracker.integration.JobLinkFetcher;
+import com.lifeos.job_tracker.integration.LatexCompiler;
 import com.lifeos.job_tracker.repository.CompanyRepository;
 import com.lifeos.job_tracker.repository.JobListingRepository;
 import com.lifeos.job_tracker.service.JobMatchingService.JobFitResult;
@@ -39,6 +40,7 @@ public class JobListingService {
   private final JobMatchingService jobMatchingService;
   private final JobLinkFetcher jobLinkFetcher;
   private final ResumeService resumeService;
+  private final LatexCompiler latexCompiler;
 
   @Transactional(readOnly = true)
   public List<JobListing> list(UUID userId) {
@@ -194,10 +196,19 @@ public class JobListingService {
 
     job.setTailoredImprovementPoints(result.improvementPoints());
     job.setTailoredLatexResume(result.latexResume());
-    job.setTailoredPlainTextResume(result.plainTextResume());
     jobListingRepository.save(job);
 
     return result;
+  }
+
+  /** Compiles the job's saved tailored LaTeX (from {@link #tailorResume}) to PDF bytes. */
+  @Transactional(readOnly = true)
+  public byte[] renderTailoredResumePdf(UUID userId, UUID jobId) {
+    JobListing job = get(userId, jobId);
+    if (job.getTailoredLatexResume() == null || job.getTailoredLatexResume().isBlank()) {
+      throw new InvalidRequestException("Tailor a resume for this job before rendering a PDF");
+    }
+    return latexCompiler.compile(job.getTailoredLatexResume());
   }
 
   @Transactional
