@@ -1,5 +1,6 @@
 package com.lifeos.job_tracker.integration;
 
+import com.lifeos.job_tracker.domains.record.EmailClassification;
 import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
 import com.lifeos.job_tracker.domains.record.ParsedResume;
 import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
@@ -133,6 +134,49 @@ public class AiAssistant {
                 blank(jobDescriptionText),
                 blank(resumeText)),
         ResumeTailoringResult.class);
+  }
+
+  /**
+   * Classifies one Gmail message forwarded by batches: is it a job-alert digest (a list of new
+   * postings), an application/interview/rejection/offer signal for a job the candidate already
+   * applied to, or unrelated mail that happened to match the search query. Told explicitly to
+   * favor a lower confidence over a guess, since a wrong auto-applied status silently corrupts the
+   * candidate's pipeline.
+   */
+  public EmailClassification classifyEmail(String fromAddress, String subject, String body) {
+    return claude.completeJson(
+        "You classify an email for a job-tracking automation. Reply with ONLY a JSON object, no"
+            + " prose.",
+        """
+        Classify this email into exactly one type:
+        - JOB_ALERT_DIGEST: a job board's "new jobs matching your search" digest, listing one or
+          more postings with links.
+        - APPLICATION_CONFIRMATION: confirms an application was received/submitted.
+        - INTERVIEW_INVITE: invites the candidate to an interview or next round.
+        - REJECTION: rejects the candidate or closes out the application.
+        - OFFER: extends a job offer.
+        - UNRELATED: anything else (newsletters, unrelated notifications, spam).
+
+        Reply with this exact shape:
+        {
+          "type": one of the six values above,
+          "confidence": "HIGH" | "MEDIUM" | "LOW",
+          "company": string or null - your best guess which company this is about,
+          "title": string or null - your best guess which role this is about,
+          "postings": [{"title","company","url"}] - ONLY for JOB_ALERT_DIGEST, one entry per
+            posting in the digest; omit or use an empty array for every other type
+        }
+
+        Use LOW confidence whenever the email is ambiguous, generic, or you are guessing at the
+        company/role - do not force a HIGH confidence to seem decisive.
+
+        FROM: %s
+        SUBJECT: %s
+        BODY:
+        %s
+        """
+            .formatted(blank(fromAddress), blank(subject), blank(body)),
+        EmailClassification.class);
   }
 
   private static String blank(String value) {
