@@ -18,6 +18,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+import { ApplicationTrackingForm } from './application-tracking-form';
+import { CoverLetterCard } from './cover-letter-card';
 import { EmailEventReviewList } from './email-event-review-list';
 import { FitBreakdown } from './fit-breakdown';
 import { FitScoreBadge } from './fit-score-badge';
@@ -245,6 +247,13 @@ export function JobDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardContent>
+              <SectionHeading className="mb-2.5">cover letter</SectionHeading>
+              <CoverLetterCard job={job} />
+            </CardContent>
+          </Card>
         </div>
 
         <div className="flex flex-col gap-5">
@@ -261,6 +270,13 @@ export function JobDetailPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <SectionHeading className="mb-2.5">application</SectionHeading>
+              <ApplicationTrackingForm job={job} />
             </CardContent>
           </Card>
 

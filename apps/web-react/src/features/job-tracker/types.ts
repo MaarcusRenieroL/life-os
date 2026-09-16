@@ -9,7 +9,8 @@ export type JobStatus =
   | 'WAITING_FOR_HR'
   | 'OFFER_ACCEPTED'
   | 'OFFER_REJECTED'
-  | 'REJECTED';
+  | 'REJECTED'
+  | 'WITHDRAWN';
 
 /** Pipeline order - matches the candidate's actual flow, not alphabetical. */
 export const JOB_STATUSES: JobStatus[] = [
@@ -22,6 +23,7 @@ export const JOB_STATUSES: JobStatus[] = [
   'OFFER_ACCEPTED',
   'OFFER_REJECTED',
   'REJECTED',
+  'WITHDRAWN',
 ];
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
@@ -34,6 +36,7 @@ export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   OFFER_ACCEPTED: 'Offer accepted',
   OFFER_REJECTED: 'Offer rejected',
   REJECTED: 'Rejected',
+  WITHDRAWN: 'Withdrawn',
 };
 
 export interface JobListing {
@@ -66,6 +69,22 @@ export interface JobListing {
   createdAt: string;
   tailoredImprovementPoints: string[] | null;
   tailoredLatexResume: string | null;
+  notes: string | null;
+  appliedAt: string | null;
+  rejectionReason: string | null;
+  offerAmount: number | null;
+  offerDeadline: string | null;
+  offerNotes: string | null;
+  coverLetterText: string | null;
+}
+
+export interface UpdateJobDetailsRequest {
+  notes: string | null;
+  appliedAt: string | null;
+  rejectionReason: string | null;
+  offerAmount: number | null;
+  offerDeadline: string | null;
+  offerNotes: string | null;
 }
 
 export interface JobFitResult {

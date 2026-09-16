@@ -7,6 +7,7 @@ import type {
   JobStatus,
   JobTailoringVersion,
   ResumeTailoringResult,
+  UpdateJobDetailsRequest,
 } from './types';
 
 export interface ReviewEmailEventRequest {
@@ -36,6 +37,14 @@ export const jobApi = {
 
   setStatus(jobId: string, status: JobStatus): Promise<JobListing> {
     return unwrap(api.patch(`${baseUrl}/${jobId}`, { status }));
+  },
+
+  updateDetails(jobId: string, request: UpdateJobDetailsRequest): Promise<JobListing> {
+    return unwrap(api.patch(`${baseUrl}/${jobId}/details`, request));
+  },
+
+  generateCoverLetter(jobId: string): Promise<JobListing> {
+    return unwrap(api.post(`${baseUrl}/${jobId}/cover-letter`, {}));
   },
 
   rescore(jobId: string): Promise<JobFitResult> {
