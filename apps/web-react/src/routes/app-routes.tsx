@@ -9,6 +9,8 @@ import { VaultLayout } from '@/features/vault/vault-layout';
 import { VaultUnlockGuard } from '@/features/vault/vault-unlock-guard';
 import { VaultStateProvider } from '@/features/vault/vault-state';
 import { AppShell } from '@/layout/app-shell';
+import { NotFoundPage } from '@/routes/not-found-page';
+import { RouteErrorBoundary } from '@/routes/route-error-boundary';
 
 // Every leaf page is a separate lazy-loaded chunk (Vite splits on the dynamic
 // import automatically) so the initial bundle isn't the whole app - only
@@ -21,9 +23,10 @@ function page<T extends string>(
 }
 
 export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
+  { path: '/login', element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
   {
     element: <ProtectedRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: (
@@ -96,6 +99,10 @@ export const router = createBrowserRouter([
           },
           // Must stay after the static finance/* subpaths above so it doesn't shadow them.
           { path: 'finance/transactions/:id', lazy: page(() => import('@/features/finance/transaction-detail-page'), 'TransactionDetailPage') },
+          // Catch-all: any unmatched path inside the shell (bad link, stale bookmark,
+          // a deep link to what's really just a client-side tab) gets a styled 404
+          // instead of falling through to React Router's raw default error page.
+          { path: '*', element: <NotFoundPage /> },
         ],
       },
     ],
