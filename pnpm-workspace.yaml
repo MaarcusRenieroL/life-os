@@ -7,3 +7,5 @@ allowBuilds:
   lmdb: false
   msgpackr-extract: false
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - cn@0.3.0
