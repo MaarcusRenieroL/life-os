@@ -90,7 +90,7 @@ public class JobListingService {
 
     if (!ai.available()) {
       throw new InvalidRequestException(
-          "Parsing a job link needs Claude; set ANTHROPIC_API_KEY to enable it");
+          "Parsing a job link needs an AI provider; set ANTHROPIC_API_KEY or enable Ollama");
     }
 
     ParsedJobPosting parsed;
@@ -176,7 +176,7 @@ public class JobListingService {
       throw new InvalidRequestException("Upload a resume with readable text before tailoring it");
     }
 
-    if (!ai.available()) {
+    if (!ai.claudeAvailable()) {
       throw new InvalidRequestException(
           "Tailoring a resume needs Claude; set ANTHROPIC_API_KEY to enable it");
     }

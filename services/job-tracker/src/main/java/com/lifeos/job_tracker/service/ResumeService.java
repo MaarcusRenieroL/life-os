@@ -124,7 +124,7 @@ public class ResumeService {
     }
     if (!ai.available()) {
       resume.setExtractionStatus(ProcessingStatus.FAILED);
-      resume.setExtractionError("Anthropic API key not configured; stored raw text only");
+      resume.setExtractionError("No AI provider configured (Claude or Ollama); stored raw text only");
       return resumeRepository.save(resume);
     }
 

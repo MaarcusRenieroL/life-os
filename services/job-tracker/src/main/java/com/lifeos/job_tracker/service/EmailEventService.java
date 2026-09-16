@@ -54,7 +54,7 @@ public class EmailEventService {
       return;
     }
     if (!ai.available()) {
-      log.warn("Skipping email event {}: Claude is not configured", gmailMessageId);
+      log.warn("Skipping email event {}: no AI provider configured", gmailMessageId);
       return;
     }
 

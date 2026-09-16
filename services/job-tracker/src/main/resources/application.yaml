@@ -37,6 +37,25 @@ anthropic:
   # reply, which routinely runs past that and gets cut off mid-string.
   max-tokens: ${ANTHROPIC_MAX_TOKENS:8192}
 
+# Local, zero-cost alternative to Claude for the routine/high-volume prompts - see
+# AiAssistant's per-task routing and the ai.routing.* keys below. Disabled by default so a
+# fresh checkout with no local Ollama server still just uses Claude everywhere.
+ollama:
+  base-url: ${OLLAMA_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:mistral}
+  enabled: ${OLLAMA_ENABLED:false}
+
+# Which provider ("ollama" or "claude") handles each AI task - flip any one without a
+# redeploy. Resume tailoring defaults to Claude and doesn't fall back further than Claude
+# itself (see AiAssistant); the others fall back to Claude automatically if Ollama is routed
+# but unreachable.
+ai:
+  routing:
+    resume-parse: ${AI_ROUTE_RESUME_PARSE:ollama}
+    job-parse: ${AI_ROUTE_JOB_PARSE:ollama}
+    email-classify: ${AI_ROUTE_EMAIL_CLASSIFY:ollama}
+    tailor-resume: ${AI_ROUTE_TAILOR_RESUME:claude}
+
 job-tracker:
   storage:
     resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}

@@ -21,7 +21,7 @@ import org.springframework.web.client.RestClientException;
  * with a 503 rather than a confusing 401 from the API.
  */
 @Component
-public class ClaudeApiClient {
+public class ClaudeApiClient implements AiClient {
 
   private static final Logger log = LoggerFactory.getLogger(ClaudeApiClient.class);
 
@@ -35,11 +35,13 @@ public class ClaudeApiClient {
     this.restClient = RestClient.builder().baseUrl(properties.baseUrl()).build();
   }
 
+  @Override
   public boolean isConfigured() {
     return properties.configured();
   }
 
   /** Returns the raw assistant text for a prompt. */
+  @Override
   public String complete(String systemPrompt, String userPrompt) {
     ensureConfigured();
 
@@ -89,63 +91,23 @@ public class ClaudeApiClient {
   }
 
   /** Runs a prompt and parses the assistant's reply as a JSON object. */
+  @Override
   public JsonNode completeJson(String systemPrompt, String userPrompt) {
     String text = complete(systemPrompt, userPrompt);
 
     try {
-      return objectMapper.readTree(extractJson(text));
+      return objectMapper.readTree(LlmJsonExtractor.extract(text));
     } catch (Exception exception) {
       throw new ClaudeUnavailableException(
           "Could not parse JSON from Anthropic response: " + exception.getMessage(), exception);
     }
   }
 
-  public <T> T completeJson(String systemPrompt, String userPrompt, Class<T> type) {
-    JsonNode json = completeJson(systemPrompt, userPrompt);
-    try {
-      return objectMapper.treeToValue(json, type);
-    } catch (Exception exception) {
-      log.warn(
-          "Could not map Anthropic response to {}: {} -- payload was: {}",
-          type.getSimpleName(),
-          exception.getMessage(),
-          json.toString());
-      throw new ClaudeUnavailableException(
-          "Could not map Anthropic response to "
-              + type.getSimpleName()
-              + ": "
-              + exception.getMessage(),
-          exception);
-    }
-  }
 
   private void ensureConfigured() {
     if (!properties.configured()) {
       throw new ClaudeUnavailableException(
           "Anthropic API key is not configured (set ANTHROPIC_API_KEY)");
     }
-  }
-
-  private static String extractJson(String text) {
-    String trimmed = text.trim();
-
-    int fence = trimmed.indexOf("```");
-    if (fence >= 0) {
-      int start = trimmed.indexOf('\n', fence);
-      int end = trimmed.lastIndexOf("```");
-      if (start > 0 && end > start) {
-        trimmed = trimmed.substring(start + 1, end).trim();
-      }
-    }
-
-    int firstBrace = trimmed.indexOf('{');
-    int firstBracket = trimmed.indexOf('[');
-    int start =
-        (firstBracket >= 0 && (firstBrace < 0 || firstBracket < firstBrace)) ? firstBracket : firstBrace;
-    int lastBrace = trimmed.lastIndexOf('}');
-    int lastBracket = trimmed.lastIndexOf(']');
-    int end = Math.max(lastBrace, lastBracket);
-
-    return (start >= 0 && end > start) ? trimmed.substring(start, end + 1) : trimmed;
   }
 }

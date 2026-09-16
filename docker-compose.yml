@@ -114,10 +114,22 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
       RESUME_STORAGE_DIR: /data/resumes
+      # host.docker.internal reaches the Mac's own Ollama server (brew install ollama; ollama
+      # serve) from inside the container - there's no Ollama service in this compose file, it
+      # runs on the host so the same model cache is shared with any other local tool using it.
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-mistral}
+      AI_ROUTE_RESUME_PARSE: ${AI_ROUTE_RESUME_PARSE:-ollama}
+      AI_ROUTE_JOB_PARSE: ${AI_ROUTE_JOB_PARSE:-ollama}
+      AI_ROUTE_EMAIL_CLASSIFY: ${AI_ROUTE_EMAIL_CLASSIFY:-ollama}
+      AI_ROUTE_TAILOR_RESUME: ${AI_ROUTE_TAILOR_RESUME:-claude}
     volumes:
       - job_tracker_resumes:/data/resumes
     ports:
       - "8003:8003"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
