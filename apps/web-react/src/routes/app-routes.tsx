@@ -62,6 +62,7 @@ export const router = createBrowserRouter([
               { index: true, lazy: page(() => import('@/features/job-tracker/jobs-list-page'), 'JobsListPage') },
               { path: 'discovery', lazy: page(() => import('@/features/job-tracker/add-job-page'), 'AddJobPage') },
               { path: 'resumes', lazy: page(() => import('@/features/job-tracker/resume-page'), 'ResumePage') },
+              { path: 'analytics', lazy: page(() => import('@/features/job-tracker/job-analytics-page'), 'JobAnalyticsPage') },
             ],
           },
           { path: 'jobs/:jobId', lazy: page(() => import('@/features/job-tracker/job-detail-page'), 'JobDetailPage') },

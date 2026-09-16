@@ -24,6 +24,7 @@ const TABS = [
   { label: 'Jobs', to: '/jobs', end: true },
   { label: 'Add a Job', to: '/jobs/discovery', end: false },
   { label: 'Resume', to: '/jobs/resumes', end: false },
+  { label: 'Analytics', to: '/jobs/analytics', end: false },
 ];
 
 export function JobTrackerLayout() {

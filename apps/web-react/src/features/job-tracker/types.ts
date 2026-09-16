@@ -270,3 +270,44 @@ export interface Skill {
   confidenceScore: number | null;
   source: string | null;
 }
+
+export interface DailyCount {
+  date: string;
+  count: number;
+}
+
+export interface WeeklyCount {
+  weekStart: string;
+  count: number;
+}
+
+export interface SourcePerformance {
+  source: string;
+  applications: number;
+  responseRatePct: number;
+}
+
+export interface SkillFrequency {
+  skill: string;
+  count: number;
+}
+
+export interface StageDwellTime {
+  stage: string;
+  avgDays: number;
+  sampleSize: number;
+}
+
+export interface JobAnalytics {
+  totalApplications: number;
+  applicationsByDay: DailyCount[];
+  applicationsByWeek: WeeklyCount[];
+  responseRatePct: number;
+  rejectionRatePct: number;
+  interviewConversionRatePct: number;
+  offerRatePct: number;
+  referralResponseRatePct: number;
+  bestPerformingSources: SourcePerformance[];
+  mostCommonMissingSkills: SkillFrequency[];
+  averageTimeInStage: StageDwellTime[];
+}

@@ -3,6 +3,7 @@ import { api, unwrap } from '@/lib/api-client';
 import type {
   EmailEvent,
   Interview,
+  JobAnalytics,
   JobFitResult,
   JobListing,
   JobStatus,
@@ -129,5 +130,11 @@ export const referralApi = {
 
   async delete(jobId: string, referralId: string): Promise<void> {
     await api.delete(`${baseUrl}/${jobId}/referrals/${referralId}`);
+  },
+};
+
+export const jobAnalyticsApi = {
+  get(): Promise<JobAnalytics> {
+    return unwrap(api.get(`${baseUrl}/analytics`));
   },
 };
