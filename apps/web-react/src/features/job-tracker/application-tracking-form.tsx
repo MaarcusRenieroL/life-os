@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { DatePicker } from '@/components/date-time-picker';
@@ -24,6 +24,12 @@ export function ApplicationTrackingForm({ job }: { job: JobListing }) {
   const [offerDeadline, setOfferDeadline] = useState<string | null>(job.offerDeadline);
   const [offerNotes, setOfferNotes] = useState(job.offerNotes ?? '');
   const [saving, setSaving] = useState(false);
+
+  // appliedAt can change from outside this form - the status dropdown auto-stamps it when moving
+  // to APPLIED - so it needs to stay in sync rather than freezing at whatever it was on mount.
+  useEffect(() => {
+    setAppliedAt(job.appliedAt);
+  }, [job.appliedAt]);
 
   const showOffer = job.status === 'OFFER_ACCEPTED' || job.status === 'OFFER_REJECTED';
   const showRejection = job.status === 'REJECTED' || job.status === 'OFFER_REJECTED';

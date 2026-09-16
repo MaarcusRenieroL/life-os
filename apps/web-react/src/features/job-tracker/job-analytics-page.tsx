@@ -69,9 +69,9 @@ export function JobAnalyticsPage() {
         {weekBars.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">Not enough history yet.</p>
         ) : (
-          <div className="mt-3 flex h-32 items-end gap-1.5">
+          <div className="mt-3 flex h-32 gap-1.5">
             {weekBars.map((w) => (
-              <div key={w.weekStart} className="flex flex-1 flex-col items-center gap-1">
+              <div key={w.weekStart} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                 <div className="w-full rounded-t bg-primary/70" style={{ height: `${w.heightPct}%` }} title={`${w.count} applications`} />
                 <span className="text-[9px] text-muted-foreground">{formatWeek(w.weekStart)}</span>
               </div>
