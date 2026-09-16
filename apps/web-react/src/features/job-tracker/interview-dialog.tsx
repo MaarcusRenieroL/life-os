@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { DateTimePicker } from '@/components/date-time-picker';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,18 +25,6 @@ import {
   type InterviewRoundType,
 } from './types';
 
-function toLocalInput(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function fromLocalInput(local: string): string | null {
-  if (!local) return null;
-  return new Date(local).toISOString();
-}
-
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,7 +35,7 @@ interface Props {
 
 export function InterviewDialog({ open, onOpenChange, jobId, editing, onSaved }: Props) {
   const [roundType, setRoundType] = useState<InterviewRoundType>('RECRUITER_SCREENING');
-  const [scheduledAt, setScheduledAt] = useState('');
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
   const [interviewerName, setInterviewerName] = useState('');
   const [meetingLink, setMeetingLink] = useState('');
   const [preparationNotes, setPreparationNotes] = useState('');
@@ -58,7 +47,7 @@ export function InterviewDialog({ open, onOpenChange, jobId, editing, onSaved }:
   useEffect(() => {
     if (!open) return;
     setRoundType(editing?.roundType ?? 'RECRUITER_SCREENING');
-    setScheduledAt(toLocalInput(editing?.scheduledAt ?? null));
+    setScheduledAt(editing?.scheduledAt ?? null);
     setInterviewerName(editing?.interviewerName ?? '');
     setMeetingLink(editing?.meetingLink ?? '');
     setPreparationNotes(editing?.preparationNotes ?? '');
@@ -73,7 +62,7 @@ export function InterviewDialog({ open, onOpenChange, jobId, editing, onSaved }:
     try {
       const request = {
         roundType,
-        scheduledAt: fromLocalInput(scheduledAt),
+        scheduledAt,
         interviewerName: interviewerName || null,
         meetingLink: meetingLink || null,
         preparationNotes: preparationNotes || null,
@@ -127,7 +116,7 @@ export function InterviewDialog({ open, onOpenChange, jobId, editing, onSaved }:
 
           <div>
             <Label className="mb-1.5 block text-xs text-muted-foreground">Scheduled at</Label>
-            <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+            <DateTimePicker value={scheduledAt} onChange={setScheduledAt} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">

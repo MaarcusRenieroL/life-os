@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { DatePicker } from '@/components/date-time-picker';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,10 +18,10 @@ import type { JobListing } from './types';
 export function ApplicationTrackingForm({ job }: { job: JobListing }) {
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState(job.notes ?? '');
-  const [appliedAt, setAppliedAt] = useState(job.appliedAt ?? '');
+  const [appliedAt, setAppliedAt] = useState<string | null>(job.appliedAt);
   const [rejectionReason, setRejectionReason] = useState(job.rejectionReason ?? '');
   const [offerAmount, setOfferAmount] = useState(job.offerAmount?.toString() ?? '');
-  const [offerDeadline, setOfferDeadline] = useState(job.offerDeadline ?? '');
+  const [offerDeadline, setOfferDeadline] = useState<string | null>(job.offerDeadline);
   const [offerNotes, setOfferNotes] = useState(job.offerNotes ?? '');
   const [saving, setSaving] = useState(false);
 
@@ -32,10 +33,10 @@ export function ApplicationTrackingForm({ job }: { job: JobListing }) {
     try {
       const updated = await jobApi.updateDetails(job.id, {
         notes: notes || null,
-        appliedAt: appliedAt || null,
+        appliedAt,
         rejectionReason: rejectionReason || null,
         offerAmount: offerAmount ? Number(offerAmount) : null,
-        offerDeadline: offerDeadline || null,
+        offerDeadline,
         offerNotes: offerNotes || null,
       });
       queryClient.setQueryData(['jobs', job.id], updated);
@@ -50,10 +51,8 @@ export function ApplicationTrackingForm({ job }: { job: JobListing }) {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <Label htmlFor="appliedAt" className="mb-1.5 block text-[11px] text-muted-foreground">
-          APPLIED ON
-        </Label>
-        <Input id="appliedAt" type="date" value={appliedAt} onChange={(e) => setAppliedAt(e.target.value)} />
+        <Label className="mb-1.5 block text-[11px] text-muted-foreground">APPLIED ON</Label>
+        <DatePicker value={appliedAt} onChange={setAppliedAt} />
       </div>
 
       <div>
@@ -89,10 +88,8 @@ export function ApplicationTrackingForm({ job }: { job: JobListing }) {
               <Input id="offerAmount" type="number" value={offerAmount} onChange={(e) => setOfferAmount(e.target.value)} />
             </div>
             <div>
-              <Label htmlFor="offerDeadline" className="mb-1.5 block text-[11px] text-muted-foreground">
-                RESPOND BY
-              </Label>
-              <Input id="offerDeadline" type="date" value={offerDeadline} onChange={(e) => setOfferDeadline(e.target.value)} />
+              <Label className="mb-1.5 block text-[11px] text-muted-foreground">RESPOND BY</Label>
+              <DatePicker value={offerDeadline} onChange={setOfferDeadline} />
             </div>
           </div>
           <Textarea rows={2} value={offerNotes} onChange={(e) => setOfferNotes(e.target.value)} placeholder="Benefits, negotiation notes…" />
