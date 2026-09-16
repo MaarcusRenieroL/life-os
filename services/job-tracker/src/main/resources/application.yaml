@@ -56,6 +56,7 @@ ai:
     email-classify: ${AI_ROUTE_EMAIL_CLASSIFY:ollama}
     tailor-resume: ${AI_ROUTE_TAILOR_RESUME:claude}
     cover-letter: ${AI_ROUTE_COVER_LETTER:claude}
+    interview-prep: ${AI_ROUTE_INTERVIEW_PREP:ollama}
 
 job-tracker:
   storage:

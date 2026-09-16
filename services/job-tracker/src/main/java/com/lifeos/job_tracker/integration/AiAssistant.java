@@ -3,6 +3,7 @@ package com.lifeos.job_tracker.integration;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lifeos.job_tracker.domains.record.EmailClassification;
+import com.lifeos.job_tracker.domains.record.InterviewPrepTopics;
 import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
 import com.lifeos.job_tracker.domains.record.ParsedResume;
 import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
@@ -49,6 +50,9 @@ public class AiAssistant {
 
   @Value("${ai.routing.cover-letter:claude}")
   private String coverLetterProvider;
+
+  @Value("${ai.routing.interview-prep:ollama}")
+  private String interviewPrepProvider;
 
   public AiAssistant(ClaudeApiClient claude, OllamaApiClient ollama, ObjectMapper objectMapper) {
     this.claude = claude;
@@ -298,6 +302,44 @@ public class AiAssistant {
         %s
         """
             .formatted(blank(jobTitle), blank(company), blank(jobDescriptionText), blank(resumeText)));
+  }
+
+  /** Suggests concrete topics to prepare for one interview round, grounded in the job posting and
+   * (when it's a technical/system-design round) the candidate's own resume - not just a generic
+   * "know data structures" list. */
+  public List<String> generateInterviewPrepTopics(
+      String roundType, String jobTitle, String company, String jobDescriptionText, String resumeText) {
+    JsonNode json =
+        routedCompleteJson(
+            interviewPrepProvider,
+            "You coach candidates for job interviews. Reply with ONLY a JSON object, no prose.",
+            """
+            Suggest concrete topics to prepare for a %s interview round for the job below. Shape:
+            {"topics": [string]}
+
+            5-8 short, specific topics (not generic advice like "practice communication") - concrete
+            technologies, question types, or areas drawn from the job's actual requirements and, where
+            relevant, gaps or emphases in the candidate's own resume relative to this job.
+
+            ROUND: %s
+
+            JOB:
+            Title: %s
+            Company: %s
+            Description:
+            %s
+
+            CANDIDATE RESUME (verbatim extracted text, may be empty):
+            %s
+            """
+                .formatted(
+                    blank(roundType),
+                    blank(roundType),
+                    blank(jobTitle),
+                    blank(company),
+                    blank(jobDescriptionText),
+                    blank(resumeText)));
+    return convert(json, InterviewPrepTopics.class).topics();
   }
 
   /** Resolves {@code providerName} to a client, calls it, and falls back to Claude if an
