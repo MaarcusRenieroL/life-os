@@ -264,9 +264,13 @@ public class AiAssistant {
               candidate's own text. Escape the document as a valid JSON string (escape backslashes as
               \\\\ and newlines as \\n).
             - Always use this exact template (the industry-standard "Jake's Resume" layout - ATS-safe,
-              no tables, no columns, ~11pt), adapting only the section content to the candidate profile
-              and dropping any section the profile has nothing for (e.g. no Projects section if the
-              profile lists no projects):
+              no tables, no columns, ~11pt), adapting only the section content to the candidate profile.
+              Drop a section ONLY when the candidate profile below has literally nothing for it (e.g.
+              no Projects section if the profile lists zero projects). If the profile has a Summary,
+              Education, or Achievements, that section MUST appear in the output - never drop a section
+              that has real content just to save space; if space is tight, trim bullets/wording within
+              sections instead (shortest bullets or fewest projects first), never delete a whole section
+              that the profile actually supports.
               \\documentclass[letterpaper,11pt]{article}
               \\usepackage{latexsym}
               \\usepackage[empty]{fullpage}
@@ -306,6 +310,8 @@ public class AiAssistant {
                   \\textbf{\\Huge \\scshape CANDIDATE NAME} \\\\ \\vspace{1pt}
                   \\small PHONE $|$ \\href{mailto:EMAIL}{\\underline{EMAIL}} $|$ LOCATION $|$ \\href{URL}{\\underline{DISPLAY}} $|$ ...
               \\end{center}
+              \\section{Summary}
+                Summary paragraph text.
               \\section{Experience}
                 \\resumeSubHeadingListStart
                   \\resumeSubheading{Title}{Dates}{Company}{Location}
@@ -322,7 +328,7 @@ public class AiAssistant {
                   \\resumeSubHeadingListEnd
               \\section{Education}
                 \\resumeSubHeadingListStart
-                  \\resumeSubheading{School}{Location}{Degree}{Dates}
+                  \\resumeSubheading{School}{Dates}{Degree}{Location}
                 \\resumeSubHeadingListEnd
               \\section{Technical Skills}
                \\begin{itemize}[leftmargin=0.15in, label={}]
@@ -331,6 +337,11 @@ public class AiAssistant {
                    \\textbf{Category}{: item, item, item}
                   }}
                \\end{itemize}
+              \\section{Achievements}
+                \\resumeSubHeadingListStart
+                  \\resumeItem{Achievement text.}
+                  \\resumeItem{Achievement text.}
+                \\resumeSubHeadingListEnd
               \\end{document}
               Put sections in whatever order best leads with this candidate's strongest match for
               this job (Experience first is typical when it's the stronger fit; Projects first if
@@ -359,7 +370,7 @@ public class AiAssistant {
             %s
 
             CANDIDATE PROFILE (verbatim - contact info, summary, work experience, projects with real
-            links, and skills):
+            links, education, skills, and achievements):
             %s
             """
             .formatted(

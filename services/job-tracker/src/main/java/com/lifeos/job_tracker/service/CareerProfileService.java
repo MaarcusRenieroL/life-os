@@ -6,6 +6,7 @@ import com.lifeos.job_tracker.domains.dto.request.UpsertWorkExperienceRequest;
 import com.lifeos.job_tracker.domains.entity.CareerProfile;
 import com.lifeos.job_tracker.domains.entity.Project;
 import com.lifeos.job_tracker.domains.entity.WorkExperience;
+import com.lifeos.job_tracker.domains.record.EducationEntry;
 import com.lifeos.job_tracker.domains.record.ParsedResume;
 import com.lifeos.job_tracker.exception.InvalidRequestException;
 import com.lifeos.job_tracker.exception.ResourceNotFoundException;
@@ -184,6 +185,8 @@ public class CareerProfileService {
     profile.setLinkedinUrl(parsed.linkedinUrl());
     profile.setPortfolioUrl(parsed.portfolioUrl());
     profile.setSummary(parsed.summary());
+    profile.setEducation(toEducationEntries(parsed.education()));
+    profile.setAchievements(parsed.achievements());
     profile = careerProfileRepository.save(profile);
 
     workExperienceRepository.deleteByUserId(userId);
@@ -291,7 +294,19 @@ public class CareerProfileService {
       text.append('\n');
     }
 
-    text.append("SKILLS (grouped by category - keep this grouping in the resume's Skills section,\n");
+    if (profile.getEducation() != null && !profile.getEducation().isEmpty()) {
+      text.append("\nEDUCATION\n");
+      for (EducationEntry edu : profile.getEducation()) {
+        text.append(blank(edu.school()));
+        if (edu.location() != null && !edu.location().isBlank()) {
+          text.append(", ").append(edu.location());
+        }
+        text.append(" (").append(blank(edu.dates())).append(")\n");
+        text.append(blank(edu.degree())).append('\n');
+      }
+    }
+
+    text.append("\nSKILLS (grouped by category - keep this grouping in the resume's Skills section,\n");
     text.append("don't flatten it into one undifferentiated list)\n");
     skillRepository.findAllByUserIdOrderByNameAsc(userId).stream()
         .collect(java.util.stream.Collectors.groupingBy(
@@ -300,11 +315,36 @@ public class CareerProfileService {
             java.util.stream.Collectors.mapping(com.lifeos.job_tracker.domains.entity.Skill::getName, java.util.stream.Collectors.toList())))
         .forEach((category, names) -> text.append(category).append(": ").append(String.join(", ", names)).append('\n'));
 
+    if (profile.getAchievements() != null && !profile.getAchievements().isEmpty()) {
+      text.append("\nACHIEVEMENTS\n");
+      for (String achievement : profile.getAchievements()) {
+        text.append("- ").append(achievement).append('\n');
+      }
+    }
+
     return text.toString();
   }
 
   private static <T> List<T> safe(List<T> list) {
     return list == null ? List.of() : list;
+  }
+
+  /** Maps the parser's {degree, school, field, graduationYear} shape onto the resume template's
+   * {@code \resumeSubheading{school}{dates}{degree}{location}} slots - "degree" folds in the
+   * field of study since that's how a degree line actually reads on the page (e.g. "B.Tech,
+   * Computer Science and Business Systems"), and location is left blank since the parser has
+   * nowhere to source it from (the candidate's own profile location is a reasonable read but
+   * would silently be wrong for anyone who studied elsewhere). */
+  private static List<EducationEntry> toEducationEntries(List<ParsedResume.Education> education) {
+    return safe(education).stream()
+        .map(
+            e ->
+                new EducationEntry(
+                    blank(e.school()),
+                    e.field() == null || e.field().isBlank() ? blank(e.degree()) : blank(e.degree()) + ", " + e.field(),
+                    "",
+                    blank(e.graduationYear())))
+        .toList();
   }
 
   private static String blank(String value) {

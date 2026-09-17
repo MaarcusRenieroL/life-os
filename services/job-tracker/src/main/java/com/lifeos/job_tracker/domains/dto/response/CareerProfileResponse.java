@@ -1,7 +1,9 @@
 package com.lifeos.job_tracker.domains.dto.response;
 
 import com.lifeos.job_tracker.domains.entity.CareerProfile;
+import com.lifeos.job_tracker.domains.record.EducationEntry;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public record CareerProfileResponse(
@@ -14,6 +16,8 @@ public record CareerProfileResponse(
     String linkedinUrl,
     String portfolioUrl,
     String summary,
+    List<EducationEntry> education,
+    List<String> achievements,
     Instant createdAt,
     Instant updatedAt) {
 
@@ -28,6 +32,8 @@ public record CareerProfileResponse(
         profile.getLinkedinUrl(),
         profile.getPortfolioUrl(),
         profile.getSummary(),
+        profile.getEducation(),
+        profile.getAchievements(),
         profile.getCreatedAt(),
         profile.getUpdatedAt());
   }

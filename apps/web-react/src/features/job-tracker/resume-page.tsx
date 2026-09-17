@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { SectionHeading } from '@/components/section-heading';
@@ -32,9 +32,34 @@ export function ResumePage() {
     open: false,
     editing: null,
   });
+  const [reuploading, setReuploading] = useState(false);
+  const resumeFileInputRef = useRef<HTMLInputElement>(null);
 
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ['career-profile'] });
+  }
+
+  function pickResumeFile() {
+    if (!confirm('This replaces your work experience, projects, education, and achievements with what this PDF parses to. Skills merge instead of replacing. Continue?')) {
+      return;
+    }
+    resumeFileInputRef.current?.click();
+  }
+
+  async function onResumeFileChosen(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setReuploading(true);
+    try {
+      await careerProfileApi.seedFromResume(file);
+      refresh();
+      toast.success('Career profile re-synced from resume');
+    } catch {
+      toast.error('Could not read that resume PDF');
+    } finally {
+      setReuploading(false);
+    }
   }
 
   async function removeExperience(id: string) {
@@ -62,9 +87,21 @@ export function ResumePage() {
             This is what every tailored resume gets built from. Keep it current.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setProfileDialogOpen(true)}>
-          Edit contact & summary
-        </Button>
+        <div className="flex gap-2">
+          <input
+            ref={resumeFileInputRef}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => void onResumeFileChosen(e)}
+          />
+          <Button variant="outline" size="sm" onClick={pickResumeFile} disabled={reuploading}>
+            {reuploading ? 'Syncing…' : 'Re-upload resume'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setProfileDialogOpen(true)}>
+            Edit contact & summary
+          </Button>
+        </div>
       </div>
 
       <section className="mt-6">
@@ -178,6 +215,41 @@ export function ResumePage() {
           ))}
         </div>
       </section>
+
+      {profile?.education && profile.education.length > 0 && (
+        <section className="mt-6">
+          <SectionHeading>education</SectionHeading>
+          <div className="mt-2 flex flex-col gap-2">
+            {profile.education.map((edu, i) => (
+              <Card key={i}>
+                <CardContent className="p-4 text-sm">
+                  <p className="font-medium">{edu.school}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {edu.degree}
+                    {edu.location ? ` · ${edu.location}` : ''}
+                    {edu.dates ? ` · ${edu.dates}` : ''}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {profile?.achievements && profile.achievements.length > 0 && (
+        <section className="mt-6">
+          <SectionHeading>achievements</SectionHeading>
+          <Card className="mt-2">
+            <CardContent className="p-4 text-sm">
+              <ul className="list-disc space-y-1 pl-4">
+                {profile.achievements.map((achievement, i) => (
+                  <li key={i}>{achievement}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </section>
+      )}
 
       <section className="mt-6">
         <SectionHeading>skills ({skills.length})</SectionHeading>

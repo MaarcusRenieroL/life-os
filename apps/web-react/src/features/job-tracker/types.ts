@@ -285,6 +285,13 @@ export interface Skill {
   source: string | null;
 }
 
+export interface EducationEntry {
+  school: string;
+  degree: string;
+  location: string;
+  dates: string;
+}
+
 export interface CareerProfile {
   userId: string;
   fullName: string | null;
@@ -295,6 +302,8 @@ export interface CareerProfile {
   linkedinUrl: string | null;
   portfolioUrl: string | null;
   summary: string | null;
+  education: EducationEntry[] | null;
+  achievements: string[] | null;
   createdAt: string;
   updatedAt: string;
 }
