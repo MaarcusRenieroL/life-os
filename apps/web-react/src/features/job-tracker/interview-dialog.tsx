@@ -144,6 +144,9 @@ export function InterviewDialog({ open, onOpenChange, jobId, editing, onSaved }:
           </div>
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={() => void submit()} disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
           </Button>

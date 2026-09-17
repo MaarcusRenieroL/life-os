@@ -24,6 +24,9 @@ export function DisputeDialog({
         <p className="text-sm text-muted-foreground">Flagging {count} transaction(s) as disputed.</p>
         <Textarea value={reason} onChange={(e) => setReason(e.target.value.slice(0, 200))} rows={3} placeholder="Reason" />
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
             variant="outline"
             className="border-destructive/50 text-destructive hover:bg-destructive/10"

@@ -108,6 +108,9 @@ export function RuleDialog({ open, onOpenChange, editing, prefillMatchValue, onS
           </div>
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={() => void submit()} disabled={saving || !categoryId || !matchValue.trim()}>
             {saving ? 'Saving…' : 'Save'}
           </Button>

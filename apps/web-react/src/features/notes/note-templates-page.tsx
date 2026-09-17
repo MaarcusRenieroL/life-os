@@ -117,6 +117,9 @@ export function NoteTemplatesPage() {
           <DialogHeader><DialogTitle>New note from "{selected?.name}"</DialogTitle></DialogHeader>
           <Input value={useTitle} onChange={(e) => setUseTitle(e.target.value)} placeholder="Note title" />
           <DialogFooter>
+            <Button variant="outline" onClick={() => setUseDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={() => void createNoteFromTemplate()} disabled={!useTitle.trim()}>Create note</Button>
           </DialogFooter>
         </DialogContent>
@@ -140,6 +143,9 @@ export function NoteTemplatesPage() {
             </div>
           </div>
           <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={() => void saveTemplate()} disabled={!form.name.trim()}>Save</Button>
           </DialogFooter>
         </DialogContent>

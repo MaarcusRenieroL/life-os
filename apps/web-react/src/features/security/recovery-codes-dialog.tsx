@@ -67,9 +67,14 @@ export function RecoveryCodesDialog({ open, onOpenChange }: { open: boolean; onO
         )}
         <DialogFooter>
           {!codes ? (
-            <Button onClick={() => void generate()} disabled={!currentPassword || busy}>
-              {busy ? 'Generating…' : 'Generate codes'}
-            </Button>
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => void generate()} disabled={!currentPassword || busy}>
+                {busy ? 'Generating…' : 'Generate codes'}
+              </Button>
+            </>
           ) : (
             <Button onClick={() => onOpenChange(false)}>Done</Button>
           )}

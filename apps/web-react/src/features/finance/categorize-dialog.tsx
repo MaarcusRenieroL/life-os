@@ -41,6 +41,9 @@ export function CategorizeDialog({ open, onOpenChange, transactionLabel, initial
           ))}
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
             onClick={() => { onSave(selected); onOpenChange(false); }}
             disabled={selected.length === 0}

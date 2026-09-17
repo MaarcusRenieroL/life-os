@@ -104,6 +104,9 @@ export function PasswordGeneratorDialog({ open, onOpenChange, onUse }: Props) {
           </Label>
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
             onClick={() => {
               onUse(password);

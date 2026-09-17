@@ -204,9 +204,14 @@ export function VaultEntryFormDialog({ open, onOpenChange, entryId, onSaved, onD
               Delete
             </Button>
           ) : <span />}
-          <Button onClick={() => void submit()} disabled={saving || !form.title.trim()}>
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
+          <div className="flex gap-2.5">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void submit()} disabled={saving || !form.title.trim()}>
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
 

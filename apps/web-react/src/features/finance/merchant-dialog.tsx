@@ -82,6 +82,9 @@ export function MerchantDialog({ open, onOpenChange, editing, onSaved }: Props) 
           </div>
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={() => void submit()} disabled={saving || !name.trim()}>
             {saving ? 'Saving…' : 'Save'}
           </Button>

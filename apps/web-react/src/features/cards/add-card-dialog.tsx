@@ -107,6 +107,9 @@ export function AddCardDialog({ open, onOpenChange, onSave, error }: Props) {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={submit} disabled={!valid}>Add card</Button>
         </DialogFooter>
       </DialogContent>
