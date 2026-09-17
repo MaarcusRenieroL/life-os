@@ -356,8 +356,15 @@ public class AiAssistant {
             - The resume MUST fit on exactly ONE page and should use the page well - avoid a large
               empty gap at the bottom (a candidate with less content should still fill the page through
               the template's own spacing, not by inventing content or leaving it visibly sparse) while
-              never spilling onto a second page. Prioritise the most relevant bullets for this job over
-              including everything if it's genuinely too much for one page.
+              never spilling onto a second page. This candidate's profile now includes Education and
+              Achievements alongside Experience/Projects/Skills, which is more content than a shorter
+              profile - budget for that from the start rather than writing every section at full length
+              and discovering the overflow later. When it's tight, cut in this order before ever
+              touching whether a section appears at all: (1) shorten or cut the weakest bullets in
+              Experience/Projects first, (2) trim Achievements down to at most 2 short one-line bullets
+              (never more), (3) keep the Education line to school, dates, degree, nothing extra. A
+              section itself (Summary/Education/Achievements) still must never be dropped entirely if
+              the profile has content for it - trim what's inside it, not the section.
             %s
 
             JOB:

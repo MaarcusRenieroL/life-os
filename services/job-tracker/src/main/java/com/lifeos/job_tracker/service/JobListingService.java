@@ -443,8 +443,12 @@ public class JobListingService {
       StringBuilder correction = new StringBuilder();
       if (overflowed) {
         correction
-            .append("The previous attempt ran onto a second page. Cut content - shorten bullets")
-            .append(" and drop the least-relevant ones - so it fits on exactly one page. ");
+            .append("The previous attempt ran onto a second page - this is not optional, it MUST be")
+            .append(" exactly one page. Cut in this order until it fits: shorten or cut the weakest")
+            .append(" bullets in Experience/Projects first; trim Achievements to at most 1 short")
+            .append(" one-line bullet; keep the Education line to school, dates, degree only, nothing")
+            .append(" extra. Do not drop a whole section (Summary/Education/Achievements) - trim what's")
+            .append(" inside it. ");
       }
       if (hasTypographicDash) {
         correction
@@ -463,12 +467,20 @@ public class JobListingService {
               baseResumeText,
               correction.toString());
       byte[] retryPdf = latexCompiler.compile(retry.latexResume());
-      if (latexCompiler.pageCount(retryPdf) <= latexCompiler.pageCount(pdf)) {
+      int retryPageCount = latexCompiler.pageCount(retryPdf);
+      // Strictly fewer pages always wins. Equal page count still prefers the retry (it also carries
+      // the dash fix, when that was part of the correction), but only when the retry didn't make
+      // things worse.
+      if (retryPageCount <= latexCompiler.pageCount(pdf)) {
         result = retry;
+        pdf = retryPdf;
       }
-      // One retry is the budget (matches the credit-conscious page-overflow retry this was
-      // already doing) - if a dash still slipped through after that, log it rather than looping
-      // again, since a human glancing at the PDF will catch a stray dash in seconds anyway.
+      // One retry is the budget (credit-conscious) - if it's STILL overflowing after that, this is
+      // not silently accepted as "good enough": log it loudly so it's traceable, since a 2-page
+      // resume going out is a real problem, not a cosmetic one.
+      if (latexCompiler.pageCount(pdf) > 1) {
+        log.warn("Tailored resume for job {} is still overflowing to a second page after one retry", job.getId());
+      }
       if (hasTypographicDash && containsTypographicDash(result.latexResume())) {
         log.warn("Tailored resume for job {} still contains an em/en dash after one retry", job.getId());
       }
