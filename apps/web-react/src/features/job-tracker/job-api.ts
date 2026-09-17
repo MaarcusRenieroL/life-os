@@ -57,8 +57,14 @@ export const jobApi = {
     return unwrap(api.post(`${baseUrl}/${jobId}/rescore`, {}));
   },
 
-  rescoreWithTailoredResume(jobId: string): Promise<JobFitResult> {
-    return unwrap(api.post(`${baseUrl}/${jobId}/rescore-tailored`, {}));
+  uploadResumeOverride(jobId: string, file: File): Promise<JobListing> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return unwrap(api.post(`${baseUrl}/${jobId}/resume-override`, formData));
+  },
+
+  deleteResumeOverride(jobId: string): Promise<JobListing> {
+    return unwrap(api.delete(`${baseUrl}/${jobId}/resume-override`));
   },
 
   tailorResume(jobId: string): Promise<ResumeTailoringResult> {

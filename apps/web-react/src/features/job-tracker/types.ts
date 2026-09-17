@@ -77,6 +77,9 @@ export interface JobListing {
   offerNotes: string | null;
   coverLetterText: string | null;
   followUpAt: string | null;
+  overrideResumeFileName: string | null;
+  overrideResumeUploadedAt: string | null;
+  fitScoreSource: 'LIBRARY' | 'TAILORED_RESUME' | 'OVERRIDE_RESUME' | null;
 }
 
 export interface UpdateJobDetailsRequest {
@@ -218,6 +221,7 @@ export interface JobTailoringVersion {
   improvementPoints: string[] | null;
   latexResume: string | null;
   fitScore: number | null;
+  basedOn: 'GLOBAL_RESUME' | 'OVERRIDE_RESUME' | null;
   createdAt: string;
 }
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -45,6 +45,19 @@ function titleCase(value: string): string {
   return value.charAt(0) + value.slice(1).toLowerCase().replace(/_/g, ' ');
 }
 
+function fitScoreSourceLabel(source: JobListing['fitScoreSource']): string | null {
+  switch (source) {
+    case 'OVERRIDE_RESUME':
+      return 'the resume uploaded for this job';
+    case 'TAILORED_RESUME':
+      return 'this job’s tailored resume';
+    case 'LIBRARY':
+      return 'your resume library';
+    default:
+      return null;
+  }
+}
+
 export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const queryClient = useQueryClient();
@@ -66,23 +79,44 @@ export function JobDetailPage() {
 
   const rescoreMutation = useMutation({
     mutationFn: () => jobApi.rescore(jobId!),
-    onSuccess: (result) => {
-      queryClient.setQueryData(['jobs', jobId], (current: typeof job) =>
-        current ? { ...current, fitScore: result.score, fitExplanation: result.explanation } : current,
-      );
+    // The endpoint only returns the score/explanation, not which source produced them (library,
+    // tailored resume, or an override) - refetch the full job rather than hand-patching fields,
+    // so the "scored against" label never goes stale relative to what the server actually used.
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['jobs', jobId] });
     },
   });
 
-  const rescoreTailoredMutation = useMutation({
-    mutationFn: () => jobApi.rescoreWithTailoredResume(jobId!),
-    onSuccess: (result) => {
-      queryClient.setQueryData(['jobs', jobId], (current: typeof job) =>
-        current ? { ...current, fitScore: result.score, fitExplanation: result.explanation } : current,
-      );
-      toast.success('Re-scored against the tailored resume');
+  const overrideFileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadOverrideMutation = useMutation({
+    mutationFn: (file: File) => jobApi.uploadResumeOverride(jobId!, file),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['jobs', jobId], updated);
+      toast.success('Resume attached to this job — fit score recomputed against it');
     },
-    onError: () => toast.error('Could not rescore against the tailored resume'),
+    onError: () => toast.error('Could not read that resume PDF'),
   });
+
+  const deleteOverrideMutation = useMutation({
+    mutationFn: () => jobApi.deleteResumeOverride(jobId!),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['jobs', jobId], updated);
+      toast.success('Removed the resume attached to this job');
+    },
+  });
+
+  function pickOverrideFile() {
+    overrideFileInputRef.current?.click();
+  }
+
+  function onOverrideFileChosen(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) {
+      uploadOverrideMutation.mutate(file);
+    }
+  }
 
   const tailorMutation = useMutation({
     mutationFn: () => jobApi.tailorResume(jobId!),
@@ -174,25 +208,64 @@ export function JobDetailPage() {
         <div className="flex flex-col gap-5">
           <Card>
             <CardContent>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <SectionHeading>fit score</SectionHeading>
+                <Button variant="outline" size="sm" onClick={() => rescoreMutation.mutate()} disabled={rescoreMutation.isPending}>
+                  {rescoreMutation.isPending ? 'Re-scoring…' : 'Re-score'}
+                </Button>
+              </div>
+              {fitScoreSourceLabel(job.fitScoreSource) && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Scored against {fitScoreSourceLabel(job.fitScoreSource)}
+                </p>
+              )}
+              <FitBreakdown fit={fit} />
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-dashed p-3">
+                <div className="text-sm text-muted-foreground">
+                  {job.overrideResumeFileName ? (
+                    <>
+                      Using <span className="font-medium text-foreground">{job.overrideResumeFileName}</span> for this
+                      job's fit score
+                      {job.overrideResumeUploadedAt &&
+                        ` · uploaded ${new Date(job.overrideResumeUploadedAt).toLocaleDateString()}`}
+                    </>
+                  ) : (
+                    "Built a resume elsewhere for this job? Upload it to score against it directly."
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
-                  {job.tailoredLatexResume && (
+                  <input
+                    ref={overrideFileInputRef}
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={onOverrideFileChosen}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={pickOverrideFile}
+                    disabled={uploadOverrideMutation.isPending}
+                  >
+                    {uploadOverrideMutation.isPending
+                      ? 'Uploading…'
+                      : job.overrideResumeFileName
+                        ? 'Replace resume'
+                        : 'Upload resume for this job'}
+                  </Button>
+                  {job.overrideResumeFileName && (
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      onClick={() => rescoreTailoredMutation.mutate()}
-                      disabled={rescoreTailoredMutation.isPending}
+                      onClick={() => deleteOverrideMutation.mutate()}
+                      disabled={deleteOverrideMutation.isPending}
                     >
-                      {rescoreTailoredMutation.isPending ? 'Re-scoring…' : 'Re-score vs tailored resume'}
+                      Remove
                     </Button>
                   )}
-                  <Button variant="outline" size="sm" onClick={() => rescoreMutation.mutate()} disabled={rescoreMutation.isPending}>
-                    {rescoreMutation.isPending ? 'Re-scoring…' : 'Re-score'}
-                  </Button>
                 </div>
               </div>
-              <FitBreakdown fit={fit} />
             </CardContent>
           </Card>
 

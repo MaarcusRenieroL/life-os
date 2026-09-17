@@ -48,6 +48,9 @@ export function TailoringVersionHistory({ jobId, jobTitle }: { jobId: string; jo
             >
               <span>
                 v{v.version} <span className="text-xs text-muted-foreground">{new Date(v.createdAt).toLocaleString()}</span>
+                {v.basedOn === 'OVERRIDE_RESUME' && (
+                  <span className="ml-1 text-xs text-muted-foreground">(from uploaded resume)</span>
+                )}
               </span>
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 {v.fitScore !== null && <span>Fit {v.fitScore}</span>}
