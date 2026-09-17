@@ -254,35 +254,93 @@ public class AiAssistant {
               for text.
             - "latexResume" is a complete, compilable LaTeX document. This gets compiled with tectonic
               (a XeTeX engine), so avoid pdfTeX-only primitives (\\pdfgentounicode,
-              \\input{glyphtounicode}). Escape LaTeX special characters (&, %%, $, #, _, {, }) found in
-              the candidate's own text. Escape the document as a valid JSON string (escape backslashes
-              as \\\\ and newlines as \\n).
-            - Use exactly this preamble (a designed look - serif Charter font, a navy accent color on
-              the name and section rules - beats a plain default-LaTeX look), adapting only the
-              section list to what the candidate profile actually has (drop empty sections, e.g. no
-              Projects section if the profile has none):
-              \\documentclass[10.5pt]{article}
-              \\usepackage[T1]{fontenc}
-              \\usepackage{charter}
-              \\usepackage[margin=0.55in]{geometry}
-              \\usepackage{enumitem}
+              \\input{glyphtounicode}) - drop those two lines from the template below even though the
+              original has them. Escape LaTeX special characters (&, %%, $, #, _, {, }) found in the
+              candidate's own text. Escape the document as a valid JSON string (escape backslashes as
+              \\\\ and newlines as \\n).
+            - Always use this exact template (the industry-standard "Jake's Resume" layout - ATS-safe,
+              no tables, no columns, ~11pt), adapting only the section content to the candidate profile
+              and dropping any section the profile has nothing for (e.g. no Projects section if the
+              profile lists no projects):
+              \\documentclass[letterpaper,11pt]{article}
+              \\usepackage{latexsym}
+              \\usepackage[empty]{fullpage}
               \\usepackage{titlesec}
+              \\usepackage{marvosym}
+              \\usepackage[usenames,dvipsnames]{color}
+              \\usepackage{verbatim}
+              \\usepackage{enumitem}
               \\usepackage[hidelinks]{hyperref}
-              \\usepackage{xcolor}
-              \\definecolor{accent}{HTML}{1F3864}
-              \\pagestyle{empty}
-              \\setlist[itemize]{leftmargin=14pt,itemsep=1pt,topsep=1pt,parsep=0pt}
-              \\titleformat{\\section}{\\large\\bfseries\\color{accent}}{}{0pt}{}[\\vspace{2pt}{\\color{accent}\\titlerule[1pt]}]
-              \\titlespacing*{\\section}{0pt}{7pt}{4pt}
-              \\renewcommand{\\baselinestretch}{1.0}
-              Name in \\Huge\\bfseries\\color{accent}, centered, with contact details below it. Each
-              job/project entry: bold title \\hfill dates on one line, italic company/context on the
-              next, then an itemize block; put \\vspace{3pt} between entries in the same section (not
-              after the last one).
+              \\usepackage{fancyhdr}
+              \\usepackage[english]{babel}
+              \\usepackage{tabularx}
+              \\pagestyle{fancy}
+              \\fancyhf{}
+              \\fancyfoot{}
+              \\renewcommand{\\headrulewidth}{0pt}
+              \\renewcommand{\\footrulewidth}{0pt}
+              \\addtolength{\\oddsidemargin}{-0.5in}
+              \\addtolength{\\evensidemargin}{-0.5in}
+              \\addtolength{\\textwidth}{1in}
+              \\addtolength{\\topmargin}{-.5in}
+              \\addtolength{\\textheight}{1.0in}
+              \\urlstyle{same}
+              \\raggedbottom
+              \\raggedright
+              \\setlength{\\tabcolsep}{0in}
+              \\titleformat{\\section}{\\vspace{-4pt}\\scshape\\raggedright\\large}{}{0em}{}[\\color{black}\\titlerule \\vspace{-5pt}]
+              \\newcommand{\\resumeItem}[1]{\\item\\small{{#1 \\vspace{-2pt}}}}
+              \\newcommand{\\resumeSubheading}[4]{\\vspace{-2pt}\\item\\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}\\textbf{#1} & #2 \\\\ \\textit{\\small#3} & \\textit{\\small #4} \\\\\\end{tabular*}\\vspace{-7pt}}
+              \\newcommand{\\resumeProjectHeading}[2]{\\item\\begin{tabular*}{0.97\\textwidth}{l@{\\extracolsep{\\fill}}r}\\small#1 & #2 \\\\\\end{tabular*}\\vspace{-7pt}}
+              \\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0.15in, label={}]}
+              \\newcommand{\\resumeSubHeadingListEnd}{\\end{itemize}}
+              \\newcommand{\\resumeItemListStart}{\\begin{itemize}}
+              \\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{-5pt}}
+              \\begin{document}
+              \\begin{center}
+                  \\textbf{\\Huge \\scshape CANDIDATE NAME} \\\\ \\vspace{1pt}
+                  \\small PHONE $|$ \\href{mailto:EMAIL}{\\underline{EMAIL}} $|$ LOCATION $|$ \\href{URL}{\\underline{DISPLAY}} $|$ ...
+              \\end{center}
+              \\section{Experience}
+                \\resumeSubHeadingListStart
+                  \\resumeSubheading{Title}{Dates}{Company}{Location}
+                  \\resumeItemListStart
+                    \\resumeItem{Bullet text.}
+                  \\resumeItemListEnd
+                \\resumeSubHeadingListEnd
+              \\section{Projects}
+                  \\resumeSubHeadingListStart
+                    \\resumeProjectHeading{\\textbf{Name} $|$ \\emph{Tech, stack, here}}{Dates}
+                    \\resumeItemListStart
+                      \\resumeItem{Bullet text.}
+                    \\resumeItemListEnd
+                  \\resumeSubHeadingListEnd
+              \\section{Education}
+                \\resumeSubHeadingListStart
+                  \\resumeSubheading{School}{Location}{Degree}{Dates}
+                \\resumeSubHeadingListEnd
+              \\section{Technical Skills}
+               \\begin{itemize}[leftmargin=0.15in, label={}]
+                  \\small{\\item{
+                   \\textbf{Category}{: item, item, item} \\\\
+                   \\textbf{Category}{: item, item, item}
+                  }}
+               \\end{itemize}
+              \\end{document}
+              Put sections in whatever order best leads with this candidate's strongest match for
+              this job (Experience first is typical when it's the stronger fit; Projects first if
+              they're more relevant than the job history). Keep \\resumeSubheading's 4 arguments in
+              that exact order (title, dates, company, location) - swapping them silently breaks the
+              layout. Only \\href real profile links; render a project with no link as plain
+              \\textbf{Name} with no \\href.
+            - Technical Skills: group into 3-5 labeled categories (e.g. Languages, Frameworks,
+              Databases, Cloud/DevOps Tools, Testing) matching the categories already given in the
+              candidate profile below - never dump every skill into one undifferentiated
+              comma-separated line with no structure.
             - The resume MUST fit on exactly ONE page and should use the page well - avoid a large
               empty gap at the bottom (a candidate with less content should still fill the page through
-              the spacing above, not by inventing content or leaving it visibly sparse) while never
-              spilling onto a second page. Prioritise the most relevant bullets for this job over
+              the template's own spacing, not by inventing content or leaving it visibly sparse) while
+              never spilling onto a second page. Prioritise the most relevant bullets for this job over
               including everything if it's genuinely too much for one page.
             %s
 

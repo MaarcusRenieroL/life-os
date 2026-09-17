@@ -286,13 +286,14 @@ public class CareerProfileService {
       text.append('\n');
     }
 
-    text.append("SKILLS\n");
-    text.append(
-        String.join(
-            ", ",
-            skillRepository.findAllByUserIdOrderByNameAsc(userId).stream()
-                .map(com.lifeos.job_tracker.domains.entity.Skill::getName)
-                .toList()));
+    text.append("SKILLS (grouped by category - keep this grouping in the resume's Skills section,\n");
+    text.append("don't flatten it into one undifferentiated list)\n");
+    skillRepository.findAllByUserIdOrderByNameAsc(userId).stream()
+        .collect(java.util.stream.Collectors.groupingBy(
+            s -> s.getCategory() == null ? com.lifeos.job_tracker.domains.enums.SkillCategory.OTHER : s.getCategory(),
+            java.util.LinkedHashMap::new,
+            java.util.stream.Collectors.mapping(com.lifeos.job_tracker.domains.entity.Skill::getName, java.util.stream.Collectors.toList())))
+        .forEach((category, names) -> text.append(category).append(": ").append(String.join(", ", names)).append('\n'));
 
     return text.toString();
   }
