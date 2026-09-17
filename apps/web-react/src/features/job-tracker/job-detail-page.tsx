@@ -73,6 +73,17 @@ export function JobDetailPage() {
     },
   });
 
+  const rescoreTailoredMutation = useMutation({
+    mutationFn: () => jobApi.rescoreWithTailoredResume(jobId!),
+    onSuccess: (result) => {
+      queryClient.setQueryData(['jobs', jobId], (current: typeof job) =>
+        current ? { ...current, fitScore: result.score, fitExplanation: result.explanation } : current,
+      );
+      toast.success('Re-scored against the tailored resume');
+    },
+    onError: () => toast.error('Could not rescore against the tailored resume'),
+  });
+
   const tailorMutation = useMutation({
     mutationFn: () => jobApi.tailorResume(jobId!),
     onSuccess: () => {
@@ -165,9 +176,21 @@ export function JobDetailPage() {
             <CardContent>
               <div className="flex items-center justify-between">
                 <SectionHeading>fit score</SectionHeading>
-                <Button variant="outline" size="sm" onClick={() => rescoreMutation.mutate()} disabled={rescoreMutation.isPending}>
-                  {rescoreMutation.isPending ? 'Re-scoring…' : 'Re-score'}
-                </Button>
+                <div className="flex items-center gap-2">
+                  {job.tailoredLatexResume && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => rescoreTailoredMutation.mutate()}
+                      disabled={rescoreTailoredMutation.isPending}
+                    >
+                      {rescoreTailoredMutation.isPending ? 'Re-scoring…' : 'Re-score vs tailored resume'}
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => rescoreMutation.mutate()} disabled={rescoreMutation.isPending}>
+                    {rescoreMutation.isPending ? 'Re-scoring…' : 'Re-score'}
+                  </Button>
+                </div>
               </div>
               <FitBreakdown fit={fit} />
             </CardContent>

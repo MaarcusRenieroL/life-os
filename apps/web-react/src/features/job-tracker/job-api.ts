@@ -57,6 +57,10 @@ export const jobApi = {
     return unwrap(api.post(`${baseUrl}/${jobId}/rescore`, {}));
   },
 
+  rescoreWithTailoredResume(jobId: string): Promise<JobFitResult> {
+    return unwrap(api.post(`${baseUrl}/${jobId}/rescore-tailored`, {}));
+  },
+
   tailorResume(jobId: string): Promise<ResumeTailoringResult> {
     return unwrap(api.post(`${baseUrl}/${jobId}/tailor-resume`, {}));
   },
