@@ -75,27 +75,26 @@ public class AiAssistant {
   }
 
   public ParsedResume parseResume(String resumeText) {
-    JsonNode json =
-        routedCompleteJson(
-            resumeParseProvider,
-            "You are a resume parser. Reply with ONLY a JSON object, no prose.",
-            """
-            Extract structured data from the resume below. Use this exact shape:
-            {
-              "name": string, "email": string, "phone": string,
-              "experience": [{"title","company","startDate","endDate","description"}],
-              "education": [{"degree","school","field","graduationYear"}],
-              "skills": [{"name","category","proficiency","yearsOfExperience","confidence"}],
-              "certifications": [string], "achievements": [string]
-            }
-            category is one of LANGUAGE, FRAMEWORK, PLATFORM, DATABASE, TOOL, SOFT, OTHER.
-            proficiency is one of BEGINNER, INTERMEDIATE, ADVANCED, EXPERT.
-            confidence is 0..1. Omit unknown scalar fields rather than guessing.
+    return routedCompleteJson(
+        resumeParseProvider,
+        "You are a resume parser. Reply with ONLY a JSON object, no prose.",
+        """
+        Extract structured data from the resume below. Use this exact shape:
+        {
+          "name": string, "email": string, "phone": string,
+          "experience": [{"title","company","startDate","endDate","description"}],
+          "education": [{"degree","school","field","graduationYear"}],
+          "skills": [{"name","category","proficiency","yearsOfExperience","confidence"}],
+          "certifications": [string], "achievements": [string]
+        }
+        category is one of LANGUAGE, FRAMEWORK, PLATFORM, DATABASE, TOOL, SOFT, OTHER.
+        proficiency is one of BEGINNER, INTERMEDIATE, ADVANCED, EXPERT.
+        confidence is 0..1. Omit unknown scalar fields rather than guessing.
 
-            RESUME:
-            """
-                + resumeText);
-    return convert(json, ParsedResume.class);
+        RESUME:
+        """
+            + resumeText,
+        ParsedResume.class);
   }
 
   /**
@@ -103,12 +102,11 @@ public class AiAssistant {
    * text) into listing fields. Also cleans the description down to just the posting's prose.
    */
   public ParsedJobPosting parseJobPosting(String rawPageContent) {
-    JsonNode json =
-        routedCompleteJson(
-            jobParseProvider,
-            "You extract a single job posting from raw web-page content. Reply with ONLY a JSON"
-                + " object, no prose.",
-            """
+    return routedCompleteJson(
+        jobParseProvider,
+        "You extract a single job posting from raw web-page content. Reply with ONLY a JSON"
+            + " object, no prose.",
+        """
             The text below was scraped from a job posting URL. It may contain navigation, cookie
             banners, JSON-LD or other noise. Extract the one job posting. Shape:
             {
@@ -136,13 +134,14 @@ public class AiAssistant {
             (skills, responsibilities, requirements). Scraped pages often collapse all of this onto
             one line with no punctuation between sentences - reconstruct the paragraph/heading/bullet
             breaks a human would have seen on the actual page, don't just copy the flattened text.
-            Omit any scalar field the page doesn't state rather than guessing. If the content is
-            clearly not a job posting, return {}.
+            Omit any scalar field the page doesn't state rather than guessing. "jobDescriptionText"
+            must be a single plain string (with \\n for line breaks) - never a nested JSON object.
+            If the content is clearly not a job posting, return {}.
 
             RAW PAGE CONTENT:
             """
-                + rawPageContent);
-    return convert(json, ParsedJobPosting.class);
+            + rawPageContent,
+        ParsedJobPosting.class);
   }
 
   /**
@@ -176,12 +175,11 @@ public class AiAssistant {
       List<String> partialSkills,
       String resumeText,
       String tightenInstruction) {
-    JsonNode json =
-        routedCompleteJson(
-            tailorResumeProvider,
-            "You are a resume coach and LaTeX typesetter. Reply with ONLY a JSON object, no prose, no"
-                + " markdown fence.",
-            """
+    return routedCompleteJson(
+        tailorResumeProvider,
+        "You are a resume coach and LaTeX typesetter. Reply with ONLY a JSON object, no prose, no"
+            + " markdown fence.",
+        """
             Compare the candidate's resume against the job below and produce tailoring output. Shape:
             {
               "improvementPoints": [string],
@@ -221,16 +219,16 @@ public class AiAssistant {
             CANDIDATE RESUME (verbatim extracted text):
             %s
             """
-                .formatted(
-                    tightenInstruction == null || tightenInstruction.isBlank() ? "" : tightenInstruction,
-                    blank(jobTitle),
-                    blank(company),
-                    String.join(", ", safe(requiredSkills)),
-                    String.join(", ", safe(missingSkills)),
-                    String.join(", ", safe(partialSkills)),
-                    blank(jobDescriptionText),
-                    blank(resumeText)));
-    return convert(json, ResumeTailoringResult.class);
+            .formatted(
+                tightenInstruction == null || tightenInstruction.isBlank() ? "" : tightenInstruction,
+                blank(jobTitle),
+                blank(company),
+                String.join(", ", safe(requiredSkills)),
+                String.join(", ", safe(missingSkills)),
+                String.join(", ", safe(partialSkills)),
+                blank(jobDescriptionText),
+                blank(resumeText)),
+        ResumeTailoringResult.class);
   }
 
   /**
@@ -241,12 +239,11 @@ public class AiAssistant {
    * candidate's pipeline.
    */
   public EmailClassification classifyEmail(String fromAddress, String subject, String body) {
-    JsonNode json =
-        routedCompleteJson(
-            emailClassifyProvider,
-            "You classify an email for a job-tracking automation. Reply with ONLY a JSON object, no"
-                + " prose.",
-            """
+    return routedCompleteJson(
+        emailClassifyProvider,
+        "You classify an email for a job-tracking automation. Reply with ONLY a JSON object, no"
+            + " prose.",
+        """
             Classify this email into exactly one type:
             - JOB_ALERT_DIGEST: a job board's "new jobs matching your search" digest, listing one or
               more postings with links.
@@ -274,8 +271,8 @@ public class AiAssistant {
             BODY:
             %s
             """
-                .formatted(blank(fromAddress), blank(subject), blank(body)));
-    return convert(json, EmailClassification.class);
+            .formatted(blank(fromAddress), blank(subject), blank(body)),
+        EmailClassification.class);
   }
 
   /** Drafts a cover letter grounded only in the candidate's real resume content - same
@@ -312,8 +309,7 @@ public class AiAssistant {
    * "know data structures" list. */
   public List<String> generateInterviewPrepTopics(
       String roundType, String jobTitle, String company, String jobDescriptionText, String resumeText) {
-    JsonNode json =
-        routedCompleteJson(
+    return routedCompleteJson(
             interviewPrepProvider,
             "You coach candidates for job interviews. Reply with ONLY a JSON object, no prose.",
             """
@@ -341,8 +337,9 @@ public class AiAssistant {
                     blank(jobTitle),
                     blank(company),
                     blank(jobDescriptionText),
-                    blank(resumeText)));
-    return convert(json, InterviewPrepTopics.class).topics();
+                    blank(resumeText)),
+            InterviewPrepTopics.class)
+        .topics();
   }
 
   /** Drafts a short outreach message asking a contact for a referral - grounded only in the
@@ -389,23 +386,26 @@ public class AiAssistant {
                 blank(resumeText)));
   }
 
-  /** Resolves {@code providerName} to a client, calls it, and falls back to Claude if an
-   * Ollama-routed call fails (server not running, model not pulled, etc.) instead of failing the
-   * whole request - Claude staying reachable is what makes routing routine work to Ollama safe. */
-  private JsonNode routedCompleteJson(String providerName, String systemPrompt, String userPrompt) {
+  /** Resolves {@code providerName} to a client, calls it, and converts the result to {@code type}.
+   * Falls back to Claude if an Ollama-routed call fails outright (server not running, model not
+   * pulled) OR returns JSON that won't map to {@code type} - a local 7B model occasionally produces
+   * malformed shapes (e.g. nesting an object where a plain string field was asked for) on complex
+   * input, and that's just as much a "this routed call didn't work" case as a network failure.
+   * Claude staying reachable is what makes routing routine work to Ollama safe either way. */
+  private <T> T routedCompleteJson(String providerName, String systemPrompt, String userPrompt, Class<T> type) {
     AiClient primary = "ollama".equalsIgnoreCase(providerName) ? ollama : claude;
 
     if (primary == ollama && !ollama.isConfigured()) {
       log.info("Ollama routed but not enabled - using Claude instead");
-      return claude.completeJson(systemPrompt, userPrompt);
+      return convert(claude.completeJson(systemPrompt, userPrompt), type);
     }
 
     try {
-      return primary.completeJson(systemPrompt, userPrompt);
+      return convert(primary.completeJson(systemPrompt, userPrompt), type);
     } catch (RuntimeException exception) {
       if (primary == ollama) {
-        log.warn("Ollama call failed ({}), falling back to Claude", exception.getMessage());
-        return claude.completeJson(systemPrompt, userPrompt);
+        log.warn("Ollama call failed or returned unmappable JSON ({}), falling back to Claude", exception.getMessage());
+        return convert(claude.completeJson(systemPrompt, userPrompt), type);
       }
       throw exception;
     }
