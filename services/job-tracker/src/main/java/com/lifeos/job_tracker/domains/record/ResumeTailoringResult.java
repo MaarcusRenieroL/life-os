@@ -9,4 +9,8 @@ import java.util.List;
  * paste straight into Overleaf or have rendered to PDF (see {@code LatexCompiler}).
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record ResumeTailoringResult(List<String> improvementPoints, String latexResume) {}
+public record ResumeTailoringResult(
+    List<String> improvementPoints,
+    List<String> gapsVsJd,
+    List<String> inferredClaims,
+    String latexResume) {}

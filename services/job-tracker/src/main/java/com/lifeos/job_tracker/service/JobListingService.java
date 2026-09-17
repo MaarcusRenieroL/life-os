@@ -5,7 +5,6 @@ import com.lifeos.job_tracker.domains.entity.Company;
 import com.lifeos.job_tracker.domains.entity.JobListing;
 import com.lifeos.job_tracker.domains.entity.JobStatusHistory;
 import com.lifeos.job_tracker.domains.entity.JobTailoringVersion;
-import com.lifeos.job_tracker.domains.entity.Resume;
 import com.lifeos.job_tracker.domains.entity.Skill;
 import com.lifeos.job_tracker.domains.enums.FitScoreSource;
 import com.lifeos.job_tracker.domains.enums.IngestSource;
@@ -52,7 +51,7 @@ public class JobListingService {
   private final AiAssistant ai;
   private final JobMatchingService jobMatchingService;
   private final JobLinkFetcher jobLinkFetcher;
-  private final ResumeService resumeService;
+  private final CareerProfileService careerProfileService;
   private final LatexCompiler latexCompiler;
   private final PdfTextExtractor pdfTextExtractor;
   private final SkillService skillService;
@@ -289,13 +288,14 @@ public class JobListingService {
   }
 
   /** The resume text {@link #tailorResume} and {@link #generateCoverLetter} should build from -
-   * this job's uploaded override if one exists, otherwise the candidate's global saved resume. */
+   * this job's uploaded override if one exists, otherwise the candidate's full career profile
+   * (contact info, summary, every work experience/project with real bullets and links, and the
+   * full skill library) - not a single static resume's text. */
   private String resolveBaseResumeText(UUID userId, JobListing job) {
     if (job.getOverrideResumeText() != null && !job.getOverrideResumeText().isBlank()) {
       return job.getOverrideResumeText();
     }
-    Resume resume = resumeService.getCurrent(userId);
-    return resume.getRawText();
+    return careerProfileService.buildProfileText(userId);
   }
 
   /**
@@ -402,11 +402,26 @@ public class JobListingService {
             partialSkills,
             baseResumeText);
 
-    // The prompt already asks for one page, but LLM length estimates are unreliable - actually
-    // compile it and, if it overflowed, retry once with a hard "cut it down" instruction rather
-    // than silently handing back a two-page resume.
+    // The prompt already asks for one page and no em/en dashes, but LLM instruction-following
+    // isn't guaranteed - actually compile it and scan the text, and if either is wrong, retry
+    // ONCE with a combined correction instruction rather than silently handing back a bad resume
+    // or burning a second full API call per problem.
     byte[] pdf = latexCompiler.compile(result.latexResume());
-    if (latexCompiler.pageCount(pdf) > 1) {
+    boolean overflowed = latexCompiler.pageCount(pdf) > 1;
+    boolean hasTypographicDash = containsTypographicDash(result.latexResume());
+    if (overflowed || hasTypographicDash) {
+      StringBuilder correction = new StringBuilder();
+      if (overflowed) {
+        correction
+            .append("The previous attempt ran onto a second page. Cut content - shorten bullets")
+            .append(" and drop the least-relevant ones - so it fits on exactly one page. ");
+      }
+      if (hasTypographicDash) {
+        correction
+            .append("The previous attempt used an em dash or en dash character somewhere. Rewrite")
+            .append(" it with a comma, period, colon, parentheses, or the word \"to\" instead, per")
+            .append(" the no-dash rule.");
+      }
       ResumeTailoringResult retry =
           ai.tailorResume(
               job.getTitle(),
@@ -416,15 +431,22 @@ public class JobListingService {
               missingSkills,
               partialSkills,
               baseResumeText,
-              "The previous attempt ran onto a second page. Cut content - shorten bullets and"
-                  + " drop the least-relevant ones - so it fits on exactly one page.");
+              correction.toString());
       byte[] retryPdf = latexCompiler.compile(retry.latexResume());
       if (latexCompiler.pageCount(retryPdf) <= latexCompiler.pageCount(pdf)) {
         result = retry;
       }
+      // One retry is the budget (matches the credit-conscious page-overflow retry this was
+      // already doing) - if a dash still slipped through after that, log it rather than looping
+      // again, since a human glancing at the PDF will catch a stray dash in seconds anyway.
+      if (hasTypographicDash && containsTypographicDash(result.latexResume())) {
+        log.warn("Tailored resume for job {} still contains an em/en dash after one retry", job.getId());
+      }
     }
 
     job.setTailoredImprovementPoints(result.improvementPoints());
+    job.setTailoredGapsVsJd(result.gapsVsJd());
+    job.setTailoredInferredClaims(result.inferredClaims());
     job.setTailoredLatexResume(result.latexResume());
 
     // Parse the tailored output once, cache it for future rescores, and only merge it into the
@@ -459,6 +481,13 @@ public class JobListingService {
     }
   }
 
+  /** The tailoring prompt explicitly forbids em dashes (—) and en dashes (–), but a
+   * model can still slip one in - checked directly against the LaTeX source rather than trusting
+   * the model's own compliance. */
+  private static boolean containsTypographicDash(String latex) {
+    return latex != null && (latex.indexOf('–') >= 0 || latex.indexOf('—') >= 0);
+  }
+
   private void saveVersion(
       UUID userId, JobListing job, ResumeTailoringResult result, int fitScore, TailoringBase basedOn) {
     int nextVersion = jobTailoringVersionRepository.countByJobId(job.getId()) + 1;
@@ -468,6 +497,8 @@ public class JobListingService {
             .userId(userId)
             .version(nextVersion)
             .improvementPoints(result.improvementPoints())
+            .gapsVsJd(result.gapsVsJd())
+            .inferredClaims(result.inferredClaims())
             .latexResume(result.latexResume())
             .fitScore(fitScore)
             .basedOn(basedOn)

@@ -49,6 +49,14 @@ public class JobTailoringVersion {
   @Column(name = "improvement_points_json")
   List<String> improvementPoints;
 
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "gaps_vs_jd_json")
+  List<String> gapsVsJd;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "inferred_claims_json")
+  List<String> inferredClaims;
+
   @Column(name = "latex_resume")
   String latexResume;
 

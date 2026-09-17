@@ -153,6 +153,14 @@ public class JobListing {
   @Column(name = "tailored_improvement_points_json")
   List<String> tailoredImprovementPoints;
 
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "tailored_gaps_vs_jd_json")
+  List<String> tailoredGapsVsJd;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "tailored_inferred_claims_json")
+  List<String> tailoredInferredClaims;
+
   @Column(name = "tailored_latex_resume")
   String tailoredLatexResume;
 
