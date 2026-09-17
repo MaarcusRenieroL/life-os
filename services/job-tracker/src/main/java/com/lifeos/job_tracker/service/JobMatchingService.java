@@ -170,6 +170,16 @@ public class JobMatchingService {
   // "Next.js" and "NextJS" should all be treated as the same skill.
   private static final Pattern SEPARATORS = Pattern.compile("[\\s._/-]+");
 
+  // Version/qualifier asides job postings tack onto a skill name, e.g. "Angular (12+)" -
+  // these don't change what the skill IS, so they're dropped before comparison.
+  private static final Pattern PARENTHETICAL = Pattern.compile("\\([^)]*\\)");
+
+  // Generic descriptive words job postings pad a skill name with ("OOPS concepts", "UX
+  // Knowledge") that carry no signal about the skill itself - stripped as whole words so
+  // "OOPS concepts" compares as "oops", not the meaningless merged "oopsconcepts".
+  private static final Pattern FILLER_WORDS =
+      Pattern.compile("\\b(concepts?|knowledge|experience|skills?|proficiency)\\b");
+
   // Skill spellings that don't collapse to the same string by separator-stripping alone
   // (abbreviations, "*JS" framework names, etc). Keys and values are already
   // separator-stripped + lowercased; extend as new mismatches turn up.
@@ -195,19 +205,25 @@ public class JobMatchingService {
           Map.entry("objectivec", "objective-c"),
           Map.entry("restapi", "rest"),
           Map.entry("ci", "cicd"),
-          Map.entry("cd", "cicd"));
+          Map.entry("cd", "cicd"),
+          Map.entry("tailwindcss", "tailwind"),
+          Map.entry("oops", "oop"));
 
   /**
-   * Canonicalises a skill name for comparison: trims, lowercases, strips common separators
-   * (spaces, dots, hyphens, slashes, underscores) so "Next JS", "NextJS" and "next.js" all
-   * collapse to the same token, then applies a small alias table for spellings that don't
-   * collapse via stripping alone (e.g. "JS" vs "JavaScript", "k8s" vs "Kubernetes").
+   * Canonicalises a skill name for comparison: trims, lowercases, drops parenthetical
+   * qualifiers ("Angular (12+)" -> "angular") and generic filler words ("OOPS concepts" ->
+   * "oops"), strips common separators (spaces, dots, hyphens, slashes, underscores) so "Next
+   * JS", "NextJS" and "next.js" all collapse to the same token, then applies a small alias
+   * table for spellings that don't collapse via stripping alone (e.g. "JS" vs "JavaScript",
+   * "Tailwind CSS" vs "Tailwind").
    */
   private static String normalise(String value) {
     if (value == null) {
       return "";
     }
-    String stripped = SEPARATORS.matcher(value.trim().toLowerCase(Locale.ROOT)).replaceAll("");
+    String lowered = value.trim().toLowerCase(Locale.ROOT);
+    String withoutAsides = FILLER_WORDS.matcher(PARENTHETICAL.matcher(lowered).replaceAll("")).replaceAll("");
+    String stripped = SEPARATORS.matcher(withoutAsides).replaceAll("");
     return SKILL_ALIASES.getOrDefault(stripped, stripped);
   }
 
