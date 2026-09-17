@@ -448,7 +448,8 @@ public class JobListingService {
         attempt++) {
       boolean overflowed = latexCompiler.pageCount(pdf) > 1;
       StringBuilder correction = new StringBuilder();
-      if (overflowed) {
+      if (overflowed && attempt == 0) {
+        // First correction: qualitative guidance, trusting the model to judge what's weakest.
         correction
             .append("The previous attempt ran onto a second page - this is not optional, it MUST be")
             .append(" exactly one page. Cut in this order until it fits: shorten or cut the weakest")
@@ -457,6 +458,21 @@ public class JobListingService {
             .append(" extra. If it's still too long after that, cut a whole bullet or an entire weaker")
             .append(" project, not just words within one. Do not drop a whole section")
             .append(" (Summary/Education/Achievements) - trim what's inside it. ");
+      } else if (overflowed) {
+        // A qualitative "trim it" instruction has now failed once already - you have no visual
+        // feedback on the rendered page, so a vague instruction to "shorten more" doesn't give you
+        // a concrete enough target. This time, hard numeric caps, no judgment calls: 3 bullets
+        // total across ALL of Experience combined, exactly 1 project with at most 2 bullets, exactly
+        // 1 one-line Achievement. Err on the side of cutting too much rather than too little - a
+        // short one-page resume beats a full two-page one every time.
+        correction
+            .append("Two previous attempts both still overflowed to a second page. This time use hard")
+            .append(" limits, do not judge case by case: at most 3 bullets total across ALL Experience")
+            .append(" entries combined (not per entry, total); exactly 1 project, at most 2 bullets;")
+            .append(" exactly 1 one-line Achievement; Education as one compact line with no extra")
+            .append(" detail. Err on the side of cutting too much rather than too little - a short")
+            .append(" one-page resume beats a full two-page one. Do not drop a whole section")
+            .append(" (Summary/Education/Achievements) - keep each section but this short. ");
       }
       if (attempt == 0 && hasTypographicDash) {
         correction
