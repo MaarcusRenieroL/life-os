@@ -75,9 +75,8 @@ public class AiAssistant {
   }
 
   public ParsedResume parseResume(String resumeText) {
-    return routedCompleteJson(
-        resumeParseProvider,
-        "You are a resume parser. Reply with ONLY a JSON object, no prose.",
+    String systemPrompt = "You are a resume parser. Reply with ONLY a JSON object, no prose.";
+    String userPrompt =
         """
         Extract structured data from the resume below. Use this exact shape:
         {
@@ -103,8 +102,21 @@ public class AiAssistant {
 
         RESUME:
         """
-            + resumeText,
-        ParsedResume.class);
+            + resumeText;
+
+    ParsedResume parsed = routedCompleteJson(resumeParseProvider, systemPrompt, userPrompt, ParsedResume.class);
+
+    // Ollama can return a syntactically valid response with zero skills for resume text that
+    // plainly has dozens - no exception, so the usual fallback-on-failure path never triggers,
+    // and this silently zeroes out every downstream score. A real resume this long having
+    // genuinely no skills is implausible, so treat it as a parse failure and retry on Claude.
+    boolean suspicientlyEmpty =
+        (parsed.skills() == null || parsed.skills().isEmpty()) && resumeText != null && resumeText.length() > 200;
+    if (suspicientlyEmpty && "ollama".equalsIgnoreCase(resumeParseProvider) && claude.isConfigured()) {
+      log.warn("Ollama parsed 0 skills from a {}-char resume - retrying on Claude", resumeText.length());
+      parsed = convert(claude.completeJson(systemPrompt, userPrompt), ParsedResume.class);
+    }
+    return parsed;
   }
 
   /**
@@ -210,8 +222,12 @@ public class AiAssistant {
               version qualifier the candidate's tooling already covers), use the job's own phrasing -
               that is honest alignment, not fabrication, and it is exactly what an ATS keyword scan
               rewards.
-            - Every hyperlink in the output must be copied verbatim from a link that appears in the
-              candidate profile below - never guess or construct a URL.
+            - Every hyperlink in the output must be copied verbatim, character-for-character, from a
+              link that already appears in the candidate profile below. If a project has no link in
+              the profile, render its name as plain bold text with NO \\href and no URL at all - do
+              not construct one from the candidate's GitHub username plus the project's name (e.g.
+              github.com/user/project-name-in-lowercase is a guess, not a fact, even if it looks
+              plausible or the candidate's real GitHub profile is linked elsewhere).
             - Keep every factual detail (dates, company names, metrics) exactly as given in the profile.
             - "improvementPoints" (4-8 items): what you emphasized or reordered and why, tied to
               specific job requirements.
