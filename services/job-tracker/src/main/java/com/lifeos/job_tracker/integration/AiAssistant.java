@@ -144,6 +144,14 @@ public class AiAssistant {
             skills/technologies whenever it names more than one (e.g. "Experience with AWS, Docker,
             and Kubernetes" -> three separate entries), and drop any bullet that's just a general trait
             (autonomy, ownership, communication) rather than a named skill.
+            NEVER emit one of the posting's own section headings as a skill (e.g. a posting with a
+            "Cross-Functional & Agile Collaboration:" heading followed by prose about working with
+            product/UX/QA teams must NOT produce "Cross-Functional & Agile Collaboration" as a skill -
+            extract the concrete named tools/technologies/practices from the prose under that heading
+            instead, the same way you would for a plain bullet list; a heading is structure, not a
+            skill). This matters most for postings that organize requirements under bolded category
+            headings rather than flat bullets - go one level deeper into each section's body text
+            every time, never stop at the heading.
 
             "jobDescriptionText" must be the posting's own description prose (responsibilities,
             requirements, about the role) with the web-page noise removed - keep the actual wording
