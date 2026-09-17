@@ -193,18 +193,40 @@ public class AiAssistant {
               suggest claiming a skill or experience the resume gives no evidence of; if a required
               skill is genuinely absent from their background, say so plainly instead of inventing a way
               to fake it.
-            - "latexResume" is a complete, compilable LaTeX document (\\documentclass through
-              \\end{document}) using a clean single-column article-style resume layout (no exotic
-              packages beyond geometry/enumitem/titlesec/hyperref) built ONLY from the candidate's real
-              resume content below - reorganised, reworded and re-prioritised toward this job's required
-              skills, but never fabricating employers, titles, dates, or skills absent from the source
-              resume. This gets compiled with tectonic (a XeTeX engine), so avoid pdfTeX-only primitives
-              (\\pdfgentounicode, \\input{glyphtounicode}). Escape LaTeX special characters (&, %%, $, #,
-              _, {, }) found in the candidate's own text. Escape the document as a valid JSON string
-              (escape backslashes as \\\\ and newlines as \\n).
-            - The resume MUST fit on exactly ONE page. Use compact spacing (tight itemsep/topsep,
-              modest margins via geometry) and be concise - prioritise the most relevant bullets for
-              this job over including everything. Never let the layout spill onto a second page.
+            - "latexResume" is a complete, compilable LaTeX document built ONLY from the candidate's
+              real resume content below - reorganised, reworded and re-prioritised toward this job's
+              required skills, but never fabricating employers, titles, dates, or skills absent from
+              the source resume. This gets compiled with tectonic (a XeTeX engine), so avoid
+              pdfTeX-only primitives (\\pdfgentounicode, \\input{glyphtounicode}). Escape LaTeX special
+              characters (&, %%, $, #, _, {, }) found in the candidate's own text. Escape the document
+              as a valid JSON string (escape backslashes as \\\\ and newlines as \\n).
+            - Use exactly this preamble (a designed look - serif Charter font, a navy accent color on
+              the name and section rules - beats a plain default-LaTeX look), adapting only the
+              section list to what the candidate's resume actually has (drop empty sections, e.g. no
+              Projects section if the resume has none):
+              \\documentclass[10.5pt]{article}
+              \\usepackage[T1]{fontenc}
+              \\usepackage{charter}
+              \\usepackage[margin=0.55in]{geometry}
+              \\usepackage{enumitem}
+              \\usepackage{titlesec}
+              \\usepackage[hidelinks]{hyperref}
+              \\usepackage{xcolor}
+              \\definecolor{accent}{HTML}{1F3864}
+              \\pagestyle{empty}
+              \\setlist[itemize]{leftmargin=14pt,itemsep=1pt,topsep=1pt,parsep=0pt}
+              \\titleformat{\\section}{\\large\\bfseries\\color{accent}}{}{0pt}{}[\\vspace{2pt}{\\color{accent}\\titlerule[1pt]}]
+              \\titlespacing*{\\section}{0pt}{7pt}{4pt}
+              \\renewcommand{\\baselinestretch}{1.0}
+              Name in \\Huge\\bfseries\\color{accent}, centered, with contact details below it. Each
+              job/project entry: bold title \\hfill dates on one line, italic company/context on the
+              next, then an itemize block; put \\vspace{3pt} between entries in the same section (not
+              after the last one).
+            - The resume MUST fit on exactly ONE page and should use the page well - avoid a large
+              empty gap at the bottom (a candidate with less content should still fill the page through
+              the spacing above, not by inventing content or leaving it visibly sparse) while never
+              spilling onto a second page. Prioritise the most relevant bullets for this job over
+              including everything if it's genuinely too much for one page.
             %s
 
             JOB:

@@ -34,7 +34,12 @@ public class JobMatchingService {
 
   @Transactional(readOnly = true)
   public JobFitResult score(UUID userId, JobListing job) {
-    List<Skill> skills = skillRepository.findAllByUserIdOrderByNameAsc(userId);
+    return score(job, skillRepository.findAllByUserIdOrderByNameAsc(userId));
+  }
+
+  /** Scores against an explicit skill set rather than the persisted library - used to rescore a
+   * job against one specific tailored-resume version instead of the candidate's whole history. */
+  public JobFitResult score(JobListing job, List<Skill> skills) {
     Set<String> userSkillNames =
         skills.stream().map(s -> normalise(s.getName())).collect(Collectors.toSet());
 

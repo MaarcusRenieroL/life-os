@@ -1,17 +1,23 @@
 % Compiled once during the Docker build so tectonic caches the packages the
 % tailored resume needs - keeps the first real request from doing a cold
-% package download. Mirrors the article-style preamble AiAssistant asks Claude
-% to use (geometry/enumitem/titlesec/hyperref).
-\documentclass[11pt]{article}
-\usepackage[margin=0.75in]{geometry}
+% package/font download. Mirrors the article-style preamble AiAssistant asks
+% Claude to use (fontenc/charter/geometry/enumitem/titlesec/hyperref/xcolor).
+\documentclass[10.5pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage{charter}
+\usepackage[margin=0.55in]{geometry}
 \usepackage{enumitem}
 \usepackage{titlesec}
 \usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+\definecolor{accent}{HTML}{1F3864}
 \makeatletter\let\@noitemerr\relax\makeatother
-\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\titleformat{\section}{\large\bfseries\color{accent}}{}{0em}{}[\titlerule]
 \begin{document}
-\begin{center}\textbf{\Large Warmup} \\ warmup@example.com\end{center}
+\begin{center}\textbf{\Huge\color{accent} Warmup} \\ warmup@example.com\end{center}
 \section{Section}
+\textbf{Bold Title} \hfill Dates\\
+\textit{Italic company/context line}
 \begin{itemize}[leftmargin=*, itemsep=1pt, topsep=2pt]
   \item A bullet.
 \end{itemize}

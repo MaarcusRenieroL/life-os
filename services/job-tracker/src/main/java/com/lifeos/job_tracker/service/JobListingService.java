@@ -224,6 +224,27 @@ public class JobListingService {
     return result;
   }
 
+  /** Rescores against the skills actually present in this job's tailored resume, instead of the
+   * candidate's whole persisted skill library - useful once tailoring has reworded/surfaced things
+   * that make the fit look different than the generic score. Doesn't touch the skill library. */
+  @Transactional
+  public JobFitResult rescoreWithTailoredResume(UUID userId, UUID jobId) {
+    JobListing job = get(userId, jobId);
+    if (job.getTailoredLatexResume() == null || job.getTailoredLatexResume().isBlank()) {
+      throw new InvalidRequestException("Tailor a resume for this job before rescoring against it");
+    }
+    if (!ai.available()) {
+      throw new InvalidRequestException("Rescoring needs an AI provider; set ANTHROPIC_API_KEY or enable Ollama");
+    }
+
+    ParsedResume parsed = ai.parseResume(job.getTailoredLatexResume());
+    JobFitResult result = jobMatchingService.score(job, skillService.toTransientSkills(parsed.skills()));
+    job.setFitScore(result.score());
+    job.setFitExplanation(result.explanation());
+    jobListingRepository.save(job);
+    return result;
+  }
+
   /**
    * Scores the saved resume against one job listing's real requirements, then asks Claude for
    * concrete resume-improvement points and a full LaTeX resume tailored to that job, ready to paste

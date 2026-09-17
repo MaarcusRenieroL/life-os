@@ -104,6 +104,15 @@ public class JobListingController extends AuthenticatedController {
             jobListingService.rescore(userId(authentication), jobId), "Fit score recomputed"));
   }
 
+  @PostMapping("/{jobId}/rescore-tailored")
+  public ResponseEntity<ApiResponse<JobFitResult>> rescoreWithTailoredResume(
+      Authentication authentication, @PathVariable UUID jobId) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            jobListingService.rescoreWithTailoredResume(userId(authentication), jobId),
+            "Fit score recomputed against tailored resume"));
+  }
+
   /**
    * Scores the saved resume against this job, then returns concrete improvement points and a full
    * LaTeX resume tailored to it, ready to paste into Overleaf.
