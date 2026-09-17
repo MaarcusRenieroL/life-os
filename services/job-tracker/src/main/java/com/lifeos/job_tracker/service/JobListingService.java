@@ -21,6 +21,7 @@ import com.lifeos.job_tracker.exception.ResourceNotFoundException;
 import com.lifeos.job_tracker.integration.AiAssistant;
 import com.lifeos.job_tracker.integration.JobLinkFetcher;
 import com.lifeos.job_tracker.integration.LatexCompiler;
+import com.lifeos.job_tracker.integration.PdfTextExtractor;
 import com.lifeos.job_tracker.repository.CompanyRepository;
 import com.lifeos.job_tracker.repository.JobListingRepository;
 import com.lifeos.job_tracker.repository.JobStatusHistoryRepository;
@@ -47,6 +48,7 @@ public class JobListingService {
   private final JobLinkFetcher jobLinkFetcher;
   private final ResumeService resumeService;
   private final LatexCompiler latexCompiler;
+  private final PdfTextExtractor pdfTextExtractor;
   private final SkillService skillService;
   private final JobTailoringVersionRepository jobTailoringVersionRepository;
   private final JobStatusHistoryRepository jobStatusHistoryRepository;
@@ -237,7 +239,7 @@ public class JobListingService {
       throw new InvalidRequestException("Rescoring needs an AI provider; set ANTHROPIC_API_KEY or enable Ollama");
     }
 
-    ParsedResume parsed = ai.parseResume(job.getTailoredLatexResume());
+    ParsedResume parsed = ai.parseResume(extractPlainText(job.getTailoredLatexResume()));
     JobFitResult result = jobMatchingService.score(job, skillService.toTransientSkills(parsed.skills()));
     job.setFitScore(result.score());
     job.setFitExplanation(result.explanation());
@@ -327,10 +329,24 @@ public class JobListingService {
 
   private void mergeSkillsFromTailoredResume(UUID userId, String tailoredLatexResume) {
     try {
-      ParsedResume parsed = ai.parseResume(tailoredLatexResume);
+      ParsedResume parsed = ai.parseResume(extractPlainText(tailoredLatexResume));
       skillService.mergeExtracted(userId, parsed.skills());
     } catch (RuntimeException exception) {
       log.warn("Could not extract skills from tailored resume: {}", exception.getMessage());
+    }
+  }
+
+  /** Skill extraction needs plain, human-readable text - raw LaTeX source (commands, braces,
+   * \hfill, section markers) is noise the resume-parse prompt wasn't designed for, and a small
+   * local model asked to parse it around that noise gives inconsistent results run to run
+   * (missing skills that are plainly present in the rendered resume). Compiling and stripping the
+   * PDF gives it exactly what a human reader would see, same as an uploaded resume. */
+  private String extractPlainText(String latexSource) {
+    try {
+      return pdfTextExtractor.extract(latexCompiler.compile(latexSource));
+    } catch (RuntimeException exception) {
+      log.warn("Could not render tailored LaTeX to extract plain text, falling back to raw source: {}", exception.getMessage());
+      return latexSource;
     }
   }
 
