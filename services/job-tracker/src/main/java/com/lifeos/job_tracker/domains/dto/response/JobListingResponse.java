@@ -45,7 +45,10 @@ public record JobListingResponse(
     LocalDate offerDeadline,
     String offerNotes,
     String coverLetterText,
-    LocalDate followUpAt) {
+    LocalDate followUpAt,
+    String overrideResumeFileName,
+    Instant overrideResumeUploadedAt,
+    String fitScoreSource) {
 
   public static JobListingResponse from(JobListing job) {
     return new JobListingResponse(
@@ -85,6 +88,9 @@ public record JobListingResponse(
         job.getOfferDeadline(),
         job.getOfferNotes(),
         job.getCoverLetterText(),
-        job.getFollowUpAt());
+        job.getFollowUpAt(),
+        job.getOverrideResumeFileName(),
+        job.getOverrideResumeUploadedAt(),
+        job.getFitScoreSource() == null ? null : job.getFitScoreSource().name());
   }
 }

@@ -6,7 +6,13 @@ import java.util.List;
 import java.util.UUID;
 
 public record JobTailoringVersionResponse(
-    UUID id, int version, List<String> improvementPoints, String latexResume, Integer fitScore, Instant createdAt) {
+    UUID id,
+    int version,
+    List<String> improvementPoints,
+    String latexResume,
+    Integer fitScore,
+    String basedOn,
+    Instant createdAt) {
 
   public static JobTailoringVersionResponse from(JobTailoringVersion entity) {
     return new JobTailoringVersionResponse(
@@ -15,11 +21,18 @@ public record JobTailoringVersionResponse(
         entity.getImprovementPoints(),
         entity.getLatexResume(),
         entity.getFitScore(),
+        entity.getBasedOn() == null ? null : entity.getBasedOn().name(),
         entity.getCreatedAt());
   }
 
   public static JobTailoringVersionResponse summary(JobTailoringVersion entity) {
     return new JobTailoringVersionResponse(
-        entity.getId(), entity.getVersion(), null, null, entity.getFitScore(), entity.getCreatedAt());
+        entity.getId(),
+        entity.getVersion(),
+        null,
+        null,
+        entity.getFitScore(),
+        entity.getBasedOn() == null ? null : entity.getBasedOn().name(),
+        entity.getCreatedAt());
   }
 }

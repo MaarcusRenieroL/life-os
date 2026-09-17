@@ -1,7 +1,10 @@
 package com.lifeos.job_tracker.domains.entity;
 
+import com.lifeos.job_tracker.domains.enums.TailoringBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -51,6 +54,10 @@ public class JobTailoringVersion {
 
   @Column(name = "fit_score")
   Integer fitScore;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "based_on")
+  TailoringBase basedOn;
 
   @CreationTimestamp
   @Column(name = "created_at")

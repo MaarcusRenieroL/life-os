@@ -23,7 +23,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/v1/jobs")
@@ -104,13 +106,28 @@ public class JobListingController extends AuthenticatedController {
             jobListingService.rescore(userId(authentication), jobId), "Fit score recomputed"));
   }
 
-  @PostMapping("/{jobId}/rescore-tailored")
-  public ResponseEntity<ApiResponse<JobFitResult>> rescoreWithTailoredResume(
+  /** Attaches a one-off resume PDF to this job only (e.g. one built with another tool), replacing
+   * any previous override for it, and immediately recomputes the fit score against it. Doesn't
+   * touch the persisted resume or skill library. */
+  @PostMapping(path = "/{jobId}/resume-override", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<ApiResponse<JobListingResponse>> uploadResumeOverride(
+      Authentication authentication, @PathVariable UUID jobId, @RequestPart("file") MultipartFile file) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            JobListingResponse.from(
+                jobListingService.uploadResumeOverride(userId(authentication), jobId, file)),
+            "Resume attached to this job"));
+  }
+
+  /** Removes this job's override resume and recomputes the fit score against whatever's next in
+   * priority (the tailored resume, then the skill library). */
+  @DeleteMapping("/{jobId}/resume-override")
+  public ResponseEntity<ApiResponse<JobListingResponse>> deleteResumeOverride(
       Authentication authentication, @PathVariable UUID jobId) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            jobListingService.rescoreWithTailoredResume(userId(authentication), jobId),
-            "Fit score recomputed against tailored resume"));
+            JobListingResponse.from(jobListingService.deleteResumeOverride(userId(authentication), jobId)),
+            "Resume override removed"));
   }
 
   /**

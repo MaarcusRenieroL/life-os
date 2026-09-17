@@ -6,12 +6,16 @@ import com.lifeos.job_tracker.domains.entity.JobListing;
 import com.lifeos.job_tracker.domains.entity.JobStatusHistory;
 import com.lifeos.job_tracker.domains.entity.JobTailoringVersion;
 import com.lifeos.job_tracker.domains.entity.Resume;
+import com.lifeos.job_tracker.domains.entity.Skill;
+import com.lifeos.job_tracker.domains.enums.FitScoreSource;
 import com.lifeos.job_tracker.domains.enums.IngestSource;
 import com.lifeos.job_tracker.domains.enums.JobStatus;
 import com.lifeos.job_tracker.domains.enums.ProcessingStatus;
 import com.lifeos.job_tracker.domains.enums.SeniorityLevel;
+import com.lifeos.job_tracker.domains.enums.TailoringBase;
 import com.lifeos.job_tracker.domains.enums.VisaSponsorship;
 import com.lifeos.job_tracker.domains.enums.WorkModel;
+import com.lifeos.job_tracker.domains.record.ExtractedSkill;
 import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
 import com.lifeos.job_tracker.domains.record.ParsedResume;
 import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
@@ -27,6 +31,7 @@ import com.lifeos.job_tracker.repository.JobListingRepository;
 import com.lifeos.job_tracker.repository.JobStatusHistoryRepository;
 import com.lifeos.job_tracker.repository.JobTailoringVersionRepository;
 import com.lifeos.job_tracker.service.JobMatchingService.JobFitResult;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -194,62 +200,165 @@ public class JobListingService {
     return jobListingRepository.save(job);
   }
 
-  /** Drafts a cover letter for this job from the candidate's real resume - same "never invent
-   * experience" constraint as tailorResume, and the same one-shot-overwrite model tailoring had
-   * before versioning (no history yet; add it if this turns out to need re-drafting often). */
+  /** Drafts a cover letter for this job from whichever resume currently represents the candidate
+   * for it - the job-specific override upload if one exists, otherwise the global saved resume -
+   * same "never invent experience" constraint as tailorResume, and the same one-shot-overwrite
+   * model tailoring had before versioning (no history yet; add it if this turns out to need
+   * re-drafting often). */
   @Transactional
   public JobListing generateCoverLetter(UUID userId, UUID jobId) {
     JobListing job = get(userId, jobId);
     if (job.getJobDescriptionText() == null || job.getJobDescriptionText().isBlank()) {
       throw new InvalidRequestException("This job has no description text to draft a cover letter against");
     }
-    Resume resume = resumeService.getCurrent(userId);
-    if (resume.getRawText() == null || resume.getRawText().isBlank()) {
+    String resumeText = resolveBaseResumeText(userId, job);
+    if (resumeText == null || resumeText.isBlank()) {
       throw new InvalidRequestException("Upload a resume with readable text before drafting a cover letter");
     }
     if (!ai.available()) {
       throw new InvalidRequestException("Drafting a cover letter needs an AI provider; set ANTHROPIC_API_KEY or enable Ollama");
     }
 
-    String letter = ai.generateCoverLetter(job.getTitle(), job.getCompany(), job.getJobDescriptionText(), resume.getRawText());
+    String letter = ai.generateCoverLetter(job.getTitle(), job.getCompany(), job.getJobDescriptionText(), resumeText);
     job.setCoverLetterText(letter);
     return jobListingRepository.save(job);
   }
 
+  /**
+   * The single "Re-score" entry point. Picks the most specific resume available for this job -
+   * an uploaded override beats this job's own AI-tailored resume, which beats the candidate's
+   * whole persisted skill library - and scores against that, so the candidate never has to know
+   * or remember which of three buttons to press.
+   */
   @Transactional
   public JobFitResult rescore(UUID userId, UUID jobId) {
     JobListing job = get(userId, jobId);
-    JobFitResult result = jobMatchingService.score(userId, job);
+    return recomputeFitScore(userId, job);
+  }
+
+  private JobFitResult recomputeFitScore(UUID userId, JobListing job) {
+    JobFitResult result;
+    FitScoreSource source;
+    if (job.getOverrideResumeText() != null && !job.getOverrideResumeText().isBlank()) {
+      result = jobMatchingService.score(job, resolveOverrideSkills(userId, job));
+      source = FitScoreSource.OVERRIDE_RESUME;
+    } else if (job.getTailoredLatexResume() != null && !job.getTailoredLatexResume().isBlank()) {
+      result = jobMatchingService.score(job, resolveTailoredSkills(userId, job));
+      source = FitScoreSource.TAILORED_RESUME;
+    } else {
+      result = jobMatchingService.score(userId, job);
+      source = FitScoreSource.LIBRARY;
+    }
     job.setFitScore(result.score());
     job.setFitExplanation(result.explanation());
+    job.setFitScoreSource(source);
     jobListingRepository.save(job);
     return result;
   }
 
-  /** Rescores against the skills actually present in this job's tailored resume, instead of the
-   * candidate's whole persisted skill library - useful once tailoring has reworded/surfaced things
-   * that make the fit look different than the generic score. Doesn't touch the skill library. */
-  @Transactional
-  public JobFitResult rescoreWithTailoredResume(UUID userId, UUID jobId) {
-    JobListing job = get(userId, jobId);
-    if (job.getTailoredLatexResume() == null || job.getTailoredLatexResume().isBlank()) {
-      throw new InvalidRequestException("Tailor a resume for this job before rescoring against it");
+  /** Extracted skills are cached on the job at upload time so repeat re-scores of the same
+   * override resume don't re-invoke the AI - besides the wasted cost, Ollama's extraction is
+   * non-deterministic, so re-parsing on every click could make the score drift with no visible
+   * cause. Only re-parses (and re-caches) if the cache is somehow missing. */
+  private List<Skill> resolveOverrideSkills(UUID userId, JobListing job) {
+    if (job.getOverrideResumeSkills() == null) {
+      List<ExtractedSkill> parsed = safeParseSkills(job.getOverrideResumeText());
+      job.setOverrideResumeSkills(parsed);
     }
-    if (!ai.available()) {
-      throw new InvalidRequestException("Rescoring needs an AI provider; set ANTHROPIC_API_KEY or enable Ollama");
-    }
+    return skillService.toTransientSkills(job.getOverrideResumeSkills());
+  }
 
-    ParsedResume parsed = ai.parseResume(extractPlainText(job.getTailoredLatexResume()));
-    JobFitResult result = jobMatchingService.score(job, skillService.toTransientSkills(parsed.skills()));
-    job.setFitScore(result.score());
-    job.setFitExplanation(result.explanation());
-    jobListingRepository.save(job);
-    return result;
+  private List<Skill> resolveTailoredSkills(UUID userId, JobListing job) {
+    if (job.getTailoredResumeSkills() == null) {
+      List<ExtractedSkill> parsed = safeParseSkills(extractPlainText(job.getTailoredLatexResume()));
+      job.setTailoredResumeSkills(parsed);
+    }
+    return skillService.toTransientSkills(job.getTailoredResumeSkills());
+  }
+
+  private List<ExtractedSkill> safeParseSkills(String text) {
+    if (!ai.available() || text == null || text.isBlank()) {
+      return List.of();
+    }
+    try {
+      return ai.parseResume(text).skills();
+    } catch (RuntimeException exception) {
+      log.warn("Could not extract skills for rescoring: {}", exception.getMessage());
+      return List.of();
+    }
+  }
+
+  /** The resume text {@link #tailorResume} and {@link #generateCoverLetter} should build from -
+   * this job's uploaded override if one exists, otherwise the candidate's global saved resume. */
+  private String resolveBaseResumeText(UUID userId, JobListing job) {
+    if (job.getOverrideResumeText() != null && !job.getOverrideResumeText().isBlank()) {
+      return job.getOverrideResumeText();
+    }
+    Resume resume = resumeService.getCurrent(userId);
+    return resume.getRawText();
   }
 
   /**
-   * Scores the saved resume against one job listing's real requirements, then asks Claude for
-   * concrete resume-improvement points and a full LaTeX resume tailored to that job, ready to paste
+   * Attaches a one-off resume to this specific job - e.g. one built with a different tool that
+   * the candidate wants to check without touching their persisted skill library or this job's own
+   * AI-tailored resume. Replaces any previous override for this job.
+   */
+  @Transactional
+  public JobListing uploadResumeOverride(UUID userId, UUID jobId, MultipartFile file) {
+    JobListing job = get(userId, jobId);
+    if (file == null || file.isEmpty()) {
+      throw new InvalidRequestException("No file was uploaded");
+    }
+
+    byte[] bytes;
+    try {
+      bytes = file.getBytes();
+    } catch (java.io.IOException exception) {
+      throw new InvalidRequestException("Could not read the uploaded file");
+    }
+
+    boolean looksLikePdf =
+        bytes.length >= 4 && bytes[0] == '%' && bytes[1] == 'P' && bytes[2] == 'D' && bytes[3] == 'F';
+    boolean namedPdf =
+        file.getOriginalFilename() != null
+            && file.getOriginalFilename().toLowerCase().endsWith(".pdf");
+    if (!looksLikePdf && !namedPdf) {
+      throw new InvalidRequestException("Only PDF resumes are supported");
+    }
+
+    String text = pdfTextExtractor.extract(bytes);
+    if (text == null || text.isBlank()) {
+      throw new InvalidRequestException("Could not read text from this PDF");
+    }
+
+    job.setOverrideResumeText(text);
+    job.setOverrideResumeFileName(
+        file.getOriginalFilename() == null ? "resume.pdf" : file.getOriginalFilename());
+    job.setOverrideResumeUploadedAt(Instant.now());
+    // Clear the stale cache from any previous override so resolveOverrideSkills re-parses this
+    // one instead of scoring against the file that was just replaced.
+    job.setOverrideResumeSkills(null);
+    jobListingRepository.save(job);
+    recomputeFitScore(userId, job);
+    return job;
+  }
+
+  @Transactional
+  public JobListing deleteResumeOverride(UUID userId, UUID jobId) {
+    JobListing job = get(userId, jobId);
+    job.setOverrideResumeText(null);
+    job.setOverrideResumeFileName(null);
+    job.setOverrideResumeUploadedAt(null);
+    job.setOverrideResumeSkills(null);
+    jobListingRepository.save(job);
+    recomputeFitScore(userId, job);
+    return job;
+  }
+
+  /**
+   * Scores the candidate's most specific resume for this job (an uploaded override if there is
+   * one, otherwise the global saved resume) against the job's real requirements, then asks Claude
+   * for concrete resume-improvement points and a full LaTeX resume tailored to it, ready to paste
    * into Overleaf.
    */
   @Transactional
@@ -259,8 +368,10 @@ public class JobListingService {
       throw new InvalidRequestException("This job has no description text to tailor a resume against");
     }
 
-    Resume resume = resumeService.getCurrent(userId);
-    if (resume.getRawText() == null || resume.getRawText().isBlank()) {
+    boolean hasOverride = job.getOverrideResumeText() != null && !job.getOverrideResumeText().isBlank();
+    TailoringBase basedOn = hasOverride ? TailoringBase.OVERRIDE_RESUME : TailoringBase.GLOBAL_RESUME;
+    String baseResumeText = resolveBaseResumeText(userId, job);
+    if (baseResumeText == null || baseResumeText.isBlank()) {
       throw new InvalidRequestException("Upload a resume with readable text before tailoring it");
     }
 
@@ -269,7 +380,11 @@ public class JobListingService {
           "Tailoring a resume needs Claude; set ANTHROPIC_API_KEY to enable it");
     }
 
-    JobFitResult fit = jobMatchingService.score(userId, job);
+    // Gap analysis has to be computed against the SAME resume being tailored - scoring against the
+    // global library while tailoring an override resume would tell Claude to "fix" gaps the
+    // override resume doesn't actually have (or hide ones it does).
+    List<Skill> baseSkills = hasOverride ? resolveOverrideSkills(userId, job) : null;
+    JobFitResult fit = hasOverride ? jobMatchingService.score(job, baseSkills) : jobMatchingService.score(userId, job);
     @SuppressWarnings("unchecked")
     List<String> missingSkills =
         (List<String>) fit.explanation().getOrDefault("missingSkills", List.of());
@@ -285,7 +400,7 @@ public class JobListingService {
             job.getRequiredSkills(),
             missingSkills,
             partialSkills,
-            resume.getRawText());
+            baseResumeText);
 
     // The prompt already asks for one page, but LLM length estimates are unreliable - actually
     // compile it and, if it overflowed, retry once with a hard "cut it down" instruction rather
@@ -300,7 +415,7 @@ public class JobListingService {
               job.getRequiredSkills(),
               missingSkills,
               partialSkills,
-              resume.getRawText(),
+              baseResumeText,
               "The previous attempt ran onto a second page. Cut content - shorten bullets and"
                   + " drop the least-relevant ones - so it fits on exactly one page.");
       byte[] retryPdf = latexCompiler.compile(retry.latexResume());
@@ -312,28 +427,22 @@ public class JobListingService {
     job.setTailoredImprovementPoints(result.improvementPoints());
     job.setTailoredLatexResume(result.latexResume());
 
-    // The tailored resume only ever rewords/surfaces skills the candidate genuinely has (the
-    // prompt forbids inventing anything) - merging what Claude notices in it can still catch real
-    // skills the original resume parse missed, so the fit score reflects the improved wording
-    // instead of staying frozen at the pre-tailor number.
-    mergeSkillsFromTailoredResume(userId, result.latexResume());
-    JobFitResult rescored = jobMatchingService.score(userId, job);
-    job.setFitScore(rescored.score());
-    job.setFitExplanation(rescored.explanation());
+    // Parse the tailored output once, cache it for future rescores, and only merge it into the
+    // permanent skill library when it was built from the candidate's own trusted global resume -
+    // an override resume is by definition an external/unverified artifact (the whole point of
+    // uploading one is to check it before trusting it), so tailoring from it must not silently
+    // contaminate the library with skills that resume claims but the candidate never confirmed.
+    List<ExtractedSkill> tailoredSkills = safeParseSkills(extractPlainText(result.latexResume()));
+    job.setTailoredResumeSkills(tailoredSkills);
+    if (basedOn == TailoringBase.GLOBAL_RESUME) {
+      skillService.mergeExtracted(userId, tailoredSkills);
+    }
 
     jobListingRepository.save(job);
-    saveVersion(userId, job, result, rescored.score());
+    JobFitResult rescored = recomputeFitScore(userId, job);
+    saveVersion(userId, job, result, rescored.score(), basedOn);
 
     return result;
-  }
-
-  private void mergeSkillsFromTailoredResume(UUID userId, String tailoredLatexResume) {
-    try {
-      ParsedResume parsed = ai.parseResume(extractPlainText(tailoredLatexResume));
-      skillService.mergeExtracted(userId, parsed.skills());
-    } catch (RuntimeException exception) {
-      log.warn("Could not extract skills from tailored resume: {}", exception.getMessage());
-    }
   }
 
   /** Skill extraction needs plain, human-readable text - raw LaTeX source (commands, braces,
@@ -350,7 +459,8 @@ public class JobListingService {
     }
   }
 
-  private void saveVersion(UUID userId, JobListing job, ResumeTailoringResult result, int fitScore) {
+  private void saveVersion(
+      UUID userId, JobListing job, ResumeTailoringResult result, int fitScore, TailoringBase basedOn) {
     int nextVersion = jobTailoringVersionRepository.countByJobId(job.getId()) + 1;
     jobTailoringVersionRepository.save(
         JobTailoringVersion.builder()
@@ -360,6 +470,7 @@ public class JobListingService {
             .improvementPoints(result.improvementPoints())
             .latexResume(result.latexResume())
             .fitScore(fitScore)
+            .basedOn(basedOn)
             .build());
   }
 
@@ -399,6 +510,7 @@ public class JobListingService {
       JobFitResult result = jobMatchingService.score(userId, job);
       job.setFitScore(result.score());
       job.setFitExplanation(result.explanation());
+      job.setFitScoreSource(FitScoreSource.LIBRARY);
     } catch (RuntimeException exception) {
       log.warn("scoring job {} failed: {}", job.getId(), exception.getMessage());
     }
