@@ -444,6 +444,15 @@ public class JobListingService {
       }
     }
 
+    // The prompt explicitly forbids constructing a URL that isn't literally in the profile, but
+    // that instruction alone didn't hold up in practice (observed Claude build a plausible
+    // github.com/<user>/<project> URL from the candidate's real username plus a project name,
+    // for a project with no link on file) - checked programmatically instead of trusted, since a
+    // fabricated link in a resume that gets submitted to an employer is a real credibility risk.
+    String finalLatex = stripFabricatedLinks(result.latexResume(), baseResumeText);
+    result = new ResumeTailoringResult(
+        result.improvementPoints(), result.gapsVsJd(), result.inferredClaims(), finalLatex);
+
     job.setTailoredImprovementPoints(result.improvementPoints());
     job.setTailoredGapsVsJd(result.gapsVsJd());
     job.setTailoredInferredClaims(result.inferredClaims());
@@ -486,6 +495,33 @@ public class JobListingService {
    * the model's own compliance. */
   private static boolean containsTypographicDash(String latex) {
     return latex != null && (latex.indexOf('–') >= 0 || latex.indexOf('—') >= 0);
+  }
+
+  private static final java.util.regex.Pattern HREF =
+      java.util.regex.Pattern.compile("\\\\href\\{([^}]*)\\}\\{([^}]*)\\}");
+
+  /** Drops the hyperlink wrapper (keeping the visible text) around any \href whose URL doesn't
+   * appear verbatim in the source profile - a link a model constructed rather than copied,
+   * however plausible-looking, is not a fact about the candidate. */
+  private static String stripFabricatedLinks(String latex, String sourceText) {
+    if (latex == null || sourceText == null) {
+      return latex;
+    }
+    java.util.regex.Matcher matcher = HREF.matcher(latex);
+    StringBuilder result = new StringBuilder();
+    while (matcher.find()) {
+      String url = matcher.group(1);
+      String text = matcher.group(2);
+      // The profile stores links without a protocol ("github.com/user"); Claude's LaTeX adds
+      // "https://" - strip it from both sides before comparing so a real link isn't mistaken
+      // for a fabricated one over a prefix mismatch.
+      String normalisedUrl = url.replaceFirst("^https?://", "");
+      boolean realLink = normalisedUrl.length() > 3 && sourceText.contains(normalisedUrl);
+      matcher.appendReplacement(
+          result, java.util.regex.Matcher.quoteReplacement(realLink ? matcher.group() : text));
+    }
+    matcher.appendTail(result);
+    return result.toString();
   }
 
   private void saveVersion(
