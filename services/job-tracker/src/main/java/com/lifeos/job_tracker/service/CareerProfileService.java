@@ -243,14 +243,13 @@ public class CareerProfileService {
     text.append(
         String.join(
             " | ",
-            List.of(
+            java.util.stream.Stream.of(
                     profile.getEmail(),
                     profile.getPhone(),
                     profile.getLocation(),
                     profile.getGithubUrl(),
                     profile.getLinkedinUrl(),
                     profile.getPortfolioUrl())
-                .stream()
                 .filter(v -> v != null && !v.isBlank())
                 .toList()));
     text.append("\n\n");

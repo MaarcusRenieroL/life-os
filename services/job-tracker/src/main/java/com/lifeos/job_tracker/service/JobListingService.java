@@ -414,6 +414,24 @@ public class JobListingService {
             partialSkills,
             baseResumeText);
 
+    // Claude occasionally comes back with the "latexResume" field missing or blank - a malformed
+    // generation, not a page-overflow/dash problem the retry below is built for. That's a one-shot
+    // task from Claude's own perspective (no memory of "you forgot the field last time"), so retry
+    // with the exact same prompt once before giving up - the flakiness observed in practice is
+    // transient and a plain retry resolves it.
+    if (result.latexResume() == null || result.latexResume().isBlank()) {
+      log.warn("Tailored resume for job {} came back with no LaTeX source, retrying once", job.getId());
+      result =
+          ai.tailorResume(
+              job.getTitle(),
+              job.getCompany(),
+              job.getJobDescriptionText(),
+              job.getRequiredSkills(),
+              missingSkills,
+              partialSkills,
+              baseResumeText);
+    }
+
     // The prompt already asks for one page and no em/en dashes, but LLM instruction-following
     // isn't guaranteed - actually compile it and scan the text, and if either is wrong, retry
     // ONCE with a combined correction instruction rather than silently handing back a bad resume
