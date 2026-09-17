@@ -472,8 +472,29 @@ public class JobListingService {
     jobListingRepository.save(job);
     JobFitResult rescored = recomputeFitScore(userId, job);
     saveVersion(userId, job, result, rescored.score(), basedOn);
+    promoteBestVersion(userId, job);
 
     return result;
+  }
+
+  /** "Current" always reflects whichever tailoring attempt ever scored highest for this job, not
+   * just the most recent one - a re-tailor can honestly score worse than an earlier attempt (a
+   * different emphasis, a tighter one-page cut that dropped a matching bullet, etc.), and the
+   * candidate should see their best real result by default rather than always the latest. */
+  private void promoteBestVersion(UUID userId, JobListing job) {
+    jobTailoringVersionRepository
+        .findFirstByJobIdOrderByFitScoreDescVersionDesc(job.getId())
+        .filter(best -> !java.util.Objects.equals(best.getLatexResume(), job.getTailoredLatexResume()))
+        .ifPresent(
+            best -> {
+              job.setTailoredLatexResume(best.getLatexResume());
+              job.setTailoredImprovementPoints(best.getImprovementPoints());
+              job.setTailoredGapsVsJd(best.getGapsVsJd());
+              job.setTailoredInferredClaims(best.getInferredClaims());
+              job.setTailoredResumeSkills(null);
+              jobListingRepository.save(job);
+              recomputeFitScore(userId, job);
+            });
   }
 
   /** Skill extraction needs plain, human-readable text - raw LaTeX source (commands, braces,

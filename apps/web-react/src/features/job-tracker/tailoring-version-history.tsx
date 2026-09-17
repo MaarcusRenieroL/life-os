@@ -28,6 +28,11 @@ export function TailoringVersionHistory({ jobId, jobTitle }: { jobId: string; jo
 
   if (versions.length <= 1) return null;
 
+  // Mirrors the backend: "current" is always whichever attempt scored highest, not the latest -
+  // versions are already newest-first, so the first max is the most recent among ties.
+  const bestScore = Math.max(...versions.map((v) => v.fitScore ?? -1));
+  const currentVersionId = versions.find((v) => v.fitScore === bestScore)?.id;
+
   async function downloadVersion(versionId: string, version: number) {
     const blob = await jobApi.tailoringVersionPdf(jobId, versionId);
     downloadBlob(blob, `${jobTitle}-resume-v${version}.pdf`);
@@ -48,6 +53,7 @@ export function TailoringVersionHistory({ jobId, jobTitle }: { jobId: string; jo
             >
               <span>
                 v{v.version} <span className="text-xs text-muted-foreground">{new Date(v.createdAt).toLocaleString()}</span>
+                {v.id === currentVersionId && <span className="ml-1 text-xs text-primary">(current)</span>}
                 {v.basedOn === 'OVERRIDE_RESUME' && (
                   <span className="ml-1 text-xs text-muted-foreground">(from uploaded resume)</span>
                 )}
