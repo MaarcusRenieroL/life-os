@@ -21,6 +21,7 @@ export default defineConfig({
       '/v1/jobs': { target: 'http://localhost:8003', changeOrigin: true },
       '/v1/resumes': { target: 'http://localhost:8003', changeOrigin: true },
       '/v1/skills': { target: 'http://localhost:8003', changeOrigin: true },
+      '/v1/career-profile': { target: 'http://localhost:8003', changeOrigin: true },
       '/v1/core': { target: 'http://localhost:8004', changeOrigin: true },
       '/v1/batches': { target: 'http://localhost:8005', changeOrigin: true },
       '/v1/finance': { target: 'http://localhost:8006', changeOrigin: true },
