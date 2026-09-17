@@ -291,12 +291,36 @@ export function JobDetailPage() {
                     <TabsTrigger value="pdf">PDF</TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="improvements">
+                  <TabsContent value="improvements" className="flex flex-col gap-4">
                     <ul className="list-disc space-y-1.5 pl-4 text-sm text-muted-foreground">
                       {(job.tailoredImprovementPoints ?? []).map((point) => (
                         <li key={point}>{point}</li>
                       ))}
                     </ul>
+
+                    {job.tailoredInferredClaims && job.tailoredInferredClaims.length > 0 && (
+                      <div className="rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3">
+                        <p className="text-xs font-medium text-yellow-600">
+                          Confirm before sending - rephrased beyond a direct reording
+                        </p>
+                        <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+                          {job.tailoredInferredClaims.map((claim) => (
+                            <li key={claim}>{claim}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {job.tailoredGapsVsJd && job.tailoredGapsVsJd.length > 0 && (
+                      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                        <p className="text-xs font-medium text-destructive">Gaps vs. job description</p>
+                        <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+                          {job.tailoredGapsVsJd.map((gap) => (
+                            <li key={gap}>{gap}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="latex">
