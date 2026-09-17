@@ -81,13 +81,21 @@ public class AiAssistant {
         """
         Extract structured data from the resume below. Use this exact shape:
         {
-          "name": string, "email": string, "phone": string,
-          "experience": [{"title","company","startDate","endDate","description"}],
+          "name": string, "email": string, "phone": string, "location": string,
+          "githubUrl": string, "linkedinUrl": string, "portfolioUrl": string,
+          "summary": string,
+          "experience": [{"title","company","location","startDate","endDate","bullets":[string]}],
           "education": [{"degree","school","field","graduationYear"}],
+          "projects": [{"name","description","techStack":[string],"link","startDate","endDate","bullets":[string]}],
           "skills": [{"name","category","proficiency","yearsOfExperience","confidence"}],
           "certifications": [string], "achievements": [string]
         }
-        category is one of LANGUAGE, FRAMEWORK, PLATFORM, DATABASE, TOOL, SOFT, OTHER.
+        "bullets" is each experience/project entry's line items, verbatim from the resume, not a
+        single merged paragraph. "startDate"/"endDate" must be "YYYY-MM" (e.g. "2024-08"), never
+        "Aug 2024" or similar - null if the resume gives no date or says "Present"/"Ongoing".
+        "summary" is the resume's own professional-summary paragraph if it has one, otherwise omit
+        it rather than writing a new one. category is one of LANGUAGE,
+        FRAMEWORK, PLATFORM, DATABASE, TOOL, SOFT, OTHER.
         proficiency is one of BEGINNER, INTERMEDIATE, ADVANCED, EXPERT.
         confidence is 0..1. yearsOfExperience must be a plain JSON number (e.g. 2.5) - never a
         string, and never with a trailing "+" or unit, even if the resume phrases it as "2.5+
@@ -182,30 +190,61 @@ public class AiAssistant {
         "You are a resume coach and LaTeX typesetter. Reply with ONLY a JSON object, no prose, no"
             + " markdown fence.",
         """
-            Compare the candidate's resume against the job below and produce tailoring output. Shape:
+            Tailor the candidate's resume to the job below. This is a one-shot task - there is no
+            second attempt, so use every honest angle you can find on the first try. Shape:
             {
               "improvementPoints": [string],
+              "gapsVsJd": [string],
+              "inferredClaims": [string],
               "latexResume": string
             }
 
-            Rules:
-            - "improvementPoints" is 4-8 short, concrete, actionable bullets telling the candidate what
-              to change on their resume for THIS job - e.g. which existing bullet to reword, which
-              already-demonstrated-but-unstated skill to surface, what to quantify, what to cut. Do not
-              suggest claiming a skill or experience the resume gives no evidence of; if a required
-              skill is genuinely absent from their background, say so plainly instead of inventing a way
-              to fake it.
-            - "latexResume" is a complete, compilable LaTeX document built ONLY from the candidate's
-              real resume content below - reorganised, reworded and re-prioritised toward this job's
-              required skills, but never fabricating employers, titles, dates, or skills absent from
-              the source resume. This gets compiled with tectonic (a XeTeX engine), so avoid
-              pdfTeX-only primitives (\\pdfgentounicode, \\input{glyphtounicode}). Escape LaTeX special
-              characters (&, %%, $, #, _, {, }) found in the candidate's own text. Escape the document
-              as a valid JSON string (escape backslashes as \\\\ and newlines as \\n).
+            GROUND RULES (non-negotiable):
+            - Never fabricate. Only include skills, tools, or achievements the candidate profile below
+              actually states. Tailoring means reordering and reweighting - leading with whichever real
+              bullets/skills are most relevant to this job, and rephrasing existing bullets into this
+              job's terminology where that rephrasing is still honestly accurate - never inventing a new
+              claim. If the job wants something genuinely absent from the profile, do not add it.
+            - Where the job's required-skill wording differs only cosmetically from how the candidate
+              already describes it (e.g. job says "Tailwind", candidate says "Tailwind CSS"; job says a
+              version qualifier the candidate's tooling already covers), use the job's own phrasing -
+              that is honest alignment, not fabrication, and it is exactly what an ATS keyword scan
+              rewards.
+            - Every hyperlink in the output must be copied verbatim from a link that appears in the
+              candidate profile below - never guess or construct a URL.
+            - Keep every factual detail (dates, company names, metrics) exactly as given in the profile.
+            - "improvementPoints" (4-8 items): what you emphasized or reordered and why, tied to
+              specific job requirements.
+            - "gapsVsJd": required or nice-to-have items from this job that the candidate's real
+              background does not support. Say so plainly - do not soften it into something that sounds
+              like a workaround.
+            - "inferredClaims": any rephrasing in the output that goes beyond a straightforward reording
+              of something already in the profile (e.g. inferring "code reviews" from "quality
+              pipeline") - flag it here so the candidate can confirm or correct it before sending this
+              out. Empty array if every line is a direct rewording.
+
+            STYLE & VOICE:
+            - No em dashes (—) or en dashes (–) anywhere - not in bullet prose, not in date
+              ranges, not in headers. Use a comma, a period splitting into two sentences, a colon,
+              parentheses, or the word "to" for date ranges (e.g. "Aug 2024 to Present") instead. A
+              plain hyphen (-) is fine where one is genuinely needed.
+            - Do not write like an LLM. Cut buzzwords and filler: "leverage", "seamless", "robust",
+              "cutting-edge", "dynamic", "synergy", "spearhead", "utilize", "in order to", and similar.
+              Vary sentence rhythm and structure across bullets - don't make every bullet follow the
+              identical "verb + object + tool + outcome" template; let a few lead with a scope, a
+              problem, or a number instead of always a gerund or past-tense verb. Before finalizing,
+              read it back for tone - if a line reads like keyword-stuffed SEO copy, rewrite it.
+            - ATS-friendly: standard section headers, no tables/columns, no images or icons standing in
+              for text.
+            - "latexResume" is a complete, compilable LaTeX document. This gets compiled with tectonic
+              (a XeTeX engine), so avoid pdfTeX-only primitives (\\pdfgentounicode,
+              \\input{glyphtounicode}). Escape LaTeX special characters (&, %%, $, #, _, {, }) found in
+              the candidate's own text. Escape the document as a valid JSON string (escape backslashes
+              as \\\\ and newlines as \\n).
             - Use exactly this preamble (a designed look - serif Charter font, a navy accent color on
               the name and section rules - beats a plain default-LaTeX look), adapting only the
-              section list to what the candidate's resume actually has (drop empty sections, e.g. no
-              Projects section if the resume has none):
+              section list to what the candidate profile actually has (drop empty sections, e.g. no
+              Projects section if the profile has none):
               \\documentclass[10.5pt]{article}
               \\usepackage[T1]{fontenc}
               \\usepackage{charter}
@@ -240,7 +279,8 @@ public class AiAssistant {
             Description:
             %s
 
-            CANDIDATE RESUME (verbatim extracted text):
+            CANDIDATE PROFILE (verbatim - contact info, summary, work experience, projects with real
+            links, and skills):
             %s
             """
             .formatted(
