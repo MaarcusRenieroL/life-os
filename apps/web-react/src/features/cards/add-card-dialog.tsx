@@ -64,7 +64,7 @@ export function AddCardDialog({ open, onOpenChange, onSave, error }: Props) {
         if (o) setForm(BLANK);
       }}
     >
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>Add a card</DialogTitle></DialogHeader>
         <div className="flex flex-col gap-3">
           <div>

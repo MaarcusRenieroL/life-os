@@ -71,7 +71,7 @@ export function ExperienceDialog({ open, onOpenChange, editing, nextDisplayOrder
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit work experience' : 'Add work experience'}</DialogTitle>
         </DialogHeader>

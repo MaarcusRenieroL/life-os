@@ -73,7 +73,7 @@ export function ProjectDialog({ open, onOpenChange, editing, nextDisplayOrder, o
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit project' : 'Add project'}</DialogTitle>
         </DialogHeader>
