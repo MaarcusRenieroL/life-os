@@ -89,7 +89,9 @@ public class AiAssistant {
         }
         category is one of LANGUAGE, FRAMEWORK, PLATFORM, DATABASE, TOOL, SOFT, OTHER.
         proficiency is one of BEGINNER, INTERMEDIATE, ADVANCED, EXPERT.
-        confidence is 0..1. Omit unknown scalar fields rather than guessing.
+        confidence is 0..1. yearsOfExperience must be a plain JSON number (e.g. 2.5) - never a
+        string, and never with a trailing "+" or unit, even if the resume phrases it as "2.5+
+        years". Omit unknown scalar fields rather than guessing.
 
         RESUME:
         """
