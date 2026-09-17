@@ -1,0 +1,18 @@
+% Compiled once during the Docker build so tectonic caches the packages the
+% tailored resume needs - keeps the first real request from doing a cold
+% package download. Mirrors the article-style preamble AiAssistant asks Claude
+% to use (geometry/enumitem/titlesec/hyperref).
+\documentclass[11pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\makeatletter\let\@noitemerr\relax\makeatother
+\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\begin{document}
+\begin{center}\textbf{\Large Warmup} \\ warmup@example.com\end{center}
+\section{Section}
+\begin{itemize}[leftmargin=*, itemsep=1pt, topsep=2pt]
+  \item A bullet.
+\end{itemize}
+\end{document}

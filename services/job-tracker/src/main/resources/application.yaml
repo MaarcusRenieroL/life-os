@@ -4,3 +4,64 @@ server:
 spring:
   application:
     name: job-tracker
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+  flyway:
+    schemas: job_tracker_schema
+    default-schema: job_tracker_schema
+
+jwt:
+  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+
+internal:
+  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+
+# job-tracker doesn't use EncryptionService itself, but it's component-scanned
+# in from com.lifeos.common (see JobTrackerApplication's @ComponentScan) and its
+# constructor requires this property to be resolvable, so it needs a value.
+encryption:
+  secret: ${ENCRYPTION_SECRET:wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+
+anthropic:
+  base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-sonnet-5}
+  version: "2023-06-01"
+  # 4096 was enough for the short JSON extraction/scoring prompts this client also sends,
+  # but tailor-resume asks for a full LaTeX resume plus improvement points in one JSON
+  # reply, which routinely runs past that and gets cut off mid-string.
+  max-tokens: ${ANTHROPIC_MAX_TOKENS:8192}
+
+# Local, zero-cost alternative to Claude for the routine/high-volume prompts - see
+# AiAssistant's per-task routing and the ai.routing.* keys below. Disabled by default so a
+# fresh checkout with no local Ollama server still just uses Claude everywhere.
+ollama:
+  base-url: ${OLLAMA_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:mistral}
+  enabled: ${OLLAMA_ENABLED:false}
+
+# Which provider ("ollama" or "claude") handles each AI task - flip any one without a
+# redeploy. Resume tailoring defaults to Claude and doesn't fall back further than Claude
+# itself (see AiAssistant); the others fall back to Claude automatically if Ollama is routed
+# but unreachable.
+ai:
+  routing:
+    resume-parse: ${AI_ROUTE_RESUME_PARSE:ollama}
+    job-parse: ${AI_ROUTE_JOB_PARSE:ollama}
+    email-classify: ${AI_ROUTE_EMAIL_CLASSIFY:ollama}
+    tailor-resume: ${AI_ROUTE_TAILOR_RESUME:claude}
+    cover-letter: ${AI_ROUTE_COVER_LETTER:claude}
+    interview-prep: ${AI_ROUTE_INTERVIEW_PREP:ollama}
+    referral-message: ${AI_ROUTE_REFERRAL_MESSAGE:claude}
+
+job-tracker:
+  storage:
+    resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}
+  latex:
+    tectonic-bin: ${TECTONIC_BIN:tectonic}
+    timeout-seconds: ${TECTONIC_TIMEOUT_SECONDS:90}

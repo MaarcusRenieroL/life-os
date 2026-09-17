@@ -29,7 +29,7 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT, PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -50,7 +50,7 @@ services:
     image: nginx:alpine
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./apps/web/dist/web/browser:/usr/share/nginx/html:ro
+      - ./apps/web-react/dist:/usr/share/nginx/html:ro
     ports:
       - "80:80"
       - "443:443"
@@ -59,6 +59,9 @@ services:
       - vault
       - job-tracker
       - core
+      - notes
+      - finance-tracker
+      - batches
 
   auth:
     build:
@@ -100,20 +103,42 @@ services:
 
   job-tracker:
     build:
-      context: ./services/job-tracker/
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/job-tracker/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
+      RESUME_STORAGE_DIR: /data/resumes
+      # host.docker.internal reaches the Mac's own Ollama server (brew install ollama; ollama
+      # serve) from inside the container - there's no Ollama service in this compose file, it
+      # runs on the host so the same model cache is shared with any other local tool using it.
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-mistral}
+      AI_ROUTE_RESUME_PARSE: ${AI_ROUTE_RESUME_PARSE:-ollama}
+      AI_ROUTE_JOB_PARSE: ${AI_ROUTE_JOB_PARSE:-ollama}
+      AI_ROUTE_EMAIL_CLASSIFY: ${AI_ROUTE_EMAIL_CLASSIFY:-ollama}
+      AI_ROUTE_TAILOR_RESUME: ${AI_ROUTE_TAILOR_RESUME:-claude}
+      AI_ROUTE_COVER_LETTER: ${AI_ROUTE_COVER_LETTER:-claude}
+      AI_ROUTE_INTERVIEW_PREP: ${AI_ROUTE_INTERVIEW_PREP:-ollama}
+      AI_ROUTE_REFERRAL_MESSAGE: ${AI_ROUTE_REFERRAL_MESSAGE:-claude}
+    volumes:
+      - job_tracker_resumes:/data/resumes
     ports:
       - "8003:8003"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
-      kafka:
-        condition: service_started
 
+  # Module tile enable/disable settings only - the notes module itself now
+  # lives in its own `notes` service below.
   core:
     build:
       context: .
@@ -122,20 +147,33 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      OLLAMA_URL: http://host.docker.internal:11434
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
     ports:
       - "8004:8004"
     depends_on:
       postgres:
         condition: service_healthy
+
+  notes:
+    build:
+      context: .
+      dockerfile: services/notes/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+    ports:
+      - "8007:8007"
+    depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
-        condition: service_started
 
   batches:
     build:
@@ -151,6 +189,16 @@ services:
       VAULT_INTERNAL_BASE_URL: http://vault:8002
       OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
       BACKUP_CRON: ${BACKUP_CRON:-0 0 3 * * *}
+      GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
+      GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
+      GMAIL_REDIRECT_URI: ${GMAIL_REDIRECT_URI:-http://localhost:8005/v1/batches/gmail/callback}
+      GMAIL_ENCRYPTION_SECRET: ${GMAIL_ENCRYPTION_SECRET:-zjQIMjy7Pp+dEPaXnwwFqETV64YQSQBYJYelXbSi5qc=}
+      GMAIL_ALERT_SENDERS: ${GMAIL_ALERT_SENDERS:-canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
+      GMAIL_JOB_SEARCH_SENDERS: ${GMAIL_JOB_SEARCH_SENDERS:-jobalerts-noreply@linkedin.com,jobs-noreply@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
+      GMAIL_JOB_SEARCH_KEYWORDS: ${GMAIL_JOB_SEARCH_KEYWORDS:-application,interview,offer,not moving forward,not selected,moving forward,thank you for applying,thanks for applying,update on your application}
+      GMAIL_POLL_CRON: ${GMAIL_POLL_CRON:-0 0 9,15,21 * * *}
+      FINANCE_INTERNAL_BASE_URL: ${FINANCE_INTERNAL_BASE_URL:-http://finance-tracker:8006}
+      JOB_TRACKER_INTERNAL_BASE_URL: ${JOB_TRACKER_INTERNAL_BASE_URL:-http://job-tracker:8003}
     ports:
       - "8005:8005"
     depends_on:
@@ -159,5 +207,33 @@ services:
       postgres:
         condition: service_healthy
 
+  finance-tracker:
+    build:
+      context: .
+      dockerfile: services/finance-tracker/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      FINANCE_ENCRYPTION_SECRET: ${FINANCE_ENCRYPTION_SECRET:-wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
+      OLLAMA_URL: http://host.docker.internal:11434
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "8006:8006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  job_tracker_resumes:

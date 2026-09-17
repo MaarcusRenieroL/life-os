@@ -35,3 +35,25 @@ owner:
 
 backup:
   cron: ${BACKUP_CRON:0 0 3 * * *}
+
+encryption:
+  secret: ${GMAIL_ENCRYPTION_SECRET}
+
+gmail:
+  client-id: ${GMAIL_CLIENT_ID}
+  client-secret: ${GMAIL_CLIENT_SECRET}
+  redirect-uri: ${GMAIL_REDIRECT_URI:http://localhost:8005/v1/batches/gmail/callback}
+  alert-senders: ${GMAIL_ALERT_SENDERS:canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
+  job-search:
+    # Known job-board/ATS senders, checked with OR against a subject-keyword fallback for
+    # arbitrary company domains - see JobEmailSyncService for why this can't be sender-only.
+    senders: ${GMAIL_JOB_SEARCH_SENDERS:jobalerts-noreply@linkedin.com,jobs-noreply@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
+    subject-keywords: ${GMAIL_JOB_SEARCH_KEYWORDS:application,interview,offer,not moving forward,not selected,moving forward,thank you for applying,thanks for applying,update on your application}
+  poll:
+    cron: ${GMAIL_POLL_CRON:0 0 9,15,21 * * *}
+
+job-tracker:
+  internal-base-url: ${JOB_TRACKER_INTERNAL_BASE_URL:http://job-tracker:8003}
+
+finance:
+  internal-base-url: ${FINANCE_INTERNAL_BASE_URL:http://finance-tracker:8006}
