@@ -204,7 +204,7 @@ export function JobDetailPage() {
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_320px]">
+      <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_360px]">
         <div className="flex flex-col gap-5">
           <Card>
             <CardContent>
@@ -419,7 +419,7 @@ export function JobDetailPage() {
           <Card>
             <CardContent>
               <SectionHeading className="mb-3">details</SectionHeading>
-              <dl className="flex flex-col gap-2.5 text-sm">
+              <dl className="flex flex-col gap-3.5 text-sm">
                 <DetailRow label="Company" value={job.company} />
                 <DetailRow label="Location" value={job.location} />
                 <DetailRow label="Work model" value={job.workModel ? titleCase(job.workModel) : null} />
@@ -472,9 +472,9 @@ export function JobDetailPage() {
 function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
   return (
-    <div className="flex items-center justify-between gap-3">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-right font-medium">{value}</dd>
+    <div className="flex flex-col gap-0.5">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="font-medium">{value}</dd>
     </div>
   );
 }

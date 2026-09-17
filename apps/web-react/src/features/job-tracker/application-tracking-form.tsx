@@ -58,7 +58,7 @@ export function ApplicationTrackingForm({ job }: { job: JobListing }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex flex-col gap-3">
         <div>
           <Label className="mb-1.5 block text-[11px] text-muted-foreground">APPLIED ON</Label>
           <DatePicker value={appliedAt} onChange={setAppliedAt} />
