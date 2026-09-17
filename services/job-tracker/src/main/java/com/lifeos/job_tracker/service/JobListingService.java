@@ -433,13 +433,20 @@ public class JobListingService {
     }
 
     // The prompt already asks for one page and no em/en dashes, but LLM instruction-following
-    // isn't guaranteed - actually compile it and scan the text, and if either is wrong, retry
-    // ONCE with a combined correction instruction rather than silently handing back a bad resume
-    // or burning a second full API call per problem.
+    // isn't guaranteed - actually compile it and scan the text, and correct it if either is wrong.
+    // A SINGLE best-effort retry used to silently accept a still-overflowing result as "good
+    // enough" (it only checked that the retry wasn't worse than the original, not that it actually
+    // fit) - loop instead, escalating the correction each time, until it fits one page or the retry
+    // budget (2 extra attempts, 3 total) runs out. Every attempt after the first is a real cost, so
+    // this budget is intentionally small, but "still overflowing" must never be the silently
+    // accepted final state.
     byte[] pdf = latexCompiler.compile(result.latexResume());
-    boolean overflowed = latexCompiler.pageCount(pdf) > 1;
     boolean hasTypographicDash = containsTypographicDash(result.latexResume());
-    if (overflowed || hasTypographicDash) {
+    final int maxOverflowRetries = 2;
+    for (int attempt = 0;
+        attempt < maxOverflowRetries && (latexCompiler.pageCount(pdf) > 1 || (attempt == 0 && hasTypographicDash));
+        attempt++) {
+      boolean overflowed = latexCompiler.pageCount(pdf) > 1;
       StringBuilder correction = new StringBuilder();
       if (overflowed) {
         correction
@@ -447,10 +454,11 @@ public class JobListingService {
             .append(" exactly one page. Cut in this order until it fits: shorten or cut the weakest")
             .append(" bullets in Experience/Projects first; trim Achievements to at most 1 short")
             .append(" one-line bullet; keep the Education line to school, dates, degree only, nothing")
-            .append(" extra. Do not drop a whole section (Summary/Education/Achievements) - trim what's")
-            .append(" inside it. ");
+            .append(" extra. If it's still too long after that, cut a whole bullet or an entire weaker")
+            .append(" project, not just words within one. Do not drop a whole section")
+            .append(" (Summary/Education/Achievements) - trim what's inside it. ");
       }
-      if (hasTypographicDash) {
+      if (attempt == 0 && hasTypographicDash) {
         correction
             .append("The previous attempt used an em dash or en dash character somewhere. Rewrite")
             .append(" it with a comma, period, colon, parentheses, or the word \"to\" instead, per")
@@ -467,23 +475,21 @@ public class JobListingService {
               baseResumeText,
               correction.toString());
       byte[] retryPdf = latexCompiler.compile(retry.latexResume());
-      int retryPageCount = latexCompiler.pageCount(retryPdf);
-      // Strictly fewer pages always wins. Equal page count still prefers the retry (it also carries
-      // the dash fix, when that was part of the correction), but only when the retry didn't make
-      // things worse.
-      if (retryPageCount <= latexCompiler.pageCount(pdf)) {
+      // Strictly fewer pages always wins; equal page count still takes the retry (it also carries
+      // the dash fix, on the first pass), but only when it didn't make things worse.
+      if (latexCompiler.pageCount(retryPdf) <= latexCompiler.pageCount(pdf)) {
         result = retry;
         pdf = retryPdf;
       }
-      // One retry is the budget (credit-conscious) - if it's STILL overflowing after that, this is
-      // not silently accepted as "good enough": log it loudly so it's traceable, since a 2-page
-      // resume going out is a real problem, not a cosmetic one.
-      if (latexCompiler.pageCount(pdf) > 1) {
-        log.warn("Tailored resume for job {} is still overflowing to a second page after one retry", job.getId());
-      }
-      if (hasTypographicDash && containsTypographicDash(result.latexResume())) {
-        log.warn("Tailored resume for job {} still contains an em/en dash after one retry", job.getId());
-      }
+    }
+    if (latexCompiler.pageCount(pdf) > 1) {
+      log.warn(
+          "Tailored resume for job {} is still overflowing to a second page after {} retries",
+          job.getId(),
+          maxOverflowRetries);
+    }
+    if (hasTypographicDash && containsTypographicDash(result.latexResume())) {
+      log.warn("Tailored resume for job {} still contains an em/en dash after retrying", job.getId());
     }
 
     // The prompt explicitly forbids constructing a URL that isn't literally in the profile, but
