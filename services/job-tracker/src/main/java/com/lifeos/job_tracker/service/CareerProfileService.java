@@ -55,6 +55,11 @@ public class CareerProfileService {
         .orElseThrow(() -> new ResourceNotFoundException("Complete your career profile first"));
   }
 
+  @Transactional(readOnly = true)
+  public CareerProfile getProfileOrNull(UUID userId) {
+    return careerProfileRepository.findById(userId).orElse(null);
+  }
+
   @Transactional
   public CareerProfile upsertProfile(UUID userId, UpsertCareerProfileRequest request) {
     CareerProfile profile =

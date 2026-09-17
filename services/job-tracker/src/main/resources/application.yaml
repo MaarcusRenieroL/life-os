@@ -58,7 +58,6 @@ ai:
     tailor-resume: ${AI_ROUTE_TAILOR_RESUME:claude}
     cover-letter: ${AI_ROUTE_COVER_LETTER:claude}
     interview-prep: ${AI_ROUTE_INTERVIEW_PREP:ollama}
-    referral-message: ${AI_ROUTE_REFERRAL_MESSAGE:claude}
 
 job-tracker:
   storage:

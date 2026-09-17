@@ -1,13 +1,12 @@
 package com.lifeos.job_tracker.service;
 
 import com.lifeos.job_tracker.domains.dto.request.UpsertReferralRequest;
+import com.lifeos.job_tracker.domains.entity.CareerProfile;
 import com.lifeos.job_tracker.domains.entity.JobListing;
 import com.lifeos.job_tracker.domains.entity.Referral;
-import com.lifeos.job_tracker.domains.entity.Resume;
 import com.lifeos.job_tracker.domains.enums.ReferralStatus;
 import com.lifeos.job_tracker.exception.InvalidRequestException;
 import com.lifeos.job_tracker.exception.ResourceNotFoundException;
-import com.lifeos.job_tracker.integration.AiAssistant;
 import com.lifeos.job_tracker.repository.ReferralRepository;
 import java.util.List;
 import java.util.UUID;
@@ -21,8 +20,7 @@ public class ReferralService {
 
   private final ReferralRepository referralRepository;
   private final JobListingService jobListingService;
-  private final ResumeService resumeService;
-  private final AiAssistant ai;
+  private final CareerProfileService careerProfileService;
 
   @Transactional(readOnly = true)
   public List<Referral> list(UUID userId, UUID jobId) {
@@ -80,33 +78,53 @@ public class ReferralService {
 
   /** Drafts (or re-drafts) the outreach message for this contact - a draft the candidate reviews
    * and sends themselves, never sent automatically. Moves a fresh referral from NOT_CONTACTED to
-   * MESSAGE_DRAFTED so the pipeline reflects that there's something ready to send. */
+   * MESSAGE_DRAFTED so the pipeline reflects that there's something ready to send.
+   *
+   * <p>Deliberately not AI-generated: a referral ask is short, personal, and always says the same
+   * thing - the candidate's own fixed template, filled in with this job's details, reads more
+   * genuine than an LLM's approximation of it and never needs "confirm this doesn't sound weird"
+   * review before sending. */
   @Transactional
   public Referral generateDraftMessage(UUID userId, UUID referralId) {
     Referral referral = get(userId, referralId);
     JobListing job = jobListingService.get(userId, referral.getJobId());
-    if (!ai.available()) {
-      throw new InvalidRequestException(
-          "Drafting a referral message needs an AI provider; set ANTHROPIC_API_KEY or enable Ollama");
-    }
-    Resume resume = resumeService.getCurrent(userId);
-    if (resume.getRawText() == null || resume.getRawText().isBlank()) {
-      throw new InvalidRequestException("Upload a resume with readable text before drafting a referral message");
-    }
-
-    String message =
-        ai.generateReferralMessage(
-            referral.getContactName(),
-            referral.getContactTitle(),
-            referral.getRelationship(),
-            job.getTitle(),
-            job.getCompany(),
-            resume.getRawText());
+    String message = buildReferralMessage(userId, referral, job);
     referral.setDraftMessage(message);
     if (referral.getStatus() == ReferralStatus.NOT_CONTACTED) {
       referral.setStatus(ReferralStatus.MESSAGE_DRAFTED);
     }
     return referralRepository.save(referral);
+  }
+
+  private String buildReferralMessage(UUID userId, Referral referral, JobListing job) {
+    String contactFirstName = firstWord(referral.getContactName());
+    CareerProfile profile = careerProfileService.getProfileOrNull(userId);
+    String signOff = firstWord(profile == null ? null : profile.getFullName());
+
+    StringBuilder message = new StringBuilder();
+    message.append("Hi").append(contactFirstName.isEmpty() ? "" : " " + contactFirstName).append(",\n\n");
+    message.append("Hope you are doing good.\n");
+    message
+        .append("I found an opening at ")
+        .append(job.getCompany())
+        .append(" for the role ")
+        .append(job.getTitle())
+        .append(" and am very interested in applying for the same.\n\n");
+    message.append("Could you please help me with a referral?\n");
+    message.append("Job Id: ").append(job.getExternalId() == null ? "" : job.getExternalId()).append('\n');
+    message.append("Job Link: ").append(job.getUrl() == null ? "" : job.getUrl()).append("\n\n");
+    message.append("Regards,\n");
+    message.append(signOff.isEmpty() ? "" : signOff);
+    return message.toString();
+  }
+
+  private static String firstWord(String value) {
+    if (value == null || value.isBlank()) {
+      return "";
+    }
+    String trimmed = value.trim();
+    int spaceIndex = trimmed.indexOf(' ');
+    return spaceIndex < 0 ? trimmed : trimmed.substring(0, spaceIndex);
   }
 
   /** Every referral contact with a follow-up date set, across all jobs - feeds the dashboard's
