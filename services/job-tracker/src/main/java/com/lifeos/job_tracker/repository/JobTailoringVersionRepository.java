@@ -12,8 +12,5 @@ public interface JobTailoringVersionRepository extends JpaRepository<JobTailorin
 
   Optional<JobTailoringVersion> findByIdAndUserId(UUID id, UUID userId);
 
-  /** Highest-scoring tailoring ever produced for this job - ties go to the most recent. */
-  Optional<JobTailoringVersion> findFirstByJobIdOrderByFitScoreDescVersionDesc(UUID jobId);
-
   int countByJobId(UUID jobId);
 }

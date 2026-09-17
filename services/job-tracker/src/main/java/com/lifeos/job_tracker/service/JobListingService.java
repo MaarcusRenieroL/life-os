@@ -368,6 +368,18 @@ public class JobListingService {
       throw new InvalidRequestException("This job has no description text to tailor a resume against");
     }
 
+    // Snapshot what's currently active before this attempt overwrites it - if the new attempt
+    // scores worse, we restore this rather than keep it. Comparing against a fresh score taken
+    // moments ago (not a stored score from whenever some other past version was first created,
+    // possibly under different scoring rules or a smaller skill library) is the only fair
+    // apples-to-apples comparison.
+    Integer scoreBeforeThisAttempt = job.getFitScore();
+    String latexBeforeThisAttempt = job.getTailoredLatexResume();
+    List<String> improvementPointsBeforeThisAttempt = job.getTailoredImprovementPoints();
+    List<String> gapsVsJdBeforeThisAttempt = job.getTailoredGapsVsJd();
+    List<String> inferredClaimsBeforeThisAttempt = job.getTailoredInferredClaims();
+    List<ExtractedSkill> tailoredSkillsBeforeThisAttempt = job.getTailoredResumeSkills();
+
     boolean hasOverride = job.getOverrideResumeText() != null && !job.getOverrideResumeText().isBlank();
     TailoringBase basedOn = hasOverride ? TailoringBase.OVERRIDE_RESUME : TailoringBase.GLOBAL_RESUME;
     String baseResumeText = resolveBaseResumeText(userId, job);
@@ -472,29 +484,25 @@ public class JobListingService {
     jobListingRepository.save(job);
     JobFitResult rescored = recomputeFitScore(userId, job);
     saveVersion(userId, job, result, rescored.score(), basedOn);
-    promoteBestVersion(userId, job);
+
+    // "Current" should never regress: if this attempt honestly scored worse than what was active
+    // a moment ago (different emphasis, a tighter one-page cut that dropped a matching bullet),
+    // keep showing the better one and let this attempt live only in history. The new attempt is
+    // still saved as a version either way - nothing is lost - but a candidate re-tailoring in the
+    // hope of improving their score should never be handed something worse by default.
+    if (latexBeforeThisAttempt != null
+        && scoreBeforeThisAttempt != null
+        && rescored.score() < scoreBeforeThisAttempt) {
+      job.setTailoredLatexResume(latexBeforeThisAttempt);
+      job.setTailoredImprovementPoints(improvementPointsBeforeThisAttempt);
+      job.setTailoredGapsVsJd(gapsVsJdBeforeThisAttempt);
+      job.setTailoredInferredClaims(inferredClaimsBeforeThisAttempt);
+      job.setTailoredResumeSkills(tailoredSkillsBeforeThisAttempt);
+      jobListingRepository.save(job);
+      recomputeFitScore(userId, job);
+    }
 
     return result;
-  }
-
-  /** "Current" always reflects whichever tailoring attempt ever scored highest for this job, not
-   * just the most recent one - a re-tailor can honestly score worse than an earlier attempt (a
-   * different emphasis, a tighter one-page cut that dropped a matching bullet, etc.), and the
-   * candidate should see their best real result by default rather than always the latest. */
-  private void promoteBestVersion(UUID userId, JobListing job) {
-    jobTailoringVersionRepository
-        .findFirstByJobIdOrderByFitScoreDescVersionDesc(job.getId())
-        .filter(best -> !java.util.Objects.equals(best.getLatexResume(), job.getTailoredLatexResume()))
-        .ifPresent(
-            best -> {
-              job.setTailoredLatexResume(best.getLatexResume());
-              job.setTailoredImprovementPoints(best.getImprovementPoints());
-              job.setTailoredGapsVsJd(best.getGapsVsJd());
-              job.setTailoredInferredClaims(best.getInferredClaims());
-              job.setTailoredResumeSkills(null);
-              jobListingRepository.save(job);
-              recomputeFitScore(userId, job);
-            });
   }
 
   /** Skill extraction needs plain, human-readable text - raw LaTeX source (commands, braces,
