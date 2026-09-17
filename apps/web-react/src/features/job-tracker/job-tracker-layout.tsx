@@ -24,7 +24,7 @@ const TABS = [
   { label: 'Dashboard', to: '/jobs', end: true },
   { label: 'Jobs', to: '/jobs/list', end: false },
   { label: 'Add a Job', to: '/jobs/discovery', end: false },
-  { label: 'Resume', to: '/jobs/resumes', end: false },
+  { label: 'Profile', to: '/jobs/resumes', end: false },
   { label: 'Analytics', to: '/jobs/analytics', end: false },
 ];
 

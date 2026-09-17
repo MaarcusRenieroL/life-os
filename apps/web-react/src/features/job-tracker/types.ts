@@ -68,6 +68,8 @@ export interface JobListing {
   status: JobStatus | null;
   createdAt: string;
   tailoredImprovementPoints: string[] | null;
+  tailoredGapsVsJd: string[] | null;
+  tailoredInferredClaims: string[] | null;
   tailoredLatexResume: string | null;
   notes: string | null;
   appliedAt: string | null;
@@ -210,6 +212,8 @@ export interface JobFitResult {
 
 export interface ResumeTailoringResult {
   improvementPoints: string[];
+  gapsVsJd: string[] | null;
+  inferredClaims: string[] | null;
   latexResume: string;
 }
 
@@ -219,6 +223,8 @@ export interface JobTailoringVersion {
   id: string;
   version: number;
   improvementPoints: string[] | null;
+  gapsVsJd: string[] | null;
+  inferredClaims: string[] | null;
   latexResume: string | null;
   fitScore: number | null;
   basedOn: 'GLOBAL_RESUME' | 'OVERRIDE_RESUME' | null;
@@ -277,6 +283,74 @@ export interface Skill {
   yearsOfExperience: number | null;
   confidenceScore: number | null;
   source: string | null;
+}
+
+export interface CareerProfile {
+  userId: string;
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  githubUrl: string | null;
+  linkedinUrl: string | null;
+  portfolioUrl: string | null;
+  summary: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkExperience {
+  id: string;
+  title: string;
+  company: string;
+  location: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  current: boolean;
+  bullets: string[] | null;
+  displayOrder: number;
+}
+
+export interface UpsertWorkExperienceRequest {
+  title: string;
+  company: string;
+  location: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  current: boolean;
+  bullets: string[];
+  displayOrder: number;
+}
+
+export interface ProjectEntry {
+  id: string;
+  name: string;
+  description: string | null;
+  techStack: string[] | null;
+  link: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  bullets: string[] | null;
+  displayOrder: number;
+}
+
+export interface UpsertProjectRequest {
+  name: string;
+  description: string | null;
+  techStack: string[];
+  link: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  bullets: string[];
+  displayOrder: number;
+}
+
+export interface CareerProfileBundle {
+  onboarded: boolean;
+  profile: CareerProfile | null;
+  experiences: WorkExperience[];
+  projects: ProjectEntry[];
+  skills: Skill[];
 }
 
 export interface DailyCount {
