@@ -133,6 +133,9 @@ export function AccountDialog({ open, onOpenChange, editing, onSaved }: Props) {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={() => void submit()} disabled={saving || !form.accountName.trim()}>
             {saving ? 'Saving…' : 'Save'}
           </Button>

@@ -83,6 +83,9 @@ export function CategoryDialog({ open, onOpenChange, editing, onSaved }: Props) 
           </Label>
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={() => void submit()} disabled={saving || !name.trim()}>
             {saving ? 'Saving…' : 'Save'}
           </Button>

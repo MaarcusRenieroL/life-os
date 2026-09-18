@@ -123,6 +123,9 @@ export function BudgetDialog({ open, onOpenChange, editing, onSaved }: Props) {
           </Label>
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={() => void submit()} disabled={saving || !categoryId || !budgetAmount}>
             {saving ? 'Saving…' : 'Save'}
           </Button>

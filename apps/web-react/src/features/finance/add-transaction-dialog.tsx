@@ -115,6 +115,9 @@ export function AddTransactionDialog({ open, onOpenChange, editing, onSaved }: P
           </div>
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={() => void submit()} disabled={saving || !description.trim() || !amount}>
             {saving ? 'Saving…' : 'Save'}
           </Button>

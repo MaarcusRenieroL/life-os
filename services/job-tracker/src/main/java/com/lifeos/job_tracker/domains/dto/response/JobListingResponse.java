@@ -35,7 +35,22 @@ public record JobListingResponse(
     Integer fitScore,
     Map<String, Object> fitExplanation,
     String status,
-    Instant createdAt) {
+    Instant createdAt,
+    List<String> tailoredImprovementPoints,
+    List<String> tailoredGapsVsJd,
+    List<String> tailoredInferredClaims,
+    String tailoredLatexResume,
+    String notes,
+    LocalDate appliedAt,
+    String rejectionReason,
+    BigDecimal offerAmount,
+    LocalDate offerDeadline,
+    String offerNotes,
+    String coverLetterText,
+    LocalDate followUpAt,
+    String overrideResumeFileName,
+    Instant overrideResumeUploadedAt,
+    String fitScoreSource) {
 
   public static JobListingResponse from(JobListing job) {
     return new JobListingResponse(
@@ -65,6 +80,21 @@ public record JobListingResponse(
         job.getFitScore(),
         job.getFitExplanation(),
         job.getStatus() == null ? null : job.getStatus().name(),
-        job.getCreatedAt());
+        job.getCreatedAt(),
+        job.getTailoredImprovementPoints(),
+        job.getTailoredGapsVsJd(),
+        job.getTailoredInferredClaims(),
+        job.getTailoredLatexResume(),
+        job.getNotes(),
+        job.getAppliedAt(),
+        job.getRejectionReason(),
+        job.getOfferAmount(),
+        job.getOfferDeadline(),
+        job.getOfferNotes(),
+        job.getCoverLetterText(),
+        job.getFollowUpAt(),
+        job.getOverrideResumeFileName(),
+        job.getOverrideResumeUploadedAt(),
+        job.getFitScoreSource() == null ? null : job.getFitScoreSource().name());
   }
 }

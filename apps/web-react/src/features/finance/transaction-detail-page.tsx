@@ -84,7 +84,7 @@ export function TransactionDetailPage() {
   const account = accounts.find((a) => a.id === tx.accountId);
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <div className="flex items-center justify-between">
         <Link to="/finance/transactions" className="text-sm text-muted-foreground hover:underline">← Transactions</Link>
         <div className="flex gap-2 text-xs">

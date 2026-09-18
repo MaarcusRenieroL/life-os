@@ -73,6 +73,9 @@ export function VaultResetDialog({ open, onOpenChange }: { open: boolean; onOpen
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={() => void submit()} disabled={!canSubmit || busy}>
             {busy ? 'Resetting…' : 'Reset vault'}
           </Button>

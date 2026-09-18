@@ -11,6 +11,8 @@ import com.lifeos.job_tracker.integration.AiAssistant;
 import com.lifeos.job_tracker.integration.PdfTextExtractor;
 import com.lifeos.job_tracker.integration.ResumeStorageService;
 import com.lifeos.job_tracker.repository.ResumeRepository;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +53,15 @@ public class ResumeService {
     return resumeRepository
         .findByIdAndUserId(resumeId, userId)
         .orElseThrow(() -> ResourceNotFoundException.of("Resume", resumeId));
+  }
+
+  /** Every resume the candidate has ever uploaded, newest first - uploading a new one doesn't
+   * delete the old ones, it just becomes the new {@link #getCurrent}. */
+  @Transactional(readOnly = true)
+  public List<Resume> list(UUID userId) {
+    return resumeRepository.findAllByUserId(userId).stream()
+        .sorted(Comparator.comparing(Resume::getCreatedAt).reversed())
+        .toList();
   }
 
   /**
@@ -113,7 +124,7 @@ public class ResumeService {
     }
     if (!ai.available()) {
       resume.setExtractionStatus(ProcessingStatus.FAILED);
-      resume.setExtractionError("Anthropic API key not configured; stored raw text only");
+      resume.setExtractionError("No AI provider configured (Claude or Ollama); stored raw text only");
       return resumeRepository.save(resume);
     }
 

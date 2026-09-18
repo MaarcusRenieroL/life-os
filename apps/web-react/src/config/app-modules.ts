@@ -36,9 +36,11 @@ export const APP_MODULES: AppModuleConfig[] = [
     enabled: true,
     path: '/jobs',
     tabs: [
-      { label: 'Jobs', path: '/jobs' },
+      { label: 'Dashboard', path: '/jobs' },
+      { label: 'Jobs', path: '/jobs/list' },
       { label: 'Add a Job', path: '/jobs/discovery' },
       { label: 'Resume', path: '/jobs/resumes' },
+      { label: 'Analytics', path: '/jobs/analytics' },
     ],
   },
   { code: 'TK', name: 'Tasks', enabled: false },

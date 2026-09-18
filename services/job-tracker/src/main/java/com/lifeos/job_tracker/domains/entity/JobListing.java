@@ -1,6 +1,7 @@
 package com.lifeos.job_tracker.domains.entity;
 
 import com.lifeos.job_tracker.domains.enums.CompanySize;
+import com.lifeos.job_tracker.domains.enums.FitScoreSource;
 import com.lifeos.job_tracker.domains.enums.GrowthStage;
 import com.lifeos.job_tracker.domains.enums.IngestSource;
 import com.lifeos.job_tracker.domains.enums.JobStatus;
@@ -8,6 +9,7 @@ import com.lifeos.job_tracker.domains.enums.ProcessingStatus;
 import com.lifeos.job_tracker.domains.enums.SeniorityLevel;
 import com.lifeos.job_tracker.domains.enums.VisaSponsorship;
 import com.lifeos.job_tracker.domains.enums.WorkModel;
+import com.lifeos.job_tracker.domains.record.ExtractedSkill;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -146,6 +148,65 @@ public class JobListing {
 
   @Column(name = "scraped_date")
   Instant scrapedDate;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "tailored_improvement_points_json")
+  List<String> tailoredImprovementPoints;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "tailored_gaps_vs_jd_json")
+  List<String> tailoredGapsVsJd;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "tailored_inferred_claims_json")
+  List<String> tailoredInferredClaims;
+
+  @Column(name = "tailored_latex_resume")
+  String tailoredLatexResume;
+
+  String notes;
+
+  @Column(name = "applied_at")
+  LocalDate appliedAt;
+
+  @Column(name = "rejection_reason")
+  String rejectionReason;
+
+  @Column(name = "offer_amount")
+  BigDecimal offerAmount;
+
+  @Column(name = "offer_deadline")
+  LocalDate offerDeadline;
+
+  @Column(name = "offer_notes")
+  String offerNotes;
+
+  @Column(name = "cover_letter_text")
+  String coverLetterText;
+
+  @Column(name = "follow_up_at")
+  LocalDate followUpAt;
+
+  @Column(name = "override_resume_text")
+  String overrideResumeText;
+
+  @Column(name = "override_resume_file_name")
+  String overrideResumeFileName;
+
+  @Column(name = "override_resume_uploaded_at")
+  Instant overrideResumeUploadedAt;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "fit_score_source")
+  FitScoreSource fitScoreSource;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "override_resume_skills_json")
+  List<ExtractedSkill> overrideResumeSkills;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "tailored_resume_skills_json")
+  List<ExtractedSkill> tailoredResumeSkills;
 
   @CreationTimestamp
   @Column(name = "created_at")

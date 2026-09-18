@@ -4,6 +4,7 @@ import { LoginPage } from '@/features/auth/login-page';
 import { ProtectedRoute } from '@/features/auth/protected-route';
 import { FinanceLayout } from '@/features/finance/finance-layout';
 import { JobTrackerLayout } from '@/features/job-tracker/job-tracker-layout';
+import { JobTrackerOnboardingGuard } from '@/features/job-tracker/job-tracker-onboarding-guard';
 import { NotesLayout } from '@/features/notes/notes-layout';
 import { VaultLayout } from '@/features/vault/vault-layout';
 import { VaultUnlockGuard } from '@/features/vault/vault-unlock-guard';
@@ -56,15 +57,29 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            path: 'jobs',
-            element: <JobTrackerLayout />,
+            path: 'jobs/onboarding',
+            lazy: page(
+              () => import('@/features/job-tracker/job-tracker-onboarding-page'),
+              'JobTrackerOnboardingPage',
+            ),
+          },
+          {
+            element: <JobTrackerOnboardingGuard />,
             children: [
-              { index: true, lazy: page(() => import('@/features/job-tracker/jobs-list-page'), 'JobsListPage') },
-              { path: 'discovery', lazy: page(() => import('@/features/job-tracker/add-job-page'), 'AddJobPage') },
-              { path: 'resumes', lazy: page(() => import('@/features/job-tracker/resume-page'), 'ResumePage') },
+              {
+                path: 'jobs',
+                element: <JobTrackerLayout />,
+                children: [
+                  { index: true, lazy: page(() => import('@/features/job-tracker/job-dashboard-page'), 'JobDashboardPage') },
+                  { path: 'list', lazy: page(() => import('@/features/job-tracker/jobs-list-page'), 'JobsListPage') },
+                  { path: 'discovery', lazy: page(() => import('@/features/job-tracker/add-job-page'), 'AddJobPage') },
+                  { path: 'resumes', lazy: page(() => import('@/features/job-tracker/resume-page'), 'ResumePage') },
+                  { path: 'analytics', lazy: page(() => import('@/features/job-tracker/job-analytics-page'), 'JobAnalyticsPage') },
+                ],
+              },
+              { path: 'jobs/:jobId', lazy: page(() => import('@/features/job-tracker/job-detail-page'), 'JobDetailPage') },
             ],
           },
-          { path: 'jobs/:jobId', lazy: page(() => import('@/features/job-tracker/job-detail-page'), 'JobDetailPage') },
           {
             path: 'notes',
             element: <NotesLayout />,

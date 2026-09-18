@@ -48,7 +48,7 @@ export function NoteSearchPage() {
   });
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <h1 className="text-2xl font-semibold tracking-tight">Search notes</h1>
       <Input
         autoFocus

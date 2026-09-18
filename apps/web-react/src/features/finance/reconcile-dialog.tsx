@@ -57,6 +57,9 @@ export function ReconcileDialog({
           </div>
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
           <Button onClick={() => void submit()} disabled={saving || !statementBalance}>
             {saving ? 'Saving…' : 'Reconcile'}
           </Button>

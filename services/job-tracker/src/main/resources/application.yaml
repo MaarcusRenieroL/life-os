@@ -32,11 +32,36 @@ anthropic:
   api-key: ${ANTHROPIC_API_KEY:}
   model: ${ANTHROPIC_MODEL:claude-sonnet-5}
   version: "2023-06-01"
-  # 4096 was enough for the short JSON extraction/scoring prompts this client also sends,
-  # but tailor-resume asks for a full LaTeX resume plus improvement points in one JSON
-  # reply, which routinely runs past that and gets cut off mid-string.
-  max-tokens: ${ANTHROPIC_MAX_TOKENS:8192}
+  # 4096, then 8192, were each enough for a while, but tailor-resume's reply grew - full
+  # LaTeX resume plus improvementPoints/gapsVsJd/inferredClaims in one JSON response - and a
+  # longer JD or extended-thinking overhead can now burn through 8192 before any text block
+  # is emitted at all (Anthropic API response had no text block, not just a truncated one).
+  max-tokens: ${ANTHROPIC_MAX_TOKENS:16384}
+
+# Local, zero-cost alternative to Claude for the routine/high-volume prompts - see
+# AiAssistant's per-task routing and the ai.routing.* keys below. Disabled by default so a
+# fresh checkout with no local Ollama server still just uses Claude everywhere.
+ollama:
+  base-url: ${OLLAMA_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:mistral}
+  enabled: ${OLLAMA_ENABLED:false}
+
+# Which provider ("ollama" or "claude") handles each AI task - flip any one without a
+# redeploy. Resume tailoring defaults to Claude and doesn't fall back further than Claude
+# itself (see AiAssistant); the others fall back to Claude automatically if Ollama is routed
+# but unreachable.
+ai:
+  routing:
+    resume-parse: ${AI_ROUTE_RESUME_PARSE:ollama}
+    job-parse: ${AI_ROUTE_JOB_PARSE:ollama}
+    email-classify: ${AI_ROUTE_EMAIL_CLASSIFY:ollama}
+    tailor-resume: ${AI_ROUTE_TAILOR_RESUME:claude}
+    cover-letter: ${AI_ROUTE_COVER_LETTER:claude}
+    interview-prep: ${AI_ROUTE_INTERVIEW_PREP:ollama}
 
 job-tracker:
   storage:
     resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}
+  latex:
+    tectonic-bin: ${TECTONIC_BIN:tectonic}
+    timeout-seconds: ${TECTONIC_TIMEOUT_SECONDS:90}

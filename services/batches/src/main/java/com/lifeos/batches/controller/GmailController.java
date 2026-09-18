@@ -3,6 +3,7 @@ package com.lifeos.batches.controller;
 import com.lifeos.batches.domains.record.GmailConnectionStatus;
 import com.lifeos.batches.service.GmailOAuthService;
 import com.lifeos.batches.service.GmailSyncService;
+import com.lifeos.batches.service.JobEmailSyncService;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class GmailController {
 
   private final GmailOAuthService gmailOAuthService;
   private final GmailSyncService gmailSyncService;
+  private final JobEmailSyncService jobEmailSyncService;
 
   @GetMapping("/status")
   public ResponseEntity<ApiResponse<GmailConnectionStatus>> status() {
@@ -54,5 +56,13 @@ public class GmailController {
     int processed = gmailSyncService.syncAll();
 
     return ResponseEntity.ok(ApiResponse.success(processed, processed + " transactions synced"));
+  }
+
+  // Same idea as /sync-all above, for the job-tracking email pipeline instead of bank alerts.
+  @PostMapping("/jobs/sync-all")
+  public ResponseEntity<ApiResponse<Integer>> syncAllJobEmails() throws IOException {
+    int processed = jobEmailSyncService.syncAll();
+
+    return ResponseEntity.ok(ApiResponse.success(processed, processed + " job emails synced"));
   }
 }

@@ -221,7 +221,7 @@ export function NoteEditorPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       <div className="flex items-center justify-between">
         <Link to="/notes" className="text-sm text-muted-foreground hover:underline">
           ← Notes
@@ -488,6 +488,9 @@ export function NoteEditorPage() {
           </Select>
           <Input value={moduleLinkId} onChange={(e) => setModuleLinkId(e.target.value)} placeholder="Module item ID" />
           <DialogFooter>
+            <Button variant="outline" onClick={() => setModuleLinkDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={() => void addModuleLink()}>Link</Button>
           </DialogFooter>
         </DialogContent>
@@ -498,6 +501,9 @@ export function NoteEditorPage() {
           <DialogHeader><DialogTitle>Link another note</DialogTitle></DialogHeader>
           <Input value={targetNoteId} onChange={(e) => setTargetNoteId(e.target.value)} placeholder="Target note ID" />
           <DialogFooter>
+            <Button variant="outline" onClick={() => setNoteLinkDialogOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={() => void addNoteLink()}>Link</Button>
           </DialogFooter>
         </DialogContent>

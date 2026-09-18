@@ -64,7 +64,7 @@ export function AddCardDialog({ open, onOpenChange, onSave, error }: Props) {
         if (o) setForm(BLANK);
       }}
     >
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>Add a card</DialogTitle></DialogHeader>
         <div className="flex flex-col gap-3">
           <div>
@@ -107,6 +107,9 @@ export function AddCardDialog({ open, onOpenChange, onSave, error }: Props) {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={submit} disabled={!valid}>Add card</Button>
         </DialogFooter>
       </DialogContent>

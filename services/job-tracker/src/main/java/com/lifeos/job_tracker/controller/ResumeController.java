@@ -4,6 +4,7 @@ import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.job_tracker.domains.dto.response.ResumeResponse;
 import com.lifeos.job_tracker.service.ResumeService;
 import com.lifeos.job_tracker.service.ResumeService.ResumeDownload;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
@@ -29,12 +30,20 @@ public class ResumeController extends AuthenticatedController {
 
   private final ResumeService resumeService;
 
-  /** The candidate's current (only) resume, or 404 if none uploaded yet. */
+  /** The candidate's current (most recently uploaded) resume, or 404 if none uploaded yet. */
   @GetMapping
   public ResponseEntity<ApiResponse<ResumeResponse>> current(Authentication authentication) {
     return ResponseEntity.ok(
         ApiResponse.success(
             ResumeResponse.from(resumeService.getCurrent(userId(authentication))), "Resume fetched"));
+  }
+
+  /** Every resume ever uploaded, newest first - the first one is the same as {@link #current}. */
+  @GetMapping("/history")
+  public ResponseEntity<ApiResponse<List<ResumeResponse>>> history(Authentication authentication) {
+    List<ResumeResponse> body =
+        resumeService.list(userId(authentication)).stream().map(ResumeResponse::from).toList();
+    return ResponseEntity.ok(ApiResponse.success(body, "Resume history fetched"));
   }
 
   @PostMapping(path = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
