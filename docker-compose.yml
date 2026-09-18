@@ -62,6 +62,7 @@ services:
       - notes
       - finance-tracker
       - batches
+      - habit-tracker
 
   auth:
     build:
@@ -226,6 +227,29 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "8006:8006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  habit-tracker:
+    build:
+      context: .
+      dockerfile: services/habit-tracker/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8008:8008"
     depends_on:
       postgres:
         condition: service_healthy
