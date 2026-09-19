@@ -28,8 +28,6 @@ type ViewMode = 'table' | 'card';
 
 const UNCATEGORIZED = 'Uncategorized';
 
-// Archived habits get their own tab (/habits/archive) - listing them here too would mean deleting
-// a habit appeared to do nothing. 'ALL' below therefore means "all of these", not literally all.
 const LISTED_STATUSES: HabitStatus[] = ['ACTIVE', 'PAUSED'];
 
 export function HabitsListPage() {
@@ -111,13 +109,11 @@ export function HabitsListPage() {
     }
   }
 
-  // The backend soft-deletes to ARCHIVED and keeps the logs, so this isn't destructive - the
-  // habit moves to the Archive tab and can be restored from there.
   async function deleteHabit(habit: Habit) {
-    if (!confirm(`Delete "${habit.name}"? It moves to the archive, where you can restore it.`)) return;
+    if (!confirm(`Delete "${habit.name}"? This cannot be undone.`)) return;
     try {
       await habitsApi.delete(habit.id);
-      toast.success(`Archived "${habit.name}"`);
+      toast.success(`Deleted "${habit.name}"`);
       invalidate();
     } catch {
       toast.error('Could not delete the habit. Please try again.');

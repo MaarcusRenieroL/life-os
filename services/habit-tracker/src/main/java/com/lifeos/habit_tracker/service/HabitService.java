@@ -135,11 +135,10 @@ public class HabitService {
     return toResponse(habitRepository.save(habit));
   }
 
-  /** Soft delete: archives instead of removing the row, per the module's spec. */
-  public void softDelete(UUID userId, UUID id) {
+  /** Hard delete: removes the habit and, via ON DELETE CASCADE, its logs/streak/reminders. */
+  public void delete(UUID userId, UUID id) {
     Habit habit = findOwned(userId, id);
-    habit.setStatus(HabitStatus.ARCHIVED);
-    habitRepository.save(habit);
+    habitRepository.delete(habit);
   }
 
   // The pause/resume endpoints only flip `status` - they don't record *which*

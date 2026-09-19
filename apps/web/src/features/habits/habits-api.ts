@@ -46,7 +46,6 @@ export const habitsApi = {
   },
 
   async delete(id: string): Promise<void> {
-    // Soft-delete: the backend archives the habit rather than removing it.
     await api.delete(`${baseUrl}/${id}`);
   },
 

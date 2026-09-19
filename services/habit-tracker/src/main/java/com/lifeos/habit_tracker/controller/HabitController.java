@@ -102,8 +102,8 @@ public class HabitController {
 
   @DeleteMapping("/{id}")
   public ResponseEntity<ApiResponse<Void>> delete(Authentication authentication, @PathVariable UUID id) {
-    habitService.softDelete(userId(authentication), id);
-    return ResponseEntity.ok(ApiResponse.success(null, "Habit archived successfully"));
+    habitService.delete(userId(authentication), id);
+    return ResponseEntity.ok(ApiResponse.success(null, "Habit deleted successfully"));
   }
 
   @PostMapping("/{id}/pause")
