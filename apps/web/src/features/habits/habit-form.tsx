@@ -116,7 +116,7 @@ function buildFrequencyConfig(value: HabitFormValue): Record<string, unknown> {
   }
 }
 
-export function habitFormToRequest(value: HabitFormValue): CreateHabitRequest & { why?: string | null; difficulty?: number | null } {
+export function habitFormToRequest(value: HabitFormValue): CreateHabitRequest {
   const hasTarget = value.type === 'COUNT' || value.type === 'DURATION';
   return {
     name: value.name.trim(),
@@ -150,6 +150,14 @@ export function validateHabitForm(value: HabitFormValue): string | null {
   }
   if (value.frequencyType === 'CUSTOM_INTERVAL' && !value.intervalDays) {
     return 'Enter the interval in days.';
+  }
+  // Matches the backend's @Min(1)/@Max(10) on difficulty, so an out-of-range value gets a clear
+  // message here instead of a generic 400 from the save.
+  if (value.difficulty) {
+    const difficulty = Number(value.difficulty);
+    if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 10) {
+      return 'Difficulty must be a whole number from 1 to 10.';
+    }
   }
   return null;
 }

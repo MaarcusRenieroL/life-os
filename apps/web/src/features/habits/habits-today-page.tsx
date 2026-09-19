@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 
+import { DifficultyRating, StreakBadge } from './habit-badges';
 import { habitsApi } from './habits-api';
 import type { TodayHabitEntry } from './types';
 
@@ -91,14 +92,25 @@ export function HabitsTodayPage() {
     queryFn: habitsApi.today,
   });
 
+  // Streak badges come from the analytics aggregate, which already carries every habit's
+  // current streak in one call - one /streak request per habit would be an N+1 waterfall on a
+  // page that can list dozens of habits.
+  const { data: analytics } = useQuery({
+    queryKey: ['habits', 'analytics', 12],
+    queryFn: () => habitsApi.analytics(12),
+  });
+
+  const streaksByHabitId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const entry of analytics?.habitPerformance ?? []) {
+      map.set(entry.habitId, entry.currentStreak);
+    }
+    return map;
+  }, [analytics]);
+
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
-
-      {/* TODO(maarcus): current-streak badges would need one streak fetch per habit here,
-          which is an N+1 waterfall for a page that can list dozens of habits - skipping
-          for now. Worth revisiting once/if the backend exposes streaks batched onto
-          GET /v1/habits/today. */}
 
       {isLoading ? (
         <div className="mt-6 flex flex-col gap-2">
@@ -126,7 +138,12 @@ export function HabitsTodayPage() {
                       {entry.habit.name}
                     </Link>
                     {entry.habit.category && <Badge variant="outline">{entry.habit.category}</Badge>}
+                    <StreakBadge days={streaksByHabitId.get(entry.habit.id) ?? 0} />
+                    <DifficultyRating difficulty={entry.habit.difficulty} />
                   </div>
+                  {entry.habit.why && (
+                    <span className="truncate text-xs text-muted-foreground italic">{entry.habit.why}</span>
+                  )}
                   {entry.todayLog && (
                     <span className="text-xs text-muted-foreground">
                       Logged: {entry.todayLog.status}

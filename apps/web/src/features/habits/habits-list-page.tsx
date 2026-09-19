@@ -18,14 +18,19 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
+import { DifficultyRating, StreakBadge } from './habit-badges';
 import { HabitFormDialog } from './habit-form-dialog';
 import { habitsApi } from './habits-api';
-import { HABIT_STATUSES, HABIT_TYPE_LABELS, type Habit, type HabitStatus } from './types';
+import { HABIT_TYPE_LABELS, type Habit, type HabitStatus } from './types';
 
 type StatusFilter = 'ALL' | HabitStatus;
 type ViewMode = 'table' | 'card';
 
 const UNCATEGORIZED = 'Uncategorized';
+
+// Archived habits get their own tab (/habits/archive) - listing them here too would mean deleting
+// a habit appeared to do nothing. 'ALL' below therefore means "all of these", not literally all.
+const LISTED_STATUSES: HabitStatus[] = ['ACTIVE', 'PAUSED'];
 
 export function HabitsListPage() {
   const queryClient = useQueryClient();
@@ -50,9 +55,25 @@ export function HabitsListPage() {
     [habits],
   );
 
+  // One streak request per habit is a waterfall on a page that can list dozens, so the badges come
+  // from the analytics aggregate instead - one call that already carries every habit's streaks.
+  const { data: analytics } = useQuery({
+    queryKey: ['habits', 'analytics', 12],
+    queryFn: () => habitsApi.analytics(12),
+  });
+
+  const streaksByHabitId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const entry of analytics?.habitPerformance ?? []) {
+      map.set(entry.habitId, entry.currentStreak);
+    }
+    return map;
+  }, [analytics]);
+
   const filtered = useMemo(
     () =>
       habits.filter((h) => {
+        if (h.status === 'ARCHIVED') return false;
         if (statusFilter !== 'ALL' && h.status !== statusFilter) return false;
         if (categoryFilter !== 'ALL' && (h.category ?? UNCATEGORIZED) !== categoryFilter) return false;
         if (searchQuery) {
@@ -90,11 +111,13 @@ export function HabitsListPage() {
     }
   }
 
+  // The backend soft-deletes to ARCHIVED and keeps the logs, so this isn't destructive - the
+  // habit moves to the Archive tab and can be restored from there.
   async function deleteHabit(habit: Habit) {
-    if (!confirm(`Delete "${habit.name}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete "${habit.name}"? It moves to the archive, where you can restore it.`)) return;
     try {
       await habitsApi.delete(habit.id);
-      toast.success(`Deleted "${habit.name}"`);
+      toast.success(`Archived "${habit.name}"`);
       invalidate();
     } catch {
       toast.error('Could not delete the habit. Please try again.');
@@ -149,7 +172,7 @@ export function HabitsListPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All statuses</SelectItem>
-            {HABIT_STATUSES.map((s) => (
+            {LISTED_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
                 {s[0] + s.slice(1).toLowerCase()}
               </SelectItem>
@@ -207,6 +230,8 @@ export function HabitsListPage() {
                       <TableHead>Name</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Frequency</TableHead>
+                      <TableHead>Difficulty</TableHead>
+                      <TableHead>Streak</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -219,9 +244,18 @@ export function HabitsListPage() {
                             {habit.icon && <span className="mr-1">{habit.icon}</span>}
                             {habit.name}
                           </Link>
+                          {habit.why && (
+                            <p className="max-w-72 truncate text-xs text-muted-foreground">{habit.why}</p>
+                          )}
                         </TableCell>
                         <TableCell>{HABIT_TYPE_LABELS[habit.type]}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{habit.frequencyType}</TableCell>
+                        <TableCell>
+                          <DifficultyRating difficulty={habit.difficulty} />
+                        </TableCell>
+                        <TableCell>
+                          <StreakBadge days={streaksByHabitId.get(habit.id) ?? 0} />
+                        </TableCell>
                         <TableCell>
                           <Badge variant={habit.status === 'ACTIVE' ? 'default' : 'outline'}>{habit.status}</Badge>
                         </TableCell>
@@ -232,8 +266,8 @@ export function HabitsListPage() {
                           <Button size="sm" variant="ghost" onClick={() => void togglePause(habit)}>
                             {habit.status === 'PAUSED' ? 'Resume' : 'Pause'}
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void archive(habit)}>
-                            Archive
+                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteHabit(habit)}>
+                            Delete
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -255,6 +289,15 @@ export function HabitsListPage() {
                         <span className="text-xs text-muted-foreground">
                           {HABIT_TYPE_LABELS[habit.type]} · {habit.frequencyType}
                         </span>
+                        {habit.why && (
+                          <p className="line-clamp-2 border-l-2 pl-2 text-xs text-muted-foreground italic">
+                            {habit.why}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <StreakBadge days={streaksByHabitId.get(habit.id) ?? 0} />
+                          <DifficultyRating difficulty={habit.difficulty} />
+                        </div>
                         <div className="mt-auto flex items-center gap-1 border-t pt-2">
                           <Button size="sm" variant="ghost" onClick={() => openEdit(habit)}>
                             Edit
