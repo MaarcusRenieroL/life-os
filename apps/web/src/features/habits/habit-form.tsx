@@ -44,6 +44,8 @@ export interface HabitFormValue {
   icon: string;
   color: string;
   priority: string;
+  why: string;
+  difficulty: string;
 }
 
 function emptyValue(): HabitFormValue {
@@ -63,6 +65,8 @@ function emptyValue(): HabitFormValue {
     icon: '',
     color: '',
     priority: '',
+    why: '',
+    difficulty: '',
   };
 }
 
@@ -91,6 +95,8 @@ function valueFromHabit(habit: Habit): HabitFormValue {
     icon: habit.icon ?? '',
     color: habit.color ?? '',
     priority: habit.priority != null ? String(habit.priority) : '',
+    why: habit.why ?? '',
+    difficulty: habit.difficulty != null ? String(habit.difficulty) : '',
   };
 }
 
@@ -110,7 +116,7 @@ function buildFrequencyConfig(value: HabitFormValue): Record<string, unknown> {
   }
 }
 
-export function habitFormToRequest(value: HabitFormValue): CreateHabitRequest {
+export function habitFormToRequest(value: HabitFormValue): CreateHabitRequest & { why?: string | null; difficulty?: number | null } {
   const hasTarget = value.type === 'COUNT' || value.type === 'DURATION';
   return {
     name: value.name.trim(),
@@ -126,6 +132,8 @@ export function habitFormToRequest(value: HabitFormValue): CreateHabitRequest {
     icon: value.icon.trim() || null,
     color: value.color.trim() || null,
     priority: value.priority ? Number(value.priority) : null,
+    why: value.why.trim() || null,
+    difficulty: value.difficulty ? Number(value.difficulty) : null,
   };
 }
 
@@ -300,6 +308,28 @@ export function HabitForm({ value, onChange }: Props) {
           <Label className="mb-1.5 block">Priority</Label>
           <Input type="number" value={value.priority} onChange={(e) => patch({ priority: e.target.value })} />
         </div>
+      </div>
+
+      <div>
+        <Label className="mb-1.5 block">Why?</Label>
+        <Textarea
+          value={value.why}
+          onChange={(e) => patch({ why: e.target.value })}
+          placeholder="Why does this habit matter to you?"
+          rows={2}
+        />
+      </div>
+
+      <div>
+        <Label className="mb-1.5 block">Difficulty (1-10)</Label>
+        <Input
+          type="number"
+          min="1"
+          max="10"
+          value={value.difficulty}
+          onChange={(e) => patch({ difficulty: e.target.value })}
+          placeholder="How hard is this habit? (1=easy, 10=very hard)"
+        />
       </div>
     </div>
   );

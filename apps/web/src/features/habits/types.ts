@@ -75,6 +75,9 @@ export interface Habit {
   icon: string | null;
   color: string | null;
   priority: number | null;
+  why?: string | null;
+  difficulty?: number | null;
+  tags?: string[] | null;
   createdAt: string;
   updatedAt: string;
 }

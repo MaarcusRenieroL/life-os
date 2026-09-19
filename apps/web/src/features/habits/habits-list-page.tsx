@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { LayoutGrid, List as ListIcon, Plus } from 'lucide-react';
+import { LayoutGrid, List as ListIcon, Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -35,6 +36,7 @@ export function HabitsListPage() {
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
   const [view, setView] = useState<ViewMode>('table');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Habit | null>(null);
@@ -53,9 +55,19 @@ export function HabitsListPage() {
       habits.filter((h) => {
         if (statusFilter !== 'ALL' && h.status !== statusFilter) return false;
         if (categoryFilter !== 'ALL' && (h.category ?? UNCATEGORIZED) !== categoryFilter) return false;
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          if (
+            !h.name.toLowerCase().includes(query) &&
+            !h.description?.toLowerCase().includes(query) &&
+            !h.why?.toLowerCase().includes(query)
+          ) {
+            return false;
+          }
+        }
         return true;
       }),
-    [habits, statusFilter, categoryFilter],
+    [habits, statusFilter, categoryFilter, searchQuery],
   );
 
   const grouped = useMemo(() => {
@@ -122,6 +134,15 @@ export function HabitsListPage() {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search habits by name, description, or why..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+        </div>
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
           <SelectTrigger className="min-w-36">
             <SelectValue />

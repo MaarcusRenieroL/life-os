@@ -57,6 +57,14 @@ export const habitsApi = {
     return unwrap(api.get(`${baseUrl}/${id}/streak`));
   },
 
+  getStreak(id: string): Promise<HabitStreak> {
+    return this.streak(id);
+  },
+
+  getHabitLogs(habitId: string, from?: string, to?: string): Promise<HabitLog[]> {
+    return this.logs(habitId, from, to);
+  },
+
   consistency(id: string, period: ConsistencyPeriod): Promise<ConsistencyScore> {
     return unwrap(api.get(`${baseUrl}/${id}/consistency`, { params: { period } }));
   },
