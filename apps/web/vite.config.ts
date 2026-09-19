@@ -29,7 +29,6 @@ export default defineConfig({
       '/v1/folders': { target: 'http://localhost:8007', changeOrigin: true },
       '/v1/tags': { target: 'http://localhost:8007', changeOrigin: true },
       '/v1/templates': { target: 'http://localhost:8007', changeOrigin: true },
-      '/v1/habits': { target: 'http://localhost:8008', changeOrigin: true },
     },
   },
 });

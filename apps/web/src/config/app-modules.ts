@@ -67,17 +67,7 @@ export const APP_MODULES: AppModuleConfig[] = [
   { code: 'WK', name: 'Workouts', enabled: false },
   { code: 'SB', name: 'Subscriptions', enabled: false },
   { code: 'GL', name: 'Goals', enabled: false },
-  {
-    code: 'HB',
-    name: 'Habits',
-    enabled: true,
-    path: '/habits',
-    tabs: [
-      { label: 'Today', path: '/habits' },
-      { label: 'Habits', path: '/habits/list' },
-      { label: 'Weekly Grid', path: '/habits/weekly' },
-    ],
-  },
+  { code: 'HB', name: 'Habits', enabled: false },
   { code: 'CL', name: 'Calendar', enabled: false },
   {
     code: 'NT',

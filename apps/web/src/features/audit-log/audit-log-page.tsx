@@ -52,17 +52,7 @@ const EVENT_TYPE_MAP: Record<AuditEventType, { type: UiType; dot: DotTone }> = {
   RECOVERY_CODE_RESET: { type: 'change', dot: 'muted' },
   BREACH_ALERT: { type: 'alert', dot: 'destructive' },
   WEAK_PASSWORD_ALERT: { type: 'alert', dot: 'destructive' },
-  RECURRING_DETECTED: { type: 'add', dot: 'muted' },
-  BUDGET_EXCEEDED: { type: 'alert', dot: 'destructive' },
-  HABIT_COMPLETED: { type: 'add', dot: 'primary' },
-  HABIT_STREAK_MILESTONE: { type: 'add', dot: 'primary' },
-  HABIT_REMINDER_DUE: { type: 'login', dot: 'muted' },
 };
-
-// The backend enum is shared across every service and can grow without this page being
-// touched (see AuditEventResponse.eventType's comment) - fall back instead of crashing the
-// whole page on an event type this map hasn't been taught yet.
-const UNKNOWN_EVENT: { type: UiType; dot: DotTone } = { type: 'change', dot: 'muted' };
 
 const DOT_CLASS: Record<DotTone, string> = {
   primary: 'bg-primary',
@@ -79,7 +69,7 @@ function formatMeta(occurredAt: string, metadata: Record<string, string> | null)
 }
 
 function toAuditEvent(response: AuditEventResponse): AuditRow {
-  const { type, dot } = EVENT_TYPE_MAP[response.eventType as AuditEventType] ?? UNKNOWN_EVENT;
+  const { type, dot } = EVENT_TYPE_MAP[response.eventType];
   const days = Math.floor((Date.now() - new Date(response.occurredAt).getTime()) / 86_400_000);
   return { type, dot, text: response.description, meta: formatMeta(response.occurredAt, response.metadata), days };
 }

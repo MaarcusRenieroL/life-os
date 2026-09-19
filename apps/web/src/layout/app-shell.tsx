@@ -3,7 +3,6 @@ import {
   Briefcase,
   ChevronsUpDown,
   Home as HomeIcon,
-  ListChecks,
   LogOut,
   Settings,
   ShieldCheck,
@@ -62,7 +61,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Notes', to: '/notes', icon: StickyNote, enabled: true },
   { label: 'Password Manager', to: '/vault', icon: ShieldCheck, enabled: true },
   { label: 'Finance', to: '/finance', icon: Wallet, enabled: true },
-  { label: 'Habits', to: '/habits', icon: ListChecks, enabled: true },
 ];
 
 /** The breadcrumb mirrors the real URL, not a made-up label, so it never drifts from the address bar. */

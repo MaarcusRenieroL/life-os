@@ -3,7 +3,6 @@ import { Navigate, createBrowserRouter, type LazyRouteFunction, type RouteObject
 import { LoginPage } from '@/features/auth/login-page';
 import { ProtectedRoute } from '@/features/auth/protected-route';
 import { FinanceLayout } from '@/features/finance/finance-layout';
-import { HabitsLayout } from '@/features/habits/habits-layout';
 import { JobTrackerLayout } from '@/features/job-tracker/job-tracker-layout';
 import { JobTrackerOnboardingGuard } from '@/features/job-tracker/job-tracker-onboarding-guard';
 import { NotesLayout } from '@/features/notes/notes-layout';
@@ -115,19 +114,6 @@ export const router = createBrowserRouter([
           },
           // Must stay after the static finance/* subpaths above so it doesn't shadow them.
           { path: 'finance/transactions/:id', lazy: page(() => import('@/features/finance/transaction-detail-page'), 'TransactionDetailPage') },
-          {
-            path: 'habits',
-            element: <HabitsLayout />,
-            children: [
-              { index: true, lazy: page(() => import('@/features/habits/habits-today-page'), 'HabitsTodayPage') },
-              { path: 'list', lazy: page(() => import('@/features/habits/habits-list-page'), 'HabitsListPage') },
-              { path: 'weekly', lazy: page(() => import('@/features/habits/habits-weekly-grid-page'), 'HabitsWeeklyGridPage') },
-              { path: 'calendar', lazy: page(() => import('@/features/habits/habits-calendar-view'), 'HabitsCalendarView') },
-              { path: 'analytics', lazy: page(() => import('@/features/habits/habits-analytics-page'), 'HabitsAnalyticsPage') },
-            ],
-          },
-          // Must stay after the static habits/* subpaths above so it doesn't shadow them.
-          { path: 'habits/:id', lazy: page(() => import('@/features/habits/habit-detail-page'), 'HabitDetailPage') },
           // Catch-all: any unmatched path inside the shell (bad link, stale bookmark,
           // a deep link to what's really just a client-side tab) gets a styled 404
           // instead of falling through to React Router's raw default error page.
