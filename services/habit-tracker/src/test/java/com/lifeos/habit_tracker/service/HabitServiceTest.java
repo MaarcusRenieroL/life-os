@@ -3,7 +3,6 @@ package com.lifeos.habit_tracker.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -70,16 +69,14 @@ class HabitServiceTest {
   }
 
   @Test
-  void softDeleteArchivesInsteadOfDeleting() {
+  void deleteRemovesTheHabit() {
     Habit habit =
         Habit.builder().id(habitId).userId(userId).status(HabitStatus.ACTIVE).build();
     when(habitRepository.findByIdAndUserId(habitId, userId)).thenReturn(Optional.of(habit));
-    when(habitRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-    habitService.softDelete(userId, habitId);
+    habitService.delete(userId, habitId);
 
-    assertThat(habit.getStatus()).isEqualTo(HabitStatus.ARCHIVED);
-    verify(habitRepository, never()).deleteById(any());
+    verify(habitRepository).delete(habit);
   }
 
   @Test

@@ -10,7 +10,6 @@ const TABS = [
   { label: 'Weekly Grid', to: '/habits/weekly', end: false },
   { label: 'Calendar', to: '/habits/calendar', end: false },
   { label: 'Analytics', to: '/habits/analytics', end: false },
-  { label: 'Archive', to: '/habits/archive', end: false },
 ];
 
 export function HabitsLayout() {
