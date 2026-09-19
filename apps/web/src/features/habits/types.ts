@@ -75,9 +75,10 @@ export interface Habit {
   icon: string | null;
   color: string | null;
   priority: number | null;
-  why?: string | null;
-  difficulty?: number | null;
-  tags?: string[] | null;
+  /** The user's stated motivation for the habit. */
+  why: string | null;
+  /** Self-rated 1-10. */
+  difficulty: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -156,6 +157,8 @@ export interface CreateHabitRequest {
   icon?: string | null;
   color?: string | null;
   priority?: number | null;
+  why?: string | null;
+  difficulty?: number | null;
 }
 
 export type UpdateHabitRequest = Partial<CreateHabitRequest>;
@@ -168,3 +171,120 @@ export interface CreateHabitReminderRequest {
 }
 
 export type UpdateHabitReminderRequest = Partial<CreateHabitReminderRequest>;
+
+// --- Analytics (GET /v1/habits/analytics) -----------------------------------
+// Aggregated server-side: every figure needs each habit's whole log history crossed with its
+// frequency schedule, which client-side would mean one request per habit per view.
+
+export interface CompletionTrendPoint {
+  weekStart: string;
+  weekEnd: string;
+  completions: number;
+  scheduledOccurrences: number;
+  /** 0..1 */
+  score: number;
+}
+
+export interface HabitPerformance {
+  habitId: string;
+  name: string;
+  icon: string | null;
+  category: string | null;
+  completions: number;
+  scheduledOccurrences: number;
+  /** 0..1 */
+  completionRate: number;
+  currentStreak: number;
+  longestStreak: number;
+}
+
+export interface DayOfWeekPattern {
+  /** ISO day of week, 1=Monday..7=Sunday. */
+  dayOfWeek: number;
+  completions: number;
+  scheduledOccurrences: number;
+  /** 0..1 */
+  score: number;
+}
+
+export interface HealthScore {
+  /** 0-100, the weighted total of the three components below. */
+  score: number;
+  consistencyScore: number;
+  streakScore: number;
+  engagementScore: number;
+  consistencyWeightPercent: number;
+  streakWeightPercent: number;
+  engagementWeightPercent: number;
+  habitsCounted: number;
+}
+
+export interface HabitAnalytics {
+  windowStart: string;
+  windowEnd: string;
+  weeks: number;
+  /** Oldest week first. */
+  trend: CompletionTrendPoint[];
+  /** Best-performing first. */
+  habitPerformance: HabitPerformance[];
+  /** Always 7 entries, Monday (1) through Sunday (7). */
+  dayOfWeekPattern: DayOfWeekPattern[];
+  healthScore: HealthScore;
+  /** X_PER_WEEK / X_PER_MONTH habits, which have no per-day schedule and so can't appear in the
+   * weekly trend or the day-of-week pattern. They still count toward performance and health. */
+  habitsExcludedFromDayPatterns: number;
+}
+
+export interface WeeklySummary {
+  weekStart: string;
+  weekEnd: string;
+  completions: number;
+  scheduledOccurrences: number;
+  /** 0..1 */
+  score: number;
+  missed: number;
+  skipped: number;
+  perfectDays: number;
+  habitsTracked: number;
+  /** 0..1 */
+  previousWeekScore: number;
+  topHabitId: string | null;
+  topHabitName: string | null;
+  needsAttentionHabitId: string | null;
+  needsAttentionHabitName: string | null;
+}
+
+export interface HourlyLogCount {
+  hour: number;
+  completions: number;
+}
+
+export interface LoggingTimePattern {
+  /** Always 24 entries, hour 0 through 23. */
+  hourlyCounts: HourlyLogCount[];
+  /** "HH:mm[:ss]", or null when there aren't enough logs to suggest one. */
+  suggestedReminderTime: string | null;
+  sampleSize: number;
+  zoneId: string;
+}
+
+// --- In-app notifications (GET /v1/habits/notifications) ---------------------
+// Derived live on each request - there is no notification table, no read state and no delivery
+// channel. In-app only, by design.
+
+export type HabitNotificationType =
+  | 'STREAK_AT_RISK'
+  | 'STREAK_MILESTONE'
+  | 'WEEKLY_SUMMARY'
+  | 'REMINDER_SUGGESTION';
+
+export interface HabitNotification {
+  /** Content-derived and stable across refreshes - not a database id. */
+  id: string;
+  type: HabitNotificationType;
+  severity: 'info' | 'warning' | 'success';
+  title: string;
+  message: string;
+  habitId: string | null;
+  habitName: string | null;
+}

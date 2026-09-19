@@ -122,6 +122,9 @@ export const router = createBrowserRouter([
               { index: true, lazy: page(() => import('@/features/habits/habits-today-page'), 'HabitsTodayPage') },
               { path: 'list', lazy: page(() => import('@/features/habits/habits-list-page'), 'HabitsListPage') },
               { path: 'weekly', lazy: page(() => import('@/features/habits/habits-weekly-grid-page'), 'HabitsWeeklyGridPage') },
+              { path: 'calendar', lazy: page(() => import('@/features/habits/habits-calendar-view'), 'HabitsCalendarView') },
+              { path: 'analytics', lazy: page(() => import('@/features/habits/habits-analytics-page'), 'HabitsAnalyticsPage') },
+              { path: 'archive', lazy: page(() => import('@/features/habits/habits-archive-page'), 'HabitsArchivePage') },
             ],
           },
           // Must stay after the static habits/* subpaths above so it doesn't shadow them.

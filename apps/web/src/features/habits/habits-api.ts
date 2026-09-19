@@ -7,17 +7,26 @@ import type {
   CreateHabitReminderRequest,
   CreateHabitRequest,
   Habit,
+  HabitAnalytics,
   HabitListFilters,
   HabitLog,
+  HabitNotification,
   HabitReminder,
   HabitStreak,
+  LoggingTimePattern,
   TodayHabitEntry,
   UpdateHabitReminderRequest,
   UpdateHabitRequest,
   UpsertHabitLogRequest,
+  WeeklySummary,
 } from './types';
 
 const baseUrl = '/v1/habits';
+
+/** logged_at is an instant, so the backend needs a zone to bucket it into hours of the day. */
+function browserZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
 
 export const habitsApi = {
   list(filters: HabitListFilters = {}): Promise<Habit[]> {
@@ -67,6 +76,25 @@ export const habitsApi = {
 
   consistency(id: string, period: ConsistencyPeriod): Promise<ConsistencyScore> {
     return unwrap(api.get(`${baseUrl}/${id}/consistency`, { params: { period } }));
+  },
+
+  /** One call for the whole analytics dashboard - trend, rankings, day-of-week pattern and
+   * health score, all aggregated server-side. */
+  analytics(weeks?: number): Promise<HabitAnalytics> {
+    return unwrap(api.get(`${baseUrl}/analytics`, { params: { weeks } }));
+  },
+
+  weeklySummary(asOf?: string): Promise<WeeklySummary> {
+    return unwrap(api.get(`${baseUrl}/analytics/weekly-summary`, { params: { asOf } }));
+  },
+
+  loggingTimes(): Promise<LoggingTimePattern> {
+    return unwrap(api.get(`${baseUrl}/analytics/logging-times`, { params: { zone: browserZone() } }));
+  },
+
+  /** In-app notification feed, computed live - nothing is stored or marked read. */
+  notifications(): Promise<HabitNotification[]> {
+    return unwrap(api.get(`${baseUrl}/notifications`, { params: { zone: browserZone() } }));
   },
 
   upsertLog(habitId: string, request: UpsertHabitLogRequest): Promise<HabitLog> {
