@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { habitsApi } from './habits-api';
-import type { Habit, HabitLog } from './types';
+import type { HabitLog } from './types';
 
 export function HabitsCalendarView() {
   const [selectedHabitId, setSelectedHabitId] = useState<string>('');
@@ -45,7 +46,7 @@ export function HabitsCalendarView() {
   const logsByDate = useMemo(() => {
     const map = new Map<string, HabitLog>();
     logs.forEach((log) => {
-      map.set(log.logDate, log);
+      map.set(log.logDate.slice(0, 10), log);
     });
     return map;
   }, [logs]);
@@ -120,16 +121,16 @@ export function HabitsCalendarView() {
                     </div>
                   ))}
                   {calendarDays.map((date, idx) => (
+                    // Keyed by date-fns format, not toISOString: these are local calendar days,
+                    // and toISOString converts to UTC first, shifting the key by a day for any
+                    // viewer west of Greenwich.
                     <div key={idx} className="aspect-square">
                       {date ? (
                         <div
                           className={`w-full h-full rounded flex items-center justify-center text-xs font-medium cursor-pointer transition-all hover:ring-2 ring-foreground ${getHeatmapColor(
-                            logsByDate.get(date.toISOString().split('T')[0])
+                            logsByDate.get(format(date, 'yyyy-MM-dd')),
                           )}`}
-                          title={
-                            logsByDate.get(date.toISOString().split('T')[0])?.status ||
-                            'No data'
-                          }
+                          title={logsByDate.get(format(date, 'yyyy-MM-dd'))?.status ?? 'No data'}
                         >
                           {date.getDate()}
                         </div>
