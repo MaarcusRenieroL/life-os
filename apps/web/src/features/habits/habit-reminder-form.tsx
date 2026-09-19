@@ -74,8 +74,17 @@ export function HabitReminderForm({ habitId }: { habitId: string }) {
     queryFn: () => habitsApi.reminders(habitId),
   });
 
+  // Derived from when the user actually logs completions, not a hardcoded default. Purely a
+  // suggestion - it prefills the draft time, it doesn't change how reminders are scheduled.
+  const { data: loggingTimes } = useQuery({
+    queryKey: ['habits', 'analytics', 'logging-times'],
+    queryFn: habitsApi.loggingTimes,
+  });
+
   const [draft, setDraft] = useState(emptyDraft());
   const [creating, setCreating] = useState(false);
+
+  const suggestedTime = loggingTimes?.suggestedReminderTime?.slice(0, 5) ?? null;
 
   function toggleDay(day: string) {
     setDraft((d) => ({
@@ -143,6 +152,19 @@ export function HabitReminderForm({ habitId }: { habitId: string }) {
           </Button>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">Leave days unchecked to repeat every day.</p>
+        {suggestedTime && suggestedTime !== draft.reminderTime && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            You log most completions around {suggestedTime} ({loggingTimes?.sampleSize} logs in the last 90
+            days).{' '}
+            <button
+              type="button"
+              className="underline underline-offset-2 hover:text-foreground"
+              onClick={() => setDraft((d) => ({ ...d, reminderTime: suggestedTime }))}
+            >
+              Use {suggestedTime}
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );
