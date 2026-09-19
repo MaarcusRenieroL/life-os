@@ -10,6 +10,9 @@ public interface HabitReminderRepository extends JpaRepository<HabitReminder, UU
 
   List<HabitReminder> findAllByHabitId(UUID habitId);
 
+  /** Bulk variant, so callers checking many habits at once don't issue one query per habit. */
+  List<HabitReminder> findAllByHabitIdIn(List<UUID> habitIds);
+
   Optional<HabitReminder> findByIdAndHabitId(UUID id, UUID habitId);
 
   List<HabitReminder> findAllByEnabledTrue();
