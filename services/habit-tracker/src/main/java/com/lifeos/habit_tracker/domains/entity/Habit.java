@@ -89,6 +89,14 @@ public class Habit {
 
   Integer priority;
 
+  // The user's stated motivation for the habit - surfaced on the habit detail
+  // page and used by the list page's search.
+  String why;
+
+  // Self-rated 1-10 difficulty. The 1-10 range is enforced by a check
+  // constraint (V2) and by bean validation on the create/update requests.
+  Integer difficulty;
+
   @CreationTimestamp Instant createdAt;
 
   @UpdateTimestamp Instant updatedAt;

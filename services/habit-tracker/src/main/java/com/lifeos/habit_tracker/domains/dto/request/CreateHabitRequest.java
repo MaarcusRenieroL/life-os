@@ -2,6 +2,8 @@ package com.lifeos.habit_tracker.domains.dto.request;
 
 import com.lifeos.habit_tracker.domains.enums.FrequencyType;
 import com.lifeos.habit_tracker.domains.enums.HabitType;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -48,4 +50,10 @@ public class CreateHabitRequest {
   String color;
 
   Integer priority;
+
+  String why;
+
+  @Min(1)
+  @Max(10)
+  Integer difficulty;
 }

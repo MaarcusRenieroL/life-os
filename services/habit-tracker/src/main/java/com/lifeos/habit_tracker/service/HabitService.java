@@ -70,6 +70,8 @@ public class HabitService {
             .icon(request.getIcon())
             .color(request.getColor())
             .priority(request.getPriority())
+            .why(request.getWhy())
+            .difficulty(request.getDifficulty())
             .build();
 
     return toResponse(habitRepository.save(habit));
@@ -122,6 +124,12 @@ public class HabitService {
     }
     if (request.getPriority() != null) {
       habit.setPriority(request.getPriority());
+    }
+    if (request.getWhy() != null) {
+      habit.setWhy(request.getWhy());
+    }
+    if (request.getDifficulty() != null) {
+      habit.setDifficulty(request.getDifficulty());
     }
 
     return toResponse(habitRepository.save(habit));
@@ -208,6 +216,8 @@ public class HabitService {
         .icon(habit.getIcon())
         .color(habit.getColor())
         .priority(habit.getPriority())
+        .why(habit.getWhy())
+        .difficulty(habit.getDifficulty())
         .createdAt(habit.getCreatedAt())
         .updatedAt(habit.getUpdatedAt())
         .build();
