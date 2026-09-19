@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+import { DifficultyRating, MilestoneBadges, nextMilestone } from './habit-badges';
 import { HabitFormDialog } from './habit-form-dialog';
 import { HabitReminderForm } from './habit-reminder-form';
 import { habitsApi } from './habits-api';
@@ -83,28 +84,61 @@ export function HabitDetailPage() {
             {habit.name}
           </h1>
           {habit.description && <p className="mt-1 text-sm text-muted-foreground">{habit.description}</p>}
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge variant={habit.status === 'ACTIVE' ? 'default' : 'outline'}>{habit.status}</Badge>
             {habit.category && <Badge variant="secondary">{habit.category}</Badge>}
+            {habit.difficulty != null && (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                Difficulty
+                <DifficultyRating difficulty={habit.difficulty} />
+                <span className="tabular-nums">{habit.difficulty}/10</span>
+              </span>
+            )}
           </div>
         </div>
         <Button onClick={() => setEditOpen(true)}>Edit habit</Button>
       </div>
+
+      {habit.why && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Why this matters</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="border-l-2 border-primary pl-3 text-sm italic">{habit.why}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Streak</CardTitle>
           </CardHeader>
-          <CardContent className="flex gap-6">
-            <div>
-              <div className="text-2xl font-semibold">{streak?.currentStreak ?? '–'}</div>
-              <div className="text-xs text-muted-foreground">Current</div>
+          <CardContent className="flex flex-col gap-3">
+            <div className="flex gap-6">
+              <div>
+                <div className="text-2xl font-semibold">{streak?.currentStreak ?? '–'}</div>
+                <div className="text-xs text-muted-foreground">Current</div>
+              </div>
+              <div>
+                <div className="text-2xl font-semibold">{streak?.longestStreak ?? '–'}</div>
+                <div className="text-xs text-muted-foreground">Longest</div>
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-semibold">{streak?.longestStreak ?? '–'}</div>
-              <div className="text-xs text-muted-foreground">Longest</div>
-            </div>
+
+            {/* Milestones are derived from the streak counts the backend already returns - nothing
+                is awarded or stored. */}
+            <MilestoneBadges days={streak?.currentStreak ?? 0} />
+            {streak != null &&
+              (() => {
+                const next = nextMilestone(streak.currentStreak);
+                return next ? (
+                  <p className="text-xs text-muted-foreground">
+                    {next.remaining} more day{next.remaining === 1 ? '' : 's'} to the {next.target}-day badge.
+                  </p>
+                ) : null;
+              })()}
           </CardContent>
         </Card>
 
