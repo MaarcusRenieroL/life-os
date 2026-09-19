@@ -56,6 +56,10 @@ public class HabitResponse {
 
   Integer priority;
 
+  String why;
+
+  Integer difficulty;
+
   Instant createdAt;
 
   Instant updatedAt;

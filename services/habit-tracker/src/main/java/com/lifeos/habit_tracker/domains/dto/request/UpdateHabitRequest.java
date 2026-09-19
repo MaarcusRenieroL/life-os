@@ -2,6 +2,8 @@ package com.lifeos.habit_tracker.domains.dto.request;
 
 import com.lifeos.habit_tracker.domains.enums.FrequencyType;
 import com.lifeos.habit_tracker.domains.enums.HabitType;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
@@ -45,4 +47,10 @@ public class UpdateHabitRequest {
   String color;
 
   Integer priority;
+
+  String why;
+
+  @Min(1)
+  @Max(10)
+  Integer difficulty;
 }
