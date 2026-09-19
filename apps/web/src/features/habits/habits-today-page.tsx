@@ -48,7 +48,8 @@ function CountEntry({ entry }: { entry: TodayHabitEntry }) {
     <div className="flex items-center gap-2">
       <Input
         type="number"
-        className="w-20"
+        inputMode="decimal"
+        className="w-20 [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         placeholder={entry.habit.targetUnit ?? 'value'}
         value={value}
         onChange={(e) => setValue(e.target.value)}
