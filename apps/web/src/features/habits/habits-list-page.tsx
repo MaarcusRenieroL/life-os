@@ -78,14 +78,14 @@ export function HabitsListPage() {
     }
   }
 
-  async function archive(habit: Habit) {
-    if (!confirm(`Archive "${habit.name}"?`)) return;
+  async function deleteHabit(habit: Habit) {
+    if (!confirm(`Delete "${habit.name}"? This cannot be undone.`)) return;
     try {
       await habitsApi.delete(habit.id);
-      toast.success(`Archived "${habit.name}"`);
+      toast.success(`Deleted "${habit.name}"`);
       invalidate();
     } catch {
-      toast.error('Could not archive the habit. Please try again.');
+      toast.error('Could not delete the habit. Please try again.');
     }
   }
 
@@ -241,8 +241,8 @@ export function HabitsListPage() {
                           <Button size="sm" variant="ghost" onClick={() => void togglePause(habit)}>
                             {habit.status === 'PAUSED' ? 'Resume' : 'Pause'}
                           </Button>
-                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void archive(habit)}>
-                            Archive
+                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteHabit(habit)}>
+                            Delete
                           </Button>
                         </div>
                       </CardContent>

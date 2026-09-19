@@ -168,20 +168,20 @@ export function HabitForm({ value, onChange }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-6">
       <div>
-        <Label>Name</Label>
+        <Label className="mb-1.5 block">Name</Label>
         <Input value={value.name} onChange={(e) => patch({ name: e.target.value })} />
       </div>
 
       <div>
-        <Label>Description</Label>
+        <Label className="mb-1.5 block">Description</Label>
         <Textarea value={value.description} onChange={(e) => patch({ description: e.target.value })} rows={2} />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Type</Label>
+          <Label className="mb-1.5 block">Type</Label>
           <Select value={value.type} onValueChange={(v) => patch({ type: v as HabitType })}>
             <SelectTrigger className="w-full">
               <SelectValue />
@@ -196,7 +196,7 @@ export function HabitForm({ value, onChange }: Props) {
           </Select>
         </div>
         <div>
-          <Label>Category</Label>
+          <Label className="mb-1.5 block">Category</Label>
           <Input value={value.category} onChange={(e) => patch({ category: e.target.value })} placeholder="e.g. Health" />
         </div>
       </div>
@@ -204,7 +204,7 @@ export function HabitForm({ value, onChange }: Props) {
       {showTargetFields && (
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>Target value</Label>
+            <Label className="mb-1.5 block">Target value</Label>
             <Input
               type="number"
               value={value.targetValue}
@@ -212,7 +212,7 @@ export function HabitForm({ value, onChange }: Props) {
             />
           </div>
           <div>
-            <Label>Target unit</Label>
+            <Label className="mb-1.5 block">Target unit</Label>
             <Input
               value={value.targetUnit}
               onChange={(e) => patch({ targetUnit: e.target.value })}
@@ -223,7 +223,7 @@ export function HabitForm({ value, onChange }: Props) {
       )}
 
       <div>
-        <Label>Frequency</Label>
+        <Label className="mb-1.5 block">Frequency</Label>
         <Select value={value.frequencyType} onValueChange={(v) => patch({ frequencyType: v as HabitFrequencyType })}>
           <SelectTrigger className="w-full">
             <SelectValue />
@@ -254,7 +254,7 @@ export function HabitForm({ value, onChange }: Props) {
 
       {(value.frequencyType === 'X_PER_WEEK' || value.frequencyType === 'X_PER_MONTH') && (
         <div>
-          <Label>{value.frequencyType === 'X_PER_WEEK' ? 'Times per week' : 'Times per month'}</Label>
+          <Label className="mb-1.5 block">{value.frequencyType === 'X_PER_WEEK' ? 'Times per week' : 'Times per month'}</Label>
           <Input
             type="number"
             min={1}
@@ -266,7 +266,7 @@ export function HabitForm({ value, onChange }: Props) {
 
       {value.frequencyType === 'CUSTOM_INTERVAL' && (
         <div>
-          <Label>Repeat every N days</Label>
+          <Label className="mb-1.5 block">Repeat every N days</Label>
           <Input
             type="number"
             min={1}
@@ -289,15 +289,15 @@ export function HabitForm({ value, onChange }: Props) {
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <Label>Icon</Label>
+          <Label className="mb-1.5 block">Icon</Label>
           <Input value={value.icon} onChange={(e) => patch({ icon: e.target.value })} placeholder="emoji" />
         </div>
         <div>
-          <Label>Color</Label>
+          <Label className="mb-1.5 block">Color</Label>
           <Input value={value.color} onChange={(e) => patch({ color: e.target.value })} placeholder="#22c55e" />
         </div>
         <div>
-          <Label>Priority</Label>
+          <Label className="mb-1.5 block">Priority</Label>
           <Input type="number" value={value.priority} onChange={(e) => patch({ priority: e.target.value })} />
         </div>
       </div>
