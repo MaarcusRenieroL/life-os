@@ -62,6 +62,9 @@ jobs:
       - name: Run Finance Tracker Tests
         run: cd services/finance-tracker && mvn clean test
 
+      - name: Run Habit Tracker Tests
+        run: cd services/habit-tracker && mvn clean test
+
   lint-and-build:
     runs-on: ubuntu-latest
 
