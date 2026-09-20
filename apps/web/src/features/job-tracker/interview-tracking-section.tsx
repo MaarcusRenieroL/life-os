@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -38,6 +39,7 @@ export function InterviewTrackingSection({ jobId }: { jobId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Interview | null>(null);
   const [generatingFor, setGeneratingFor] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   function refetch() {
     void queryClient.invalidateQueries({ queryKey });
@@ -67,7 +69,11 @@ export function InterviewTrackingSection({ jobId }: { jobId: string }) {
   }
 
   async function remove(interview: Interview) {
-    if (!confirm(`Delete this ${INTERVIEW_ROUND_TYPE_LABELS[interview.roundType ?? 'TECHNICAL']} interview?`)) return;
+    const ok = await confirm({
+      title: `Delete this ${INTERVIEW_ROUND_TYPE_LABELS[interview.roundType ?? 'TECHNICAL']} interview?`,
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
     await interviewApi.delete(jobId, interview.id);
     refetch();
   }
@@ -168,6 +174,7 @@ export function InterviewTrackingSection({ jobId }: { jobId: string }) {
       )}
 
       <InterviewDialog open={dialogOpen} onOpenChange={setDialogOpen} jobId={jobId} editing={editing} onSaved={refetch} />
+      {dialog}
     </div>
   );
 }

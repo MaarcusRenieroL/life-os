@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -24,6 +25,7 @@ export function ReferralTrackingSection({ jobId }: { jobId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Referral | null>(null);
   const [draftingFor, setDraftingFor] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   function refetch() {
     void queryClient.invalidateQueries({ queryKey });
@@ -59,7 +61,8 @@ export function ReferralTrackingSection({ jobId }: { jobId: string }) {
   }
 
   async function remove(referral: Referral) {
-    if (!confirm(`Delete referral contact "${referral.contactName}"?`)) return;
+    const ok = await confirm({ title: `Delete referral contact "${referral.contactName}"?`, confirmLabel: 'Delete' });
+    if (!ok) return;
     await referralApi.delete(jobId, referral.id);
     refetch();
   }
@@ -152,6 +155,7 @@ export function ReferralTrackingSection({ jobId }: { jobId: string }) {
       )}
 
       <ReferralDialog open={dialogOpen} onOpenChange={setDialogOpen} jobId={jobId} editing={editing} onSaved={refetch} />
+      {dialog}
     </div>
   );
 }

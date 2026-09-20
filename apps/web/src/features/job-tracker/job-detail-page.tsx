@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { FormattedText } from '@/components/formatted-text';
 import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { ApplicationTrackingForm } from './application-tracking-form';
 import { CoverLetterCard } from './cover-letter-card';
@@ -26,10 +26,7 @@ import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
 import { InterviewTrackingSection } from './interview-tracking-section';
 import { jobApi } from './job-api';
-import { downloadLatex, LatexCodeBlock } from './latex-code-block';
 import { ReferralTrackingSection } from './referral-tracking-section';
-import { TailoredResumePdf } from './tailored-resume-pdf';
-import { TailoringVersionHistory } from './tailoring-version-history';
 import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
 
 function formatSalary(job: JobListing): string | null {
@@ -49,8 +46,6 @@ function fitScoreSourceLabel(source: JobListing['fitScoreSource']): string | nul
   switch (source) {
     case 'OVERRIDE_RESUME':
       return 'the resume uploaded for this job';
-    case 'TAILORED_RESUME':
-      return 'this job’s tailored resume';
     case 'LIBRARY':
       return 'your resume library';
     default:
@@ -74,8 +69,8 @@ export function JobDetailPage() {
   });
   const pendingForJob = pendingEvents.filter((e) => e.matchedJobId === jobId);
 
-  const [tailorError, setTailorError] = useState<string | null>(null);
-  const [copiedTab, setCopiedTab] = useState<string | null>(null);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const rescoreMutation = useMutation({
     mutationFn: () => jobApi.rescore(jobId!),
@@ -110,6 +105,16 @@ export function JobDetailPage() {
     overrideFileInputRef.current?.click();
   }
 
+  async function removeOverrideResume() {
+    const ok = await confirm({
+      title: 'Remove this resume?',
+      description: 'The fit score recomputes against your resume library once it\'s gone.',
+      confirmLabel: 'Remove',
+    });
+    if (!ok) return;
+    deleteOverrideMutation.mutate();
+  }
+
   function onOverrideFileChosen(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -118,21 +123,17 @@ export function JobDetailPage() {
     }
   }
 
-  const tailorMutation = useMutation({
-    mutationFn: () => jobApi.tailorResume(jobId!),
-    onSuccess: () => {
-      setTailorError(null);
-      // Tailoring also re-scores fit (skills the tailored wording surfaces get merged into the
-      // library) and appends a new version - refetch rather than patch individual fields so all
-      // of that comes back in sync.
-      void queryClient.invalidateQueries({ queryKey: ['jobs', jobId] });
-      void queryClient.invalidateQueries({ queryKey: ['jobs', jobId, 'tailor-resume', 'versions'] });
+  const suggestionsMutation = useMutation({
+    mutationFn: () => jobApi.getAtsSuggestions(jobId!),
+    onSuccess: (updated) => {
+      setSuggestionsError(null);
+      queryClient.setQueryData(['jobs', jobId], updated);
     },
     onError: (err) => {
       const message =
         (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
-        'Could not tailor a resume for this job. Try again.';
-      setTailorError(message);
+        'Could not get suggestions for this job. Try again.';
+      setSuggestionsError(message);
     },
   });
 
@@ -140,13 +141,6 @@ export function JobDetailPage() {
     if (!jobId) return;
     const updated = await jobApi.setStatus(jobId, status);
     queryClient.setQueryData(['jobs', jobId], updated);
-  }
-
-  async function copyText(tab: string, text: string, label: string) {
-    await navigator.clipboard.writeText(text);
-    setCopiedTab(tab);
-    toast.success(`${label} copied to clipboard`);
-    setTimeout(() => setCopiedTab(null), 2000);
   }
 
   if (isLoading) {
@@ -258,7 +252,7 @@ export function JobDetailPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => deleteOverrideMutation.mutate()}
+                      onClick={() => void removeOverrideResume()}
                       disabled={deleteOverrideMutation.isPending}
                     >
                       Remove
@@ -272,87 +266,45 @@ export function JobDetailPage() {
           <Card>
             <CardContent>
               <div className="flex items-center justify-between">
-                <SectionHeading>tailor your resume</SectionHeading>
-                <div className="flex items-center gap-2">
-                  {job.tailoredLatexResume && <TailoringVersionHistory jobId={jobId!} jobTitle={job.title} />}
-                  <Button variant="outline" size="sm" onClick={() => tailorMutation.mutate()} disabled={tailorMutation.isPending}>
-                    {tailorMutation.isPending ? 'Tailoring…' : job.tailoredLatexResume ? 'Re-tailor' : 'Tailor resume for this job'}
-                  </Button>
-                </div>
+                <SectionHeading>ats suggestions</SectionHeading>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => suggestionsMutation.mutate()}
+                  disabled={suggestionsMutation.isPending}
+                >
+                  {suggestionsMutation.isPending
+                    ? 'Analyzing…'
+                    : job.atsSuggestions
+                      ? 'Refresh suggestions'
+                      : 'Get suggestions'}
+                </Button>
               </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Wording edits to make by hand in your own resume - nothing here rewrites or generates a resume for you.
+              </p>
 
-              {tailorError && <p className="mt-2 text-sm text-destructive">{tailorError}</p>}
+              {suggestionsError && <p className="mt-2 text-sm text-destructive">{suggestionsError}</p>}
 
-              {job.tailoredLatexResume && (
-                <Tabs defaultValue="improvements" className="mt-4">
-                  <TabsList>
-                    <TabsTrigger value="improvements">Improvements</TabsTrigger>
-                    <TabsTrigger value="latex">LaTeX</TabsTrigger>
-                    <TabsTrigger value="pdf">PDF</TabsTrigger>
-                  </TabsList>
+              {job.atsSuggestions && job.atsSuggestions.length > 0 && (
+                <div className="mt-4 flex flex-col gap-4">
+                  <ul className="list-disc space-y-1.5 pl-4 text-sm text-muted-foreground">
+                    {job.atsSuggestions.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
+                  </ul>
 
-                  <TabsContent value="improvements" className="flex flex-col gap-4">
-                    <ul className="list-disc space-y-1.5 pl-4 text-sm text-muted-foreground">
-                      {(job.tailoredImprovementPoints ?? []).map((point) => (
-                        <li key={point}>{point}</li>
-                      ))}
-                    </ul>
-
-                    {job.tailoredInferredClaims && job.tailoredInferredClaims.length > 0 && (
-                      <div className="rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3">
-                        <p className="text-xs font-medium text-yellow-600">
-                          Confirm before sending - rephrased beyond a direct reording
-                        </p>
-                        <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
-                          {job.tailoredInferredClaims.map((claim) => (
-                            <li key={claim}>{claim}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {job.tailoredGapsVsJd && job.tailoredGapsVsJd.length > 0 && (
-                      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                        <p className="text-xs font-medium text-destructive">Gaps vs. job description</p>
-                        <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
-                          {job.tailoredGapsVsJd.map((gap) => (
-                            <li key={gap}>{gap}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="latex">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void copyText('latex', job.tailoredLatexResume ?? '', 'LaTeX')}
-                      >
-                        {copiedTab === 'latex' ? 'Copied ✓' : 'Copy .tex'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => downloadLatex(job.tailoredLatexResume ?? '', `${job.title}-resume.tex`)}
-                      >
-                        Download .tex
-                      </Button>
+                  {job.atsSuggestionGaps && job.atsSuggestionGaps.length > 0 && (
+                    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                      <p className="text-xs font-medium text-destructive">Gaps vs. job description</p>
+                      <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm text-muted-foreground">
+                        {job.atsSuggestionGaps.map((gap) => (
+                          <li key={gap}>{gap}</li>
+                        ))}
+                      </ul>
                     </div>
-                    <div className="mt-2">
-                      <LatexCodeBlock source={job.tailoredLatexResume} />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="pdf">
-                    <TailoredResumePdf
-                      jobId={jobId!}
-                      latexResume={job.tailoredLatexResume}
-                      fileName={`${job.title}-resume.pdf`}
-                    />
-                  </TabsContent>
-                </Tabs>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -465,6 +417,7 @@ export function JobDetailPage() {
           )}
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 }

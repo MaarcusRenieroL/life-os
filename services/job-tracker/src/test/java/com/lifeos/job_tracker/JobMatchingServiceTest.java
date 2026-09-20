@@ -7,6 +7,7 @@ import com.lifeos.job_tracker.domains.entity.JobListing;
 import com.lifeos.job_tracker.domains.entity.Skill;
 import com.lifeos.job_tracker.domains.enums.VisaSponsorship;
 import com.lifeos.job_tracker.domains.enums.WorkModel;
+import com.lifeos.job_tracker.integration.AiAssistant;
 import com.lifeos.job_tracker.repository.SkillRepository;
 import com.lifeos.job_tracker.service.JobMatchingService;
 import com.lifeos.job_tracker.service.JobMatchingService.JobFitResult;
@@ -22,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class JobMatchingServiceTest {
 
   @Mock private SkillRepository skillRepository;
+  @Mock private AiAssistant ai;
   @InjectMocks private JobMatchingService jobMatchingService;
 
   private final UUID userId = UUID.randomUUID();

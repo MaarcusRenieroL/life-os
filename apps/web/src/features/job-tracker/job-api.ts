@@ -8,9 +8,7 @@ import type {
   JobFitResult,
   JobListing,
   JobStatus,
-  JobTailoringVersion,
   Referral,
-  ResumeTailoringResult,
   UpdateJobDetailsRequest,
   UpsertInterviewRequest,
   UpsertReferralRequest,
@@ -67,24 +65,10 @@ export const jobApi = {
     return unwrap(api.delete(`${baseUrl}/${jobId}/resume-override`));
   },
 
-  tailorResume(jobId: string): Promise<ResumeTailoringResult> {
-    return unwrap(api.post(`${baseUrl}/${jobId}/tailor-resume`, {}));
-  },
-
-  async tailorResumePdf(jobId: string): Promise<Blob> {
-    const response = await api.get(`${baseUrl}/${jobId}/tailor-resume/pdf`, { responseType: 'blob' });
-    return response.data;
-  },
-
-  tailoringVersions(jobId: string): Promise<JobTailoringVersion[]> {
-    return unwrap(api.get(`${baseUrl}/${jobId}/tailor-resume/versions`));
-  },
-
-  async tailoringVersionPdf(jobId: string, versionId: string): Promise<Blob> {
-    const response = await api.get(`${baseUrl}/${jobId}/tailor-resume/versions/${versionId}/pdf`, {
-      responseType: 'blob',
-    });
-    return response.data;
+  /** Wording-edit suggestions the candidate applies to their own resume by hand - no resume is
+   * generated or rewritten. */
+  getAtsSuggestions(jobId: string): Promise<JobListing> {
+    return unwrap(api.post(`${baseUrl}/${jobId}/ats-suggestions`, {}));
   },
 
   async delete(jobId: string): Promise<void> {

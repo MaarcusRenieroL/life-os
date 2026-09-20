@@ -15,6 +15,7 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
@@ -46,6 +47,7 @@ export function JobsListPage() {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'fitScore', desc: true }]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const { confirm, dialog } = useConfirmDialog();
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['jobs'] });
@@ -59,6 +61,12 @@ export function JobsListPage() {
   }
 
   async function remove(job: JobListing) {
+    const ok = await confirm({
+      title: `Remove "${job.title}"?`,
+      description: `This removes it from your tracker along with any interviews, referrals, and notes on it. This cannot be undone.`,
+      confirmLabel: 'Remove',
+    });
+    if (!ok) return;
     await jobApi.delete(job.id);
     queryClient.setQueryData<JobListing[]>(['jobs'], (list) => list?.filter((j) => j.id !== job.id));
     toast.success(`Removed ${job.title}`);
@@ -67,7 +75,12 @@ export function JobsListPage() {
   const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
 
   async function removeSelected() {
-    if (!confirm(`Remove ${selectedIds.length} job(s)?`)) return;
+    const ok = await confirm({
+      title: `Remove ${selectedIds.length} job(s)?`,
+      description: 'This cannot be undone.',
+      confirmLabel: 'Remove',
+    });
+    if (!ok) return;
     for (const id of selectedIds) {
       await jobApi.delete(id);
     }
@@ -229,6 +242,7 @@ export function JobsListPage() {
           <DataTablePagination table={table} />
         </>
       )}
+      {dialog}
     </div>
   );
 }
