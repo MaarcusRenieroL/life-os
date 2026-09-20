@@ -18,7 +18,7 @@ import { importApi } from './import-api';
 
 export function ImportPage() {
   const queryClient = useQueryClient();
-  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts });
+  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts, staleTime: 5 * 60_000 });
   const { data: gmailStatus } = useQuery({ queryKey: ['finance', 'gmail-status'], queryFn: importApi.getGmailStatus });
 
   const [accountId, setAccountId] = useState('');

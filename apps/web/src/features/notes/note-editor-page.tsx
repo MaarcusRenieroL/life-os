@@ -55,8 +55,8 @@ export function NoteEditorPage() {
   const syncedNoteId = useRef<string | null>(null);
 
   const { data: note } = useQuery({ queryKey: ['notes', id], queryFn: () => notesApi.get(id!), enabled: !!id });
-  const { data: folders = [] } = useQuery({ queryKey: ['notes', 'folders'], queryFn: foldersApi.list });
-  const { data: allTags = [] } = useQuery({ queryKey: ['notes', 'tags'], queryFn: () => tagsApi.list() });
+  const { data: folders = [] } = useQuery({ queryKey: ['notes', 'folders'], queryFn: foldersApi.list, staleTime: 5 * 60_000 });
+  const { data: allTags = [] } = useQuery({ queryKey: ['notes', 'tags'], queryFn: () => tagsApi.list(), staleTime: 5 * 60_000 });
 
   const [title, setTitle] = useState('');
   const [tagQuery, setTagQuery] = useState('');

@@ -44,7 +44,7 @@ export function NoteSearchPage() {
   });
 
   const { data: recent = [] } = useQuery({
-    queryKey: ['notes', 'search', 'recent', committedQuery],
+    queryKey: ['notes', 'search', 'recent'],
     queryFn: noteSearchApi.recent,
   });
 

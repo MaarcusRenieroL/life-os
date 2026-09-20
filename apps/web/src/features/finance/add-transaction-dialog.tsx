@@ -26,7 +26,7 @@ interface Props {
 }
 
 export function AddTransactionDialog({ open, onOpenChange, editing, onSaved }: Props) {
-  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts });
+  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts, staleTime: 5 * 60_000 });
 
   const [accountId, setAccountId] = useState('');
   const [transactionDate, setTransactionDate] = useState('');

@@ -59,7 +59,7 @@ function formatRange(startDate: string | null, endDate: string | null, current: 
 
 export function ResumePage() {
   const queryClient = useQueryClient();
-  const { data: bundle } = useQuery({ queryKey: ['career-profile'], queryFn: careerProfileApi.get });
+  const { data: bundle } = useQuery({ queryKey: ['career-profile'], queryFn: careerProfileApi.get, staleTime: 5 * 60_000 });
 
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [experienceDialog, setExperienceDialog] = useState<{ open: boolean; editing: WorkExperience | null }>({

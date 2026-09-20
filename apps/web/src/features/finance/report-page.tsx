@@ -22,7 +22,7 @@ function defaultTaxYear(): number {
 }
 
 export function ReportPage() {
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
   const { data: budgets = [] } = useQuery({ queryKey: ['finance', 'budgets'], queryFn: budgetApi.getBudgets });
   const expenseCategoryIds = categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id);
   const { data: comparisons = [] } = useQuery({

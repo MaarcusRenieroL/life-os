@@ -25,7 +25,7 @@ import { accountSubLabel, formatINR } from './utils';
 
 export function AccountsPage() {
   const queryClient = useQueryClient();
-  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts });
+  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts, staleTime: 5 * 60_000 });
 
   const [sorting, setSorting] = useState<SortingState>([{ id: 'accountName', desc: false }]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});

@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: notes
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: validate

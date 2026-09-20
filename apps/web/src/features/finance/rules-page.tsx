@@ -41,7 +41,7 @@ export function RulesPage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const { data: rules = [] } = useQuery({ queryKey: ['finance', 'rules'], queryFn: ruleApi.getRules });
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
 
   const [dialogOpen, setDialogOpen] = useState(!!searchParams.get('matchValue'));
   const [editing, setEditing] = useState<CategorizationRuleResponse | null>(null);

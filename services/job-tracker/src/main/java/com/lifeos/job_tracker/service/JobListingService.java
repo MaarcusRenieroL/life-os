@@ -32,6 +32,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,6 +42,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class JobListingService {
 
   private static final Logger log = LoggerFactory.getLogger(JobListingService.class);
+
+  // The job listing (GET /v1/jobs) endpoint returns a flat array the frontend consumes directly
+  // (apps/web/src/features/job-tracker/jobs-list-page.tsx expects JobListing[], not a Page). To
+  // avoid a frontend/API contract break, list() stays a flat List but is capped here instead of
+  // pulling every job a user has ever added - ordered by fit score desc as before, so this only
+  // ever trims the long tail of old/low-fit listings off the end.
+  private static final int LIST_LIMIT = 200;
 
   private final JobListingRepository jobListingRepository;
   private final CompanyRepository companyRepository;
@@ -54,7 +62,7 @@ public class JobListingService {
 
   @Transactional(readOnly = true)
   public List<JobListing> list(UUID userId) {
-    return jobListingRepository.findAllForUser(userId);
+    return jobListingRepository.findAllForUser(userId, PageRequest.of(0, LIST_LIMIT));
   }
 
   @Transactional(readOnly = true)

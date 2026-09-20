@@ -32,7 +32,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 export function CategoriesPage() {
   const queryClient = useQueryClient();
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
 
   const [query, setQuery] = useState('');
   const [sorting, setSorting] = useState<SortingState>([{ id: 'type', desc: false }]);

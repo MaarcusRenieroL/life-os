@@ -6,6 +6,8 @@ import com.lifeos.core.repository.UserModuleSettingRepository;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,7 @@ public class ModuleSettingService {
   // Only rows the user has actually toggled exist here - a module with no row is
   // meant to fall back to its static default (e.g. Password Manager enabled, every
   // other module disabled) on the frontend, not to something seeded here.
+  @Cacheable(value = "module-settings", key = "#userId")
   @Transactional(readOnly = true)
   public List<ModuleSettingResponse> getSettings(UUID userId) {
     return userModuleSettingRepository.findAllByUserId(userId).stream()
@@ -25,6 +28,7 @@ public class ModuleSettingService {
         .toList();
   }
 
+  @CacheEvict(value = "module-settings", key = "#userId")
   @Transactional
   public ModuleSettingResponse setEnabled(UUID userId, String moduleCode, boolean enabled) {
     UserModuleSetting setting =

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
 // Mirrors apps/web's vault-state.service.ts - a pure in-memory reactive flag,
 // reset to false on every page reload (no persistence). "Unlocked" truth
@@ -13,11 +13,8 @@ const VaultStateContext = createContext<VaultStateValue | null>(null);
 
 export function VaultStateProvider({ children }: { children: ReactNode }) {
   const [unlocked, setUnlocked] = useState(false);
-  return (
-    <VaultStateContext.Provider value={{ unlocked, setUnlocked }}>
-      {children}
-    </VaultStateContext.Provider>
-  );
+  const value = useMemo(() => ({ unlocked, setUnlocked }), [unlocked, setUnlocked]);
+  return <VaultStateContext.Provider value={value}>{children}</VaultStateContext.Provider>;
 }
 
 export function useVaultState(): VaultStateValue {

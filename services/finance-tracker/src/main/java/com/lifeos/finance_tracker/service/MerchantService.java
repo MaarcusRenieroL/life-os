@@ -12,10 +12,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +31,7 @@ public class MerchantService {
 
   private final MerchantRepository merchantRepository;
 
+  @Cacheable(value = "finance-merchants", key = "#authentication.principal")
   @Transactional(readOnly = true)
   public List<MerchantResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -35,6 +39,15 @@ public class MerchantService {
     return merchantRepository.findAllByUserIdOrUserIdIsNull(userId).stream()
         .map(this::toResponse)
         .toList();
+  }
+
+  // Loads the user's full merchant set (including global, userId-null merchants) once so a CSV
+  // import batch can resolve/record every row in memory instead of re-querying per row - see
+  // TransactionService#createFromCsvImportBatch. Not cached itself (it feeds a request-scoped,
+  // mutated-in-place working set, not something safe to share across requests).
+  @Transactional(readOnly = true)
+  public List<Merchant> loadAllForUser(UUID userId) {
+    return new ArrayList<>(merchantRepository.findAllByUserIdOrUserIdIsNull(userId));
   }
 
   @Transactional(readOnly = true)
@@ -47,6 +60,7 @@ public class MerchantService {
             .orElseThrow(() -> new MerchantNotFoundException(id)));
   }
 
+  @CacheEvict(value = "finance-merchants", key = "#authentication.principal")
   public MerchantResponse save(Authentication authentication, CreateMerchantRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -66,6 +80,7 @@ public class MerchantService {
     return toResponse(merchantRepository.save(merchant));
   }
 
+  @CacheEvict(value = "finance-merchants", key = "#authentication.principal")
   public MerchantResponse update(Authentication authentication, UUID id, UpdateMerchantRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -101,6 +116,7 @@ public class MerchantService {
     return toResponse(merchantRepository.save(merchant));
   }
 
+  @CacheEvict(value = "finance-merchants", key = "#authentication.principal")
   public void delete(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -133,6 +149,7 @@ public class MerchantService {
   // creates) a merchant keyed by this description's fingerprint, renames it,
   // and records the fingerprint as an alias so the same raw narration
   // resolves to the corrected name on every future import too.
+  @CacheEvict(value = "finance-merchants", key = "#userId")
   public Merchant rename(UUID userId, String rawDescription, String correctedName) {
     String fingerprint = DescriptionFingerprint.of(rawDescription);
 
@@ -169,6 +186,7 @@ public class MerchantService {
   // the same alias-fingerprint scheme as rename()/resolveCorrectedName() so
   // a merchant renamed via the transaction detail page keeps accumulating
   // stats under its corrected name instead of splitting into a duplicate.
+  @CacheEvict(value = "finance-merchants", key = "#userId")
   public void recordTransaction(UUID userId, String description, BigDecimal amount) {
     String fingerprint = DescriptionFingerprint.of(description);
 
@@ -212,6 +230,97 @@ public class MerchantService {
     merchant.setAliases(aliases);
 
     merchantRepository.save(merchant);
+  }
+
+  // Batch-import counterpart of resolveCorrectedName(UUID, String) - takes the merchant set
+  // already loaded once by loadAllForUser instead of re-querying the repository for every row.
+  @Transactional(readOnly = true)
+  public Optional<String> resolveCorrectedName(List<Merchant> merchants, String rawDescription) {
+    String fingerprint = DescriptionFingerprint.of(rawDescription);
+
+    if (fingerprint.isBlank()) {
+      return Optional.empty();
+    }
+
+    return merchants.stream()
+        .filter(m -> m.getAliases() != null && containsIgnoreCase(m.getAliases(), fingerprint))
+        .map(Merchant::getName)
+        .findFirst();
+  }
+
+  // Batch-import counterpart of recordTransaction(UUID, String, BigDecimal) - looks up/creates
+  // the merchant within the already-loaded in-memory list (mutating and, for a new merchant,
+  // appending to it so a later row in the same batch for the same merchant finds it too) instead
+  // of hitting the repository per row. The caller is responsible for persisting the returned
+  // merchant (e.g. via saveAllTouched) once for the whole batch - nothing is saved here.
+  public Merchant recordTransaction(
+      List<Merchant> merchants, UUID userId, String description, BigDecimal amount) {
+    String fingerprint = DescriptionFingerprint.of(description);
+
+    if (fingerprint.isBlank()) {
+      return null;
+    }
+
+    Merchant merchant =
+        merchants.stream()
+            .filter(m -> m.getAliases() != null && containsIgnoreCase(m.getAliases(), fingerprint))
+            .findFirst()
+            .or(
+                () ->
+                    merchants.stream()
+                        .filter(
+                            m ->
+                                userId.equals(m.getUserId())
+                                    && m.getName() != null
+                                    && m.getName().equalsIgnoreCase(description))
+                        .findFirst())
+            .orElseGet(
+                () -> {
+                  Merchant created =
+                      Merchant.builder()
+                          .userId(userId)
+                          .name(MerchantNameNormalizer.normalize(description))
+                          .aliases(new ArrayList<>())
+                          .transactionCount(0)
+                          .isRecognized(true)
+                          .build();
+                  merchants.add(created);
+                  return created;
+                });
+
+    int previousCount = merchant.getTransactionCount();
+    BigDecimal previousAverage =
+        merchant.getAverageTransactionAmount() == null ? BigDecimal.ZERO : merchant.getAverageTransactionAmount();
+    BigDecimal newAverage =
+        previousAverage
+            .multiply(BigDecimal.valueOf(previousCount))
+            .add(amount)
+            .divide(BigDecimal.valueOf(previousCount + 1), 2, RoundingMode.HALF_UP);
+
+    merchant.setTransactionCount(previousCount + 1);
+    merchant.setAverageTransactionAmount(newAverage);
+    merchant.setLastTransactionDate(Instant.now());
+    merchant.setRecognized(true);
+
+    List<String> aliases = merchant.getAliases() == null ? new ArrayList<>() : new ArrayList<>(merchant.getAliases());
+    if (!containsIgnoreCase(aliases, fingerprint)) {
+      aliases.add(fingerprint);
+    }
+    merchant.setAliases(aliases);
+
+    return merchant;
+  }
+
+  // Persists every merchant touched by a batch's worth of recordTransaction(List, ...) calls in
+  // one saveAll, and evicts the user's merchant cache once for the whole batch rather than once
+  // per row.
+  @CacheEvict(value = "finance-merchants", key = "#userId")
+  public void saveAllTouched(UUID userId, Collection<Merchant> touchedMerchants) {
+    if (touchedMerchants.isEmpty()) {
+      return;
+    }
+
+    merchantRepository.saveAll(touchedMerchants);
   }
 
   private boolean containsIgnoreCase(List<String> values, String target) {

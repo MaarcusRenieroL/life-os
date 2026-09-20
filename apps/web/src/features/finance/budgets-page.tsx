@@ -33,7 +33,7 @@ interface BudgetRow extends BudgetResponse {
 export function BudgetsPage() {
   const queryClient = useQueryClient();
   const { data: budgets = [] } = useQuery({ queryKey: ['finance', 'budgets'], queryFn: budgetApi.getBudgets });
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
 
   const expenseCategoryIds = categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id);
   const comparisonIds = Array.from(new Set([...expenseCategoryIds, ...budgets.map((b) => b.categoryId)]));

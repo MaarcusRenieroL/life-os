@@ -74,7 +74,7 @@ export function TransactionsPage() {
     categoryId: categoryId ?? undefined,
   };
 
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
   const { data: txPage, isLoading } = useQuery({
     queryKey: ['finance', 'transactions', page, filters],
     queryFn: () => transactionApi.getTransactions(page, PAGE_SIZE, filters),

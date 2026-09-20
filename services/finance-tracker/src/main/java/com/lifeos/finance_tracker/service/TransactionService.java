@@ -13,6 +13,8 @@ import com.lifeos.finance_tracker.domains.dto.response.CsvImportBatchResponse;
 import com.lifeos.finance_tracker.domains.dto.response.TransactionResponse;
 import com.lifeos.finance_tracker.domains.entity.Account;
 import com.lifeos.finance_tracker.domains.entity.Category;
+import com.lifeos.finance_tracker.domains.entity.CategorizationRule;
+import com.lifeos.finance_tracker.domains.entity.Merchant;
 import com.lifeos.finance_tracker.domains.entity.Transaction;
 import com.lifeos.finance_tracker.domains.entity.TransactionCategory;
 import com.lifeos.finance_tracker.domains.enums.SourceType;
@@ -30,7 +32,9 @@ import com.lifeos.finance_tracker.util.MerchantNameNormalizer;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +43,8 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -53,6 +59,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class TransactionService {
 
   private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
+
+  // Analytics caches are keyed per-userId-per-report-shape (getCategoryAnalytics by userId AND
+  // categoryId, getTopMerchants by userId AND limit) - Spring's declarative @CacheEvict can't
+  // evict "every entry for this userId" out of a parameterized cache without enumerating every
+  // key combination, so on every write path below we evict each analytics cache in full
+  // (allEntries = true) rather than try to target just the affected user. With a 5-minute TTL
+  // this is a deliberately blunt but simple invalidation strategy.
+  private static final String CACHE_ANALYTICS_DASHBOARD = "finance-analytics-dashboard";
+  private static final String CACHE_ANALYTICS_CATEGORY = "finance-analytics-category";
+  private static final String CACHE_ANALYTICS_TRENDS = "finance-analytics-trends";
+  private static final String CACHE_ANALYTICS_MERCHANTS = "finance-analytics-merchants";
 
   private final AccountRepository accountRepository;
   private final TransactionRepository transactionRepository;
@@ -110,6 +127,13 @@ public class TransactionService {
     return toResponse(transaction, categoryIdsFor(id));
   }
 
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
   public TransactionResponse save(Authentication authentication, CreateTransactionRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -145,6 +169,13 @@ public class TransactionService {
     return toResponse(transactionRepository.save(transaction), List.of());
   }
 
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
   public TransactionResponse update(
       Authentication authentication, UUID id, UpdateTransactionRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -193,6 +224,13 @@ public class TransactionService {
     return toResponse(transactionRepository.save(transaction), categoryIdsFor(id));
   }
 
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
   public void delete(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -272,9 +310,7 @@ public class TransactionService {
     merchantService.rename(userId, rawDescription, correctedName);
 
     List<Transaction> matches =
-        transactionRepository.findAllByUserIdOrderByTransactionDateDesc(userId).stream()
-            .filter(t -> t.getDescription() != null && t.getDescription().equalsIgnoreCase(rawDescription))
-            .toList();
+        transactionRepository.findAllByUserIdAndDescriptionIgnoreCase(userId, rawDescription);
 
     matches.forEach(t -> t.setDescription(correctedName));
     transactionRepository.saveAll(matches);
@@ -307,6 +343,13 @@ public class TransactionService {
     return toResponse(canonical, categoryIdsFor(canonical.getId()));
   }
 
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
   public void createFromEmailAlert(CreateEmailAlertTransactionRequest request) {
     boolean isExisting =
         transactionRepository.existsBySourceReference(request.getSourceReference());
@@ -352,6 +395,13 @@ public class TransactionService {
     transactionRepository.save(transaction);
   }
 
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
   public void createFromCsvImport(CreateCsvImportTransactionRequest request) {
     Account account =
         accountRepository
@@ -377,7 +427,22 @@ public class TransactionService {
    * <p>Every row is expected to carry the same userId/accountId (one statement import is always
    * for one account) - the account is resolved once from the first row rather than requiring the
    * caller to pass it separately.
+   *
+   * <p>Per-row work that used to hit the database is also loaded/flushed once for the whole
+   * batch instead of once per row: the user's merchants and active categorization rules are
+   * fetched up front (see {@link MerchantService#loadAllForUser} and {@link
+   * CategorizationService#loadActiveRules}) and mutated in memory by the per-row batch overloads
+   * of {@code resolveCorrectedName}/{@code recordTransaction}/{@code categorize}, and every new
+   * or touched {@link Transaction}, {@link Merchant} and {@link CategorizationRule} is persisted
+   * with a single {@code saveAll} after the loop rather than row-by-row.
    */
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
   public CsvImportBatchResponse createFromCsvImportBatch(List<CreateCsvImportTransactionRequest> requests) {
     UUID userId = requests.get(0).getUserId();
     UUID accountId = requests.get(0).getAccountId();
@@ -386,18 +451,85 @@ public class TransactionService {
             .findByIdAndUserId(accountId, userId)
             .orElseThrow(() -> new AccountNotFoundException(accountId));
 
-    int imported = 0;
+    List<Merchant> merchants = merchantService.loadAllForUser(userId);
+    List<CategorizationRule> categorizationRules = categorizationService.loadActiveRules(userId);
+    Set<Merchant> touchedMerchants = new LinkedHashSet<>();
+    List<Transaction> toSave = new ArrayList<>(requests.size());
+
     for (CreateCsvImportTransactionRequest request : requests) {
       try {
-        if (importCsvRow(account, request)) {
-          imported++;
+        Transaction transaction =
+            buildCsvRowTransaction(account, request, merchants, categorizationRules, touchedMerchants);
+        if (transaction != null) {
+          toSave.add(transaction);
         }
       } catch (RuntimeException exception) {
         log.warn("Skipping a row in CSV import batch for account {}: {}", accountId, exception.getMessage());
       }
     }
 
-    return new CsvImportBatchResponse(requests.size(), imported);
+    transactionRepository.saveAll(toSave);
+    merchantService.saveAllTouched(userId, touchedMerchants);
+    categorizationService.saveAllTouched(categorizationRules);
+
+    return new CsvImportBatchResponse(requests.size(), toSave.size());
+  }
+
+  /** Batch-import counterpart of {@link #importCsvRow} - identical dedup/build/categorize/balance
+   * logic, but resolves the merchant and rule lookups against the batch's pre-loaded in-memory
+   * data (see {@link #createFromCsvImportBatch}) instead of querying per row, and returns the
+   * built transaction for the caller to persist via {@code saveAll} rather than saving it here.
+   * Returns null for a row silently deduplicated against an existing transaction (not an error,
+   * same as the single-row method's early return). */
+  private Transaction buildCsvRowTransaction(
+      Account account,
+      CreateCsvImportTransactionRequest request,
+      List<Merchant> merchants,
+      List<CategorizationRule> categorizationRules,
+      Set<Merchant> touchedMerchants) {
+    String description =
+        merchantService
+            .resolveCorrectedName(merchants, request.getDescription())
+            .orElseGet(() -> MerchantNameNormalizer.normalize(request.getDescription()));
+
+    Instant windowStart = request.getTransactionDate().minus(1, ChronoUnit.DAYS);
+    Instant windowEnd = request.getTransactionDate().plus(1, ChronoUnit.DAYS);
+
+    boolean isDuplicate =
+        transactionRepository.existsByAccountIdAndAmountAndTransactionDateBetweenAndDescription(
+            request.getAccountId(), request.getAmount(), windowStart, windowEnd, description);
+
+    if (isDuplicate) {
+      return null;
+    }
+
+    Transaction transaction =
+        Transaction.builder()
+            .accountId(account.getId())
+            .userId(account.getUserId())
+            .transactionDate(request.getTransactionDate())
+            .description(description)
+            .amount(request.getAmount())
+            .type(request.getType())
+            .sourceType(SourceType.CSV_IMPORT)
+            .status(TransactionStatus.RECONCILED)
+            .isReconciled(true)
+            .importedAt(Instant.now())
+            .build();
+
+    categorizationService.categorize(transaction, categorizationRules).ifPresent(transaction::setCategoryId);
+
+    applyToBalance(account, transaction.getAmount(), transaction.getType());
+
+    Merchant touched =
+        merchantService.recordTransaction(merchants, account.getUserId(), description, transaction.getAmount());
+    if (touched != null) {
+      touchedMerchants.add(touched);
+    }
+
+    recordBudgetSpendIfExpense(transaction);
+
+    return transaction;
   }
 
   /** Returns false for a row silently deduplicated against an existing transaction (not an

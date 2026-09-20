@@ -26,7 +26,7 @@ interface Props {
 }
 
 export function RuleDialog({ open, onOpenChange, editing, prefillMatchValue, onSaved }: Props) {
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
 
   const [categoryId, setCategoryId] = useState('');
   const [matchType, setMatchType] = useState<MatchType>('CONTAINS');

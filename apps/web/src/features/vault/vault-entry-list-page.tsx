@@ -37,7 +37,7 @@ export function VaultEntryListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: entries = [] } = useQuery({ queryKey: ['vault', 'entries'], queryFn: vaultApi.getEntries });
-  const { data: categories = [] } = useQuery({ queryKey: ['vault', 'categories'], queryFn: vaultCategoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['vault', 'categories'], queryFn: vaultCategoryApi.getCategories, staleTime: 5 * 60_000 });
   const { data: health } = useQuery({
     queryKey: ['vault', 'health'],
     queryFn: vaultApi.getHealthSummary,

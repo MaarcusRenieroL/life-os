@@ -9,6 +9,8 @@ import com.lifeos.finance_tracker.repository.CategoryRepository;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ public class CategoryService {
 
   private final CategoryRepository categoryRepository;
 
+  @Cacheable(value = "finance-categories", key = "#authentication.principal")
   @Transactional(readOnly = true)
   public List<CategoryResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -40,6 +43,7 @@ public class CategoryService {
             .orElseThrow(() -> new CategoryNotFoundException(id)));
   }
 
+  @CacheEvict(value = "finance-categories", key = "#authentication.principal")
   public CategoryResponse save(Authentication authentication, CreateCategoryRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -58,6 +62,7 @@ public class CategoryService {
     return toResponse(categoryRepository.save(category));
   }
 
+  @CacheEvict(value = "finance-categories", key = "#authentication.principal")
   public CategoryResponse update(Authentication authentication, UUID id, UpdateCategoryRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -101,6 +106,7 @@ public class CategoryService {
     return toResponse(categoryRepository.save(category));
   }
 
+  @CacheEvict(value = "finance-categories", key = "#authentication.principal")
   public void delete(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 

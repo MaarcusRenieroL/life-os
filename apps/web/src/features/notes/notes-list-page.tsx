@@ -52,8 +52,8 @@ export function NotesListPage() {
     size: PAGE_SIZE,
   };
 
-  const { data: folders = [] } = useQuery({ queryKey: ['notes', 'folders'], queryFn: foldersApi.list });
-  const { data: tags = [] } = useQuery({ queryKey: ['notes', 'tags'], queryFn: () => tagsApi.list() });
+  const { data: folders = [] } = useQuery({ queryKey: ['notes', 'folders'], queryFn: foldersApi.list, staleTime: 5 * 60_000 });
+  const { data: tags = [] } = useQuery({ queryKey: ['notes', 'tags'], queryFn: () => tagsApi.list(), staleTime: 5 * 60_000 });
   const { data: pinned = [] } = useQuery({ queryKey: ['notes', 'pinned'], queryFn: notesApi.pinned });
   const { data: favorites = [] } = useQuery({
     queryKey: ['notes', 'favorites'],

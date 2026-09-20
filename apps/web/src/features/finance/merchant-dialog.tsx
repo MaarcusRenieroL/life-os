@@ -25,7 +25,7 @@ interface Props {
 }
 
 export function MerchantDialog({ open, onOpenChange, editing, onSaved }: Props) {
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [website, setWebsite] = useState('');

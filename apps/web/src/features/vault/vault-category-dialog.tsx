@@ -26,6 +26,7 @@ export function VaultCategoryDialog({ open, onOpenChange }: { open: boolean; onO
   const { data: categories = [] } = useQuery({
     queryKey: ['vault', 'categories'],
     queryFn: vaultCategoryApi.getCategories,
+    staleTime: 5 * 60_000,
   });
 
   const [name, setName] = useState('');

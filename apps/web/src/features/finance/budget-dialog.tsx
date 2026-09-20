@@ -29,6 +29,7 @@ export function BudgetDialog({ open, onOpenChange, editing, onSaved }: Props) {
   const { data: categories = [] } = useQuery({
     queryKey: ['finance', 'categories'],
     queryFn: categoryApi.getCategories,
+    staleTime: 5 * 60_000,
   });
   const expenseCategories = categories.filter((c) => c.type === 'EXPENSE');
 

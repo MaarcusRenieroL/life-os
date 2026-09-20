@@ -98,6 +98,7 @@ export function SettingsPage() {
   const { data: overrides } = useQuery({
     queryKey: ['core', 'modules'],
     queryFn: coreApi.getModuleSettings,
+    staleTime: 5 * 60_000,
   });
   const [localOverrides, setLocalOverrides] = useState<Map<string, boolean> | null>(null);
   const overrideMap = localOverrides ?? new Map((overrides ?? []).map((s) => [s.moduleCode, s.enabled]));

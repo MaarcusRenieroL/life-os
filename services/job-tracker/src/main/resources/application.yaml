@@ -4,9 +4,18 @@ server:
 spring:
   application:
     name: job-tracker
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: validate
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: job_tracker_service
   servlet:
     multipart:
       max-file-size: 10MB

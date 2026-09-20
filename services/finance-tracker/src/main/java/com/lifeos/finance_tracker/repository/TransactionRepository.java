@@ -19,6 +19,8 @@ public interface TransactionRepository
 
   List<Transaction> findAllByUserIdOrderByTransactionDateDesc(UUID userId);
 
+  List<Transaction> findAllByUserIdAndDescriptionIgnoreCase(UUID userId, String description);
+
   Page<Transaction> findAllByUserId(UUID userId, Pageable pageable);
 
   Optional<Transaction> findByIdAndUserId(UUID id, UUID userId);

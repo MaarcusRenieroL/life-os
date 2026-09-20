@@ -23,8 +23,8 @@ export function TransactionDetailPage() {
   const queryClient = useQueryClient();
 
   const { data: tx } = useQuery({ queryKey: ['finance', 'transaction', id], queryFn: () => transactionApi.getTransaction(id!), enabled: !!id });
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
-  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
+  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts, staleTime: 5 * 60_000 });
   const { data: recentPage } = useQuery({
     queryKey: ['finance', 'transactions', 'recent-for-detail'],
     queryFn: () => transactionApi.getTransactions(0, 50),

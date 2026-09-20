@@ -59,6 +59,7 @@ export function VaultEntryFormDialog({ open, onOpenChange, entryId, onSaved, onD
   const { data: categories = [] } = useQuery({
     queryKey: ['vault', 'categories'],
     queryFn: vaultCategoryApi.getCategories,
+    staleTime: 5 * 60_000,
   });
 
   const [form, setForm] = useState<VaultEntryWriteRequest>(BLANK);

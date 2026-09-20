@@ -20,7 +20,7 @@ function flatten(folders: Folder[], depth = 0): FlatFolder[] {
 
 export function FolderManagerDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const queryClient = useQueryClient();
-  const { data: folders = [] } = useQuery({ queryKey: ['notes', 'folders'], queryFn: foldersApi.list });
+  const { data: folders = [] } = useQuery({ queryKey: ['notes', 'folders'], queryFn: foldersApi.list, staleTime: 5 * 60_000 });
   const flat = flatten(folders);
 
   const [newName, setNewName] = useState('');

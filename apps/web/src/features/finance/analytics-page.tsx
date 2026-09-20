@@ -13,7 +13,7 @@ export function AnalyticsPage() {
     queryKey: ['finance', 'merchants', 'top'],
     queryFn: () => analyticsApi.getTopMerchants(8),
   });
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
   const expenseCategoryIds = categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id);
   const { data: comparisons = [] } = useQuery({
     queryKey: ['finance', 'comparisons', expenseCategoryIds],

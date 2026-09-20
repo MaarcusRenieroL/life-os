@@ -21,8 +21,8 @@ const UNUSED_IDLE_DAYS = 30;
 
 export function FinanceDashboardPage() {
   const queryClient = useQueryClient();
-  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts });
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts, staleTime: 5 * 60_000 });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
   const { data: summary } = useQuery({ queryKey: ['finance', 'dashboard'], queryFn: analyticsApi.getDashboardSummary });
   const { data: trends = [] } = useQuery({ queryKey: ['finance', 'trends'], queryFn: analyticsApi.getTrends });
   const { data: budgets = [] } = useQuery({ queryKey: ['finance', 'budgets'], queryFn: budgetApi.getBudgets });
