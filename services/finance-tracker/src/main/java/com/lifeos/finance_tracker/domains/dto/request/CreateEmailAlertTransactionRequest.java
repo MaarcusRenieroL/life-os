@@ -10,17 +10,17 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.experimental.FieldDefaults;
 
-// No @Builder here - unlike every other request DTO, this one used to have
-// it, but nothing in finance-tracker actually builds this object (only
-// deserializes it from the internal endpoint's request body). @Builder
-// generates an all-args constructor, which suppresses Java's implicit no-args
-// one - and without a no-args constructor, Jackson has nothing to instantiate
-// with, so every incoming request failed with "no Creators, like default
-// constructor, exist".
+// Built directly by BankAlertEventConsumer from a Kafka BankAlertEventRecord - no longer
+// deserialized from an HTTP request body (the /v1/finance/internal/transactions REST endpoint
+// this used to back was removed when the batches->finance-tracker bank-alert pipeline moved to
+// Kafka), so @Builder's all-args constructor no longer conflicts with anything needing a
+// no-args one for Jackson.
 @Getter
+@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CreateEmailAlertTransactionRequest {
 
