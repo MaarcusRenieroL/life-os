@@ -157,6 +157,43 @@ public class JobListingService {
     return job;
   }
 
+  /**
+   * Seeds a minimal {@link JobListing} from core's quick-capture flow - the candidate typed one
+   * line of free text somewhere in the app (e.g. "applied to Stripe for backend engineer"), core's
+   * AI classifier extracted a company and title from it, and that's all we get here: no URL, no
+   * description text to parse or score against. Starts at {@link JobStatus#INTERESTED} like every
+   * other creation path in this service ({@link #createFromLink}, the email digest path via {@code
+   * EmailEventService.createDigestJobs}) - the candidate's pipeline stage is a deliberate,
+   * separate action via {@link #updateStatus}, never inferred at creation time even when the
+   * captured text says "applied".
+   */
+  @Transactional
+  public JobListing createFromQuickCapture(UUID userId, String company, String title) {
+    if (isBlank(company) && isBlank(title)) {
+      throw new InvalidRequestException("Quick capture needs at least a company or a title");
+    }
+
+    String companyName = isBlank(company) ? "Unknown company" : company.trim();
+    Company companyEntity = resolveCompany(userId, companyName);
+
+    JobListing job =
+        jobListingRepository.save(
+            JobListing.builder()
+                .userId(userId)
+                .companyId(companyEntity == null ? null : companyEntity.getId())
+                .title(isBlank(title) ? "Untitled role" : title.trim())
+                .company(companyName)
+                .source("quick-capture")
+                .ingestedBy(IngestSource.MANUAL)
+                .visaSponsorship(VisaSponsorship.UNKNOWN)
+                .status(JobStatus.INTERESTED)
+                .parseStatus(ProcessingStatus.COMPLETED)
+                .build());
+
+    recordStatusChange(userId, job.getId(), null, job.getStatus());
+    return job;
+  }
+
   @Transactional
   public JobListing updateStatus(UUID userId, UUID jobId, JobStatus status) {
     JobListing job = get(userId, jobId);

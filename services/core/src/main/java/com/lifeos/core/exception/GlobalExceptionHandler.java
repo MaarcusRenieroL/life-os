@@ -18,4 +18,14 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiResponse<Void>> handleInvalid(RuntimeException exception) {
     return ResponseEntity.badRequest().body(ApiResponse.error(exception.getMessage()));
   }
+
+  @ExceptionHandler(AiUnavailableException.class)
+  public ResponseEntity<ApiResponse<Void>> handleAiUnavailable(AiUnavailableException exception) {
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(QuickCaptureRoutingException.class)
+  public ResponseEntity<ApiResponse<Void>> handleQuickCaptureRouting(QuickCaptureRoutingException exception) {
+    return ResponseEntity.unprocessableEntity().body(ApiResponse.error(exception.getMessage()));
+  }
 }

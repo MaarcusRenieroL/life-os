@@ -3,6 +3,7 @@ package com.lifeos.finance_tracker.service;
 import com.lifeos.finance_tracker.domains.dto.request.CategorizeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateCsvImportTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateEmailAlertTransactionRequest;
+import com.lifeos.finance_tracker.domains.dto.request.CreateQuickCaptureTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.DisputeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
@@ -23,6 +24,7 @@ import com.lifeos.finance_tracker.domains.enums.TransactionType;
 import com.lifeos.finance_tracker.domains.record.PageResponse;
 import com.lifeos.finance_tracker.exception.AccountNotFoundException;
 import com.lifeos.finance_tracker.exception.CategoryNotFoundException;
+import com.lifeos.finance_tracker.exception.NoDefaultAccountException;
 import com.lifeos.finance_tracker.exception.TransactionNotFoundException;
 import com.lifeos.finance_tracker.repository.AccountRepository;
 import com.lifeos.finance_tracker.repository.CategoryRepository;
@@ -143,20 +145,120 @@ public class TransactionService {
             .orElseThrow(() -> new AccountNotFoundException(request.getAccountId()));
 
     Transaction transaction =
+        createAndPersist(
+            account,
+            userId,
+            request.getTransactionDate(),
+            request.getDescription(),
+            request.getAmount(),
+            request.getType(),
+            request.getNotes(),
+            request.getReceiptUrl(),
+            SourceType.MANUAL_ENTRY,
+            TransactionStatus.ACTIVE,
+            false);
+
+    return toResponse(transaction, List.of());
+  }
+
+  /**
+   * Backs core's quick-capture flow (POST /v1/finance/internal/quick-transaction) - core's AI
+   * classifier turns free text like "spent 400 on groceries" into {@code
+   * {description, amount, type}} with no account context at all, so this resolves a default
+   * account for the user (see {@link #resolveDefaultAccount}) rather than requiring the caller to
+   * know which account to use, then runs the transaction through the exact same
+   * categorization/merchant/budget/cache-eviction pipeline as a normal manual entry via {@link
+   * #createAndPersist} - a quick-captured transaction should show up in analytics and budgets
+   * exactly like any other one, not be a second-class stripped-down record.
+   */
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
+  public TransactionResponse createFromQuickCapture(CreateQuickCaptureTransactionRequest request) {
+    Account account = resolveDefaultAccount(request.getUserId());
+
+    Transaction transaction =
+        createAndPersist(
+            account,
+            request.getUserId(),
+            Instant.now(),
+            request.getDescription(),
+            request.getAmount(),
+            request.getType(),
+            null,
+            null,
+            SourceType.MANUAL_ENTRY,
+            TransactionStatus.ACTIVE,
+            false);
+
+    return toResponse(transaction, List.of());
+  }
+
+  /**
+   * Picks a default account for a quick-capture transaction, which arrives with no account
+   * context at all (free text has no way to say which account was used). If the user has exactly
+   * one active account, that's an unambiguous choice. Otherwise (zero accounts, or several with
+   * no signal about which is "default") fall back to whichever is flagged {@code isPrimary} -
+   * {@link Account#isPrimary} already exists for this purpose. If neither rule resolves to a
+   * single account (no accounts at all, or several non-primary accounts), guessing would silently
+   * misattribute the spend, so this fails loudly instead via {@link NoDefaultAccountException}
+   * (mapped to 422 by GlobalExceptionHandler).
+   */
+  private Account resolveDefaultAccount(UUID userId) {
+    List<Account> activeAccounts =
+        accountRepository.findAllByUserId(userId).stream().filter(Account::isActive).toList();
+
+    if (activeAccounts.size() == 1) {
+      return activeAccounts.get(0);
+    }
+
+    return activeAccounts.stream()
+        .filter(Account::isPrimary)
+        .findFirst()
+        .orElseThrow(NoDefaultAccountException::new);
+  }
+
+  /**
+   * Shared by every "create one transaction the normal way" path (manual entry via {@link #save},
+   * quick-capture via {@link #createFromQuickCapture}) - builds the transaction, runs it through
+   * categorization ({@link CategorizationService#categorize(Transaction)}), applies it to the
+   * account's running balance, records it against the merchant ({@link
+   * MerchantService#recordTransaction}), records budget spend if it's an expense ({@link
+   * #recordBudgetSpendIfExpense}), and persists it. The email-alert and CSV-import paths don't go
+   * through here since they also need source-reference/description-normalization dedup logic this
+   * helper doesn't do.
+   */
+  private Transaction createAndPersist(
+      Account account,
+      UUID userId,
+      Instant transactionDate,
+      String description,
+      BigDecimal amount,
+      TransactionType type,
+      String notes,
+      String receiptUrl,
+      SourceType sourceType,
+      TransactionStatus status,
+      boolean isReconciled) {
+    Transaction transaction =
         Transaction.builder()
-            .accountId(request.getAccountId())
+            .accountId(account.getId())
             .userId(userId)
-            .transactionDate(request.getTransactionDate())
-            .description(request.getDescription())
-            .amount(request.getAmount())
-            .type(request.getType())
-            .notes(request.getNotes())
-            .receiptUrl(request.getReceiptUrl())
+            .transactionDate(transactionDate)
+            .description(description)
+            .amount(amount)
+            .type(type)
+            .notes(notes)
+            .receiptUrl(receiptUrl)
             .isRecurring(false)
-            .sourceType(SourceType.MANUAL_ENTRY)
-            .isReconciled(false)
+            .sourceType(sourceType)
+            .isReconciled(isReconciled)
             .isDuplicate(false)
-            .status(TransactionStatus.ACTIVE)
+            .status(status)
             .importedAt(Instant.now())
             .build();
 
@@ -166,7 +268,7 @@ public class TransactionService {
     merchantService.recordTransaction(userId, transaction.getDescription(), transaction.getAmount());
     recordBudgetSpendIfExpense(transaction);
 
-    return toResponse(transactionRepository.save(transaction), List.of());
+    return transactionRepository.save(transaction);
   }
 
   @Caching(

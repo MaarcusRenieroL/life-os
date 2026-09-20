@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { APP_MODULES, type AppModuleConfig } from '@/config/app-modules';
+import { authApi } from '@/features/auth/auth-api';
 import { useAuth } from '@/features/auth/auth-context';
 import { getErrorMessage } from '@/lib/error';
 import { cn } from '@/lib/utils';
@@ -60,7 +61,7 @@ function computeInitials(name: string, email: string): string {
 }
 
 export function SettingsPage() {
-  const { user, updateProfileName } = useAuth();
+  const { user, updateProfileName, refreshUser } = useAuth();
   const [activeSection, setActiveSection] = useState('profile');
   const [name, setName] = useState(user?.name ?? '');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -68,6 +69,40 @@ export function SettingsPage() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [theme, setTheme] = useState<ThemePreference>('terminal-dark');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!user?.hasAvatar) {
+      setAvatarUrl(null);
+      return;
+    }
+    let objectUrl: string | null = null;
+    authApi.getAvatarObjectUrl().then((url) => {
+      objectUrl = url;
+      setAvatarUrl(url);
+    }).catch(() => setAvatarUrl(null));
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [user?.hasAvatar]);
+
+  async function handleAvatarSelected(file: File | undefined) {
+    if (!file) return;
+    setAvatarError(null);
+    setUploadingAvatar(true);
+    try {
+      await authApi.updateAvatar(file);
+      await refreshUser();
+    } catch (err) {
+      setAvatarError(getErrorMessage(err, 'Could not update avatar.'));
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  }
   const suppressSpyRef = useRef(false);
 
   // Scroll-spy: highlight whichever section is currently at the top of the
@@ -182,12 +217,40 @@ export function SettingsPage() {
             <SectionHeading className="mb-3.5">Profile</SectionHeading>
 
             <div className="mb-4 flex items-center gap-3.5">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border bg-background text-sm text-primary">
-                {initials}
-              </div>
-              <Button variant="ghost" size="sm" disabled title="Requires an avatar upload endpoint">
-                Change avatar
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="h-12 w-12 rounded-full border object-cover" />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border bg-background text-sm text-primary">
+                  {initials}
+                </div>
+              )}
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => void handleAvatarSelected(e.target.files?.[0])}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={uploadingAvatar}
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {uploadingAvatar ? 'Uploading…' : 'Change avatar'}
               </Button>
+              {user?.hasAvatar && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  disabled={uploadingAvatar}
+                  onClick={() => void authApi.deleteAvatar().then(() => refreshUser())}
+                >
+                  Remove
+                </Button>
+              )}
+              {avatarError && <span className="text-[11px] text-destructive">{avatarError}</span>}
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -256,8 +319,8 @@ export function SettingsPage() {
             <section id="notifications" className="rounded-lg border bg-card p-5">
               <SectionHeading className="mb-1.5">Notifications</SectionHeading>
               <div className="text-[11px] text-muted-foreground">
-                Email and push notification preferences are coming soon — there's no notifications
-                backend yet.
+                In-app notifications (the bell, top right) are live across every module. Email
+                and push delivery, and per-type preferences, are still on the roadmap.
               </div>
             </section>
 

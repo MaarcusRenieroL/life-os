@@ -52,3 +52,19 @@ notes:
 # requires this property to be resolvable, so it needs a value even if unused here.
 encryption:
   secret: ${ENCRYPTION_SECRET:ZZM3kFKNDKuRBXSIKG8e3AZ/qyzwngMnr9zJZfqRXMA=}
+
+# QuickCaptureAiClient's classifier - same provider config shape as job-tracker's, Ollama-first
+# per this codebase's cost-conscious routing convention. Disabled by default so a fresh checkout
+# with no local Ollama server still works (quick-capture just reports "needs approval" and, if
+# the user opts in, uses Claude).
+ollama:
+  base-url: ${OLLAMA_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:mistral}
+  enabled: ${OLLAMA_ENABLED:false}
+
+anthropic:
+  base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-sonnet-5}
+  version: "2023-06-01"
+  max-tokens: 512

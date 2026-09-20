@@ -13,6 +13,9 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   /** Saves the profile name and reflects it locally without a round-trip GET /me. */
   updateProfileName: (name: string) => Promise<void>;
+  /** Re-fetches the profile - used after an avatar change, where the update already
+   * happened server-side (a file upload) and the local user just needs to catch up. */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -52,9 +55,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(updated);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    setUser(await authApi.getMe());
+  }, []);
+
   const value = useMemo(
-    () => ({ user, loading, login, logout, updateProfileName }),
-    [user, loading, login, logout, updateProfileName],
+    () => ({ user, loading, login, logout, updateProfileName, refreshUser }),
+    [user, loading, login, logout, updateProfileName, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

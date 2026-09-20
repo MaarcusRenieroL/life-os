@@ -35,4 +35,9 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.CONFLICT)
         .body(ApiResponse.error(exception.getMessage()));
   }
+
+  @ExceptionHandler(InvalidAvatarException.class)
+  public ResponseEntity<ApiResponse<Void>> handleInvalidAvatar(InvalidAvatarException exception) {
+    return ResponseEntity.badRequest().body(ApiResponse.error(exception.getMessage()));
+  }
 }

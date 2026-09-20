@@ -15,6 +15,10 @@ spring:
   flyway:
     schemas: auth_schema
     default-schema: auth_schema
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
@@ -31,3 +35,6 @@ jwt:
 # requires this property to be resolvable, so it needs a value even if unused here.
 encryption:
   secret: ${ENCRYPTION_SECRET:yRzWgGNnMTQZsQyWSIK8E+L8ZgHlOjjujLcM5W6o9dI=}
+
+avatar:
+  storage-dir: ${AVATAR_STORAGE_DIR:/data/avatars}

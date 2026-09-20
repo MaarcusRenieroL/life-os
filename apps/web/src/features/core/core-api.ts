@@ -32,6 +32,12 @@ export interface NotificationPage {
   last: boolean;
 }
 
+export interface QuickCaptureResult {
+  status: 'created' | 'needs_ai_approval';
+  module: string | null;
+  summary: string | null;
+}
+
 export interface TodayItem {
   module: string;
   type: string;
@@ -91,5 +97,9 @@ export const coreApi = {
 
   getToday(): Promise<TodayItem[]> {
     return unwrap(api.get(`${baseUrl}/today`));
+  },
+
+  quickCapture(text: string, useClaudeFallback = false): Promise<QuickCaptureResult> {
+    return unwrap(api.post(`${baseUrl}/quick-capture`, { text, useClaudeFallback }));
   },
 };

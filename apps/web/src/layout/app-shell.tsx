@@ -15,6 +15,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/features/auth/auth-context';
 import { NotificationBell } from '@/features/core/notification-bell';
+import { QuickCaptureDialog } from '@/features/core/quick-capture-dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -175,7 +176,8 @@ export function AppShell() {
             <span className="text-primary">~/</span>
             {currentPathSegment(location.pathname)}
           </span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <QuickCaptureDialog />
             <NotificationBell />
           </div>
         </header>
