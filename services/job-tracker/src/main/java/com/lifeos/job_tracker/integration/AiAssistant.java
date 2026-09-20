@@ -6,8 +6,10 @@ import com.lifeos.job_tracker.domains.record.EmailClassification;
 import com.lifeos.job_tracker.domains.record.InterviewPrepTopics;
 import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
 import com.lifeos.job_tracker.domains.record.ParsedResume;
-import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
+import com.lifeos.job_tracker.domains.record.AtsSuggestions;
+import com.lifeos.job_tracker.domains.record.SkillSemanticMatch;
 import com.lifeos.job_tracker.exception.ClaudeUnavailableException;
+import com.lifeos.job_tracker.exception.ResumeExtractionException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,16 +18,14 @@ import org.springframework.stereotype.Component;
 
 /**
  * Domain-shaped prompts on top of {@link ClaudeApiClient} and {@link OllamaApiClient}. Each task
- * below is independently routed to whichever provider {@code ai.routing.*} names for it (env
- * vars: {@code AI_ROUTE_RESUME_PARSE}, {@code AI_ROUTE_JOB_PARSE}, {@code AI_ROUTE_EMAIL_CLASSIFY},
+ * below is independently routed to whichever provider {@code ai.routing.*} names for it (env vars:
+ * {@code AI_ROUTE_RESUME_PARSE}, {@code AI_ROUTE_JOB_PARSE}, {@code AI_ROUTE_EMAIL_CLASSIFY},
  * {@code AI_ROUTE_TAILOR_RESUME}) - "ollama" or "claude", flippable without a redeploy.
  *
- * <p>Routine, high-volume extraction (resume/job parsing, email classification) defaults to
- * Ollama, which runs locally at zero marginal cost; a wrong guess there just means a re-parse.
- * Resume tailoring defaults to Claude and stays there even if routed to Ollama fails, since a bad
- * tailored resume is the one output a candidate might actually submit. If a call routed to Ollama
- * fails (not running, model not pulled), it falls back to Claude automatically rather than hard
- * failing.
+ * <p>Routine, high-volume extraction (resume/job parsing, email classification) defaults to Ollama,
+ * which runs locally at zero marginal cost; a wrong guess there just means a re-parse. If a call
+ * routed to Ollama fails (not running, model not pulled), it falls back to Claude automatically
+ * rather than hard failing.
  */
 @Component
 public class AiAssistant {
@@ -45,8 +45,8 @@ public class AiAssistant {
   @Value("${ai.routing.email-classify:ollama}")
   private String emailClassifyProvider;
 
-  @Value("${ai.routing.tailor-resume:claude}")
-  private String tailorResumeProvider;
+  @Value("${ai.routing.ats-suggestions:ollama}")
+  private String atsSuggestionsProvider;
 
   @Value("${ai.routing.cover-letter:claude}")
   private String coverLetterProvider;
@@ -54,8 +54,8 @@ public class AiAssistant {
   @Value("${ai.routing.interview-prep:ollama}")
   private String interviewPrepProvider;
 
-  @Value("${ai.routing.referral-message:claude}")
-  private String referralMessageProvider;
+  @Value("${ai.routing.skill-match:ollama}")
+  private String skillMatchProvider;
 
   public AiAssistant(ClaudeApiClient claude, OllamaApiClient ollama, ObjectMapper objectMapper) {
     this.claude = claude;
@@ -68,33 +68,92 @@ public class AiAssistant {
     return claude.isConfigured() || ollama.isConfigured();
   }
 
-  /** Resume tailoring is pinned to Claude regardless of routing (see class docs), so its own
-   * availability gate checks Claude specifically rather than "any provider". */
-  public boolean claudeAvailable() {
-    return claude.isConfigured();
-  }
-
   public ParsedResume parseResume(String resumeText) {
-    return routedCompleteJson(
-        resumeParseProvider,
-        "You are a resume parser. Reply with ONLY a JSON object, no prose.",
+    String systemPrompt = "You are a resume parser. Reply with ONLY a JSON object, no prose.";
+    String userPrompt =
         """
         Extract structured data from the resume below. Use this exact shape:
         {
-          "name": string, "email": string, "phone": string,
-          "experience": [{"title","company","startDate","endDate","description"}],
+          "name": string, "email": string, "phone": string, "location": string,
+          "githubUrl": string, "linkedinUrl": string, "portfolioUrl": string,
+          "summary": string,
+          "experience": [{"title","company","location","startDate","endDate","bullets":[string]}],
           "education": [{"degree","school","field","graduationYear"}],
+          "projects": [{"name","description","techStack":[string],"link","startDate","endDate","bullets":[string]}],
           "skills": [{"name","category","proficiency","yearsOfExperience","confidence"}],
           "certifications": [string], "achievements": [string]
         }
-        category is one of LANGUAGE, FRAMEWORK, PLATFORM, DATABASE, TOOL, SOFT, OTHER.
+        "bullets" is each experience/project entry's line items, verbatim from the resume, not a
+        single merged paragraph. "startDate"/"endDate" must be "YYYY-MM" (e.g. "2024-08"), never
+        "Aug 2024" or similar - null if the resume gives no date or says "Present"/"Ongoing".
+        "summary" is the resume's own professional-summary paragraph if it has one, otherwise omit
+        it rather than writing a new one. category is one of LANGUAGE,
+        FRAMEWORK, PLATFORM, DATABASE, TOOL, SOFT, OTHER.
         proficiency is one of BEGINNER, INTERMEDIATE, ADVANCED, EXPERT.
-        confidence is 0..1. Omit unknown scalar fields rather than guessing.
+        confidence is 0..1. yearsOfExperience must be a plain JSON number (e.g. 2.5) - never a
+        string, and never with a trailing "+" or unit, even if the resume phrases it as "2.5+
+        years". Omit unknown scalar fields rather than guessing.
 
         RESUME:
         """
-            + resumeText,
-        ParsedResume.class);
+            + resumeText;
+
+    ParsedResume parsed =
+        routedCompleteJson(resumeParseProvider, systemPrompt, userPrompt, ParsedResume.class);
+    int textLength = resumeText == null ? 0 : resumeText.length();
+    int skillCount = parsed.skills() == null ? 0 : parsed.skills().size();
+    log.info(
+        "Resume extraction: {} chars -> {} skills (provider={})",
+        textLength,
+        skillCount,
+        resumeParseProvider);
+
+    // Ollama can return a syntactically valid response with an implausibly low skill count for
+    // resume text that plainly has more (including zero) - no exception, so the usual
+    // fallback-on-failure path never triggers, and this silently starves every downstream score.
+    // A real resume this long having so few extractable skills is implausible, so treat it as a
+    // parse failure and retry.
+    if (isSuspiciouslySparse(skillCount, textLength)
+        && "ollama".equalsIgnoreCase(resumeParseProvider)) {
+      log.warn(
+          "Ollama parsed only {} skill(s) from a {}-char resume - retrying on Ollama once",
+          skillCount,
+          textLength);
+      parsed =
+          routedCompleteJson(resumeParseProvider, systemPrompt, userPrompt, ParsedResume.class);
+      skillCount = parsed.skills() == null ? 0 : parsed.skills().size();
+
+      if (isSuspiciouslySparse(skillCount, textLength) && claude.isConfigured()) {
+        log.warn(
+            "Ollama retry still only found {} skill(s) from a {}-char resume - falling back to"
+                + " Claude directly",
+            skillCount,
+            textLength);
+        parsed = convert(claude.completeJson(systemPrompt, userPrompt), ParsedResume.class);
+        skillCount = parsed.skills() == null ? 0 : parsed.skills().size();
+      }
+    }
+
+    if (skillCount == 0 && textLength > 200) {
+      throw new ResumeExtractionException(
+          "Could not extract any skills from a "
+              + textLength
+              + "-char resume after retrying - "
+              + "extraction likely failed rather than the resume genuinely listing none.");
+    }
+    return parsed;
+  }
+
+  /**
+   * A resume long enough to plausibly list several skills but extracted with very few is more
+   * likely a bad parse than a genuinely sparse resume - the exact-zero case is caught separately as
+   * a hard failure below; this only drives the retry/fallback decision.
+   */
+  private static boolean isSuspiciouslySparse(int skillCount, int textLength) {
+    if (textLength > 800) {
+      return skillCount < 3;
+    }
+    return skillCount == 0 && textLength > 200;
   }
 
   /**
@@ -107,66 +166,59 @@ public class AiAssistant {
         "You extract a single job posting from raw web-page content. Reply with ONLY a JSON"
             + " object, no prose.",
         """
-            The text below was scraped from a job posting URL. It may contain navigation, cookie
-            banners, JSON-LD or other noise. Extract the one job posting. Shape:
-            {
-              "title": string, "company": string, "location": string,
-              "workModel": one of ONSITE|HYBRID|REMOTE,
-              "seniorityLevel": one of INTERN|JUNIOR|MID|SENIOR|STAFF|LEAD|PRINCIPAL,
-              "industry": string,
-              "salaryMin": number, "salaryMax": number, "currency": 3-letter code,
-              "requiredSkills": [string], "niceToHaveSkills": [string], "techStack": [string],
-              "jobDescriptionText": string
-            }
-            "requiredSkills"/"niceToHaveSkills" are short skill or technology names (2-6 words each,
-            e.g. "REST APIs", "AWS", "Containerization") distilled from the posting's requirements -
-            never a whole requirement sentence copied verbatim. One bullet in the posting can still
-            become one skill if it's already that concise, but split a bullet into its distinct named
-            skills/technologies whenever it names more than one (e.g. "Experience with AWS, Docker,
-            and Kubernetes" -> three separate entries), and drop any bullet that's just a general trait
-            (autonomy, ownership, communication) rather than a named skill.
+        The text below was scraped from a job posting URL. It may contain navigation, cookie
+        banners, JSON-LD or other noise. Extract the one job posting. Shape:
+        {
+          "title": string, "company": string, "location": string,
+          "workModel": one of ONSITE|HYBRID|REMOTE,
+          "seniorityLevel": one of INTERN|JUNIOR|MID|SENIOR|STAFF|LEAD|PRINCIPAL,
+          "industry": string,
+          "salaryMin": number, "salaryMax": number, "currency": 3-letter code,
+          "requiredSkills": [string], "niceToHaveSkills": [string], "techStack": [string],
+          "jobDescriptionText": string
+        }
+        "requiredSkills"/"niceToHaveSkills" are short skill or technology names (2-6 words each,
+        e.g. "REST APIs", "AWS", "Containerization") distilled from the posting's requirements -
+        never a whole requirement sentence copied verbatim. One bullet in the posting can still
+        become one skill if it's already that concise, but split a bullet into its distinct named
+        skills/technologies whenever it names more than one (e.g. "Experience with AWS, Docker,
+        and Kubernetes" -> three separate entries), and drop any bullet that's just a general trait
+        (autonomy, ownership, communication) rather than a named skill.
+        NEVER emit one of the posting's own section headings as a skill (e.g. a posting with a
+        "Cross-Functional & Agile Collaboration:" heading followed by prose about working with
+        product/UX/QA teams must NOT produce "Cross-Functional & Agile Collaboration" as a skill -
+        extract the concrete named tools/technologies/practices from the prose under that heading
+        instead, the same way you would for a plain bullet list; a heading is structure, not a
+        skill). This matters most for postings that organize requirements under bolded category
+        headings rather than flat bullets - go one level deeper into each section's body text
+        every time, never stop at the heading.
 
-            "jobDescriptionText" must be the posting's own description prose (responsibilities,
-            requirements, about the role) with the web-page noise removed - keep the actual wording
-            verbatim, don't summarise, but DO restore real structure: a blank line between each
-            section (About the company / About the role / Requirements / Benefits / etc.), a short
-            heading line for each section, and "- " at the start of each bullet point in a list
-            (skills, responsibilities, requirements). Scraped pages often collapse all of this onto
-            one line with no punctuation between sentences - reconstruct the paragraph/heading/bullet
-            breaks a human would have seen on the actual page, don't just copy the flattened text.
-            Omit any scalar field the page doesn't state rather than guessing. "jobDescriptionText"
-            must be a single plain string (with \\n for line breaks) - never a nested JSON object.
-            If the content is clearly not a job posting, return {}.
+        "jobDescriptionText" must be the posting's own description prose (responsibilities,
+        requirements, about the role) with the web-page noise removed - keep the actual wording
+        verbatim, don't summarise, but DO restore real structure: a blank line between each
+        section (About the company / About the role / Requirements / Benefits / etc.), a short
+        heading line for each section, and "- " at the start of each bullet point in a list
+        (skills, responsibilities, requirements). Scraped pages often collapse all of this onto
+        one line with no punctuation between sentences - reconstruct the paragraph/heading/bullet
+        breaks a human would have seen on the actual page, don't just copy the flattened text.
+        Omit any scalar field the page doesn't state rather than guessing. "jobDescriptionText"
+        must be a single plain string (with \\n for line breaks) - never a nested JSON object.
+        If the content is clearly not a job posting, return {}.
 
-            RAW PAGE CONTENT:
-            """
+        RAW PAGE CONTENT:
+        """
             + rawPageContent,
         ParsedJobPosting.class);
   }
 
   /**
-   * Scores the candidate's resume prose against one job posting, then returns concrete
-   * improvement points and a full LaTeX resume the candidate can paste into Overleaf. Claude is
-   * told to only rephrase/reorganise/emphasise the candidate's real, stated experience - never to
-   * invent skills or history the resume doesn't support - and to weave in the missing/partial
-   * keywords only where the resume text actually backs them up.
+   * Text-only ATS advice: concrete, specific edits the candidate can make to their own resume by
+   * hand to better match this job's terminology, plus the honest list of required/nice-to-have
+   * items their real background doesn't support. Does not rewrite or regenerate the resume itself
+   * - the candidate applies these by hand, so there's no LaTeX/PDF output and nothing to fabricate
+   * into a document that gets submitted.
    */
-  public ResumeTailoringResult tailorResume(
-      String jobTitle,
-      String company,
-      String jobDescriptionText,
-      List<String> requiredSkills,
-      List<String> missingSkills,
-      List<String> partialSkills,
-      String resumeText) {
-    return tailorResume(jobTitle, company, jobDescriptionText, requiredSkills, missingSkills, partialSkills, resumeText, null);
-  }
-
-  /**
-   * @param tightenInstruction non-null only on the one-page retry (see JobListingService) - tells
-   *     Claude the previous attempt overflowed and to cut content, not just tighten wording.
-   */
-  public ResumeTailoringResult tailorResume(
+  public AtsSuggestions generateAtsSuggestions(
       String jobTitle,
       String company,
       String jobDescriptionText,
@@ -174,68 +226,69 @@ public class AiAssistant {
       List<String> missingSkills,
       List<String> partialSkills,
       String resumeText,
-      String tightenInstruction) {
+      List<String> candidateSkillNames) {
     return routedCompleteJson(
-        tailorResumeProvider,
-        "You are a resume coach and LaTeX typesetter. Reply with ONLY a JSON object, no prose, no"
-            + " markdown fence.",
+        atsSuggestionsProvider,
+        "You are an ATS resume-keyword coach. Reply with ONLY a JSON object, no prose, no markdown"
+            + " fence.",
         """
-            Compare the candidate's resume against the job below and produce tailoring output. Shape:
-            {
-              "improvementPoints": [string],
-              "latexResume": string
-            }
+        Compare the candidate's real resume against the job below and suggest concrete, specific
+        wording edits the candidate can make BY HAND to better match this job's terminology for an
+        ATS keyword scan. Do not write a new resume or any resume text yourself - only describe
+        what to change and why. Shape:
+        {
+          "suggestions": [string],
+          "gapsVsJd": [string]
+        }
 
-            Rules:
-            - "improvementPoints" is 4-8 short, concrete, actionable bullets telling the candidate what
-              to change on their resume for THIS job - e.g. which existing bullet to reword, which
-              already-demonstrated-but-unstated skill to surface, what to quantify, what to cut. Do not
-              suggest claiming a skill or experience the resume gives no evidence of; if a required
-              skill is genuinely absent from their background, say so plainly instead of inventing a way
-              to fake it.
-            - "latexResume" is a complete, compilable LaTeX document (\\documentclass through
-              \\end{document}) using a clean single-column article-style resume layout (no exotic
-              packages beyond geometry/enumitem/titlesec/hyperref) built ONLY from the candidate's real
-              resume content below - reorganised, reworded and re-prioritised toward this job's required
-              skills, but never fabricating employers, titles, dates, or skills absent from the source
-              resume. This gets compiled with tectonic (a XeTeX engine), so avoid pdfTeX-only primitives
-              (\\pdfgentounicode, \\input{glyphtounicode}). Escape LaTeX special characters (&, %%, $, #,
-              _, {, }) found in the candidate's own text. Escape the document as a valid JSON string
-              (escape backslashes as \\\\ and newlines as \\n).
-            - The resume MUST fit on exactly ONE page. Use compact spacing (tight itemsep/topsep,
-              modest margins via geometry) and be concise - prioritise the most relevant bullets for
-              this job over including everything. Never let the layout spill onto a second page.
-            %s
+        GROUND RULES:
+        - Every suggestion must point at something already true of the candidate (an existing
+          bullet, project, or skill) and describe a wording/emphasis change only - never suggest
+          adding a skill, tool, or achievement the candidate's profile doesn't support.
+        - Where the job's required-skill wording differs only cosmetically from how the candidate
+          already describes it (e.g. job says "Tailwind", candidate says "Tailwind CSS"; a version
+          qualifier the candidate's tooling already covers), suggest using the job's own phrasing -
+          that is honest alignment, exactly what an ATS keyword scan rewards.
+        - "suggestions" (4-10 items): specific, actionable edits, each naming the bullet/section to
+          change and the exact rewording to make, tied to a specific job requirement.
+        - "gapsVsJd": required or nice-to-have items from this job that the candidate's real
+          background does not support. Say so plainly - do not soften it into something that sounds
+          like a workaround, and do not suggest wording that would imply the candidate has it.
 
-            JOB:
-            Title: %s
-            Company: %s
-            Required skills: %s
-            Skills the candidate is missing: %s
-            Skills the candidate partially matches: %s
-            Description:
-            %s
+        JOB:
+        Title: %s
+        Company: %s
+        Required skills: %s
+        Skills the candidate is missing: %s
+        Skills the candidate partially matches: %s
+        Description:
+        %s
 
-            CANDIDATE RESUME (verbatim extracted text):
-            %s
-            """
+        CANDIDATE PROFILE (verbatim - contact info, summary, work experience, projects with real
+        links, education, skills, and achievements):
+        %s
+
+        CANDIDATE'S KNOWN SKILLS (structured, already extracted from the profile above - treat
+        this as the authoritative skill list):
+        %s
+        """
             .formatted(
-                tightenInstruction == null || tightenInstruction.isBlank() ? "" : tightenInstruction,
                 blank(jobTitle),
                 blank(company),
                 String.join(", ", safe(requiredSkills)),
                 String.join(", ", safe(missingSkills)),
                 String.join(", ", safe(partialSkills)),
                 blank(jobDescriptionText),
-                blank(resumeText)),
-        ResumeTailoringResult.class);
+                blank(resumeText),
+                String.join(", ", safe(candidateSkillNames))),
+        AtsSuggestions.class);
   }
 
   /**
    * Classifies one Gmail message forwarded by batches: is it a job-alert digest (a list of new
    * postings), an application/interview/rejection/offer signal for a job the candidate already
-   * applied to, or unrelated mail that happened to match the search query. Told explicitly to
-   * favor a lower confidence over a guess, since a wrong auto-applied status silently corrupts the
+   * applied to, or unrelated mail that happened to match the search query. Told explicitly to favor
+   * a lower confidence over a guess, since a wrong auto-applied status silently corrupts the
    * candidate's pipeline.
    */
   public EmailClassification classifyEmail(String fromAddress, String subject, String body) {
@@ -244,41 +297,44 @@ public class AiAssistant {
         "You classify an email for a job-tracking automation. Reply with ONLY a JSON object, no"
             + " prose.",
         """
-            Classify this email into exactly one type:
-            - JOB_ALERT_DIGEST: a job board's "new jobs matching your search" digest, listing one or
-              more postings with links.
-            - APPLICATION_CONFIRMATION: confirms an application was received/submitted.
-            - INTERVIEW_INVITE: invites the candidate to an interview or next round.
-            - REJECTION: rejects the candidate or closes out the application.
-            - OFFER: extends a job offer.
-            - UNRELATED: anything else (newsletters, unrelated notifications, spam).
+        Classify this email into exactly one type:
+        - JOB_ALERT_DIGEST: a job board's "new jobs matching your search" digest, listing one or
+          more postings with links.
+        - APPLICATION_CONFIRMATION: confirms an application was received/submitted.
+        - INTERVIEW_INVITE: invites the candidate to an interview or next round.
+        - REJECTION: rejects the candidate or closes out the application.
+        - OFFER: extends a job offer.
+        - UNRELATED: anything else (newsletters, unrelated notifications, spam).
 
-            Reply with this exact shape:
-            {
-              "type": one of the six values above,
-              "confidence": "HIGH" | "MEDIUM" | "LOW",
-              "company": string or null - your best guess which company this is about,
-              "title": string or null - your best guess which role this is about,
-              "postings": [{"title","company","url"}] - ONLY for JOB_ALERT_DIGEST, one entry per
-                posting in the digest; omit or use an empty array for every other type
-            }
+        Reply with this exact shape:
+        {
+          "type": one of the six values above,
+          "confidence": "HIGH" | "MEDIUM" | "LOW",
+          "company": string or null - your best guess which company this is about,
+          "title": string or null - your best guess which role this is about,
+          "postings": [{"title","company","url"}] - ONLY for JOB_ALERT_DIGEST, one entry per
+            posting in the digest; omit or use an empty array for every other type
+        }
 
-            Use LOW confidence whenever the email is ambiguous, generic, or you are guessing at the
-            company/role - do not force a HIGH confidence to seem decisive.
+        Use LOW confidence whenever the email is ambiguous, generic, or you are guessing at the
+        company/role - do not force a HIGH confidence to seem decisive.
 
-            FROM: %s
-            SUBJECT: %s
-            BODY:
-            %s
-            """
+        FROM: %s
+        SUBJECT: %s
+        BODY:
+        %s
+        """
             .formatted(blank(fromAddress), blank(subject), blank(body)),
         EmailClassification.class);
   }
 
-  /** Drafts a cover letter grounded only in the candidate's real resume content - same
-   * never-invent constraint as {@link #tailorResume}, since this is a document that gets sent
-   * to a real employer. */
-  public String generateCoverLetter(String jobTitle, String company, String jobDescriptionText, String resumeText) {
+  /**
+   * Drafts a cover letter grounded only in the candidate's real resume content - never invents
+   * employers, projects, skills, or achievements, since this is a document that gets sent to a
+   * real employer.
+   */
+  public String generateCoverLetter(
+      String jobTitle, String company, String jobDescriptionText, String resumeText) {
     return routedComplete(
         coverLetterProvider,
         "You write cover letters. Reply with ONLY the letter text, no subject line, no prose"
@@ -301,14 +357,21 @@ public class AiAssistant {
         CANDIDATE RESUME (verbatim extracted text):
         %s
         """
-            .formatted(blank(jobTitle), blank(company), blank(jobDescriptionText), blank(resumeText)));
+            .formatted(
+                blank(jobTitle), blank(company), blank(jobDescriptionText), blank(resumeText)));
   }
 
-  /** Suggests concrete topics to prepare for one interview round, grounded in the job posting and
+  /**
+   * Suggests concrete topics to prepare for one interview round, grounded in the job posting and
    * (when it's a technical/system-design round) the candidate's own resume - not just a generic
-   * "know data structures" list. */
+   * "know data structures" list.
+   */
   public List<String> generateInterviewPrepTopics(
-      String roundType, String jobTitle, String company, String jobDescriptionText, String resumeText) {
+      String roundType,
+      String jobTitle,
+      String company,
+      String jobDescriptionText,
+      String resumeText) {
     return routedCompleteJson(
             interviewPrepProvider,
             "You coach candidates for job interviews. Reply with ONLY a JSON object, no prose.",
@@ -342,57 +405,57 @@ public class AiAssistant {
         .topics();
   }
 
-  /** Drafts a short outreach message asking a contact for a referral - grounded only in the
-   * candidate's real resume, same never-invent constraint as {@link #generateCoverLetter}. This is
-   * always a draft the candidate reviews and sends themselves; nothing here ever contacts anyone
-   * automatically. */
-  public String generateReferralMessage(
-      String contactName,
-      String contactTitle,
-      String relationship,
-      String jobTitle,
-      String company,
-      String resumeText) {
-    return routedComplete(
-        referralMessageProvider,
-        "You draft short referral-request messages (for LinkedIn or email). Reply with ONLY the"
-            + " message text, no subject line, no prose before or after.",
-        """
-        Draft a short (3-5 sentence), warm but direct message asking %s%s for a referral for the
-        role below, using ONLY real experience from the candidate's resume - never invent
-        employers, projects, skills, or achievements. Reference 1 concrete, relevant thing from
-        the candidate's actual background. Acknowledge the relationship context naturally if given.
-        End with a clear, low-friction ask (e.g. "would you be open to referring me?"). No
-        generic filler, no placeholders left unfilled.
+  /**
+   * One call per job/resume pair (never per skill) asking whether any of the job's still-missing
+   * required skills are actually covered by the candidate's skill list under different wording
+   * (e.g. job says "container orchestration", candidate has "Kubernetes"). Only called by {@code
+   * JobMatchingService} on the leftover skills the alias table in {@code normalise()} couldn't
+   * resolve - routine, so it defaults to Ollama like the other high-volume extraction tasks rather
+   * than being pinned to Claude.
+   */
+  public List<String> semanticSkillMatch(
+      List<String> missingRequiredSkills, List<String> candidateSkillNames) {
+    if (missingRequiredSkills == null || missingRequiredSkills.isEmpty()) {
+      return List.of();
+    }
+    return routedCompleteJson(
+            skillMatchProvider,
+            "You match job-required skills against a candidate's skill list for a fit score. Reply"
+                + " with ONLY a JSON object, no prose.",
+            """
+            The candidate's skills are listed below. For each REQUIRED SKILL, decide if it is
+            genuinely the same skill as one already in the candidate's list, just described
+            differently (e.g. "container orchestration" vs "Kubernetes", "relational databases" vs
+            "PostgreSQL", "distributed messaging" vs "Kafka"). Do NOT match skills that are merely
+            related or adjacent (e.g. "Kubernetes" does not match "Docker" - one is orchestration,
+            the other is containers; "SQL" does not match "MongoDB"). Reply with this exact shape:
+            {"matched": [string]} - only the required-skill strings (copied verbatim from the
+            REQUIRED SKILLS list below) that have a genuine equivalent in the candidate's list.
+            Omit any required skill with no real match - do not guess.
 
-        CONTACT: %s%s
-        RELATIONSHIP TO CANDIDATE: %s
+            REQUIRED SKILLS:
+            %s
 
-        JOB:
-        Title: %s
-        Company: %s
-
-        CANDIDATE RESUME (verbatim extracted text):
-        %s
-        """
-            .formatted(
-                blank(contactName),
-                contactTitle == null || contactTitle.isBlank() ? "" : " (" + contactTitle + ")",
-                blank(contactName),
-                contactTitle == null || contactTitle.isBlank() ? "" : ", " + contactTitle,
-                blank(relationship),
-                blank(jobTitle),
-                blank(company),
-                blank(resumeText)));
+            CANDIDATE SKILLS:
+            %s
+            """
+                .formatted(
+                    String.join(", ", missingRequiredSkills),
+                    String.join(", ", safe(candidateSkillNames))),
+            SkillSemanticMatch.class)
+        .matched();
   }
 
-  /** Resolves {@code providerName} to a client, calls it, and converts the result to {@code type}.
+  /**
+   * Resolves {@code providerName} to a client, calls it, and converts the result to {@code type}.
    * Falls back to Claude if an Ollama-routed call fails outright (server not running, model not
    * pulled) OR returns JSON that won't map to {@code type} - a local 7B model occasionally produces
    * malformed shapes (e.g. nesting an object where a plain string field was asked for) on complex
    * input, and that's just as much a "this routed call didn't work" case as a network failure.
-   * Claude staying reachable is what makes routing routine work to Ollama safe either way. */
-  private <T> T routedCompleteJson(String providerName, String systemPrompt, String userPrompt, Class<T> type) {
+   * Claude staying reachable is what makes routing routine work to Ollama safe either way.
+   */
+  private <T> T routedCompleteJson(
+      String providerName, String systemPrompt, String userPrompt, Class<T> type) {
     AiClient primary = "ollama".equalsIgnoreCase(providerName) ? ollama : claude;
 
     if (primary == ollama && !ollama.isConfigured()) {
@@ -404,7 +467,9 @@ public class AiAssistant {
       return convert(primary.completeJson(systemPrompt, userPrompt), type);
     } catch (RuntimeException exception) {
       if (primary == ollama) {
-        log.warn("Ollama call failed or returned unmappable JSON ({}), falling back to Claude", exception.getMessage());
+        log.warn(
+            "Ollama call failed or returned unmappable JSON ({}), falling back to Claude",
+            exception.getMessage());
         return convert(claude.completeJson(systemPrompt, userPrompt), type);
       }
       throw exception;

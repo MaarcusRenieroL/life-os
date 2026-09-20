@@ -1,5 +1,6 @@
 package com.lifeos.notes.service;
 
+import com.lifeos.common.domains.dto.response.TodayItemResponse;
 import com.lifeos.notes.domains.dto.request.CreateNoteModuleLinkRequest;
 import com.lifeos.notes.domains.dto.request.CreateNoteRequest;
 import com.lifeos.notes.domains.dto.request.DuplicateNoteRequest;
@@ -60,6 +61,7 @@ public class NoteService {
   private final NoteFolderService noteFolderService;
   private final TagService tagService;
 
+  @Transactional(readOnly = true)
   public org.springframework.data.domain.Page<NoteSummaryResponse> list(
       UUID userId,
       String sort,
@@ -98,6 +100,7 @@ public class NoteService {
     return noteRepository.findAll(spec, pageable).map(this::toSummary);
   }
 
+  @Transactional(readOnly = true)
   public NoteResponse get(UUID userId, UUID id) {
     return toFull(requireOwned(userId, id));
   }
@@ -225,6 +228,12 @@ public class NoteService {
       note.setFavorite(request.getIsFavorite());
     }
 
+    if (Boolean.TRUE.equals(request.getClearFollowUpAt())) {
+      note.setFollowUpAt(null);
+    } else if (request.getFollowUpAt() != null) {
+      note.setFollowUpAt(request.getFollowUpAt());
+    }
+
     return toFull(noteRepository.saveAndFlush(note));
   }
 
@@ -256,6 +265,7 @@ public class NoteService {
 
   private static final int TRASH_RETENTION_DAYS = 30;
 
+  @Transactional(readOnly = true)
   public List<TrashedNoteResponse> listTrash(UUID userId) {
     return noteRepository.findAllByUserIdAndDeletedAtIsNotNullOrderByDeletedAtDesc(userId).stream()
         .map(
@@ -314,6 +324,7 @@ public class NoteService {
     return toFull(saved);
   }
 
+  @Transactional(readOnly = true)
   public List<NoteSummaryResponse> recent(UUID userId, int limit) {
     return noteRepository
         .findAllByUserIdAndDeletedAtIsNullOrderByUpdatedAtDesc(userId, PageRequest.of(0, limit))
@@ -322,6 +333,7 @@ public class NoteService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public List<NoteSummaryResponse> favorites(UUID userId) {
     return noteRepository.findAllByUserIdAndIsFavoriteTrueAndDeletedAtIsNullAndIsArchivedFalse(userId)
         .stream()
@@ -329,6 +341,7 @@ public class NoteService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public List<NoteSummaryResponse> pinned(UUID userId) {
     return noteRepository.findAllByUserIdAndIsPinnedTrueAndDeletedAtIsNullAndIsArchivedFalse(userId)
         .stream()
@@ -336,6 +349,7 @@ public class NoteService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public List<NoteSummaryResponse> byModule(UUID userId, NoteModuleType moduleType, UUID moduleId) {
     List<UUID> noteIds =
         noteModuleLinkRepository.findAllByModuleTypeAndModuleId(moduleType, moduleId).stream()
@@ -352,6 +366,36 @@ public class NoteService {
         .toList();
   }
 
+  // Internal Today endpoint (called by core's cross-module aggregator, see
+  // InternalTodayController) - notes whose follow-up is due today or overdue. "Overdue" priority
+  // is "urgent" (it already slipped), "due today" is "warning" (still actionable today).
+  @Transactional(readOnly = true)
+  public List<TodayItemResponse> todayFollowUps(UUID userId) {
+    Instant endOfToday =
+        java.time.LocalDate.now(java.time.ZoneId.systemDefault())
+            .plusDays(1)
+            .atStartOfDay(java.time.ZoneId.systemDefault())
+            .toInstant();
+
+    return noteRepository
+        .findAllByUserIdAndFollowUpAtIsNotNullAndFollowUpAtLessThanAndDeletedAtIsNull(
+            userId, endOfToday)
+        .stream()
+        .map(
+            note ->
+                TodayItemResponse.builder()
+                    .module("notes")
+                    .type("note_followup")
+                    .title(note.getTitle())
+                    .description(note.getDescription())
+                    .dueAt(note.getFollowUpAt())
+                    .entityId(note.getId().toString())
+                    .priority(note.getFollowUpAt().isBefore(Instant.now()) ? "urgent" : "warning")
+                    .build())
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
   public List<NoteVersionResponse> getVersions(UUID userId, UUID id) {
     requireOwned(userId, id);
 
@@ -489,6 +533,7 @@ public class NoteService {
         .backlinks(backlinks)
         .moduleLinks(moduleLinks)
         .versions(versions)
+        .followUpAt(note.getFollowUpAt())
         .createdAt(note.getCreatedAt())
         .updatedAt(note.getUpdatedAt())
         .build();

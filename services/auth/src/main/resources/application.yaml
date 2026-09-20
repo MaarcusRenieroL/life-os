@@ -4,12 +4,21 @@ server:
 spring:
   application:
     name: auth
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: validate
   flyway:
     schemas: auth_schema
     default-schema: auth_schema
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
@@ -25,4 +34,7 @@ jwt:
 # com.lifeos.common (see AuthApplication's @ComponentScan) and its constructor
 # requires this property to be resolvable, so it needs a value even if unused here.
 encryption:
-  secret: ${ENCRYPTION_SECRET:wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+  secret: ${ENCRYPTION_SECRET:yRzWgGNnMTQZsQyWSIK8E+L8ZgHlOjjujLcM5W6o9dI=}
+
+avatar:
+  storage-dir: ${AVATAR_STORAGE_DIR:/data/avatars}

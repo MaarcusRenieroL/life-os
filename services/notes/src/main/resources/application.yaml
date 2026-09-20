@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: notes
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -25,6 +30,15 @@ jwt:
 internal:
   api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
 
+# notes doesn't use EncryptionService itself, but it's component-scanned in from
+# com.lifeos.common (see NotesApplication's @ComponentScan) and its constructor
+# requires this property to be resolvable, so it needs a value.
+encryption:
+  secret: ${ENCRYPTION_SECRET:Ga5x04JZ+lXOo9BJul80MCbS64Jpnb/l74/xMVqKSEA=}
+
 notes:
   attachments:
     storage-path: ${NOTE_ATTACHMENTS_PATH:./data/note-attachments}
+  follow-up:
+    scan:
+      cron: ${NOTE_FOLLOWUP_SCAN_CRON:0 0 8 * * *}

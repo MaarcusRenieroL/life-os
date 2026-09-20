@@ -21,12 +21,14 @@ public class BudgetService {
 
   private final BudgetRepository budgetRepository;
 
+  @Transactional(readOnly = true)
   public List<BudgetResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
     return budgetRepository.findAllByUserId(userId).stream().map(this::toResponse).toList();
   }
 
+  @Transactional(readOnly = true)
   public BudgetResponse get(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 

@@ -1,18 +1,70 @@
-% Compiled once during the Docker build so tectonic caches the packages the
-% tailored resume needs - keeps the first real request from doing a cold
-% package download. Mirrors the article-style preamble AiAssistant asks Claude
-% to use (geometry/enumitem/titlesec/hyperref).
-\documentclass[11pt]{article}
-\usepackage[margin=0.75in]{geometry}
-\usepackage{enumitem}
+% Compiled once during the Docker build so tectonic caches the packages the tailored resume
+% needs - keeps the first real request from doing a cold package/font download. Mirrors the
+% "Jake's Resume" template AiAssistant asks Claude to use, including its custom macros, so every
+% package/glyph combination the real templates use gets exercised here too.
+\documentclass[letterpaper,11pt]{article}
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
 \usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
 \usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+\titleformat{\section}{\vspace{-4pt}\scshape\raggedright\large}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
 \makeatletter\let\@noitemerr\relax\makeatother
-\titleformat{\section}{\large\bfseries}{}{0em}{}[\titlerule]
+\newcommand{\resumeItem}[1]{\item\small{{#1 \vspace{-2pt}}}}
+\newcommand{\resumeSubheading}[4]{\vspace{-2pt}\item\begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}\textbf{#1} & #2 \\ \textit{\small#3} & \textit{\small #4} \\\end{tabular*}\vspace{-7pt}}
+\newcommand{\resumeProjectHeading}[2]{\item\begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}\small#1 & #2 \\\end{tabular*}\vspace{-7pt}}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
 \begin{document}
-\begin{center}\textbf{\Large Warmup} \\ warmup@example.com\end{center}
-\section{Section}
-\begin{itemize}[leftmargin=*, itemsep=1pt, topsep=2pt]
-  \item A bullet.
-\end{itemize}
+\begin{center}
+    \textbf{\Huge \scshape Warmup Candidate} \\ \vspace{1pt}
+    \small 000-000-0000 $|$ \href{mailto:warmup@example.com}{\underline{warmup@example.com}} $|$ City, ST $|$ \href{https://example.com}{\underline{example.com}}
+\end{center}
+\section{Experience}
+  \resumeSubHeadingListStart
+    \resumeSubheading{Title}{Dates}{Company}{Location}
+    \resumeItemListStart
+      \resumeItem{A bullet.}
+    \resumeItemListEnd
+  \resumeSubHeadingListEnd
+\section{Projects}
+    \resumeSubHeadingListStart
+      \resumeProjectHeading{\textbf{Name} $|$ \emph{Tech stack}}{Dates}
+      \resumeItemListStart
+        \resumeItem{A bullet.}
+      \resumeItemListEnd
+    \resumeSubHeadingListEnd
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading{School}{Location}{Degree}{Dates}
+  \resumeSubHeadingListEnd
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}{: item, item} \\
+     \textbf{Frameworks}{: item, item}
+    }}
+ \end{itemize}
 \end{document}

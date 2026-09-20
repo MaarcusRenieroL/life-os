@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: finance-tracker
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -15,6 +20,8 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: finance_tracker_service
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -23,8 +30,10 @@ spring:
 jwt:
   secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
 
+# This one is actually used (AccountService encrypts account numbers with it) - unlike the
+# other services' inert copy of this property, a real deployment must override this.
 encryption:
-  secret: ${FINANCE_ENCRYPTION_SECRET:wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+  secret: ${FINANCE_ENCRYPTION_SECRET:FNhRh4Cv3lxh2B68n9ffJUW+r9R65CpKcZEpjte16UE=}
 
 internal:
   api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
@@ -39,3 +48,7 @@ anthropic:
 
 owner:
   user-id: ${OWNER_USER_ID}
+
+finance:
+  attention-scan:
+    cron: ${FINANCE_ATTENTION_SCAN_CRON:0 0 8 * * *}

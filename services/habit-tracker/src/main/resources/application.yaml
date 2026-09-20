@@ -1,0 +1,47 @@
+server:
+  port: 8008
+
+spring:
+  application:
+    name: habit-tracker
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    schemas: habit_tracker_schema
+    default-schema: habit_tracker_schema
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+jwt:
+  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+
+# habit-tracker doesn't use EncryptionService itself, but it's component-scanned
+# in from com.lifeos.common (see HabitTrackerApplication's @ComponentScan) and
+# its constructor requires this property to be resolvable, so it needs a value.
+encryption:
+  secret: ${ENCRYPTION_SECRET:r2/57VjqHzF7wXuwQNL5Ot4M+YFp5pGuG2bHwjVTdHg=}
+
+internal:
+  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+
+habit:
+  missed-log:
+    cron: ${HABIT_MISSED_LOG_CRON:0 5 0 * * *}
+  reminder:
+    dispatch:
+      cron: ${HABIT_REMINDER_DISPATCH_CRON:0 */5 * * * *}
+  attention-scanner:
+    cron: ${HABIT_ATTENTION_SCANNER_CRON:0 0 8 * * *}

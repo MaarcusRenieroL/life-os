@@ -146,6 +146,7 @@ public class NoteSearchService {
     }
   }
 
+  @Transactional(readOnly = true)
   public List<SearchSuggestionResponse> suggestions(UUID userId, String query, String type) {
     if (!StringUtils.hasText(query)) {
       return List.of();
@@ -184,6 +185,7 @@ public class NoteSearchService {
     };
   }
 
+  @Transactional(readOnly = true)
   public List<RecentSearchResponse> recentSearches(UUID userId) {
     List<String> raw =
         redisTemplate.opsForList().range(recentSearchesKey(userId), 0, RECENT_SEARCHES_LIMIT - 1);

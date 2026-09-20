@@ -1,6 +1,7 @@
 package com.lifeos.job_tracker.domains.entity;
 
 import com.lifeos.job_tracker.domains.enums.CompanySize;
+import com.lifeos.job_tracker.domains.enums.FitScoreSource;
 import com.lifeos.job_tracker.domains.enums.GrowthStage;
 import com.lifeos.job_tracker.domains.enums.IngestSource;
 import com.lifeos.job_tracker.domains.enums.JobStatus;
@@ -8,6 +9,7 @@ import com.lifeos.job_tracker.domains.enums.ProcessingStatus;
 import com.lifeos.job_tracker.domains.enums.SeniorityLevel;
 import com.lifeos.job_tracker.domains.enums.VisaSponsorship;
 import com.lifeos.job_tracker.domains.enums.WorkModel;
+import com.lifeos.job_tracker.domains.record.ExtractedSkill;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -147,12 +149,15 @@ public class JobListing {
   @Column(name = "scraped_date")
   Instant scrapedDate;
 
+  /** Wording-only edit suggestions from {@code AiAssistant.generateAtsSuggestions} - things to
+   * change by hand in the candidate's own resume, never a rewritten resume itself. */
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "tailored_improvement_points_json")
-  List<String> tailoredImprovementPoints;
+  @Column(name = "ats_suggestions_json")
+  List<String> atsSuggestions;
 
-  @Column(name = "tailored_latex_resume")
-  String tailoredLatexResume;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "ats_suggestion_gaps_json")
+  List<String> atsSuggestionGaps;
 
   String notes;
 
@@ -176,6 +181,23 @@ public class JobListing {
 
   @Column(name = "follow_up_at")
   LocalDate followUpAt;
+
+  @Column(name = "override_resume_text")
+  String overrideResumeText;
+
+  @Column(name = "override_resume_file_name")
+  String overrideResumeFileName;
+
+  @Column(name = "override_resume_uploaded_at")
+  Instant overrideResumeUploadedAt;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "fit_score_source")
+  FitScoreSource fitScoreSource;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "override_resume_skills_json")
+  List<ExtractedSkill> overrideResumeSkills;
 
   @CreationTimestamp
   @Column(name = "created_at")

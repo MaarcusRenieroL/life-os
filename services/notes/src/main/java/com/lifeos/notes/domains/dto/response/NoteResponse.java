@@ -68,6 +68,8 @@ public class NoteResponse {
 
   @Builder.Default List<NoteVersionResponse> versions = List.of();
 
+  Instant followUpAt;
+
   Instant createdAt;
 
   Instant updatedAt;

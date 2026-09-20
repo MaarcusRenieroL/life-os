@@ -10,55 +10,44 @@ import com.lifeos.finance_tracker.repository.TransactionRepository;
 import com.lifeos.finance_tracker.repository.UserFinanceSettingsRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
 public class AnalyticsService {
 
   private static final ZoneId ZONE_ID = ZoneId.of("Asia/Kolkata");
-  private static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
   private final TransactionRepository transactionRepository;
   private final UserFinanceSettingsRepository userFinanceSettingsRepository;
-  private final StringRedisTemplate stringRedisTemplate;
-  private final ObjectMapper objectMapper;
+
+  // Self-injected via ObjectProvider (lazy, so it doesn't create a circular-construction
+  // problem) so that the call below to computeDashboardSummary goes back through the Spring
+  // proxy instead of a bare `this` call - a same-class method call bypasses the proxy and
+  // silently skips @Cacheable. Only the cacheable "sum over transactions" part is cached; the
+  // fixed-income setting is merged in fresh on every call (see the comment below), so caching
+  // the whole method would have frozen the income figure at whatever it was on the first
+  // request after a cache miss.
+  private final ObjectProvider<AnalyticsService> self;
 
   public DashboardSummary getDashboardSummary(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
-    String key = "analytics:dashboard:" + userId + ":" + YearMonth.now(ZONE_ID);
-    String cached = stringRedisTemplate.opsForValue().get(key);
-
-    DashboardSummary result;
-    if (cached != null) {
-      result = objectMapper.readValue(cached, DashboardSummary.class);
-    } else {
-      ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
-      Instant start = now.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant();
-      Instant end = now.toLocalDate().plusDays(1).atStartOfDay(ZONE_ID).toInstant();
-
-      result = transactionRepository.getDashboardSummary(userId, start, end);
-
-      stringRedisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(result), CACHE_TTL);
-    }
+    DashboardSummary result = self.getObject().computeDashboardSummary(userId);
 
     // Fixed income is a user setting, not derived from transactions - always
     // read fresh (a single PK lookup, not worth caching) rather than letting
-    // it go stale for up to CACHE_TTL after the user changes it.
+    // it go stale for up to the cache TTL after the user changes it.
     BigDecimal fixedMonthlyIncome =
         userFinanceSettingsRepository
             .findById(userId)
@@ -66,6 +55,20 @@ public class AnalyticsService {
             .orElse(null);
 
     return new DashboardSummary(result.totalIncome(), result.totalExpenses(), fixedMonthlyIncome);
+  }
+
+  // Cache key mirrors the original hand-rolled Redis key shape (userId + current YearMonth) so a
+  // cached entry still naturally separates across a month boundary rather than serving last
+  // month's totals into the new month for up to a full TTL.
+  @Cacheable(
+      value = "finance-analytics-dashboard",
+      key = "#userId + ':' + T(java.time.YearMonth).now(T(java.time.ZoneId).of('Asia/Kolkata'))")
+  public DashboardSummary computeDashboardSummary(UUID userId) {
+    ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
+    Instant start = now.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant();
+    Instant end = now.toLocalDate().plusDays(1).atStartOfDay(ZONE_ID).toInstant();
+
+    return transactionRepository.getDashboardSummary(userId, start, end);
   }
 
   public DashboardSummary updateMonthlyIncome(
@@ -83,15 +86,9 @@ public class AnalyticsService {
     return getDashboardSummary(authentication);
   }
 
+  @Cacheable(value = "finance-analytics-category", key = "#authentication.principal + ':' + #categoryId")
   public CategoryComparison getCategoryAnalytics(Authentication authentication, UUID categoryId) {
     UUID userId = (UUID) authentication.getPrincipal();
-
-    String key = "analytics:category:" + userId + ":" + categoryId;
-    String cached = stringRedisTemplate.opsForValue().get(key);
-
-    if (cached != null) {
-      return objectMapper.readValue(cached, CategoryComparison.class);
-    }
 
     ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
 
@@ -126,24 +123,13 @@ public class AnalyticsService {
               .multiply(BigDecimal.valueOf(100));
     }
 
-    CategoryComparison result =
-        new CategoryComparison(
-            categoryId, currentMonthSpend, lastMonthSpend, difference, percentageChange);
-
-    stringRedisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(result), CACHE_TTL);
-
-    return result;
+    return new CategoryComparison(
+        categoryId, currentMonthSpend, lastMonthSpend, difference, percentageChange);
   }
 
+  @Cacheable(value = "finance-analytics-trends", key = "#authentication.principal")
   public List<MonthlyTrend> getMonthlyTrends(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
-
-    String key = "analytics:trends:" + userId;
-    String cached = stringRedisTemplate.opsForValue().get(key);
-
-    if (cached != null) {
-      return objectMapper.readValue(cached, new TypeReference<List<MonthlyTrend>>() {});
-    }
 
     Instant since =
         ZonedDateTime.now(ZONE_ID)
@@ -159,20 +145,12 @@ public class AnalyticsService {
       trends.add(new MonthlyTrend((String) row[0], (BigDecimal) row[1]));
     }
 
-    stringRedisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(trends), CACHE_TTL);
-
     return trends;
   }
 
+  @Cacheable(value = "finance-analytics-merchants", key = "#authentication.principal + ':' + #limit")
   public List<MerchantSpend> getTopMerchants(Authentication authentication, int limit) {
     UUID userId = (UUID) authentication.getPrincipal();
-
-    String key = "analytics:merchants:" + userId + ":" + limit;
-    String cached = stringRedisTemplate.opsForValue().get(key);
-
-    if (cached != null) {
-      return objectMapper.readValue(cached, new TypeReference<List<MerchantSpend>>() {});
-    }
 
     List<Object[]> rawMerchants = transactionRepository.getTopMerchantsRaw(userId, limit);
 
@@ -180,10 +158,6 @@ public class AnalyticsService {
     for (Object[] row : rawMerchants) {
       merchants.add(new MerchantSpend((String) row[0], (BigDecimal) row[1]));
     }
-
-    stringRedisTemplate
-        .opsForValue()
-        .set(key, objectMapper.writeValueAsString(merchants), CACHE_TTL);
 
     return merchants;
   }

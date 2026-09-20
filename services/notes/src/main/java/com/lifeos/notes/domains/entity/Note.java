@@ -74,4 +74,9 @@ public class Note {
 
   @Column(name = "deleted_at")
   Instant deletedAt;
+
+  // Optional user-set date/time to be reminded about this note. Nullable - most notes never set
+  // one. Scanned daily by NoteFollowUpScanner and surfaced via the internal /today endpoint.
+  @Column(name = "follow_up_at")
+  Instant followUpAt;
 }

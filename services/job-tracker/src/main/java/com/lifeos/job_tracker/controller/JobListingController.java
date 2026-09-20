@@ -5,8 +5,6 @@ import com.lifeos.job_tracker.domains.dto.request.FromLinkRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobDetailsRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobListingRequest;
 import com.lifeos.job_tracker.domains.dto.response.JobListingResponse;
-import com.lifeos.job_tracker.domains.dto.response.JobTailoringVersionResponse;
-import com.lifeos.job_tracker.domains.record.ResumeTailoringResult;
 import com.lifeos.job_tracker.service.JobListingService;
 import com.lifeos.job_tracker.service.JobMatchingService.JobFitResult;
 import java.util.List;
@@ -23,7 +21,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/v1/jobs")
@@ -104,39 +104,40 @@ public class JobListingController extends AuthenticatedController {
             jobListingService.rescore(userId(authentication), jobId), "Fit score recomputed"));
   }
 
-  /**
-   * Scores the saved resume against this job, then returns concrete improvement points and a full
-   * LaTeX resume tailored to it, ready to paste into Overleaf.
-   */
-  @PostMapping("/{jobId}/tailor-resume")
-  public ResponseEntity<ApiResponse<ResumeTailoringResult>> tailorResume(
+  /** Attaches a one-off resume PDF to this job only (e.g. one built with another tool), replacing
+   * any previous override for it, and immediately recomputes the fit score against it. Doesn't
+   * touch the persisted resume or skill library. */
+  @PostMapping(path = "/{jobId}/resume-override", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<ApiResponse<JobListingResponse>> uploadResumeOverride(
+      Authentication authentication, @PathVariable UUID jobId, @RequestPart("file") MultipartFile file) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            JobListingResponse.from(
+                jobListingService.uploadResumeOverride(userId(authentication), jobId, file)),
+            "Resume attached to this job"));
+  }
+
+  /** Removes this job's override resume and recomputes the fit score against the skill library. */
+  @DeleteMapping("/{jobId}/resume-override")
+  public ResponseEntity<ApiResponse<JobListingResponse>> deleteResumeOverride(
       Authentication authentication, @PathVariable UUID jobId) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            jobListingService.tailorResume(userId(authentication), jobId), "Resume tailored"));
+            JobListingResponse.from(jobListingService.deleteResumeOverride(userId(authentication), jobId)),
+            "Resume override removed"));
   }
 
-  @GetMapping("/{jobId}/tailor-resume/pdf")
-  public ResponseEntity<byte[]> tailorResumePdf(Authentication authentication, @PathVariable UUID jobId) {
-    byte[] pdf = jobListingService.renderTailoredResumePdf(userId(authentication), jobId);
-    return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).body(pdf);
-  }
-
-  @GetMapping("/{jobId}/tailor-resume/versions")
-  public ResponseEntity<ApiResponse<List<JobTailoringVersionResponse>>> tailoringVersions(
+  /**
+   * Scores the saved resume against this job and returns concrete wording-edit suggestions the
+   * candidate applies to their own resume by hand - no resume is rewritten or generated here.
+   */
+  @PostMapping("/{jobId}/ats-suggestions")
+  public ResponseEntity<ApiResponse<JobListingResponse>> getAtsSuggestions(
       Authentication authentication, @PathVariable UUID jobId) {
-    List<JobTailoringVersionResponse> body =
-        jobListingService.tailoringVersions(userId(authentication), jobId).stream()
-            .map(JobTailoringVersionResponse::summary)
-            .toList();
-    return ResponseEntity.ok(ApiResponse.success(body, "Tailoring versions fetched"));
-  }
-
-  @GetMapping("/{jobId}/tailor-resume/versions/{versionId}/pdf")
-  public ResponseEntity<byte[]> tailoringVersionPdf(
-      Authentication authentication, @PathVariable UUID jobId, @PathVariable UUID versionId) {
-    byte[] pdf = jobListingService.renderTailoringVersionPdf(userId(authentication), jobId, versionId);
-    return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).body(pdf);
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            JobListingResponse.from(jobListingService.getAtsSuggestions(userId(authentication), jobId)),
+            "ATS suggestions generated"));
   }
 
   @DeleteMapping("/{jobId}")

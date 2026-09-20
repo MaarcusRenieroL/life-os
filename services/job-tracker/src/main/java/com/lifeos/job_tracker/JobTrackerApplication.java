@@ -4,11 +4,13 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 // scanBasePackages needed since JwtService/JwtAuthenticationFilter live in
 // com.lifeos.common, outside this app's default com.lifeos.job_tracker scan root.
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@EnableScheduling
 @ComponentScan(basePackages = {"com.lifeos.job_tracker", "com.lifeos.common"})
 public class JobTrackerApplication {
 
