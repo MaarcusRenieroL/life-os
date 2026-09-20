@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,43 @@ import { careerProfileApi } from './career-profile-api';
 import { CareerProfileDialog } from './career-profile-dialog';
 import { ExperienceDialog } from './experience-dialog';
 import { ProjectDialog } from './project-dialog';
+import { resumeApi } from './resume-api';
 import type { ProjectEntry, WorkExperience } from './types';
+
+/** Fetches the candidate's current uploaded resume PDF as a blob URL for inline preview - kept
+ * separate from react-query's cache since a blob URL needs explicit revocation on change/unmount,
+ * not something a query cache does for you. */
+function useBaseResumePdfUrl(refreshToken: number) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [state, setState] = useState<'loading' | 'ready' | 'empty'>('loading');
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    async function load() {
+      setState('loading');
+      try {
+        const resume = await resumeApi.current();
+        const blob = await resumeApi.downloadPdf(resume.id);
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setUrl(objectUrl);
+        setState('ready');
+      } catch {
+        if (!cancelled) setState('empty');
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [refreshToken]);
+
+  return { url, state };
+}
 
 function formatRange(startDate: string | null, endDate: string | null, current: boolean): string {
   const start = startDate ?? '?';
@@ -34,15 +71,22 @@ export function ResumePage() {
   });
   const [reuploading, setReuploading] = useState(false);
   const resumeFileInputRef = useRef<HTMLInputElement>(null);
+  const [pdfRefreshToken, setPdfRefreshToken] = useState(0);
+  const { url: pdfUrl, state: pdfState } = useBaseResumePdfUrl(pdfRefreshToken);
+  const { confirm, dialog } = useConfirmDialog();
 
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ['career-profile'] });
   }
 
-  function pickResumeFile() {
-    if (!confirm('This replaces your work experience, projects, education, and achievements with what this PDF parses to. Skills merge instead of replacing. Continue?')) {
-      return;
-    }
+  async function pickResumeFile() {
+    const ok = await confirm({
+      title: 'Re-sync career profile from this resume?',
+      description:
+        'This replaces your work experience, projects, education, and achievements with what this PDF parses to. Skills merge instead of replacing.',
+      confirmLabel: 'Continue',
+    });
+    if (!ok) return;
     resumeFileInputRef.current?.click();
   }
 
@@ -54,6 +98,7 @@ export function ResumePage() {
     try {
       await careerProfileApi.seedFromResume(file);
       refresh();
+      setPdfRefreshToken((n) => n + 1);
       toast.success('Career profile re-synced from resume');
     } catch {
       toast.error('Could not read that resume PDF');
@@ -62,13 +107,17 @@ export function ResumePage() {
     }
   }
 
-  async function removeExperience(id: string) {
+  async function removeExperience(id: string, title: string) {
+    const ok = await confirm({ title: `Remove "${title}"?`, confirmLabel: 'Remove' });
+    if (!ok) return;
     await careerProfileApi.deleteExperience(id);
     refresh();
     toast.success('Removed');
   }
 
-  async function removeProject(id: string) {
+  async function removeProject(id: string, name: string) {
+    const ok = await confirm({ title: `Remove "${name}"?`, confirmLabel: 'Remove' });
+    if (!ok) return;
     await careerProfileApi.deleteProject(id);
     refresh();
     toast.success('Removed');
@@ -95,7 +144,7 @@ export function ResumePage() {
             className="hidden"
             onChange={(e) => void onResumeFileChosen(e)}
           />
-          <Button variant="outline" size="sm" onClick={pickResumeFile} disabled={reuploading}>
+          <Button variant="outline" size="sm" onClick={() => void pickResumeFile()} disabled={reuploading}>
             {reuploading ? 'Syncing…' : 'Re-upload resume'}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setProfileDialogOpen(true)}>
@@ -104,7 +153,9 @@ export function ResumePage() {
         </div>
       </div>
 
-      <section className="mt-6">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+      <div className="flex flex-col gap-6">
+      <section>
         <SectionHeading>contact</SectionHeading>
         <Card className="mt-2">
           <CardContent className="p-4 text-sm">
@@ -122,7 +173,7 @@ export function ResumePage() {
         </Card>
       </section>
 
-      <section className="mt-6">
+      <section>
         <div className="flex items-center justify-between">
           <SectionHeading>work experience</SectionHeading>
           <Button variant="outline" size="sm" onClick={() => setExperienceDialog({ open: true, editing: null })}>
@@ -148,7 +199,7 @@ export function ResumePage() {
                     <Button variant="ghost" size="sm" onClick={() => setExperienceDialog({ open: true, editing: e })}>
                       Edit
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => void removeExperience(e.id)}>
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => void removeExperience(e.id, `${e.title} at ${e.company}`)}>
                       Remove
                     </Button>
                   </div>
@@ -166,7 +217,7 @@ export function ResumePage() {
         </div>
       </section>
 
-      <section className="mt-6">
+      <section>
         <div className="flex items-center justify-between">
           <SectionHeading>projects</SectionHeading>
           <Button variant="outline" size="sm" onClick={() => setProjectDialog({ open: true, editing: null })}>
@@ -197,7 +248,7 @@ export function ResumePage() {
                     <Button variant="ghost" size="sm" onClick={() => setProjectDialog({ open: true, editing: p })}>
                       Edit
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => void removeProject(p.id)}>
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => void removeProject(p.id, p.name)}>
                       Remove
                     </Button>
                   </div>
@@ -217,7 +268,7 @@ export function ResumePage() {
       </section>
 
       {profile?.education && profile.education.length > 0 && (
-        <section className="mt-6">
+        <section>
           <SectionHeading>education</SectionHeading>
           <div className="mt-2 flex flex-col gap-2">
             {profile.education.map((edu, i) => (
@@ -237,7 +288,7 @@ export function ResumePage() {
       )}
 
       {profile?.achievements && profile.achievements.length > 0 && (
-        <section className="mt-6">
+        <section>
           <SectionHeading>achievements</SectionHeading>
           <Card className="mt-2">
             <CardContent className="p-4 text-sm">
@@ -251,7 +302,7 @@ export function ResumePage() {
         </section>
       )}
 
-      <section className="mt-6">
+      <section>
         <SectionHeading>skills ({skills.length})</SectionHeading>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {skills.map((skill) => (
@@ -262,6 +313,27 @@ export function ResumePage() {
           ))}
         </div>
       </section>
+      </div>
+
+      <div className="lg:sticky lg:top-4">
+        <SectionHeading>uploaded resume</SectionHeading>
+        <Card className="mt-2 overflow-hidden">
+          <CardContent className="p-0">
+            {pdfState === 'ready' && pdfUrl && (
+              <iframe title="Uploaded resume PDF" src={pdfUrl} className="h-[calc(100vh-10rem)] w-full" />
+            )}
+            {pdfState === 'loading' && (
+              <p className="p-4 text-sm text-muted-foreground">Loading resume preview…</p>
+            )}
+            {pdfState === 'empty' && (
+              <p className="p-4 text-sm text-muted-foreground">
+                No resume PDF on file yet - upload one above.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      </div>
 
       <CareerProfileDialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen} profile={profile} onSaved={refresh} />
       <ExperienceDialog
@@ -278,6 +350,7 @@ export function ResumePage() {
         nextDisplayOrder={projects.length}
         onSaved={refresh}
       />
+      {dialog}
     </div>
   );
 }

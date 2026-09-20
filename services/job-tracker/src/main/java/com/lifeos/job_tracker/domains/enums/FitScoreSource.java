@@ -4,6 +4,5 @@ package com.lifeos.job_tracker.domains.enums;
  * button doesn't leave the candidate guessing which resume produced the number. */
 public enum FitScoreSource {
   LIBRARY,
-  TAILORED_RESUME,
   OVERRIDE_RESUME
 }

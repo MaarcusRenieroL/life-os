@@ -47,17 +47,16 @@ ollama:
   enabled: ${OLLAMA_ENABLED:false}
 
 # Which provider ("ollama" or "claude") handles each AI task - flip any one without a
-# redeploy. Resume tailoring defaults to Claude and doesn't fall back further than Claude
-# itself (see AiAssistant); the others fall back to Claude automatically if Ollama is routed
-# but unreachable.
+# redeploy. Each falls back to Claude automatically if Ollama is routed but unreachable.
 ai:
   routing:
     resume-parse: ${AI_ROUTE_RESUME_PARSE:ollama}
     job-parse: ${AI_ROUTE_JOB_PARSE:ollama}
     email-classify: ${AI_ROUTE_EMAIL_CLASSIFY:ollama}
-    tailor-resume: ${AI_ROUTE_TAILOR_RESUME:claude}
+    ats-suggestions: ${AI_ROUTE_ATS_SUGGESTIONS:ollama}
     cover-letter: ${AI_ROUTE_COVER_LETTER:claude}
     interview-prep: ${AI_ROUTE_INTERVIEW_PREP:ollama}
+    skill-match: ${AI_ROUTE_SKILL_MATCH:ollama}
 
 job-tracker:
   storage:

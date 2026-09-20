@@ -67,10 +67,8 @@ export interface JobListing {
   fitExplanation: Record<string, unknown> | null;
   status: JobStatus | null;
   createdAt: string;
-  tailoredImprovementPoints: string[] | null;
-  tailoredGapsVsJd: string[] | null;
-  tailoredInferredClaims: string[] | null;
-  tailoredLatexResume: string | null;
+  atsSuggestions: string[] | null;
+  atsSuggestionGaps: string[] | null;
   notes: string | null;
   appliedAt: string | null;
   rejectionReason: string | null;
@@ -81,7 +79,7 @@ export interface JobListing {
   followUpAt: string | null;
   overrideResumeFileName: string | null;
   overrideResumeUploadedAt: string | null;
-  fitScoreSource: 'LIBRARY' | 'TAILORED_RESUME' | 'OVERRIDE_RESUME' | null;
+  fitScoreSource: 'LIBRARY' | 'OVERRIDE_RESUME' | null;
 }
 
 export interface UpdateJobDetailsRequest {
@@ -208,27 +206,6 @@ export interface UpsertReferralRequest {
 export interface JobFitResult {
   score: number;
   explanation: Record<string, unknown>;
-}
-
-export interface ResumeTailoringResult {
-  improvementPoints: string[];
-  gapsVsJd: string[] | null;
-  inferredClaims: string[] | null;
-  latexResume: string;
-}
-
-/** A summary entry (no improvementPoints/latexResume) - the versions list endpoint keeps the
- * payload light since only the PDF of a given version is ever needed, not its raw content. */
-export interface JobTailoringVersion {
-  id: string;
-  version: number;
-  improvementPoints: string[] | null;
-  gapsVsJd: string[] | null;
-  inferredClaims: string[] | null;
-  latexResume: string | null;
-  fitScore: number | null;
-  basedOn: 'GLOBAL_RESUME' | 'OVERRIDE_RESUME' | null;
-  createdAt: string;
 }
 
 export interface Resume {

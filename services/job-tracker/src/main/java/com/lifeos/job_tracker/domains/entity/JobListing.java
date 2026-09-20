@@ -149,20 +149,15 @@ public class JobListing {
   @Column(name = "scraped_date")
   Instant scrapedDate;
 
+  /** Wording-only edit suggestions from {@code AiAssistant.generateAtsSuggestions} - things to
+   * change by hand in the candidate's own resume, never a rewritten resume itself. */
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "tailored_improvement_points_json")
-  List<String> tailoredImprovementPoints;
+  @Column(name = "ats_suggestions_json")
+  List<String> atsSuggestions;
 
   @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "tailored_gaps_vs_jd_json")
-  List<String> tailoredGapsVsJd;
-
-  @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "tailored_inferred_claims_json")
-  List<String> tailoredInferredClaims;
-
-  @Column(name = "tailored_latex_resume")
-  String tailoredLatexResume;
+  @Column(name = "ats_suggestion_gaps_json")
+  List<String> atsSuggestionGaps;
 
   String notes;
 
@@ -203,10 +198,6 @@ public class JobListing {
   @JdbcTypeCode(SqlTypes.JSON)
   @Column(name = "override_resume_skills_json")
   List<ExtractedSkill> overrideResumeSkills;
-
-  @JdbcTypeCode(SqlTypes.JSON)
-  @Column(name = "tailored_resume_skills_json")
-  List<ExtractedSkill> tailoredResumeSkills;
 
   @CreationTimestamp
   @Column(name = "created_at")
