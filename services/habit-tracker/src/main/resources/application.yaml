@@ -27,7 +27,7 @@ jwt:
 # in from com.lifeos.common (see HabitTrackerApplication's @ComponentScan) and
 # its constructor requires this property to be resolvable, so it needs a value.
 encryption:
-  secret: ${ENCRYPTION_SECRET:wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+  secret: ${ENCRYPTION_SECRET:r2/57VjqHzF7wXuwQNL5Ot4M+YFp5pGuG2bHwjVTdHg=}
 
 internal:
   api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}

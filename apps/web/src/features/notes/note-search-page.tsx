@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
+import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useDebouncedCallback } from '@/lib/use-debounced-callback';
@@ -81,9 +82,7 @@ export function NoteSearchPage() {
 
       {results && (
         <ul className="mt-4 flex flex-col gap-2">
-          {results.content.length === 0 && (
-            <p className="text-sm text-muted-foreground">No results.</p>
-          )}
+          {results.content.length === 0 && <EmptyState message="No results." />}
           {results.content.map((r) => (
             <li key={r.id}>
               <Link to={`/notes/${r.id}`} className="block rounded-lg border bg-card p-3 hover:border-primary/40">

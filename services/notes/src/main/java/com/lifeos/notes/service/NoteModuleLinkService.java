@@ -41,6 +41,7 @@ public class NoteModuleLinkService {
     noteModuleLinkRepository.deleteByIdAndNoteId(linkId, noteId);
   }
 
+  @Transactional(readOnly = true)
   public List<NoteModuleLinkResponse> listForNote(UUID userId, UUID noteId) {
     requireOwned(userId, noteId);
     return noteModuleLinkRepository.findAllByNoteId(noteId).stream().map(this::toResponse).toList();

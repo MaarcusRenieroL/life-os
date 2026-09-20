@@ -18,6 +18,7 @@ public class ModuleSettingService {
   // Only rows the user has actually toggled exist here - a module with no row is
   // meant to fall back to its static default (e.g. Password Manager enabled, every
   // other module disabled) on the frontend, not to something seeded here.
+  @Transactional(readOnly = true)
   public List<ModuleSettingResponse> getSettings(UUID userId) {
     return userModuleSettingRepository.findAllByUserId(userId).stream()
         .map(this::toResponse)

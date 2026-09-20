@@ -34,6 +34,7 @@ public class VaultBackupService {
   private final RecoveryCodeRepository recoveryCodeRepository;
   private final EntityManager entityManager;
 
+  @Transactional(readOnly = true)
   public VaultBackupSnapshotResponse snapshot(UUID userId) {
     return VaultBackupSnapshotResponse.builder()
         .entries(

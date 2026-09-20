@@ -21,4 +21,4 @@ internal:
 # com.lifeos.common (see CoreApplication's @ComponentScan) and its constructor
 # requires this property to be resolvable, so it needs a value even if unused here.
 encryption:
-  secret: ${ENCRYPTION_SECRET:wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+  secret: ${ENCRYPTION_SECRET:ZZM3kFKNDKuRBXSIKG8e3AZ/qyzwngMnr9zJZfqRXMA=}

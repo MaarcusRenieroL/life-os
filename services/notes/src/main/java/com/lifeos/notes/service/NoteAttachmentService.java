@@ -84,6 +84,7 @@ public class NoteAttachmentService {
     }
   }
 
+  @Transactional(readOnly = true)
   public List<AttachmentResponse> listForNote(UUID userId, UUID noteId) {
     requireOwned(userId, noteId);
     return noteAttachmentRepository.findAllByNoteIdAndDeletedAtIsNull(noteId).stream()
@@ -96,10 +97,12 @@ public class NoteAttachmentService {
   // host; the expected attachment count per user is small enough that the
   // frontend can search/filter the full list client-side without a second
   // query round trip per keystroke.
+  @Transactional(readOnly = true)
   public List<GlobalAttachmentResponse> listAllForUser(UUID userId) {
     return noteAttachmentRepository.findAllForUser(userId).stream().map(this::toGlobalResponse).toList();
   }
 
+  @Transactional(readOnly = true)
   public NoteAttachment get(UUID userId, UUID noteId, UUID attachmentId) {
     requireOwned(userId, noteId);
     return noteAttachmentRepository
@@ -107,6 +110,7 @@ public class NoteAttachmentService {
         .orElseThrow(() -> new NoteAttachmentNotFoundException(attachmentId));
   }
 
+  @Transactional(readOnly = true)
   public InputStream download(UUID userId, UUID noteId, UUID attachmentId) {
     NoteAttachment attachment = get(userId, noteId, attachmentId);
 

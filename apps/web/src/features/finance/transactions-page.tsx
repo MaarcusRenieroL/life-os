@@ -11,6 +11,7 @@ import {
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
@@ -60,6 +61,7 @@ export function TransactionsPage() {
   const [categorizeOpen, setCategorizeOpen] = useState(false);
   const [categorizeTargets, setCategorizeTargets] = useState<string[]>([]);
   const [disputeOpen, setDisputeOpen] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   const debouncedSearch = useDebouncedCallback((value: string) => {
     setSearch(value);
@@ -103,9 +105,7 @@ export function TransactionsPage() {
   }
 
   async function saveCategories(categoryIds: string[]) {
-    for (const id of categorizeTargets) {
-      await transactionApi.updateCategories(id, { categoryIds });
-    }
+    await Promise.all(categorizeTargets.map((id) => transactionApi.updateCategories(id, { categoryIds })));
     invalidate();
   }
 
@@ -118,17 +118,14 @@ export function TransactionsPage() {
   }
 
   async function disputeSelected(reason: string) {
-    for (const id of selectedIds) {
-      await transactionApi.dispute(id, { reason });
-    }
+    await Promise.all(selectedIds.map((id) => transactionApi.dispute(id, { reason })));
     invalidate();
   }
 
   async function deleteSelected() {
-    if (!confirm(`Delete ${selectedIds.length} transaction(s)?`)) return;
-    for (const id of selectedIds) {
-      await transactionApi.deleteTransaction(id);
-    }
+    const ok = await confirm({ title: `Delete ${selectedIds.length} transaction(s)?`, confirmLabel: 'Delete' });
+    if (!ok) return;
+    await Promise.all(selectedIds.map((id) => transactionApi.deleteTransaction(id)));
     invalidate();
   }
 
@@ -294,6 +291,7 @@ export function TransactionsPage() {
         onSave={(ids) => void saveCategories(ids)}
       />
       <DisputeDialog open={disputeOpen} onOpenChange={setDisputeOpen} count={selectedIds.length} onSubmit={(reason) => void disputeSelected(reason)} />
+      {dialog}
     </div>
   );
 }

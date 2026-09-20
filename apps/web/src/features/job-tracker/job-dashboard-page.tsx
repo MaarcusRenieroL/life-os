@@ -3,6 +3,7 @@ import { AlertCircle, ArrowRight, CalendarClock, Inbox, Plus, TrendingUp } from 
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
+import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -139,7 +140,7 @@ export function JobDashboardPage() {
             </Link>
           </div>
           {statusCounts.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No jobs yet.</p>
+            <EmptyState message="No jobs yet." className="mt-2" />
           ) : (
             <ul className="mt-3 flex flex-col gap-2.5">
               {statusCounts.map((row) => (

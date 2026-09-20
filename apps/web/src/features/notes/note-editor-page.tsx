@@ -14,6 +14,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,7 @@ export function NoteEditorPage() {
   const [moduleLinkId, setModuleLinkId] = useState('');
   const [noteLinkDialogOpen, setNoteLinkDialogOpen] = useState(false);
   const [targetNoteId, setTargetNoteId] = useState('');
+  const { confirm, dialog } = useConfirmDialog();
 
   useEffect(() => {
     if (note) setTitle(note.title);
@@ -157,7 +159,9 @@ export function NoteEditorPage() {
   }
 
   async function deleteNote() {
-    if (!id || !confirm("Delete this note? You can restore it from Trash later.")) return;
+    if (!id) return;
+    const ok = await confirm({ title: 'Delete this note? You can restore it from Trash later.', confirmLabel: 'Delete' });
+    if (!ok) return;
     await notesApi.delete(id);
     navigate('/notes');
   }
@@ -169,7 +173,13 @@ export function NoteEditorPage() {
 
   async function restoreVersion(versionNumber: number) {
     if (!id) return;
-    if (!confirm(`Restore version ${versionNumber}? This becomes the new current version (the current content is kept in history).`)) return;
+    const ok = await confirm({
+      title: `Restore version ${versionNumber}?`,
+      description: 'This becomes the new current version (the current content is kept in history).',
+      confirmLabel: 'Restore',
+      destructive: false,
+    });
+    if (!ok) return;
     await notesApi.restoreVersion(id, versionNumber);
     syncedNoteId.current = null;
     invalidate();
@@ -508,6 +518,7 @@ export function NoteEditorPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   );
 }

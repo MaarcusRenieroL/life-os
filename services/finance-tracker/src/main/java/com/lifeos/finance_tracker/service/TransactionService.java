@@ -9,6 +9,7 @@ import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
 import com.lifeos.finance_tracker.domains.dto.request.RenameTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionCategoriesRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionRequest;
+import com.lifeos.finance_tracker.domains.dto.response.CsvImportBatchResponse;
 import com.lifeos.finance_tracker.domains.dto.response.TransactionResponse;
 import com.lifeos.finance_tracker.domains.entity.Account;
 import com.lifeos.finance_tracker.domains.entity.Category;
@@ -36,6 +37,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +52,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class TransactionService {
 
+  private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
+
   private final AccountRepository accountRepository;
   private final TransactionRepository transactionRepository;
   private final CategoryRepository categoryRepository;
@@ -57,6 +62,7 @@ public class TransactionService {
   private final MerchantService merchantService;
   private final BudgetSpendService budgetSpendService;
 
+  @Transactional(readOnly = true)
   public PageResponse<TransactionResponse> getAllPaginated(
       Authentication authentication,
       int page,
@@ -92,6 +98,7 @@ public class TransactionService {
     return PageResponse.from(responses);
   }
 
+  @Transactional(readOnly = true)
   public TransactionResponse get(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -351,6 +358,51 @@ public class TransactionService {
             .findByIdAndUserId(request.getAccountId(), request.getUserId())
             .orElseThrow(() -> new AccountNotFoundException(request.getAccountId()));
 
+    importCsvRow(account, request);
+  }
+
+  /**
+   * Imports a whole parsed bank statement in one call instead of the caller (batches'
+   * StatementImportService) making one HTTP round-trip per row - for a multi-hundred-row
+   * statement that was a multi-hundred-request serial network waterfall. The account is fetched
+   * once and its running balance accumulated in memory across every row via the same {@link
+   * #applyToBalance} call each single-row import already used, instead of a fresh fetch per row.
+   *
+   * <p>A bad row is skipped (same "keep going" behavior the caller used to implement itself with
+   * a per-request try/catch) rather than failing the whole import - since this now runs inside
+   * one transaction (class-level {@code @Transactional} above), a skipped row's exception is
+   * caught here and never allowed to escape the method, so it can't roll back the rows already
+   * imported earlier in the same batch.
+   *
+   * <p>Every row is expected to carry the same userId/accountId (one statement import is always
+   * for one account) - the account is resolved once from the first row rather than requiring the
+   * caller to pass it separately.
+   */
+  public CsvImportBatchResponse createFromCsvImportBatch(List<CreateCsvImportTransactionRequest> requests) {
+    UUID userId = requests.get(0).getUserId();
+    UUID accountId = requests.get(0).getAccountId();
+    Account account =
+        accountRepository
+            .findByIdAndUserId(accountId, userId)
+            .orElseThrow(() -> new AccountNotFoundException(accountId));
+
+    int imported = 0;
+    for (CreateCsvImportTransactionRequest request : requests) {
+      try {
+        if (importCsvRow(account, request)) {
+          imported++;
+        }
+      } catch (RuntimeException exception) {
+        log.warn("Skipping a row in CSV import batch for account {}: {}", accountId, exception.getMessage());
+      }
+    }
+
+    return new CsvImportBatchResponse(requests.size(), imported);
+  }
+
+  /** Returns false for a row silently deduplicated against an existing transaction (not an
+   * error, same as the original single-row method's early return), true if it was persisted. */
+  private boolean importCsvRow(Account account, CreateCsvImportTransactionRequest request) {
     String description =
         merchantService
             .resolveCorrectedName(account.getUserId(), request.getDescription())
@@ -369,7 +421,7 @@ public class TransactionService {
             request.getAccountId(), request.getAmount(), windowStart, windowEnd, description);
 
     if (isDuplicate) {
-      return;
+      return false;
     }
 
     Transaction transaction =
@@ -393,6 +445,7 @@ public class TransactionService {
     recordBudgetSpendIfExpense(transaction);
 
     transactionRepository.save(transaction);
+    return true;
   }
 
   // Records spend against the transaction's category budget (if any) so

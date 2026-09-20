@@ -3,6 +3,7 @@ import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -209,7 +210,7 @@ export function FinanceDashboardPage() {
         <section className="rounded-lg border bg-card p-5">
           <SectionHeading>Spending trend</SectionHeading>
           {trendBars.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">Not enough history yet.</p>
+            <EmptyState className="mt-2" message="Not enough history yet." />
           ) : (
             <div className="mt-3 flex h-32 items-end gap-2">
               {trendBars.map((t) => (
@@ -233,7 +234,7 @@ export function FinanceDashboardPage() {
                 <Link to={item.link} className="text-sm hover:underline">{item.text}</Link>
               </li>
             ))}
-            {attentionItems.length === 0 && <p className="text-sm text-muted-foreground">Nothing needs attention right now.</p>}
+            {attentionItems.length === 0 && <EmptyState message="Nothing needs attention right now." />}
           </ul>
         </section>
       </div>
@@ -242,7 +243,7 @@ export function FinanceDashboardPage() {
         <section className="rounded-lg border bg-card p-5">
           <SectionHeading>Top spend categories</SectionHeading>
           {categorySpend.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No categorized spend yet.</p>
+            <EmptyState className="mt-2" message="No categorized spend yet." />
           ) : (
             <ul className="mt-3 flex flex-col gap-2">
               {categorySpend.map((c) => (
@@ -258,7 +259,7 @@ export function FinanceDashboardPage() {
         <section className="rounded-lg border bg-card p-5">
           <SectionHeading>Budgets</SectionHeading>
           {budgetRows.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No budgets set up yet.</p>
+            <EmptyState className="mt-2" message="No budgets set up yet." />
           ) : (
             <ul className="mt-3 flex flex-col gap-2">
               {budgetRows.map((b) => (
@@ -272,9 +273,7 @@ export function FinanceDashboardPage() {
         </section>
       </div>
 
-      {accounts.length === 0 && (
-        <p className="mt-4 text-sm text-muted-foreground">No transactions yet.</p>
-      )}
+      {accounts.length === 0 && <EmptyState className="mt-4" message="No transactions yet." />}
     </div>
   );
 }

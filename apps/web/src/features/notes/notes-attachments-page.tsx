@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -29,6 +31,7 @@ export function NotesAttachmentsPage() {
   const [typeFilter, setTypeFilter] = useState<FileKind | 'all'>('all');
   const [sort, setSort] = useState<SortOption>('newest');
   const [selected, setSelected] = useState<GlobalAttachment | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   const filtered = useMemo(() => {
     let list = attachments.filter((a) => a.fileName.toLowerCase().includes(search.toLowerCase()));
@@ -44,7 +47,8 @@ export function NotesAttachmentsPage() {
   }, [attachments, search, typeFilter, sort]);
 
   async function deleteAttachment(attachment: GlobalAttachment) {
-    if (!confirm(`Delete "${attachment.fileName}"? This can't be undone.`)) return;
+    const ok = await confirm({ title: `Delete "${attachment.fileName}"? This can't be undone.`, confirmLabel: 'Delete' });
+    if (!ok) return;
     await notesApi.deleteAttachment(attachment.noteId, attachment.id);
     if (selected?.id === attachment.id) setSelected(null);
     queryClient.invalidateQueries({ queryKey: ['notes', 'attachments'] });
@@ -96,7 +100,7 @@ export function NotesAttachmentsPage() {
               </li>
             );
           })}
-          {filtered.length === 0 && <p className="text-sm text-muted-foreground">No attachments found.</p>}
+          {filtered.length === 0 && <EmptyState message="No attachments found." />}
         </ul>
 
         {selected && (
@@ -126,6 +130,7 @@ export function NotesAttachmentsPage() {
           </div>
         )}
       </div>
+      {dialog}
     </div>
   );
 }

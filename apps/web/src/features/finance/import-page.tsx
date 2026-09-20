@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getErrorMessage } from '@/lib/error';
 
 import { accountApi } from './account-api';
 import { importApi } from './import-api';
@@ -50,10 +51,7 @@ export function ImportPage() {
       queryClient.invalidateQueries({ queryKey: ['finance'] });
     } catch (err) {
       setState('error');
-      setError(
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
-          'Could not parse this statement. Please try again.',
-      );
+      setError(getErrorMessage(err, 'Could not parse this statement. Please try again.'));
     }
   }
 
@@ -65,9 +63,7 @@ export function ImportPage() {
       setSyncMessage(`Synced ${count} transaction(s).`);
       queryClient.invalidateQueries({ queryKey: ['finance'] });
     } catch (err) {
-      setSyncMessage(
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Sync failed.',
-      );
+      setSyncMessage(getErrorMessage(err, 'Sync failed.'));
     } finally {
       setSyncing(false);
     }

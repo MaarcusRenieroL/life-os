@@ -16,6 +16,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { APP_MODULES, type AppModuleConfig } from '@/config/app-modules';
 import { useAuth } from '@/features/auth/auth-context';
+import { getErrorMessage } from '@/lib/error';
 import { cn } from '@/lib/utils';
 
 import { coreApi } from '../core/core-api';
@@ -39,10 +40,14 @@ const NAV_ITEMS: NavItem[] = [
 
 type ThemePreference = 'terminal-dark' | 'light' | 'system';
 
-const THEME_OPTIONS: { label: string; value: ThemePreference }[] = [
+// Light/System aren't implemented yet - the app currently has one committed visual theme (see
+// the comment in src/index.css), not an actual toggle. Both options are listed but disabled so
+// the selector honestly reflects what picking them would do (nothing) instead of implying a
+// working theme switch that silently doesn't change anything.
+const THEME_OPTIONS: { label: string; value: ThemePreference; disabled?: boolean }[] = [
   { label: 'Terminal dark (default)', value: 'terminal-dark' },
-  { label: 'Light', value: 'light' },
-  { label: 'System', value: 'system' },
+  { label: 'Light (coming soon)', value: 'light', disabled: true },
+  { label: 'System (coming soon)', value: 'system', disabled: true },
 ];
 
 function computeInitials(name: string, email: string): string {
@@ -61,7 +66,6 @@ export function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
-  // TODO: no theme-switching wired up yet, this only records the preference locally.
   const [theme, setTheme] = useState<ThemePreference>('terminal-dark');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const suppressSpyRef = useRef(false);
@@ -110,10 +114,7 @@ export function SettingsPage() {
       await coreApi.setModuleEnabled(code, enabled);
       setLocalOverrides(new Map(overrideMap).set(code, enabled));
     } catch (err) {
-      setModulesError(
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
-          'Unable to update module.',
-      );
+      setModulesError(getErrorMessage(err, 'Unable to update module.'));
     }
   }
 
@@ -127,10 +128,7 @@ export function SettingsPage() {
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 2000);
     } catch (err) {
-      setProfileError(
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
-          'Unable to update profile.',
-      );
+      setProfileError(getErrorMessage(err, 'Unable to update profile.'));
     } finally {
       setSavingProfile(false);
     }

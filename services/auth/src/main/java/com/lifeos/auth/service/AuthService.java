@@ -9,7 +9,7 @@ import com.lifeos.auth.domains.entity.User;
 import com.lifeos.auth.domains.record.ChallengeRecord;
 import com.lifeos.auth.exception.EmailAlreadyExistsException;
 import com.lifeos.auth.exception.InvalidCredentialsException;
-import com.lifeos.auth.publisher.AuditEventPublisher;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.auth.repository.BiometricEnrollmentRepository;
 import com.lifeos.auth.repository.DeviceSessionRepository;
 import com.lifeos.auth.repository.RefreshTokenRepository;
@@ -132,6 +132,7 @@ public class AuthService {
     return issueTokens(deviceSession);
   }
 
+  @Transactional(readOnly = true)
   public List<DeviceSession> listSessions(UUID userId) {
     return deviceSessionRepository.findByUserIdAndRevokedAtIsNull(userId);
   }

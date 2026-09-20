@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +25,7 @@ export function NotesSettingsPage() {
   const { data: trash = [] } = useQuery({ queryKey: ['notes', 'trash'], queryFn: notesApi.trash });
 
   const [autoArchiveDays, setAutoArchiveDays] = useState(settings?.autoArchiveDays ?? 90);
+  const { confirm, dialog } = useConfirmDialog();
 
   function invalidateSettings() {
     queryClient.invalidateQueries({ queryKey: ['notes', 'settings'] });
@@ -49,13 +52,19 @@ export function NotesSettingsPage() {
   }
 
   async function permanentlyDelete(id: string) {
-    if (!confirm('Permanently delete this note? This cannot be undone.')) return;
+    const ok = await confirm({ title: 'Permanently delete this note? This cannot be undone.', confirmLabel: 'Delete' });
+    if (!ok) return;
     await notesApi.permanentlyDelete(id);
     queryClient.invalidateQueries({ queryKey: ['notes', 'trash'] });
   }
 
   async function deleteAllData() {
-    if (!confirm("This permanently deletes every note, folder, tag, and template. Attachments and version history go with them. This cannot be undone.\n\nType nothing to cancel, OK to confirm.")) return;
+    const ok = await confirm({
+      title: 'This permanently deletes every note, folder, tag, and template.',
+      description: 'Attachments and version history go with them. This cannot be undone.',
+      confirmLabel: 'Delete everything',
+    });
+    if (!ok) return;
     await noteSettingsApi.deleteAllData();
     queryClient.invalidateQueries({ queryKey: ['notes'] });
   }
@@ -132,7 +141,7 @@ export function NotesSettingsPage() {
               </div>
             </li>
           ))}
-          {trash.length === 0 && <p className="text-sm text-muted-foreground">Trash is empty.</p>}
+          {trash.length === 0 && <EmptyState message="Trash is empty." />}
         </ul>
       </section>
 
@@ -146,6 +155,7 @@ export function NotesSettingsPage() {
           I'm sure, delete everything
         </Button>
       </section>
+      {dialog}
     </div>
   );
 }

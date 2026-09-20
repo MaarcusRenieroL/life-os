@@ -31,6 +31,7 @@ public class NoteFolderService {
   private final NoteRepository noteRepository;
 
   @Cacheable(value = "user-folders", key = "#userId")
+  @Transactional(readOnly = true)
   public List<FolderResponse> getTree(UUID userId) {
     List<NoteFolder> all = noteFolderRepository.findAllByUserId(userId);
     Map<UUID, Long> counts =
@@ -167,6 +168,7 @@ public class NoteFolderService {
     noteFolderAssignmentRepository.deleteByNoteIdAndFolderId(noteId, folderId);
   }
 
+  @Transactional(readOnly = true)
   public List<UUID> getFolderIdsForNote(UUID noteId) {
     return noteFolderAssignmentRepository.findAllByNoteId(noteId).stream()
         .map(NoteFolderAssignment::getFolderId)

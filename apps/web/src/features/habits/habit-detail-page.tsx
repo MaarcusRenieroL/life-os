@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +23,7 @@ export function HabitDetailPage() {
   const queryClient = useQueryClient();
   const [period, setPeriod] = useState<ConsistencyPeriod>('week');
   const [editOpen, setEditOpen] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   const { data: habit, isLoading } = useQuery({
     queryKey: ['habits', id],
@@ -52,7 +55,8 @@ export function HabitDetailPage() {
 
   async function deleteLog(logId: string) {
     if (!id) return;
-    if (!confirm('Undo this log entry?')) return;
+    const ok = await confirm({ title: 'Undo this log entry?', confirmLabel: 'Undo' });
+    if (!ok) return;
     try {
       await habitsApi.deleteLog(id, logId);
       queryClient.invalidateQueries({ queryKey: ['habits', id, 'logs'] });
@@ -184,7 +188,7 @@ export function HabitDetailPage() {
           {logsLoading ? (
             <Skeleton className="h-32 w-full" />
           ) : sortedLogs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No logs yet.</p>
+            <EmptyState message="No logs yet." />
           ) : (
             <Table>
               <TableHeader>
@@ -219,6 +223,7 @@ export function HabitDetailPage() {
       </Card>
 
       <HabitFormDialog open={editOpen} onOpenChange={setEditOpen} editing={habit} onSaved={invalidateAll} />
+      {dialog}
     </div>
   );
 }

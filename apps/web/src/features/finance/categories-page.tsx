@@ -10,9 +10,11 @@ import {
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
+import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,13 +39,15 @@ export function CategoriesPage() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryResponse | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['finance', 'categories'] });
   }
 
   async function remove(category: CategoryResponse) {
-    if (!confirm(`Delete "${category.name}"?`)) return;
+    const ok = await confirm({ title: `Delete "${category.name}"?`, confirmLabel: 'Delete' });
+    if (!ok) return;
     await categoryApi.deleteCategory(category.id);
     invalidate();
   }
@@ -105,9 +109,10 @@ export function CategoriesPage() {
       </div>
 
       {categories.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">
-          No categories yet — create one to start budgeting and categorizing transactions.
-        </p>
+        <EmptyState
+          className="mt-6"
+          message="No categories yet — create one to start budgeting and categorizing transactions."
+        />
       ) : (
         <>
           <div className="mt-4 flex items-center gap-2">
@@ -121,6 +126,7 @@ export function CategoriesPage() {
       )}
 
       <CategoryDialog open={dialogOpen} onOpenChange={setDialogOpen} editing={editing} onSaved={invalidate} />
+      {dialog}
     </div>
   );
 }

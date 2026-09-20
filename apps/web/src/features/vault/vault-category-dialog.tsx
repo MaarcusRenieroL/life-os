@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -29,6 +31,7 @@ export function VaultCategoryDialog({ open, onOpenChange }: { open: boolean; onO
   const [name, setName] = useState('');
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [editing, setEditing] = useState<VaultCategory | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['vault', 'categories'] });
@@ -58,7 +61,11 @@ export function VaultCategoryDialog({ open, onOpenChange }: { open: boolean; onO
   }
 
   async function remove(category: VaultCategory) {
-    if (!confirm(`Delete category "${category.name}"?`)) return;
+    const ok = await confirm({
+      title: `Delete category "${category.name}"?`,
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
     await vaultCategoryApi.deleteCategory(category.id);
     if (editing?.id === category.id) resetForm();
     invalidate();
@@ -82,7 +89,7 @@ export function VaultCategoryDialog({ open, onOpenChange }: { open: boolean; onO
               </span>
             </li>
           ))}
-          {categories.length === 0 && <p className="text-sm text-muted-foreground">No categories yet.</p>}
+          {categories.length === 0 && <EmptyState message="No categories yet." />}
         </ul>
 
         <div className="mt-2 flex flex-col gap-2 border-t pt-3">
@@ -114,6 +121,7 @@ export function VaultCategoryDialog({ open, onOpenChange }: { open: boolean; onO
           </div>
         </div>
       </DialogContent>
+      {dialog}
     </Dialog>
   );
 }

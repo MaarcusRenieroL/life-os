@@ -98,6 +98,7 @@ public class StreakService {
     return toResponse(streak);
   }
 
+  @Transactional(readOnly = true)
   public HabitStreakResponse get(UUID habitId) {
     return habitStreakRepository
         .findById(habitId)

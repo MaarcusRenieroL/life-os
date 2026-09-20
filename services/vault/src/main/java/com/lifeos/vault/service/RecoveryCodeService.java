@@ -8,7 +8,7 @@ import com.lifeos.vault.domains.entity.VaultEntry;
 import com.lifeos.vault.domains.entity.VaultMasterPassword;
 import com.lifeos.vault.exception.InvalidMasterPasswordException;
 import com.lifeos.vault.exception.InvalidRecoveryCodeException;
-import com.lifeos.vault.publisher.AuditEventPublisher;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.vault.repository.PaymentCardRepository;
 import com.lifeos.vault.repository.RecoveryCodeRepository;
 import com.lifeos.vault.repository.VaultEntryRepository;
@@ -95,6 +95,7 @@ public class RecoveryCodeService {
     return plainTextCodes;
   }
 
+  @Transactional(readOnly = true)
   public List<RecoveryCodeStatusResponse> listStatus(UUID userId) {
     List<RecoveryCode> recoveryCodes =
         recoveryCodeRepository.findAllByUserIdOrderByCreatedAtAsc(userId);

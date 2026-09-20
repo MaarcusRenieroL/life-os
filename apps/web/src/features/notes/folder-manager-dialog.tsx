@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -24,6 +26,7 @@ export function FolderManagerDialog({ open, onOpenChange }: { open: boolean; onO
   const [newName, setNewName] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const { confirm, dialog } = useConfirmDialog();
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['notes', 'folders'] });
@@ -54,12 +57,14 @@ export function FolderManagerDialog({ open, onOpenChange }: { open: boolean; onO
       folder.noteCount > 0
         ? `"${folder.name}" has ${folder.noteCount} note(s) in it. Delete the folder and everything in it?`
         : `Delete "${folder.name}"?`;
-    if (!confirm(message)) return;
+    const ok = await confirm({ title: message, confirmLabel: 'Delete' });
+    if (!ok) return;
     await foldersApi.delete(folder.id, true);
     invalidate();
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader><DialogTitle>Manage folders</DialogTitle></DialogHeader>
@@ -101,9 +106,11 @@ export function FolderManagerDialog({ open, onOpenChange }: { open: boolean; onO
               </button>
             </li>
           ))}
-          {flat.length === 0 && <p className="p-2 text-sm text-muted-foreground">No folders yet.</p>}
+          {flat.length === 0 && <EmptyState className="p-2" message="No folders yet." />}
         </ul>
       </DialogContent>
     </Dialog>
+    {dialog}
+    </>
   );
 }

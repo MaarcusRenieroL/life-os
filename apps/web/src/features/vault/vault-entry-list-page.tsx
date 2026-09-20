@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +56,7 @@ export function VaultEntryListPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   useEffect(() => {
     const editId = searchParams.get('edit');
@@ -111,7 +114,8 @@ export function VaultEntryListPage() {
   }
 
   async function deleteEntry(id: string) {
-    if (!confirm('Delete this vault entry?')) return;
+    const ok = await confirm({ title: 'Delete this vault entry?', confirmLabel: 'Delete' });
+    if (!ok) return;
     await vaultApi.deleteEntry(id);
     invalidate();
   }
@@ -132,10 +136,13 @@ export function VaultEntryListPage() {
   }
 
   async function deleteSelected() {
-    if (selected.size === 0 || !confirm(`Delete ${selected.size} selected entries?`)) return;
-    for (const id of selected) {
-      await vaultApi.deleteEntry(id);
-    }
+    if (selected.size === 0) return;
+    const ok = await confirm({
+      title: `Delete ${selected.size} selected entries?`,
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+    await Promise.all([...selected].map((id) => vaultApi.deleteEntry(id)));
     setSelected(new Set());
     invalidate();
   }
@@ -269,7 +276,7 @@ export function VaultEntryListPage() {
             </li>
           );
         })}
-        {filteredEntries.length === 0 && <p className="text-sm text-muted-foreground">No entries found.</p>}
+        {filteredEntries.length === 0 && <EmptyState message="No entries found." />}
       </ul>
 
       {openEntry && (
@@ -292,6 +299,7 @@ export function VaultEntryListPage() {
       />
 
       <VaultCategoryDialog open={categoriesOpen} onOpenChange={setCategoriesOpen} />
+      {dialog}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { SectionHeading } from '@/components/section-heading';
@@ -46,6 +47,7 @@ export function RulesPage() {
   const [editing, setEditing] = useState<CategorizationRuleResponse | null>(null);
   const [testText, setTestText] = useState('');
   const [testResult, setTestResult] = useState<{ rule: CategorizationRuleResponse; categoryName: string } | 'none' | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   const myRules = rules.filter((r) => !r.autoLearned);
   const autoRules = rules.filter((r) => r.autoLearned);
@@ -61,7 +63,8 @@ export function RulesPage() {
   }
 
   async function remove(rule: CategorizationRuleResponse) {
-    if (!confirm('Delete this rule?')) return;
+    const ok = await confirm({ title: 'Delete this rule?', confirmLabel: 'Delete' });
+    if (!ok) return;
     await ruleApi.deleteRule(rule.id);
     invalidate();
   }
@@ -177,6 +180,7 @@ export function RulesPage() {
         prefillMatchValue={searchParams.get('matchValue') ?? undefined}
         onSaved={invalidate}
       />
+      {dialog}
     </div>
   );
 }

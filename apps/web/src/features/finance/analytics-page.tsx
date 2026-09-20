@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { analyticsApi } from './analytics-api';
 import { categoryApi } from './category-api';
@@ -20,9 +21,14 @@ export function AnalyticsPage() {
     enabled: expenseCategoryIds.length > 0,
   });
 
-  const avgMonthlySpend = trends.length ? trends.reduce((s, t) => s + t.totalSpend, 0) / trends.length : 0;
-  const highestMonth = trends.length ? trends.reduce((a, b) => (b.totalSpend > a.totalSpend ? b : a)) : null;
-  const lowestMonth = trends.length ? trends.reduce((a, b) => (b.totalSpend < a.totalSpend ? b : a)) : null;
+  const { avgMonthlySpend, highestMonth, lowestMonth } = useMemo(
+    () => ({
+      avgMonthlySpend: trends.length ? trends.reduce((s, t) => s + t.totalSpend, 0) / trends.length : 0,
+      highestMonth: trends.length ? trends.reduce((a, b) => (b.totalSpend > a.totalSpend ? b : a)) : null,
+      lowestMonth: trends.length ? trends.reduce((a, b) => (b.totalSpend < a.totalSpend ? b : a)) : null,
+    }),
+    [trends],
+  );
 
   const trendBars = useMemo(() => {
     const max = Math.max(1, ...trends.map((t) => t.totalSpend));
@@ -81,7 +87,7 @@ export function AnalyticsPage() {
       <section className="mt-4 rounded-lg border bg-card p-5">
         <SectionHeading>Spending trend</SectionHeading>
         {trendBars.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">Not enough history yet.</p>
+          <EmptyState className="mt-2" message="Not enough history yet." />
         ) : (
           <div className="mt-3 flex h-32 items-end gap-2">
             {trendBars.map((t) => (
@@ -97,7 +103,7 @@ export function AnalyticsPage() {
       <section className="mt-4 rounded-lg border bg-card p-5">
         <SectionHeading>Category trends</SectionHeading>
         {categoryRows.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No categorized spend yet.</p>
+          <EmptyState className="mt-2" message="No categorized spend yet." />
         ) : (
           <ul className="mt-3 flex flex-col gap-2">
             {categoryRows.map((c) => (
@@ -123,7 +129,7 @@ export function AnalyticsPage() {
       <section className="mt-4 rounded-lg border bg-card p-5">
         <SectionHeading>Top merchants</SectionHeading>
         {merchants.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No merchant data yet.</p>
+          <EmptyState className="mt-2" message="No merchant data yet." />
         ) : (
           <ul className="mt-2 flex flex-col gap-1.5 text-sm">
             {merchants.map((m) => (
@@ -139,7 +145,7 @@ export function AnalyticsPage() {
       <section className="mt-4 rounded-lg border bg-card p-5">
         <SectionHeading>Insights</SectionHeading>
         {insights.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">Not enough data yet for insights.</p>
+          <EmptyState className="mt-2" message="Not enough data yet for insights." />
         ) : (
           <ul className="mt-2 flex flex-col gap-2">
             {insights.map((insight, i) => (

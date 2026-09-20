@@ -28,6 +28,7 @@ public class MerchantService {
 
   private final MerchantRepository merchantRepository;
 
+  @Transactional(readOnly = true)
   public List<MerchantResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -36,6 +37,7 @@ public class MerchantService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public MerchantResponse get(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -113,6 +115,7 @@ public class MerchantService {
   // merchant the user has previously corrected (via rename()), so future
   // imports of the same merchant get the corrected name instead of the raw,
   // often-truncated bank narration text.
+  @Transactional(readOnly = true)
   public Optional<String> resolveCorrectedName(UUID userId, String rawDescription) {
     String fingerprint = DescriptionFingerprint.of(rawDescription);
 

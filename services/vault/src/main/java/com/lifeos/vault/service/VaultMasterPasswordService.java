@@ -8,7 +8,7 @@ import com.lifeos.vault.domains.entity.VaultMasterPassword;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
 import com.lifeos.vault.exception.InvalidMasterPasswordException;
 import com.lifeos.vault.exception.MasterPasswordAlreadySetException;
-import com.lifeos.vault.publisher.AuditEventPublisher;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.vault.repository.PaymentCardRepository;
 import com.lifeos.vault.repository.RecoveryCodeRepository;
 import com.lifeos.vault.repository.VaultEntryRepository;
@@ -73,6 +73,7 @@ public class VaultMasterPasswordService {
         userId, new VaultKeyRecord(key, Instant.now().plusSeconds(VAULT_UNLOCK_DURATION_SECONDS)));
   }
 
+  @Transactional(readOnly = true)
   public VaultStatusResponse getStatus(UUID userId) {
     var vaultMasterPassword = vaultMasterPasswordRepository.findByUserId(userId).orElse(null);
 

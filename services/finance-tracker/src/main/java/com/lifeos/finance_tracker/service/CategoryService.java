@@ -21,6 +21,7 @@ public class CategoryService {
 
   private final CategoryRepository categoryRepository;
 
+  @Transactional(readOnly = true)
   public List<CategoryResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -29,6 +30,7 @@ public class CategoryService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public CategoryResponse get(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 

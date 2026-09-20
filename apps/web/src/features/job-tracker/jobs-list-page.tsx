@@ -81,9 +81,7 @@ export function JobsListPage() {
       confirmLabel: 'Remove',
     });
     if (!ok) return;
-    for (const id of selectedIds) {
-      await jobApi.delete(id);
-    }
+    await Promise.all(selectedIds.map((id) => jobApi.delete(id)));
     setRowSelection({});
     invalidate();
     toast.success(`Removed ${selectedIds.length} job(s)`);

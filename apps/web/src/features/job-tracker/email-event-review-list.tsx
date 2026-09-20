@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -74,7 +75,7 @@ export function EmailEventReviewList({ jobId }: { jobId?: string }) {
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (filtered.length === 0) {
-    return <p className="text-sm text-muted-foreground">Nothing needs review right now.</p>;
+    return <EmptyState message="Nothing needs review right now." />;
   }
 
   return (

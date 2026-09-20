@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -20,6 +22,7 @@ function emptyDraft() {
 function ReminderRow({ habitId, reminder }: { habitId: string; reminder: HabitReminder }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['habits', habitId, 'reminders'] });
@@ -38,7 +41,8 @@ function ReminderRow({ habitId, reminder }: { habitId: string; reminder: HabitRe
   }
 
   async function remove() {
-    if (!confirm('Delete this reminder?')) return;
+    const ok = await confirm({ title: 'Delete this reminder?', confirmLabel: 'Delete' });
+    if (!ok) return;
     try {
       await habitsApi.deleteReminder(habitId, reminder.id);
       invalidate();
@@ -63,6 +67,7 @@ function ReminderRow({ habitId, reminder }: { habitId: string; reminder: HabitRe
           Delete
         </Button>
       </div>
+      {dialog}
     </div>
   );
 }
@@ -119,7 +124,7 @@ export function HabitReminderForm({ habitId }: { habitId: string }) {
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Loading reminders…</p>
       ) : reminders.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No reminders set.</p>
+        <EmptyState message="No reminders set." />
       ) : (
         <div className="flex flex-col gap-2">
           {reminders.map((reminder) => (

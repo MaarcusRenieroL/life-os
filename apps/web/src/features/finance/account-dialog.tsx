@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { getErrorMessage } from '@/lib/error';
 
 import { accountApi } from './account-api';
 import { ACCOUNT_TYPE_LABELS, ACCOUNT_TYPES } from './types';
@@ -90,9 +91,8 @@ export function AccountDialog({ open, onOpenChange, editing, onSaved }: Props) {
       onSaved();
       onOpenChange(false);
     } catch (err) {
-      const status = (err as { response?: { status?: number; data?: { message?: string } } }).response?.status;
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message ?? `Could not save this account (HTTP ${status ?? '?'})`);
+      const status = (err as { response?: { status?: number } }).response?.status;
+      setError(getErrorMessage(err, `Could not save this account (HTTP ${status ?? '?'})`));
     } finally {
       setSaving(false);
     }

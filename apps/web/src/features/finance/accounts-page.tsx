@@ -9,9 +9,11 @@ import {
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
+import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -31,13 +33,15 @@ export function AccountsPage() {
   const [editing, setEditing] = useState<AccountResponse | null>(null);
   const [reconciling, setReconciling] = useState<AccountResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['finance', 'accounts'] });
   }
 
   async function deleteAccount(account: AccountResponse) {
-    if (!confirm(`Delete "${account.accountName}"?`)) return;
+    const ok = await confirm({ title: `Delete "${account.accountName}"?`, confirmLabel: 'Delete' });
+    if (!ok) return;
     try {
       await accountApi.deleteAccount(account.id);
       invalidate();
@@ -116,9 +120,10 @@ export function AccountsPage() {
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
       {accounts.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">
-          No accounts yet — add one to start tracking balances and importing statements.
-        </p>
+        <EmptyState
+          className="mt-6"
+          message="No accounts yet — add one to start tracking balances and importing statements."
+        />
       ) : (
         <div className="mt-4">
           <DataTable table={table} onRowClick={openEdit} />
@@ -127,6 +132,7 @@ export function AccountsPage() {
 
       <AccountDialog open={dialogOpen} onOpenChange={setDialogOpen} editing={editing} onSaved={invalidate} />
       <ReconcileDialog account={reconciling} onClose={() => setReconciling(null)} onSaved={invalidate} />
+      {dialog}
     </div>
   );
 }

@@ -97,10 +97,10 @@ export function HabitsCalendarView() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle>{selectedHabit?.name} - {monthName}</CardTitle>
             <div className="flex gap-2">
-              <Button size="icon" variant="outline" onClick={previousMonth}>
+              <Button size="icon" variant="outline" onClick={previousMonth} aria-label="Previous month">
                 <ChevronLeft className="size-4" />
               </Button>
-              <Button size="icon" variant="outline" onClick={nextMonth}>
+              <Button size="icon" variant="outline" onClick={nextMonth} aria-label="Next month">
                 <ChevronRight className="size-4" />
               </Button>
             </div>

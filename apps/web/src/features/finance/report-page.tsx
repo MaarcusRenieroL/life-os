@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
+import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,7 +112,7 @@ export function ReportPage() {
       <section className="mt-4 rounded-lg border bg-card p-5">
         <SectionHeading>Expense breakdown</SectionHeading>
         {expenseSegments.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No categorized spend yet.</p>
+          <EmptyState className="mt-2" message="No categorized spend yet." />
         ) : (
           <>
             <div className="mt-3 flex h-6 overflow-hidden rounded-full">
@@ -136,7 +137,7 @@ export function ReportPage() {
           {budgetPerformance.map((b) => (
             <li key={b.name} className="flex justify-between"><span>{b.name}</span><span>{b.text}</span></li>
           ))}
-          {budgetPerformance.length === 0 && <p className="text-sm text-muted-foreground">No budgets set up yet.</p>}
+          {budgetPerformance.length === 0 && <EmptyState message="No budgets set up yet." />}
         </ul>
       </section>
 
@@ -156,7 +157,7 @@ export function ReportPage() {
             ))}
           </tbody>
         </table>
-        {monthOverMonth.length === 0 && <p className="mt-2 text-sm text-muted-foreground">Not enough history yet.</p>}
+        {monthOverMonth.length === 0 && <EmptyState className="mt-2" message="Not enough history yet." />}
       </section>
     </div>
   );

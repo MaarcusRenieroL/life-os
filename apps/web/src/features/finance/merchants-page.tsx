@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
 import { DataTablePagination } from '@/components/data-table/data-table-pagination';
@@ -33,13 +34,15 @@ export function MerchantsPage() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MerchantResponse | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['finance', 'merchants'] });
   }
 
   async function remove(merchant: MerchantResponse) {
-    if (!confirm(`Delete "${merchant.name}"?`)) return;
+    const ok = await confirm({ title: `Delete "${merchant.name}"?`, confirmLabel: 'Delete' });
+    if (!ok) return;
     await merchantApi.deleteMerchant(merchant.id);
     invalidate();
   }
@@ -124,6 +127,7 @@ export function MerchantsPage() {
       <DataTablePagination table={table} />
 
       <MerchantDialog open={dialogOpen} onOpenChange={setDialogOpen} editing={editing} onSaved={invalidate} />
+      {dialog}
     </div>
   );
 }

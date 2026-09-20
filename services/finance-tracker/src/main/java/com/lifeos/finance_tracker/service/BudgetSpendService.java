@@ -2,7 +2,7 @@ package com.lifeos.finance_tracker.service;
 
 import com.lifeos.common.events.AuditEventType;
 import com.lifeos.finance_tracker.domains.entity.Budget;
-import com.lifeos.finance_tracker.publisher.AuditEventPublisher;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.finance_tracker.repository.BudgetRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;

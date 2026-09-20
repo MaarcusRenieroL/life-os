@@ -60,6 +60,7 @@ public class NoteService {
   private final NoteFolderService noteFolderService;
   private final TagService tagService;
 
+  @Transactional(readOnly = true)
   public org.springframework.data.domain.Page<NoteSummaryResponse> list(
       UUID userId,
       String sort,
@@ -98,6 +99,7 @@ public class NoteService {
     return noteRepository.findAll(spec, pageable).map(this::toSummary);
   }
 
+  @Transactional(readOnly = true)
   public NoteResponse get(UUID userId, UUID id) {
     return toFull(requireOwned(userId, id));
   }
@@ -256,6 +258,7 @@ public class NoteService {
 
   private static final int TRASH_RETENTION_DAYS = 30;
 
+  @Transactional(readOnly = true)
   public List<TrashedNoteResponse> listTrash(UUID userId) {
     return noteRepository.findAllByUserIdAndDeletedAtIsNotNullOrderByDeletedAtDesc(userId).stream()
         .map(
@@ -314,6 +317,7 @@ public class NoteService {
     return toFull(saved);
   }
 
+  @Transactional(readOnly = true)
   public List<NoteSummaryResponse> recent(UUID userId, int limit) {
     return noteRepository
         .findAllByUserIdAndDeletedAtIsNullOrderByUpdatedAtDesc(userId, PageRequest.of(0, limit))
@@ -322,6 +326,7 @@ public class NoteService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public List<NoteSummaryResponse> favorites(UUID userId) {
     return noteRepository.findAllByUserIdAndIsFavoriteTrueAndDeletedAtIsNullAndIsArchivedFalse(userId)
         .stream()
@@ -329,6 +334,7 @@ public class NoteService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public List<NoteSummaryResponse> pinned(UUID userId) {
     return noteRepository.findAllByUserIdAndIsPinnedTrueAndDeletedAtIsNullAndIsArchivedFalse(userId)
         .stream()
@@ -336,6 +342,7 @@ public class NoteService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public List<NoteSummaryResponse> byModule(UUID userId, NoteModuleType moduleType, UUID moduleId) {
     List<UUID> noteIds =
         noteModuleLinkRepository.findAllByModuleTypeAndModuleId(moduleType, moduleId).stream()
@@ -352,6 +359,7 @@ public class NoteService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public List<NoteVersionResponse> getVersions(UUID userId, UUID id) {
     requireOwned(userId, id);
 

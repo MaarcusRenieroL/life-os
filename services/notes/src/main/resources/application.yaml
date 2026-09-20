@@ -29,7 +29,7 @@ internal:
 # com.lifeos.common (see NotesApplication's @ComponentScan) and its constructor
 # requires this property to be resolvable, so it needs a value.
 encryption:
-  secret: ${ENCRYPTION_SECRET:wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+  secret: ${ENCRYPTION_SECRET:Ga5x04JZ+lXOo9BJul80MCbS64Jpnb/l74/xMVqKSEA=}
 
 notes:
   attachments:

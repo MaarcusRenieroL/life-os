@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { getErrorMessage } from '@/lib/error';
 
 import { vaultApi } from './vault-api';
 import { useVaultState } from './vault-state';
@@ -39,10 +40,7 @@ export function VaultResetDialog({ open, onOpenChange }: { open: boolean; onOpen
       }
       onOpenChange(false);
     } catch (err) {
-      setError(
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
-          'Unable to reset the vault with that recovery code.',
-      );
+      setError(getErrorMessage(err, 'Unable to reset the vault with that recovery code.'));
     } finally {
       setBusy(false);
     }
