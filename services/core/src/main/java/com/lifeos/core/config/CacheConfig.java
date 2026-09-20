@@ -37,6 +37,7 @@ public class CacheConfig {
     return RedisCacheManager.builder(connectionFactory)
         .cacheDefaults(defaultConfig)
         .withCacheConfiguration("module-settings", defaultConfig.entryTtl(Duration.ofMinutes(5)))
+        .withCacheConfiguration("user-settings", defaultConfig.entryTtl(Duration.ofMinutes(5)))
         .build();
   }
 }
