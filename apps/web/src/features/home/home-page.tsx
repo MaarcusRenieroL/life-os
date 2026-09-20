@@ -2,8 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
+import { formatDistanceToNow } from 'date-fns';
+
 import { SectionHeading } from '@/components/section-heading';
 import { APP_MODULES, type AppModuleConfig } from '@/config/app-modules';
+import { auditLogApi } from '@/features/audit-log/audit-log-api';
 import { useAuth } from '@/features/auth/auth-context';
 import { accountApi } from '@/features/finance/account-api';
 import { transactionApi } from '@/features/finance/transaction-api';
@@ -68,6 +71,12 @@ export function HomePage() {
   const { data: aiUsage } = useQuery({
     queryKey: ['jobs', 'ai-usage', 'summary', 'home'],
     queryFn: aiUsageApi.getSummary,
+    retry: false,
+    throwOnError: false,
+  });
+  const { data: recentEvents = [] } = useQuery({
+    queryKey: ['audit-log', 'events', 'home'],
+    queryFn: auditLogApi.getEvents,
     retry: false,
     throwOnError: false,
   });
@@ -184,8 +193,26 @@ export function HomePage() {
 
       <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
         <div className="rounded-lg border bg-card p-5">
-          <SectionHeading>recent activity</SectionHeading>
-          <p className="mt-3 text-sm text-muted-foreground">Cross-module activity feed coming soon.</p>
+          <div className="flex items-center justify-between">
+            <SectionHeading>recent activity</SectionHeading>
+            <Link to="/vault/audit-log" className="text-[11px] text-muted-foreground hover:text-primary">
+              View all
+            </Link>
+          </div>
+          {recentEvents.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">Nothing yet.</p>
+          ) : (
+            <ul className="mt-3 flex flex-col gap-2.5">
+              {recentEvents.slice(0, 6).map((event) => (
+                <li key={event.eventId} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="truncate">{event.description}</span>
+                  <span className="shrink-0 text-[11px] text-muted-foreground">
+                    {formatDistanceToNow(new Date(event.occurredAt), { addSuffix: true })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="rounded-lg border bg-card p-5">
