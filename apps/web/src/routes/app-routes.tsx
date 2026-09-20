@@ -38,6 +38,7 @@ export const router = createBrowserRouter([
         ),
         children: [
           { index: true, element: <Navigate to="/home" replace /> },
+          { path: 'today', lazy: page(() => import('@/features/today/today-page'), 'TodayPage') },
           { path: 'home', lazy: page(() => import('@/features/home/home-page'), 'HomePage') },
           { path: 'settings', lazy: page(() => import('@/features/settings/settings-page'), 'SettingsPage') },
           { path: 'vault', lazy: page(() => import('@/features/vault/vault-unlock-page'), 'VaultUnlockPage') },

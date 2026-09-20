@@ -3,6 +3,8 @@ package com.lifeos.batches.service;
 import com.lifeos.batches.domains.record.ParsedAlert;
 import com.lifeos.batches.domains.record.RawAlertEmail;
 import com.lifeos.common.events.BankAlertEventRecord;
+import com.lifeos.common.events.NotificationEventPublisher;
+import com.lifeos.common.events.NotificationEventType;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -36,6 +38,7 @@ public class GmailSyncService {
   private final GmailMessageService gmailMessageService;
   private final GmailAlertParsingService gmailAlertParsingService;
   private final KafkaTemplate<String, BankAlertEventRecord> bankAlertEventKafkaTemplate;
+  private final NotificationEventPublisher notificationEventPublisher;
 
   public int syncRecent() throws IOException {
     return processEmails(gmailMessageService.fetchRecentAlerts());
@@ -75,6 +78,18 @@ public class GmailSyncService {
       } catch (Exception e) {
         log.error("Failed to process Gmail alert {}: {}", email.messageId(), e.getMessage(), e);
       }
+    }
+
+    if (!emails.isEmpty() && processed < emails.size() / 2.0) {
+      notificationEventPublisher.publish(
+          userId,
+          NotificationEventType.GMAIL_SYNC_FAILED,
+          "Bank alert email sync had widespread failures",
+          "Only "
+              + processed
+              + " of "
+              + emails.size()
+              + " bank alert emails were processed successfully in the last sync run.");
     }
 
     return processed;

@@ -48,3 +48,7 @@ anthropic:
 
 owner:
   user-id: ${OWNER_USER_ID}
+
+finance:
+  attention-scan:
+    cron: ${FINANCE_ATTENTION_SCAN_CRON:0 0 8 * * *}

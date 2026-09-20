@@ -33,6 +33,20 @@ jwt:
 internal:
   api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
 
+# Fan-out targets for TodayService's cross-module aggregation - same naming
+# convention as batches' equivalent internal-base-url properties.
+habit-tracker:
+  internal-base-url: ${HABIT_TRACKER_INTERNAL_BASE_URL:http://habit-tracker:8008}
+
+job-tracker:
+  internal-base-url: ${JOB_TRACKER_INTERNAL_BASE_URL:http://job-tracker:8003}
+
+finance:
+  internal-base-url: ${FINANCE_INTERNAL_BASE_URL:http://finance-tracker:8006}
+
+notes:
+  internal-base-url: ${NOTES_INTERNAL_BASE_URL:http://notes:8007}
+
 # core doesn't use EncryptionService itself, but it's component-scanned in from
 # com.lifeos.common (see CoreApplication's @ComponentScan) and its constructor
 # requires this property to be resolvable, so it needs a value even if unused here.

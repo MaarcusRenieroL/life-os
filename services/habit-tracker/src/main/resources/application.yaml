@@ -43,3 +43,5 @@ habit:
   reminder:
     dispatch:
       cron: ${HABIT_REMINDER_DISPATCH_CRON:0 */5 * * * *}
+  attention-scanner:
+    cron: ${HABIT_ATTENTION_SCANNER_CRON:0 0 8 * * *}

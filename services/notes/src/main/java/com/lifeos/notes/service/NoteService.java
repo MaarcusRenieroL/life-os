@@ -1,5 +1,6 @@
 package com.lifeos.notes.service;
 
+import com.lifeos.common.domains.dto.response.TodayItemResponse;
 import com.lifeos.notes.domains.dto.request.CreateNoteModuleLinkRequest;
 import com.lifeos.notes.domains.dto.request.CreateNoteRequest;
 import com.lifeos.notes.domains.dto.request.DuplicateNoteRequest;
@@ -227,6 +228,12 @@ public class NoteService {
       note.setFavorite(request.getIsFavorite());
     }
 
+    if (Boolean.TRUE.equals(request.getClearFollowUpAt())) {
+      note.setFollowUpAt(null);
+    } else if (request.getFollowUpAt() != null) {
+      note.setFollowUpAt(request.getFollowUpAt());
+    }
+
     return toFull(noteRepository.saveAndFlush(note));
   }
 
@@ -356,6 +363,35 @@ public class NoteService {
     return noteRepository.findAllById(noteIds).stream()
         .filter(n -> n.getUserId().equals(userId) && n.getDeletedAt() == null)
         .map(this::toSummary)
+        .toList();
+  }
+
+  // Internal Today endpoint (called by core's cross-module aggregator, see
+  // InternalTodayController) - notes whose follow-up is due today or overdue. "Overdue" priority
+  // is "urgent" (it already slipped), "due today" is "warning" (still actionable today).
+  @Transactional(readOnly = true)
+  public List<TodayItemResponse> todayFollowUps(UUID userId) {
+    Instant endOfToday =
+        java.time.LocalDate.now(java.time.ZoneId.systemDefault())
+            .plusDays(1)
+            .atStartOfDay(java.time.ZoneId.systemDefault())
+            .toInstant();
+
+    return noteRepository
+        .findAllByUserIdAndFollowUpAtIsNotNullAndFollowUpAtLessThanAndDeletedAtIsNull(
+            userId, endOfToday)
+        .stream()
+        .map(
+            note ->
+                TodayItemResponse.builder()
+                    .module("notes")
+                    .type("note_followup")
+                    .title(note.getTitle())
+                    .description(note.getDescription())
+                    .dueAt(note.getFollowUpAt())
+                    .entityId(note.getId().toString())
+                    .priority(note.getFollowUpAt().isBefore(Instant.now()) ? "urgent" : "warning")
+                    .build())
         .toList();
   }
 
@@ -497,6 +533,7 @@ public class NoteService {
         .backlinks(backlinks)
         .moduleLinks(moduleLinks)
         .versions(versions)
+        .followUpAt(note.getFollowUpAt())
         .createdAt(note.getCreatedAt())
         .updatedAt(note.getUpdatedAt())
         .build();

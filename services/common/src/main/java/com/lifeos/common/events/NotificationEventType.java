@@ -26,6 +26,9 @@ public enum NotificationEventType {
   HABIT_STREAK_AT_RISK,
   HABIT_STREAK_MILESTONE,
 
+  // notes
+  NOTE_FOLLOWUP_DUE,
+
   // batches
   GMAIL_SYNC_FAILED,
   BACKUP_FAILED,

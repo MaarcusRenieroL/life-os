@@ -31,12 +31,7 @@ public class BudgetSpendService {
     }
 
     String key =
-        "spend:"
-            + userId
-            + ":"
-            + categoryId
-            + ":"
-            + YearMonth.from(transactionDate.atZone(ZoneId.of("Asia/Kolkata")));
+        spendKey(userId, categoryId, YearMonth.from(transactionDate.atZone(ZoneId.of("Asia/Kolkata"))));
 
     stringRedisTemplate.opsForValue().increment(key, amount.doubleValue());
 
@@ -85,5 +80,20 @@ public class BudgetSpendService {
           "Budget alert threshold reached for category: " + categoryId,
           metadata);
     }
+  }
+
+  /** Current month-to-date spend for a category, read from the same Redis counter {@link
+   * #recordSpend} maintains - used by FinanceAttentionScanner and FinanceTodayService so they
+   * don't recompute an aggregate that's already tracked in real time. Zero if nothing has been
+   * spent (or recorded) yet this month. */
+  public BigDecimal getCurrentSpend(UUID userId, UUID categoryId) {
+    String key = spendKey(userId, categoryId, YearMonth.now(ZoneId.of("Asia/Kolkata")));
+    String value = stringRedisTemplate.opsForValue().get(key);
+
+    return value == null ? BigDecimal.ZERO : new BigDecimal(value);
+  }
+
+  private String spendKey(UUID userId, UUID categoryId, YearMonth month) {
+    return "spend:" + userId + ":" + categoryId + ":" + month;
   }
 }

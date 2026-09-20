@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 
 import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.common.events.AuditEventType;
+import com.lifeos.common.events.NotificationEventPublisher;
+import com.lifeos.common.events.NotificationEventType;
 import com.lifeos.vault.domains.entity.PaymentCard;
 import com.lifeos.vault.domains.entity.RecoveryCode;
 import com.lifeos.vault.domains.entity.VaultEntry;
@@ -52,6 +54,7 @@ class RecoveryCodeServiceTest {
   @Mock private EncryptionService encryptionService;
   @Mock private PasswordStrengthService passwordStrengthService;
   @Mock private AuditEventPublisher auditEventPublisher;
+  @Mock private NotificationEventPublisher notificationEventPublisher;
 
   @InjectMocks private RecoveryCodeService recoveryCodeService;
 
@@ -149,6 +152,8 @@ class RecoveryCodeServiceTest {
 
     verify(auditEventPublisher)
         .publish(eq(userId), eq(AuditEventType.RECOVERY_CODE_REDEEMED), anyString(), eq(null));
+    verify(notificationEventPublisher)
+        .publish(eq(userId), eq(NotificationEventType.VAULT_RECOVERY_CODE_USED), anyString(), anyString());
   }
 
   @Test
@@ -295,5 +300,9 @@ class RecoveryCodeServiceTest {
     verify(recoveryCodeRepository).deleteAllByUserId(userId);
     verify(auditEventPublisher)
         .publish(eq(userId), eq(AuditEventType.RECOVERY_CODE_RESET), anyString(), eq(null));
+    verify(notificationEventPublisher)
+        .publish(eq(userId), eq(NotificationEventType.VAULT_RECOVERY_CODE_USED), anyString(), anyString());
+    verify(notificationEventPublisher)
+        .publish(eq(userId), eq(NotificationEventType.VAULT_MASTER_PASSWORD_CHANGED), anyString(), anyString());
   }
 }

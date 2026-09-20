@@ -73,3 +73,8 @@ job-tracker:
   latex:
     tectonic-bin: ${TECTONIC_BIN:tectonic}
     timeout-seconds: ${TECTONIC_TIMEOUT_SECONDS:90}
+  attention:
+    # Once a day is enough for "interview coming up" / "referral follow-up due" nudges - these
+    # aren't time-sensitive to the minute like a habit reminder. Runs at 08:00 UTC.
+    scan:
+      cron: ${JOB_ATTENTION_SCAN_CRON:0 0 8 * * *}

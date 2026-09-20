@@ -2,6 +2,8 @@ package com.lifeos.batches.service;
 
 import com.lifeos.batches.domains.record.RawEmail;
 import com.lifeos.common.events.JobEmailEventRecord;
+import com.lifeos.common.events.NotificationEventPublisher;
+import com.lifeos.common.events.NotificationEventType;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -46,6 +48,7 @@ public class JobEmailSyncService {
 
   private final GmailMessageService gmailMessageService;
   private final KafkaTemplate<String, JobEmailEventRecord> jobEmailEventKafkaTemplate;
+  private final NotificationEventPublisher notificationEventPublisher;
 
   public int syncRecent() throws IOException {
     return processEmails(gmailMessageService.fetchByQuery(searchClause(), "newer_than:2d"));
@@ -81,6 +84,18 @@ public class JobEmailSyncService {
       } catch (Exception e) {
         log.error("Failed to publish job email {}: {}", email.messageId(), e.getMessage(), e);
       }
+    }
+
+    if (!emails.isEmpty() && processed < emails.size() / 2.0) {
+      notificationEventPublisher.publish(
+          userId,
+          NotificationEventType.GMAIL_SYNC_FAILED,
+          "Job email sync had widespread failures",
+          "Only "
+              + processed
+              + " of "
+              + emails.size()
+              + " job-related emails were processed successfully in the last sync run.");
     }
 
     return processed;

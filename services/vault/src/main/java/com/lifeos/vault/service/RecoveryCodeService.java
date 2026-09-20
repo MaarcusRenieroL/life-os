@@ -1,6 +1,8 @@
 package com.lifeos.vault.service;
 
 import com.lifeos.common.events.AuditEventType;
+import com.lifeos.common.events.NotificationEventPublisher;
+import com.lifeos.common.events.NotificationEventType;
 import com.lifeos.vault.domains.dto.response.RecoveryCodeStatusResponse;
 import com.lifeos.vault.domains.entity.PaymentCard;
 import com.lifeos.vault.domains.entity.RecoveryCode;
@@ -45,6 +47,7 @@ public class RecoveryCodeService {
   private final EncryptionService encryptionService;
   private final PasswordStrengthService passwordStrengthService;
   private final AuditEventPublisher auditEventPublisher;
+  private final NotificationEventPublisher notificationEventPublisher;
 
   @Transactional
   public List<String> generate(UUID userId, String currentPassword) {
@@ -116,6 +119,12 @@ public class RecoveryCodeService {
 
         auditEventPublisher.publish(
             userId, AuditEventType.RECOVERY_CODE_REDEEMED, "Recovery code redeemed", null);
+
+        notificationEventPublisher.publish(
+            userId,
+            NotificationEventType.VAULT_RECOVERY_CODE_USED,
+            "A vault recovery code was used",
+            "One of your vault recovery codes was just used. If this wasn't you, change your master password immediately.");
 
         return;
       }
@@ -239,6 +248,18 @@ public class RecoveryCodeService {
             AuditEventType.RECOVERY_CODE_RESET,
             "Master password reset via recovery code",
             null);
+
+        notificationEventPublisher.publish(
+            userId,
+            NotificationEventType.VAULT_RECOVERY_CODE_USED,
+            "A vault recovery code was used",
+            "One of your vault recovery codes was just used to reset your master password. If this wasn't you, secure your account immediately.");
+
+        notificationEventPublisher.publish(
+            userId,
+            NotificationEventType.VAULT_MASTER_PASSWORD_CHANGED,
+            "Vault master password changed",
+            "Your vault master password was reset using a recovery code. If this wasn't you, secure your account immediately.");
 
         return;
       }

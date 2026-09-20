@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Briefcase,
+  CalendarCheck,
   ChevronsUpDown,
   Home as HomeIcon,
   ListChecks,
@@ -13,6 +14,7 @@ import {
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { useAuth } from '@/features/auth/auth-context';
+import { NotificationBell } from '@/features/core/notification-bell';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +59,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { label: 'Today', to: '/today', icon: CalendarCheck, enabled: true },
   { label: 'Home', to: '/home', icon: HomeIcon, enabled: true },
   { label: 'Job Tracker', to: '/jobs', icon: Briefcase, enabled: true },
   { label: 'Notes', to: '/notes', icon: StickyNote, enabled: true },
@@ -172,6 +175,9 @@ export function AppShell() {
             <span className="text-primary">~/</span>
             {currentPathSegment(location.pathname)}
           </span>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </header>
         <main className="flex-1 p-6">
           <Outlet />

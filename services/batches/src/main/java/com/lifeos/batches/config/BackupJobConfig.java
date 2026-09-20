@@ -1,5 +1,6 @@
 package com.lifeos.batches.config;
 
+import com.lifeos.batches.job.VaultBackupJobListener;
 import com.lifeos.batches.job.VaultBackupTasklet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.job.Job;
@@ -18,6 +19,7 @@ public class BackupJobConfig {
   private final JobRepository jobRepository;
   private final PlatformTransactionManager platformTransactionManager;
   private final VaultBackupTasklet vaultBackupTasklet;
+  private final VaultBackupJobListener vaultBackupJobListener;
 
   @Bean
   public Step vaultBackupStep() {
@@ -28,6 +30,9 @@ public class BackupJobConfig {
 
   @Bean
   public Job vaultBackupJob() {
-    return new JobBuilder("vaultBackupJob", jobRepository).start(vaultBackupStep()).build();
+    return new JobBuilder("vaultBackupJob", jobRepository)
+        .start(vaultBackupStep())
+        .listener(vaultBackupJobListener)
+        .build();
   }
 }

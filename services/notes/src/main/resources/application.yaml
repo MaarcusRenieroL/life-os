@@ -39,3 +39,6 @@ encryption:
 notes:
   attachments:
     storage-path: ${NOTE_ATTACHMENTS_PATH:./data/note-attachments}
+  follow-up:
+    scan:
+      cron: ${NOTE_FOLLOWUP_SCAN_CRON:0 0 8 * * *}

@@ -1,6 +1,8 @@
 package com.lifeos.vault.service;
 
 import com.lifeos.common.events.AuditEventType;
+import com.lifeos.common.events.NotificationEventPublisher;
+import com.lifeos.common.events.NotificationEventType;
 import com.lifeos.vault.domains.dto.response.VaultStatusResponse;
 import com.lifeos.vault.domains.entity.PaymentCard;
 import com.lifeos.vault.domains.entity.VaultEntry;
@@ -40,6 +42,7 @@ public class VaultMasterPasswordService {
   private final VaultKeyStore vaultKeyStore;
 
   private final AuditEventPublisher auditEventPublisher;
+  private final NotificationEventPublisher notificationEventPublisher;
 
   public void setup(UUID userId, String masterPassword) {
     if (vaultMasterPasswordRepository.existsByUserId(userId)) {
@@ -191,5 +194,11 @@ public class VaultMasterPasswordService {
 
     auditEventPublisher.publish(
         userId, AuditEventType.MASTER_PASSWORD_CHANGED, "Master Password Updated", null);
+
+    notificationEventPublisher.publish(
+        userId,
+        NotificationEventType.VAULT_MASTER_PASSWORD_CHANGED,
+        "Vault master password changed",
+        "Your vault master password was changed. If this wasn't you, secure your account immediately.");
   }
 }
