@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, Trash2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'notifications', label: 'Notifications' },
   { id: 'integrations', label: 'Integrations' },
   { id: 'data-privacy', label: 'Data & privacy' },
+  { id: 'advanced', label: 'Advanced' },
   { id: 'danger-zone', label: 'Danger zone', danger: true },
 ];
 
@@ -344,6 +346,8 @@ export function SettingsPage() {
             </section>
           </div>
 
+          <AdvancedSettingsSection />
+
           <section id="danger-zone" className="rounded-lg border border-destructive/35 bg-card p-5">
             <SectionHeading className="mb-1.5" tone="destructive">Danger zone</SectionHeading>
             <div className="mb-3.5 text-[11px] text-muted-foreground">
@@ -358,5 +362,104 @@ export function SettingsPage() {
 
       <DeleteAccountDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} />
     </div>
+  );
+}
+
+/** The "almost everything you can possibly think of" settings store - a generic module/key/value
+ * editor over core's UserSettingController, collapsed by default. Progressive disclosure on
+ * purpose: the daily-use surface above stays simple, this is for anyone who wants to reach past
+ * it. Not every module reads every setting yet (that's rolled out per-feature as each one is
+ * built), but everything stored here is real, persisted, and cached - not a mockup. */
+function AdvancedSettingsSection() {
+  const [expanded, setExpanded] = useState(false);
+  const [module, setModule] = useState('');
+  const [key, setKey] = useState('');
+  const [value, setValue] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const { data: settings = [] } = useQuery({
+    queryKey: ['core', 'settings'],
+    queryFn: coreApi.getSettings,
+    enabled: expanded,
+  });
+
+  async function addSetting() {
+    if (!module.trim() || !key.trim()) return;
+    setError(null);
+    try {
+      await coreApi.setSetting(module.trim(), key.trim(), value);
+      setModule('');
+      setKey('');
+      setValue('');
+      void queryClient.invalidateQueries({ queryKey: ['core', 'settings'] });
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not save that setting.'));
+    }
+  }
+
+  async function removeSetting(m: string, k: string) {
+    try {
+      await coreApi.deleteSetting(m, k);
+      void queryClient.invalidateQueries({ queryKey: ['core', 'settings'] });
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not remove that setting.'));
+    }
+  }
+
+  return (
+    <section id="advanced" className="rounded-lg border bg-card p-5">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between text-left"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <SectionHeading>Advanced</SectionHeading>
+        <ChevronDown className={cn('size-4 text-muted-foreground transition-transform', expanded && 'rotate-180')} />
+      </button>
+
+      {expanded && (
+        <div className="mt-3.5">
+          <p className="mb-3 text-[11px] text-muted-foreground">
+            Raw settings storage, keyed by module and name. Most people won't need this - it's
+            here for tuning things the regular settings above don't expose yet.
+          </p>
+
+          {settings.length > 0 && (
+            <div className="mb-3.5 flex flex-col gap-1.5">
+              {settings.map((s) => (
+                <div key={`${s.module}.${s.key}`} className="flex items-center justify-between rounded-md border px-3 py-2 text-xs">
+                  <span className="font-mono text-muted-foreground">
+                    {s.module}.{s.key} = <span className="text-foreground">{s.value ?? '—'}</span>
+                  </span>
+                  <Button variant="ghost" size="icon" className="size-6" onClick={() => void removeSetting(s.module, s.key)}>
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <Label className="mb-1 block text-[10px] text-muted-foreground">MODULE</Label>
+              <Input value={module} onChange={(e) => setModule(e.target.value)} placeholder="finance" className="h-8 w-28 text-xs" />
+            </div>
+            <div>
+              <Label className="mb-1 block text-[10px] text-muted-foreground">KEY</Label>
+              <Input value={key} onChange={(e) => setKey(e.target.value)} placeholder="budget-alert-threshold" className="h-8 w-48 text-xs" />
+            </div>
+            <div>
+              <Label className="mb-1 block text-[10px] text-muted-foreground">VALUE</Label>
+              <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="0.9" className="h-8 w-32 text-xs" />
+            </div>
+            <Button size="sm" className="h-8" onClick={() => void addSetting()} disabled={!module.trim() || !key.trim()}>
+              Save
+            </Button>
+          </div>
+          {error && <p className="mt-2 text-[11px] text-destructive">{error}</p>}
+        </div>
+      )}
+    </section>
   );
 }
