@@ -1,9 +1,12 @@
 package com.lifeos.finance_tracker.repository;
 
 import com.lifeos.finance_tracker.domains.entity.Transaction;
+import com.lifeos.finance_tracker.domains.enums.TransactionType;
+import com.lifeos.finance_tracker.domains.record.CategoryPeriodSpend;
 import com.lifeos.finance_tracker.domains.record.DashboardSummary;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,6 +33,13 @@ public interface TransactionRepository
   void deleteByIdAndUserId(UUID id, UUID userId);
 
   boolean existsBySourceReference(String sourceReference);
+
+  /**
+   * Count of transactions still awaiting a category - what the home and finance dashboards show as
+   * "N need review". Both used to fetch a page of 50 full transactions and filter it client-side,
+   * which both over-fetched and silently undercounted once a user had more than 50 uncategorized.
+   */
+  long countByUserIdAndCategoryIdIsNullAndTypeNot(UUID userId, TransactionType type);
 
   boolean existsByAccountIdAndAmountAndTransactionDateBetweenAndDescription(
       UUID accountId,
@@ -58,6 +68,38 @@ public interface TransactionRepository
       @Param("categoryId") UUID categoryId,
       @Param("start") Instant start,
       @Param("end") Instant end);
+
+  /**
+   * Bulk form of {@link #sumCategorySpendByPeriod}: both compared periods for every requested
+   * category, in one grouped pass. The per-category endpoint ran two of the query above per
+   * category, so a dashboard showing ~20 categories cost ~40 queries across ~20 HTTP requests.
+   *
+   * <p>The outer BETWEEN spans previousStart..currentEnd - the two periods are contiguous (last
+   * month's end butts up against this month's start), so that's one index-friendly range scan on
+   * (user_id, transaction_date) and the two conditional sums split it per period.
+   *
+   * <p>A category with no DEBIT activity in either period produces no row at all, so callers must
+   * fill in zeros for the requested ids that come back absent.
+   */
+  @Query(
+      "SELECT new com.lifeos.finance_tracker.domains.record.CategoryPeriodSpend("
+          + "  t.categoryId, "
+          + "  COALESCE(SUM(CASE WHEN t.transactionDate BETWEEN :currentStart AND :currentEnd "
+          + "    THEN t.amount ELSE 0 END), 0), "
+          + "  COALESCE(SUM(CASE WHEN t.transactionDate BETWEEN :previousStart AND :previousEnd "
+          + "    THEN t.amount ELSE 0 END), 0)"
+          + ") "
+          + "FROM Transaction t "
+          + "WHERE t.userId = :userId AND t.categoryId IN :categoryIds AND t.type = 'DEBIT' "
+          + "AND t.transactionDate BETWEEN :previousStart AND :currentEnd "
+          + "GROUP BY t.categoryId")
+  List<CategoryPeriodSpend> sumCategorySpendForPeriods(
+      @Param("userId") UUID userId,
+      @Param("categoryIds") Collection<UUID> categoryIds,
+      @Param("currentStart") Instant currentStart,
+      @Param("currentEnd") Instant currentEnd,
+      @Param("previousStart") Instant previousStart,
+      @Param("previousEnd") Instant previousEnd);
 
   @Query(
       value =
