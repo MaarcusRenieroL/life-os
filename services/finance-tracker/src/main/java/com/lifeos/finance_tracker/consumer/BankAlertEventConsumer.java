@@ -8,6 +8,7 @@ import com.lifeos.finance_tracker.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -45,6 +46,12 @@ public class BankAlertEventConsumer {
               .build();
 
       transactionService.createFromEmailAlert(request);
+    } catch (DataIntegrityViolationException e) {
+      // createFromEmailAlert's existsBySourceReference check and its insert are two separate
+      // statements, so two concurrent deliveries of the same alert can both pass the check. The
+      // unique index on source_reference (V12) makes the second insert fail instead of
+      // double-importing - which is the outcome we wanted, not an error worth alerting on.
+      log.debug("Bank alert {} was already imported concurrently, skipping", event.sourceReference());
     } catch (Exception e) {
       log.error(
           "Failed to process bank alert {}: {}", event.sourceReference(), e.getMessage(), e);
