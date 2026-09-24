@@ -5,7 +5,7 @@ import com.lifeos.common.domains.dto.response.TodayItemResponse;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,11 +48,33 @@ public class TodayService {
   }
 
   public List<TodayItemResponse> get(UUID userId) {
-    return Stream.of(
-            fetch(habitTrackerRestClient, "/v1/habits/internal/today", userId, "habit-tracker"),
-            fetch(jobTrackerRestClient, "/v1/jobs/internal/today", userId, "job-tracker"),
-            fetch(financeTrackerRestClient, "/v1/finance/internal/today", userId, "finance-tracker"),
-            fetch(notesRestClient, "/v1/notes/internal/today", userId, "notes"))
+    // Fan out in parallel rather than one module after another: this is the home screen's first
+    // paint, so it should cost the slowest module, not the sum of all four. fetch() already
+    // isolates its own failures and returns an empty list, so no future here completes
+    // exceptionally and join() can't throw - the per-module error handling is unchanged.
+    List<CompletableFuture<List<TodayItemResponse>>> pending =
+        List.of(
+            CompletableFuture.supplyAsync(
+                () ->
+                    fetch(
+                        habitTrackerRestClient,
+                        "/v1/habits/internal/today",
+                        userId,
+                        "habit-tracker")),
+            CompletableFuture.supplyAsync(
+                () -> fetch(jobTrackerRestClient, "/v1/jobs/internal/today", userId, "job-tracker")),
+            CompletableFuture.supplyAsync(
+                () ->
+                    fetch(
+                        financeTrackerRestClient,
+                        "/v1/finance/internal/today",
+                        userId,
+                        "finance-tracker")),
+            CompletableFuture.supplyAsync(
+                () -> fetch(notesRestClient, "/v1/notes/internal/today", userId, "notes")));
+
+    return pending.stream()
+        .map(CompletableFuture::join)
         .flatMap(List::stream)
         .sorted(
             Comparator.comparing(
