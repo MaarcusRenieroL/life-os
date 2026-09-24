@@ -93,14 +93,28 @@ const FILTER_CHIPS: { label: string; type: UiType | 'all' }[] = [
 ];
 
 export function AuditLogPage() {
-  const { data: events = [] } = useQuery({ queryKey: ['vault', 'audit-log'], queryFn: auditLogApi.getEvents });
+  // The endpoint is paginated now. Search/type/date filtering below all run client-side over the
+  // fetched set, so this takes one large page rather than the server's 50-row default - that keeps
+  // the filters working over a useful window while still bounding what used to be the entire
+  // (unbounded, Kafka-fed) audit_events table.
+  const { data: page } = useQuery({
+    queryKey: ['vault', 'audit-log'],
+    queryFn: () => auditLogApi.getEvents(),
+  });
+  const truncated = page ? page.totalElements > page.numberOfElements : false;
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<UiType | 'all'>('all');
   const [dateRange, setDateRange] = useState<7 | 30 | 9999>(30);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
-  const rows = useMemo(() => events.map(toAuditEvent), [events]);
+  const rows = useMemo(() => (page?.content ?? []).map(toAuditEvent), [page?.content]);
+
+  // Surfaced so a user looking at a filtered view knows the window is capped rather than
+  // silently believing they're seeing their whole history.
+  const truncationNotice = truncated
+    ? `Showing the ${page?.numberOfElements ?? 0} most recent of ${page?.totalElements ?? 0} events.`
+    : null;
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
@@ -188,6 +202,10 @@ export function AuditLogPage() {
         </Select>
         <DataTableViewOptions table={table} />
       </div>
+
+      {truncationNotice && (
+        <p className="mt-3 text-xs text-muted-foreground">{truncationNotice}</p>
+      )}
 
       <div className="mt-4">
         <DataTable table={table} emptyMessage="No events match." />
