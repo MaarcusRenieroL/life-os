@@ -34,7 +34,7 @@ public class JobLinkFetcher {
   private final RestClient restClient;
 
   public JobLinkFetcher(
-      @Qualifier("internalRestClientBuilder") RestClient.Builder restClientBuilder) {
+      @Qualifier("externalFetchRestClientBuilder") RestClient.Builder restClientBuilder) {
     this.restClient = restClientBuilder.clone().build();
   }
 
