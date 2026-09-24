@@ -21,7 +21,7 @@ import com.lifeos.finance_tracker.domains.entity.TransactionCategory;
 import com.lifeos.finance_tracker.domains.enums.SourceType;
 import com.lifeos.finance_tracker.domains.enums.TransactionStatus;
 import com.lifeos.finance_tracker.domains.enums.TransactionType;
-import com.lifeos.finance_tracker.domains.record.PageResponse;
+import com.lifeos.common.domains.dto.response.PageResponse;
 import com.lifeos.finance_tracker.exception.AccountNotFoundException;
 import com.lifeos.finance_tracker.exception.CategoryNotFoundException;
 import com.lifeos.finance_tracker.exception.NoDefaultAccountException;
@@ -30,7 +30,7 @@ import com.lifeos.finance_tracker.repository.AccountRepository;
 import com.lifeos.finance_tracker.repository.CategoryRepository;
 import com.lifeos.finance_tracker.repository.TransactionCategoryRepository;
 import com.lifeos.finance_tracker.repository.TransactionRepository;
-import com.lifeos.finance_tracker.util.MerchantNameNormalizer;
+import com.lifeos.common.finance.MerchantNameNormalizer;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -115,6 +115,20 @@ public class TransactionService {
                     transaction, tagsByTransactionId.getOrDefault(transaction.getId(), List.of())));
 
     return PageResponse.from(responses);
+  }
+
+  /**
+   * How many transactions still need a category. The home and finance dashboards only ever showed
+   * this as a number, but fetched a 50-row page of full transactions and counted client-side - which
+   * over-fetched and, past 50 uncategorized rows, quietly reported the wrong number.
+   */
+  @Transactional(readOnly = true)
+  public long countNeedsReview(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    // Credits are income, not spending to categorize - matching the filter both dashboards applied.
+    return transactionRepository.countByUserIdAndCategoryIdIsNullAndTypeNot(
+        userId, TransactionType.CREDIT);
   }
 
   @Transactional(readOnly = true)
