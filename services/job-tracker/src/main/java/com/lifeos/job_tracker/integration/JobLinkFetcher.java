@@ -1,12 +1,12 @@
 package com.lifeos.job_tracker.integration;
 
 import com.lifeos.job_tracker.exception.JobLinkUnreadableException;
-import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -22,7 +22,6 @@ import org.springframework.web.client.RestClientResponseException;
  * the description.
  */
 @Component
-@RequiredArgsConstructor
 public class JobLinkFetcher {
 
   private static final Logger log = LoggerFactory.getLogger(JobLinkFetcher.class);
@@ -32,7 +31,12 @@ public class JobLinkFetcher {
           + " (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
   private static final int MAX_TEXT_CHARS = 24_000;
 
-  private final RestClient.Builder restClientBuilder;
+  private final RestClient restClient;
+
+  public JobLinkFetcher(
+      @Qualifier("internalRestClientBuilder") RestClient.Builder restClientBuilder) {
+    this.restClient = restClientBuilder.clone().build();
+  }
 
   public record FetchedPage(String url, String content) {}
 
@@ -40,8 +44,7 @@ public class JobLinkFetcher {
     String html;
     try {
       html =
-          restClientBuilder
-              .build()
+          restClient
               .get()
               .uri(url)
               .header("User-Agent", USER_AGENT)
