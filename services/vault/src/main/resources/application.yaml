@@ -12,6 +12,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+    open-in-view: false
   flyway:
     schemas: vault_schema
     default-schema: vault_schema

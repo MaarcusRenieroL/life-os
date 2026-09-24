@@ -12,6 +12,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+    open-in-view: false
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -70,9 +71,6 @@ ai:
 job-tracker:
   storage:
     resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}
-  latex:
-    tectonic-bin: ${TECTONIC_BIN:tectonic}
-    timeout-seconds: ${TECTONIC_TIMEOUT_SECONDS:90}
   attention:
     # Once a day is enough for "interview coming up" / "referral follow-up due" nudges - these
     # aren't time-sensitive to the minute like a habit reminder. Runs at 08:00 UTC.
