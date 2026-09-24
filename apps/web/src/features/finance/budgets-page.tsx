@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { BudgetDialog } from './budget-dialog';
 import { budgetApi } from './budget-api';
 import { categoryApi } from './category-api';
-import { analyticsApi } from './analytics-api';
+import { useCategoryComparisons } from './category-comparison-query';
 import type { BudgetResponse } from './types';
 import { formatINR } from './utils';
 
@@ -35,13 +35,14 @@ export function BudgetsPage() {
   const { data: budgets = [] } = useQuery({ queryKey: ['finance', 'budgets'], queryFn: budgetApi.getBudgets });
   const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
 
-  const expenseCategoryIds = categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id);
-  const comparisonIds = Array.from(new Set([...expenseCategoryIds, ...budgets.map((b) => b.categoryId)]));
-  const { data: comparisons = [] } = useQuery({
-    queryKey: ['finance', 'comparisons', comparisonIds],
-    queryFn: () => Promise.all(comparisonIds.map((id) => analyticsApi.getCategoryComparison(id))),
-    enabled: comparisonIds.length > 0,
-  });
+  // Memoized so its identity is stable across unrelated re-renders - it's a dependency of the
+  // uncapped memo below, which would otherwise recompute on every render of this page.
+  const expenseCategoryIds = useMemo(
+    () => categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id),
+    [categories],
+  );
+
+  const comparisons = useCategoryComparisons(categories);
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [dialogOpen, setDialogOpen] = useState(false);

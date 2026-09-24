@@ -12,6 +12,7 @@ import { accountApi } from './account-api';
 import { analyticsApi } from './analytics-api';
 import { budgetApi } from './budget-api';
 import { categoryApi } from './category-api';
+import { useCategoryComparisons } from './category-comparison-query';
 import { merchantApi } from './merchant-api';
 import { recurringPatternApi } from './recurring-pattern-api';
 import { transactionApi } from './transaction-api';
@@ -26,22 +27,24 @@ export function FinanceDashboardPage() {
   const { data: summary } = useQuery({ queryKey: ['finance', 'dashboard'], queryFn: analyticsApi.getDashboardSummary });
   const { data: trends = [] } = useQuery({ queryKey: ['finance', 'trends'], queryFn: analyticsApi.getTrends });
   const { data: budgets = [] } = useQuery({ queryKey: ['finance', 'budgets'], queryFn: budgetApi.getBudgets });
-  const { data: txPage } = useQuery({
-    queryKey: ['finance', 'transactions', 'dashboard'],
-    queryFn: () => transactionApi.getTransactions(0, 50),
+  // A count endpoint rather than a 50-row page of full transactions filtered client-side - the only
+  // thing derived from it here was this number, and past 50 uncategorized rows it was wrong anyway.
+  const { data: needsReviewCount = 0 } = useQuery({
+    queryKey: ['finance', 'transactions', 'needs-review-count'],
+    queryFn: transactionApi.getNeedsReviewCount,
   });
   const { data: patterns = [] } = useQuery({ queryKey: ['finance', 'recurring'], queryFn: recurringPatternApi.getPatterns });
   const { data: merchants = [] } = useQuery({ queryKey: ['finance', 'merchants'], queryFn: merchantApi.getMerchants });
 
-  const expenseCategoryIds = categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id);
-  const budgetedCategoryIds = budgets.map((b) => b.categoryId);
-  const comparisonIds = Array.from(new Set([...expenseCategoryIds, ...budgetedCategoryIds]));
+  // Memoized so its identity is stable across unrelated re-renders (e.g. typing in the income
+  // input below) - it's a dependency of the categorySpend memo, which would otherwise recompute on
+  // every keystroke.
+  const expenseCategoryIds = useMemo(
+    () => categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id),
+    [categories],
+  );
 
-  const { data: comparisons = [] } = useQuery({
-    queryKey: ['finance', 'comparisons', comparisonIds],
-    queryFn: () => Promise.all(comparisonIds.map((id) => analyticsApi.getCategoryComparison(id))),
-    enabled: comparisonIds.length > 0,
-  });
+  const comparisons = useCategoryComparisons(categories);
 
   const [editingIncome, setEditingIncome] = useState(false);
   const [incomeInput, setIncomeInput] = useState('');
@@ -55,9 +58,6 @@ export function FinanceDashboardPage() {
   const effectiveIncome = fixedMonthlyIncome ?? totalIncome ?? 0;
   const savings = effectiveIncome - (totalExpenses ?? 0);
   const savingsRate = effectiveIncome > 0 ? (savings / effectiveIncome) * 100 : 0;
-
-  const transactions = txPage?.content ?? [];
-  const needsReviewCount = transactions.filter((t) => t.categoryId === null && t.type !== 'CREDIT').length;
 
   const trendBars = useMemo(() => {
     const max = Math.max(1, ...trends.map((t) => t.totalSpend));

@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { analyticsApi } from './analytics-api';
 import { categoryApi } from './category-api';
+import { useCategoryComparisons } from './category-comparison-query';
 import { formatINR } from './utils';
 
 export function AnalyticsPage() {
@@ -14,12 +15,13 @@ export function AnalyticsPage() {
     queryFn: () => analyticsApi.getTopMerchants(8),
   });
   const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
-  const expenseCategoryIds = categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id);
-  const { data: comparisons = [] } = useQuery({
-    queryKey: ['finance', 'comparisons', expenseCategoryIds],
-    queryFn: () => Promise.all(expenseCategoryIds.map((id) => analyticsApi.getCategoryComparison(id))),
-    enabled: expenseCategoryIds.length > 0,
-  });
+  // The shared hook returns comparisons for every category so all four finance pages hit one cache
+  // entry; this page only charts expense categories, so filter back down to those.
+  const allComparisons = useCategoryComparisons(categories);
+  const comparisons = useMemo(() => {
+    const expenseIds = new Set(categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id));
+    return allComparisons.filter((c) => expenseIds.has(c.categoryId));
+  }, [allComparisons, categories]);
 
   const { avgMonthlySpend, highestMonth, lowestMonth } = useMemo(
     () => ({
