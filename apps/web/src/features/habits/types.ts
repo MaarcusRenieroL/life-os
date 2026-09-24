@@ -268,23 +268,7 @@ export interface LoggingTimePattern {
   zoneId: string;
 }
 
-// --- In-app notifications (GET /v1/habits/notifications) ---------------------
-// Derived live on each request - there is no notification table, no read state and no delivery
-// channel. In-app only, by design.
-
-export type HabitNotificationType =
-  | 'STREAK_AT_RISK'
-  | 'STREAK_MILESTONE'
-  | 'WEEKLY_SUMMARY'
-  | 'REMINDER_SUGGESTION';
-
-export interface HabitNotification {
-  /** Content-derived and stable across refreshes - not a database id. */
-  id: string;
-  type: HabitNotificationType;
-  severity: 'info' | 'warning' | 'success';
-  title: string;
-  message: string;
-  habitId: string | null;
-  habitName: string | null;
-}
+// Streak-at-risk and streak-milestone alerts are published to the global, cross-module
+// notification system (core service) rather than served from a habits-only endpoint - see
+// StreakService/HabitStreakAtRiskScheduler on the backend and NotificationBell in
+// features/core on the frontend.

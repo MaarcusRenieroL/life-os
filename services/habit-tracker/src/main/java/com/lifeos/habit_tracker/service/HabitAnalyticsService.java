@@ -490,10 +490,6 @@ public class HabitAnalyticsService {
         .toList();
   }
 
-  List<Habit> activeHabits(UUID userId) {
-    return habitRepository.findAllByUserIdAndStatus(userId, HabitStatus.ACTIVE);
-  }
-
   private Map<UUID, List<HabitLog>> logsByHabit(
       UUID userId, LocalDate from, LocalDate to, List<Habit> habits) {
     if (habits.isEmpty()) {
