@@ -21,7 +21,12 @@ export function NotificationBell() {
   const { data: unread } = useQuery({
     queryKey: ['core', 'notifications', 'unread-count'],
     queryFn: coreApi.getUnreadCount,
-    refetchInterval: 30_000,
+    // Mounted on every authenticated route (see AppShell), so this polls constantly regardless of
+    // whether the bell is visible/relevant right now. 3 min is plenty fresh for a single-user app
+    // with no concurrent writers; refetchOnWindowFocus overrides the app-wide default (off, see
+    // main.tsx) just for this query so switching back to the tab still feels live.
+    refetchInterval: 3 * 60_000,
+    refetchOnWindowFocus: true,
     retry: false,
     throwOnError: false,
   });
