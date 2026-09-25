@@ -43,9 +43,16 @@ export function HabitDetailPage() {
     enabled: !!id,
   });
 
+  // Bounded to the last 12 months rather than the habit's whole history - the log history table
+  // below renders every row unbounded, so a habit tracked for a couple of years was shipping and
+  // rendering hundreds of rows on every detail-page open.
+  const logsFrom = new Date();
+  logsFrom.setFullYear(logsFrom.getFullYear() - 1);
+  const logsFromIso = logsFrom.toISOString().slice(0, 10);
+
   const { data: logs = [], isLoading: logsLoading } = useQuery({
-    queryKey: ['habits', id, 'logs', 'all'],
-    queryFn: () => habitsApi.logs(id!),
+    queryKey: ['habits', id, 'logs', logsFromIso],
+    queryFn: () => habitsApi.logs(id!, logsFromIso),
     enabled: !!id,
   });
 
