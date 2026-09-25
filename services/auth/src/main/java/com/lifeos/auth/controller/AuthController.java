@@ -16,6 +16,7 @@ import com.lifeos.auth.domains.entity.DeviceSession;
 import com.lifeos.auth.service.AccountService;
 import com.lifeos.auth.service.AuthService;
 import com.lifeos.auth.service.UserService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -97,7 +98,7 @@ public class AuthController {
 
   @PostMapping("/register")
   public ResponseEntity<ApiResponse<Void>> register(
-      @RequestBody UserRegisterRequest userRegisterRequest) {
+      @Valid @RequestBody UserRegisterRequest userRegisterRequest) {
     authService.register(userRegisterRequest.getEmail(), userRegisterRequest.getRawPassword());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(ApiResponse.success(null, "User registered successfully"));
@@ -105,7 +106,7 @@ public class AuthController {
 
   @PostMapping("/login")
   public ResponseEntity<ApiResponse<AuthResponse>> login(
-      @RequestBody UserLoginRequest userLoginRequest) {
+      @Valid @RequestBody UserLoginRequest userLoginRequest) {
     AuthResponse authResponse =
         authService.login(
             userLoginRequest.getEmail(),
