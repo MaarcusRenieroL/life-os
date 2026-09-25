@@ -6,9 +6,9 @@ import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { analyticsApi } from './analytics-api';
 import { budgetApi } from './budget-api';
 import { categoryApi } from './category-api';
+import { useCategoryComparisons } from './category-comparison-query';
 import { downloadBlob, reportApi } from './report-api';
 import { formatINR } from './utils';
 
@@ -24,12 +24,14 @@ function defaultTaxYear(): number {
 export function ReportPage() {
   const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
   const { data: budgets = [] } = useQuery({ queryKey: ['finance', 'budgets'], queryFn: budgetApi.getBudgets });
-  const expenseCategoryIds = categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id);
-  const { data: comparisons = [] } = useQuery({
-    queryKey: ['finance', 'comparisons', expenseCategoryIds],
-    queryFn: () => Promise.all(expenseCategoryIds.map((id) => analyticsApi.getCategoryComparison(id))),
-    enabled: expenseCategoryIds.length > 0,
-  });
+  // The shared hook returns comparisons for every category so all four finance pages hit one cache
+  // entry. The spend rollups below are expense-only, so they use the filtered list; budget
+  // performance looks up by the budget's own categoryId and uses the full set.
+  const allComparisons = useCategoryComparisons(categories);
+  const comparisons = useMemo(() => {
+    const expenseIds = new Set(categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id));
+    return allComparisons.filter((c) => expenseIds.has(c.categoryId));
+  }, [allComparisons, categories]);
 
   const [taxYear, setTaxYear] = useState(defaultTaxYear());
   const [exporting, setExporting] = useState(false);
@@ -48,7 +50,7 @@ export function ReportPage() {
   );
 
   const budgetPerformance = budgets.map((b) => {
-    const spend = comparisons.find((c) => c.categoryId === b.categoryId)?.currentMonthSpend ?? 0;
+    const spend = allComparisons.find((c) => c.categoryId === b.categoryId)?.currentMonthSpend ?? 0;
     const pct = b.budgetAmount > 0 ? (spend / b.budgetAmount) * 100 : 0;
     return {
       name: categories.find((c) => c.id === b.categoryId)?.name ?? 'Unknown',

@@ -7,7 +7,7 @@ import com.lifeos.finance_tracker.domains.entity.Merchant;
 import com.lifeos.finance_tracker.exception.MerchantNotFoundException;
 import com.lifeos.finance_tracker.repository.MerchantRepository;
 import com.lifeos.finance_tracker.util.DescriptionFingerprint;
-import com.lifeos.finance_tracker.util.MerchantNameNormalizer;
+import com.lifeos.common.finance.MerchantNameNormalizer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;

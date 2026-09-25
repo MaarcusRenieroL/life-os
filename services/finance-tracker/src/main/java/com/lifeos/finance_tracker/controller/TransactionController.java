@@ -10,7 +10,7 @@ import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionCategorie
 import com.lifeos.finance_tracker.domains.dto.request.UpdateTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.response.TransactionResponse;
 import com.lifeos.finance_tracker.domains.enums.SourceType;
-import com.lifeos.finance_tracker.domains.record.PageResponse;
+import com.lifeos.common.domains.dto.response.PageResponse;
 import com.lifeos.finance_tracker.service.TransactionService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -48,6 +48,19 @@ public class TransactionController {
             transactionService.getAllPaginated(
                 authentication, page, size, search, status, categoryId, sourceType),
             "Transactions fetched successfully"));
+  }
+
+  /**
+   * Just the count of transactions needing a category, for the dashboards' "N need review" badge.
+   * Declared before the {@code /{id}} mapping below for readability - Spring matches the literal
+   * path first regardless.
+   */
+  @GetMapping("/needs-review-count")
+  public ResponseEntity<ApiResponse<Long>> getNeedsReviewCount(Authentication authentication) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            transactionService.countNeedsReview(authentication),
+            "Needs-review count fetched successfully"));
   }
 
   @GetMapping("/{id}")

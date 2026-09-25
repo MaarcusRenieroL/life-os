@@ -3,6 +3,7 @@ package com.lifeos.finance_tracker.service;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateMonthlyIncomeRequest;
 import com.lifeos.finance_tracker.domains.entity.UserFinanceSettings;
 import com.lifeos.finance_tracker.domains.record.CategoryComparison;
+import com.lifeos.finance_tracker.domains.record.CategoryPeriodSpend;
 import com.lifeos.finance_tracker.domains.record.DashboardSummary;
 import com.lifeos.finance_tracker.domains.record.MerchantSpend;
 import com.lifeos.finance_tracker.domains.record.MonthlyTrend;
@@ -15,7 +16,9 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cache.annotation.Cacheable;
@@ -89,42 +92,101 @@ public class AnalyticsService {
   @Cacheable(value = "finance-analytics-category", key = "#authentication.principal + ':' + #categoryId")
   public CategoryComparison getCategoryAnalytics(Authentication authentication, UUID categoryId) {
     UUID userId = (UUID) authentication.getPrincipal();
-
-    ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
-
-    Instant startThisMonth = now.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant();
-    Instant endThisMonth = now.toLocalDate().plusDays(1).atStartOfDay(ZONE_ID).toInstant();
-
-    ZonedDateTime lastMonth = now.minusMonths(1);
-    Instant startLastMonth =
-        lastMonth.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant();
-    Instant endLastMonth =
-        lastMonth
-            .withDayOfMonth(lastMonth.toLocalDate().lengthOfMonth())
-            .toLocalDate()
-            .plusDays(1)
-            .atStartOfDay(ZONE_ID)
-            .toInstant();
+    ComparisonWindow window = ComparisonWindow.thisMonthVsLast();
 
     BigDecimal currentMonthSpend =
         transactionRepository.sumCategorySpendByPeriod(
-            userId, categoryId, startThisMonth, endThisMonth);
+            userId, categoryId, window.currentStart(), window.currentEnd());
     BigDecimal lastMonthSpend =
         transactionRepository.sumCategorySpendByPeriod(
-            userId, categoryId, startLastMonth, endLastMonth);
+            userId, categoryId, window.previousStart(), window.previousEnd());
 
-    BigDecimal difference = currentMonthSpend.subtract(lastMonthSpend);
+    return toComparison(categoryId, currentMonthSpend, lastMonthSpend);
+  }
+
+  /**
+   * Aggregate form of {@link #getCategoryAnalytics}: the whole set of categories a page cares about
+   * in one call and one grouped query, instead of the frontend fanning out one request per category.
+   * The dashboard, budgets, analytics and report pages each did that fan-out (up to ~20 requests,
+   * ~40 queries) and cached the results under different per-page keys, so navigating between them
+   * re-ran the whole thing.
+   *
+   * <p>Deliberately not {@code @Cacheable}: the cache key would be the id set, and the four callers
+   * ask about overlapping-but-different sets, so it would mostly miss while still needing eviction
+   * on every transaction write. The single grouped query is cheap enough not to need it, and the
+   * per-category method above stays cached for callers that want one.
+   */
+  public List<CategoryComparison> getCategoryAnalyticsBulk(
+      Authentication authentication, List<UUID> categoryIds) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    if (categoryIds == null || categoryIds.isEmpty()) {
+      return List.of();
+    }
+
+    // Deduplicated so a repeated id doesn't widen the IN list, but the response is built from the
+    // distinct ids below so every requested category still gets exactly one entry.
+    List<UUID> distinctIds = categoryIds.stream().distinct().toList();
+    ComparisonWindow window = ComparisonWindow.thisMonthVsLast();
+
+    Map<UUID, CategoryPeriodSpend> spendByCategory =
+        transactionRepository
+            .sumCategorySpendForPeriods(
+                userId,
+                distinctIds,
+                window.currentStart(),
+                window.currentEnd(),
+                window.previousStart(),
+                window.previousEnd())
+            .stream()
+            .collect(Collectors.toMap(CategoryPeriodSpend::categoryId, row -> row));
+
+    // A category with no spend in either period produces no row, so fall back to zeros rather than
+    // omitting it - callers index this by categoryId and expect every id they asked for.
+    return distinctIds.stream()
+        .map(
+            id -> {
+              CategoryPeriodSpend row = spendByCategory.get(id);
+              return row == null
+                  ? toComparison(id, BigDecimal.ZERO, BigDecimal.ZERO)
+                  : toComparison(id, row.currentPeriodSpend(), row.previousPeriodSpend());
+            })
+        .toList();
+  }
+
+  private CategoryComparison toComparison(
+      UUID categoryId, BigDecimal currentSpend, BigDecimal previousSpend) {
+    BigDecimal difference = currentSpend.subtract(previousSpend);
     BigDecimal percentageChange = BigDecimal.ZERO;
 
-    if (lastMonthSpend.compareTo(BigDecimal.ZERO) > 0) {
+    if (previousSpend.compareTo(BigDecimal.ZERO) > 0) {
       percentageChange =
-          difference
-              .divide(lastMonthSpend, 4, RoundingMode.HALF_UP)
-              .multiply(BigDecimal.valueOf(100));
+          difference.divide(previousSpend, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
     }
 
     return new CategoryComparison(
-        categoryId, currentMonthSpend, lastMonthSpend, difference, percentageChange);
+        categoryId, currentSpend, previousSpend, difference, percentageChange);
+  }
+
+  /** The "this month so far vs. all of last month" window both category endpoints compare over. */
+  private record ComparisonWindow(
+      Instant currentStart, Instant currentEnd, Instant previousStart, Instant previousEnd) {
+
+    static ComparisonWindow thisMonthVsLast() {
+      ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
+      ZonedDateTime lastMonth = now.minusMonths(1);
+
+      return new ComparisonWindow(
+          now.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant(),
+          now.toLocalDate().plusDays(1).atStartOfDay(ZONE_ID).toInstant(),
+          lastMonth.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant(),
+          lastMonth
+              .withDayOfMonth(lastMonth.toLocalDate().lengthOfMonth())
+              .toLocalDate()
+              .plusDays(1)
+              .atStartOfDay(ZONE_ID)
+              .toInstant());
+    }
   }
 
   @Cacheable(value = "finance-analytics-trends", key = "#authentication.principal")

@@ -11,6 +11,7 @@ import com.lifeos.batches.domains.record.RawAlertEmail;
 import com.lifeos.batches.domains.record.RawEmail;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -210,10 +211,19 @@ public class GmailMessageService {
     return new Gmail.Builder(
             TRANSPORT,
             JSON_FACTORY,
-            request ->
-                request
-                    .getHeaders()
-                    .setAuthorization("Bearer " + gmailOAuthService.getValidAccessToken()))
+            request -> {
+              request
+                  .getHeaders()
+                  .setAuthorization("Bearer " + gmailOAuthService.getValidAccessToken());
+              // Google's client defaults to a 20s connect / 20s read timeout, but it's set per
+              // request and easy to lose track of - pin it explicitly. This runs on the scheduled
+              // poller, and a hung Gmail call with no timeout would hold its thread (and the
+              // service's 6-connection pool is small) indefinitely. Not one of common's
+              // RestClient.Builder beans because this is Google's own HTTP transport, not Spring's
+              // RestClient, so those beans don't apply here.
+              request.setConnectTimeout((int) Duration.ofSeconds(10).toMillis());
+              request.setReadTimeout((int) Duration.ofSeconds(30).toMillis());
+            })
         .setApplicationName("life-os-batches")
         .build();
   }

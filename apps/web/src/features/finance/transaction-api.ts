@@ -17,6 +17,11 @@ export const transactionApi = {
   getTransactions(page = 0, size = 50, filters?: TransactionFilters): Promise<SpringPage<TransactionResponse>> {
     return unwrap(api.get(baseUrl, { params: { page, size, ...filters } }));
   },
+  // Just the count, for the "N need review" badges - callers used to fetch a 50-row page of full
+  // transactions and filter it client-side, which also undercounted past 50 uncategorized rows.
+  getNeedsReviewCount(): Promise<number> {
+    return unwrap(api.get(`${baseUrl}/needs-review-count`));
+  },
   getTransaction(id: string): Promise<TransactionResponse> {
     return unwrap(api.get(`${baseUrl}/${id}`));
   },

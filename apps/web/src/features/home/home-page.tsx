@@ -44,15 +44,20 @@ export function HomePage() {
     retry: false,
     throwOnError: false,
   });
+  // Keyed exactly as the finance module keys it (['finance','accounts'], same staleTime) so the two
+  // actually share one cache entry - this used to sit under a 'home' suffix and duplicate the fetch.
   const { data: accounts } = useQuery({
-    queryKey: ['finance', 'accounts', 'home'],
+    queryKey: ['finance', 'accounts'],
     queryFn: accountApi.getAccounts,
+    staleTime: 5 * 60_000,
     retry: false,
     throwOnError: false,
   });
-  const { data: txPage } = useQuery({
-    queryKey: ['finance', 'transactions', 'home'],
-    queryFn: () => transactionApi.getTransactions(0, 50),
+  // A count endpoint rather than 50 full transaction objects just to .filter().length them - which
+  // also silently undercounted once there were more than 50 uncategorized.
+  const { data: financeNeedsReview = 0 } = useQuery({
+    queryKey: ['finance', 'transactions', 'needs-review-count'],
+    queryFn: transactionApi.getNeedsReviewCount,
     retry: false,
     throwOnError: false,
   });
@@ -74,16 +79,18 @@ export function HomePage() {
     retry: false,
     throwOnError: false,
   });
-  const { data: recentEvents = [] } = useQuery({
+  // The audit-events endpoint is paginated now, and this only ever shows the 6 most recent - so ask
+  // for one small page instead of the whole (unbounded) table.
+  const { data: recentEventsPage } = useQuery({
     queryKey: ['audit-log', 'events', 'home'],
-    queryFn: auditLogApi.getEvents,
+    queryFn: () => auditLogApi.getEvents(0, 6),
     retry: false,
     throwOnError: false,
   });
+  const recentEvents = recentEventsPage?.content ?? [];
 
   const vaultActionRequired = (healthSummary?.weakCount ?? 0) + (healthSummary?.duplicateCount ?? 0);
   const financeTotalBalance = accounts?.reduce((sum, a) => sum + a.currentBalance, 0) ?? null;
-  const financeNeedsReview = (txPage?.content ?? []).filter((t) => t.categoryId === null && t.type !== 'CREDIT').length;
   const modulesActiveCount = APP_MODULES.filter((m) => m.enabled).length;
 
   // Built, working modules sort ahead of not-yet-built ones so the grid always

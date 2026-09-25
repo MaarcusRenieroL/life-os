@@ -13,6 +13,16 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          # A bank-statement import saves a whole statement in one saveAll (see
+          # TransactionService#createFromCsvImportBatch) - 100-400 rows, which without batching is
+          # one INSERT round-trip per row. Transaction/entity ids use GenerationType.UUID
+          # (assigned app-side before insert), not IDENTITY, so Hibernate can actually batch these.
+          batch_size: 30
+        order_inserts: true
+        order_updates: true
   flyway:
     schemas: finance_schema
     default-schema: finance_schema
