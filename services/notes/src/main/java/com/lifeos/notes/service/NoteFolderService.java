@@ -153,6 +153,10 @@ public class NoteFolderService {
 
   // Note ownership is verified by the caller (NoteService) before these run -
   // this service only owns folder-side invariants.
+  // folderIds is part of the note-detail payload.
+  @CacheEvict(
+      value = NoteService.NOTE_DETAIL_CACHE,
+      key = NoteService.NOTE_DETAIL_KEY_BY_NOTE_ID)
   public void assignNoteToFolder(UUID userId, UUID noteId, UUID folderId) {
     requireOwned(userId, folderId);
 
@@ -163,6 +167,9 @@ public class NoteFolderService {
     }
   }
 
+  @CacheEvict(
+      value = NoteService.NOTE_DETAIL_CACHE,
+      key = NoteService.NOTE_DETAIL_KEY_BY_NOTE_ID)
   public void removeNoteFromFolder(UUID userId, UUID noteId, UUID folderId) {
     requireOwned(userId, folderId);
     noteFolderAssignmentRepository.deleteByNoteIdAndFolderId(noteId, folderId);

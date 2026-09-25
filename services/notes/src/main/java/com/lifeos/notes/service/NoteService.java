@@ -13,6 +13,7 @@ import com.lifeos.notes.domains.dto.response.NoteVersionResponse;
 import com.lifeos.notes.domains.dto.response.TagResponse;
 import com.lifeos.notes.domains.dto.response.TrashedNoteResponse;
 import com.lifeos.notes.domains.entity.Note;
+import com.lifeos.notes.domains.entity.NoteLink;
 import com.lifeos.notes.domains.entity.NoteModuleLink;
 import com.lifeos.notes.domains.entity.NoteTag;
 import com.lifeos.notes.domains.entity.NoteVersion;
@@ -34,7 +35,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -47,6 +51,16 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 @Transactional
 public class NoteService {
+
+  // The "note-detail" cache (10 min TTL, registered in CacheConfig) backs
+  // NoteService#get. Keyed on user + note so one user's cached detail can
+  // never be served to another, even though note ids are globally unique.
+  // These are package-private because the sibling services that mutate parts
+  // of the detail payload (links, folders, module links, attachments) evict
+  // the same key and must use the identical name/key expression.
+  static final String NOTE_DETAIL_CACHE = "note-detail";
+  static final String NOTE_DETAIL_KEY = "#userId + ':' + #id";
+  static final String NOTE_DETAIL_KEY_BY_NOTE_ID = "#userId + ':' + #noteId";
 
   private static final Map<String, String> SORT_FIELDS =
       Map.of("title", "title", "created", "createdAt", "modified", "updatedAt", "manual", "updatedAt");
@@ -71,6 +85,7 @@ public class NoteService {
       NoteType noteType,
       boolean archived,
       Boolean favorite,
+      Boolean pinned,
       int page,
       int size) {
     Specification<Note> spec =
@@ -93,6 +108,10 @@ public class NoteService {
       spec = spec.and(NoteSpecifications.favorite(favorite));
     }
 
+    if (pinned != null) {
+      spec = spec.and(NoteSpecifications.pinned(pinned));
+    }
+
     String sortField = SORT_FIELDS.getOrDefault(sort, "updatedAt");
     Sort.Direction direction = "asc".equalsIgnoreCase(order) ? Sort.Direction.ASC : Sort.Direction.DESC;
     Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
@@ -100,6 +119,7 @@ public class NoteService {
     return noteRepository.findAll(spec, pageable).map(this::toSummary);
   }
 
+  @Cacheable(value = NOTE_DETAIL_CACHE, key = NOTE_DETAIL_KEY)
   @Transactional(readOnly = true)
   public NoteResponse get(UUID userId, UUID id) {
     return toFull(requireOwned(userId, id));
@@ -177,6 +197,9 @@ public class NoteService {
     return toFull(noteRepository.saveAndFlush(note));
   }
 
+  // Covers content edits (which also append a version), pin/favorite toggles
+  // and archive/unarchive - each changes the cached detail payload.
+  @CacheEvict(value = NOTE_DETAIL_CACHE, key = NOTE_DETAIL_KEY)
   public NoteResponse update(UUID userId, UUID id, UpdateNoteRequest request) {
     Note note = requireOwned(userId, id);
 
@@ -237,6 +260,7 @@ public class NoteService {
     return toFull(noteRepository.saveAndFlush(note));
   }
 
+  @CacheEvict(value = NOTE_DETAIL_CACHE, key = NOTE_DETAIL_KEY_BY_NOTE_ID)
   public NoteResponse addTag(UUID userId, UUID noteId, UUID tagId) {
     Note note = requireOwned(userId, noteId);
     tagService.requireOwned(userId, tagId);
@@ -244,18 +268,21 @@ public class NoteService {
     return toFull(note);
   }
 
+  @CacheEvict(value = NOTE_DETAIL_CACHE, key = NOTE_DETAIL_KEY_BY_NOTE_ID)
   public NoteResponse removeTag(UUID userId, UUID noteId, UUID tagId) {
     Note note = requireOwned(userId, noteId);
     noteTagRepository.deleteByNoteIdAndTagId(noteId, tagId);
     return toFull(note);
   }
 
+  @CacheEvict(value = NOTE_DETAIL_CACHE, key = NOTE_DETAIL_KEY)
   public void softDelete(UUID userId, UUID id) {
     Note note = requireOwned(userId, id);
     note.setDeletedAt(Instant.now());
     noteRepository.save(note);
   }
 
+  @CacheEvict(value = NOTE_DETAIL_CACHE, key = NOTE_DETAIL_KEY)
   public NoteResponse restore(UUID userId, UUID id) {
     Note note = noteRepository.findByIdAndUserId(id, userId).orElseThrow(() -> new NoteNotFoundException(id));
     note.setDeletedAt(null);
@@ -279,6 +306,7 @@ public class NoteService {
         .toList();
   }
 
+  @CacheEvict(value = NOTE_DETAIL_CACHE, key = NOTE_DETAIL_KEY)
   public void permanentlyDelete(UUID userId, UUID id) {
     Note note =
         noteRepository
@@ -411,6 +439,9 @@ public class NoteService {
         .toList();
   }
 
+  // Rolls content back and appends a new version, so both the content and the
+  // inline version list in the cached detail go stale.
+  @CacheEvict(value = NOTE_DETAIL_CACHE, key = NOTE_DETAIL_KEY)
   public NoteResponse restoreVersion(UUID userId, UUID id, int versionNumber) {
     Note note = requireOwned(userId, id);
     NoteVersion version =
@@ -466,15 +497,34 @@ public class NoteService {
     String plainText = note.getContentPlainText() == null ? "" : note.getContentPlainText();
     int wordCount = NoteContentUtil.wordCount(plainText);
 
+    List<NoteLink> outgoingLinks = noteLinkRepository.findAllBySourceNoteId(note.getId());
+    List<NoteLink> incomingLinks = noteLinkRepository.findAllByTargetNoteId(note.getId());
+
+    // One batch fetch for every note on either end of a link, instead of a
+    // findById per link - a note with N links used to cost N queries here,
+    // each loading a whole row (content included) just for a title+excerpt.
+    List<UUID> linkedNoteIds =
+        Stream.concat(
+                outgoingLinks.stream().map(NoteLink::getTargetNoteId),
+                incomingLinks.stream().map(NoteLink::getSourceNoteId))
+            .distinct()
+            .toList();
+
+    Map<UUID, Note> linkedNotes =
+        linkedNoteIds.isEmpty()
+            ? Map.of()
+            : noteRepository.findAllById(linkedNoteIds).stream()
+                .collect(Collectors.toMap(Note::getId, linked -> linked));
+
     List<NoteLinkResponse> outgoing =
-        noteLinkRepository.findAllBySourceNoteId(note.getId()).stream()
-            .map(link -> toLinkResponse(link.getTargetNoteId(), link.getCreatedAt()))
+        outgoingLinks.stream()
+            .map(link -> toLinkResponse(linkedNotes.get(link.getTargetNoteId()), link.getCreatedAt()))
             .filter(java.util.Objects::nonNull)
             .toList();
 
     List<NoteLinkResponse> backlinks =
-        noteLinkRepository.findAllByTargetNoteId(note.getId()).stream()
-            .map(link -> toLinkResponse(link.getSourceNoteId(), link.getCreatedAt()))
+        incomingLinks.stream()
+            .map(link -> toLinkResponse(linkedNotes.get(link.getSourceNoteId()), link.getCreatedAt()))
             .filter(java.util.Objects::nonNull)
             .toList();
 
@@ -490,8 +540,10 @@ public class NoteService {
                         .build())
             .toList();
 
+    // Capped at the 20 most recent versions rather than the whole history -
+    // GET /v1/notes/{id}/versions still serves the exhaustive list.
     List<NoteVersionResponse> versions =
-        noteVersionRepository.findAllByNoteIdOrderByVersionNumberDesc(note.getId()).stream()
+        noteVersionRepository.findTop20ByNoteIdOrderByVersionNumberDesc(note.getId()).stream()
             .map(
                 v ->
                     NoteVersionResponse.builder()
@@ -539,18 +591,20 @@ public class NoteService {
         .build();
   }
 
-  private NoteLinkResponse toLinkResponse(UUID otherNoteId, Instant linkedAt) {
-    return noteRepository
-        .findById(otherNoteId)
-        .map(
-            other ->
-                NoteLinkResponse.builder()
-                    .id(other.getId())
-                    .title(other.getTitle())
-                    .excerpt(NoteContentUtil.excerpt(other.getContentPlainText(), 160))
-                    .linkedAt(linkedAt)
-                    .build())
-        .orElse(null);
+  // `other` comes from toFull's batch-loaded map and is null when the note on
+  // the far end of the link no longer exists; callers filter those out, which
+  // preserves the previous per-link findById().orElse(null) behaviour.
+  private NoteLinkResponse toLinkResponse(Note other, Instant linkedAt) {
+    if (other == null) {
+      return null;
+    }
+
+    return NoteLinkResponse.builder()
+        .id(other.getId())
+        .title(other.getTitle())
+        .excerpt(NoteContentUtil.excerpt(other.getContentPlainText(), 160))
+        .linkedAt(linkedAt)
+        .build();
   }
 
   private List<TagResponse> tagsFor(UUID noteId) {

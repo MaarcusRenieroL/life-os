@@ -28,6 +28,10 @@ public final class NoteSpecifications {
     return (root, query, cb) -> cb.equal(root.get("isFavorite"), favorite);
   }
 
+  public static Specification<Note> pinned(boolean pinned) {
+    return (root, query, cb) -> cb.equal(root.get("isPinned"), pinned);
+  }
+
   public static Specification<Note> noteType(NoteType noteType) {
     return (root, query, cb) -> cb.equal(root.get("noteType"), noteType);
   }

@@ -48,6 +48,7 @@ export function NotesListPage() {
     tag: tag ?? undefined,
     archived: quickView === 'archived',
     favorite: quickView === 'favorites' ? true : undefined,
+    pinned: quickView === 'pinned' ? true : undefined,
     page,
     size: PAGE_SIZE,
   };
