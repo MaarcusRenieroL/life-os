@@ -40,7 +40,7 @@ type StatusFilter = 'ALL' | JobStatus;
 export function JobsListPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { data: jobs = [], isLoading } = useQuery({ queryKey: ['jobs'], queryFn: jobApi.list });
+  const { data: jobs = [], isLoading } = useQuery({ queryKey: ['jobs', 'list'], queryFn: jobApi.list });
 
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
@@ -54,10 +54,11 @@ export function JobsListPage() {
   }
 
   async function setStatus(job: JobListing, status: JobStatus) {
-    const updated = await jobApi.setStatus(job.id, status);
-    queryClient.setQueryData<JobListing[]>(['jobs'], (list) =>
-      list?.map((j) => (j.id === updated.id ? updated : j)),
-    );
+    await jobApi.setStatus(job.id, status);
+    // Invalidate rather than patching a single key: this list, the dashboard and the home summary
+    // all read GET /v1/jobs, so patching only one left the others showing the old status until
+    // their 60s staleTime expired.
+    invalidate();
   }
 
   async function remove(job: JobListing) {
@@ -68,7 +69,7 @@ export function JobsListPage() {
     });
     if (!ok) return;
     await jobApi.delete(job.id);
-    queryClient.setQueryData<JobListing[]>(['jobs'], (list) => list?.filter((j) => j.id !== job.id));
+    invalidate();
     toast.success(`Removed ${job.title}`);
   }
 

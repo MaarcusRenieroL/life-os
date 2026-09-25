@@ -1,9 +1,9 @@
 package com.lifeos.core.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.PageResponse;
 import com.lifeos.core.domains.dto.request.SetAiFallbackApprovalRequest;
 import com.lifeos.core.domains.dto.response.NotificationResponse;
-import com.lifeos.core.domains.record.PageResponse;
 import com.lifeos.core.service.NotificationService;
 import java.util.Map;
 import java.util.UUID;

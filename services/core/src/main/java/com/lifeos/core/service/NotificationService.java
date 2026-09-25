@@ -1,8 +1,8 @@
 package com.lifeos.core.service;
 
-import com.lifeos.core.domains.entity.Notification;
-import com.lifeos.core.domains.record.PageResponse;
+import com.lifeos.common.domains.dto.response.PageResponse;
 import com.lifeos.core.domains.dto.response.NotificationResponse;
+import com.lifeos.core.domains.entity.Notification;
 import com.lifeos.core.exception.ResourceNotFoundException;
 import com.lifeos.core.repository.NotificationRepository;
 import java.util.UUID;

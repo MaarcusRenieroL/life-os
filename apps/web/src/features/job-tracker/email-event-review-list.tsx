@@ -37,7 +37,7 @@ export function EmailEventReviewList({ jobId }: { jobId?: string }) {
     queryKey: ['jobs', 'email-events', 'needs-review'],
     queryFn: jobApi.needsReviewEmailEvents,
   });
-  const { data: jobs = [] } = useQuery({ queryKey: ['jobs'], queryFn: jobApi.list });
+  const { data: jobs = [] } = useQuery({ queryKey: ['jobs', 'list'], queryFn: jobApi.list });
   const [overrides, setOverrides] = useState<Record<string, Override>>({});
 
   const filtered = jobId ? events.filter((e) => e.matchedJobId === jobId) : events;

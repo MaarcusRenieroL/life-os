@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -27,10 +28,13 @@ public class OllamaApiClient implements AiClient {
   private final ObjectMapper objectMapper;
   private final RestClient restClient;
 
-  public OllamaApiClient(OllamaProperties properties, ObjectMapper objectMapper) {
+  public OllamaApiClient(
+      OllamaProperties properties,
+      ObjectMapper objectMapper,
+      @Qualifier("aiRestClientBuilder") RestClient.Builder aiRestClientBuilder) {
     this.properties = properties;
     this.objectMapper = objectMapper;
-    this.restClient = RestClient.builder().baseUrl(properties.baseUrl()).build();
+    this.restClient = aiRestClientBuilder.clone().baseUrl(properties.baseUrl()).build();
   }
 
   @Override

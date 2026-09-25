@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -67,12 +68,16 @@ public class QuickCaptureAiClient {
   // spring-boot-starter-webmvc (unlike spring-boot-starter-web) doesn't autoconfigure an
   // ObjectMapper bean - same gotcha already documented on core's CacheConfig. Build our own
   // rather than depending on injection that isn't there.
-  public QuickCaptureAiClient(OllamaProperties ollamaProperties, AnthropicProperties anthropicProperties) {
+  public QuickCaptureAiClient(
+      OllamaProperties ollamaProperties,
+      AnthropicProperties anthropicProperties,
+      @Qualifier("aiRestClientBuilder") RestClient.Builder aiRestClientBuilder) {
     this.ollamaProperties = ollamaProperties;
     this.anthropicProperties = anthropicProperties;
     this.objectMapper = new ObjectMapper().findAndRegisterModules();
-    this.ollamaRestClient = RestClient.builder().baseUrl(ollamaProperties.baseUrl()).build();
-    this.claudeRestClient = RestClient.builder().baseUrl(anthropicProperties.baseUrl()).build();
+    this.ollamaRestClient = aiRestClientBuilder.clone().baseUrl(ollamaProperties.baseUrl()).build();
+    this.claudeRestClient =
+        aiRestClientBuilder.clone().baseUrl(anthropicProperties.baseUrl()).build();
   }
 
   public QuickCaptureClassification classifyWithOllama(String text) {

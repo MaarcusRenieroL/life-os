@@ -3,6 +3,7 @@ package com.lifeos.job_tracker.service;
 import com.lifeos.job_tracker.domains.entity.AiUsageLog;
 import com.lifeos.job_tracker.domains.record.AiUsageSummaryResponse;
 import com.lifeos.job_tracker.domains.record.AiUsageSummaryResponse.DailyCost;
+import com.lifeos.job_tracker.domains.record.AiUsageTotals;
 import com.lifeos.job_tracker.repository.AiUsageLogRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -40,12 +41,14 @@ public class AiUsageService {
     }
     List<DailyCost> costLast30Days = byDay.entrySet().stream().map(e -> new DailyCost(e.getKey(), e.getValue())).toList();
 
+    AiUsageTotals totals = repository.totals(monthStart);
+
     return new AiUsageSummaryResponse(
-        repository.sumCost(),
-        repository.sumCostSince(monthStart),
-        repository.count(),
-        repository.sumInputTokens(),
-        repository.sumOutputTokens(),
+        totals.totalCostOrZero(),
+        totals.costThisMonthOrZero(),
+        totals.totalCallsOrZero(),
+        totals.totalInputTokensOrZero(),
+        totals.totalOutputTokensOrZero(),
         costLast30Days);
   }
 }

@@ -10,6 +10,7 @@ import com.lifeos.job_tracker.integration.AiUsageRecorder;
 import com.lifeos.job_tracker.integration.ClaudeApiClient;
 import com.lifeos.job_tracker.repository.AiUsageLogRepository;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.client.RestClient;
 
 class ClaudeApiClientTest {
 
@@ -19,7 +20,8 @@ class ClaudeApiClientTest {
         new ClaudeApiClient(
             new AnthropicProperties("https://api.anthropic.com", "", "claude-sonnet-4-6", "2023-06-01", 1024),
             new ObjectMapper(),
-            new AiUsageRecorder(org.mockito.Mockito.mock(AiUsageLogRepository.class)));
+            new AiUsageRecorder(org.mockito.Mockito.mock(AiUsageLogRepository.class)),
+            RestClient.builder());
 
     assertThat(client.isConfigured()).isFalse();
     assertThatThrownBy(() -> client.complete("sys", "user"))

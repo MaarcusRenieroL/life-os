@@ -62,7 +62,7 @@ export function HomePage() {
     throwOnError: false,
   });
   const { data: jobs } = useQuery({
-    queryKey: ['jobs', 'list', 'home-count'],
+    queryKey: ['jobs', 'list'],
     queryFn: jobApi.list,
     retry: false,
     throwOnError: false,
@@ -74,7 +74,7 @@ export function HomePage() {
     throwOnError: false,
   });
   const { data: aiUsage } = useQuery({
-    queryKey: ['jobs', 'ai-usage', 'summary', 'home'],
+    queryKey: ['jobs', 'ai-usage', 'summary'],
     queryFn: aiUsageApi.getSummary,
     retry: false,
     throwOnError: false,
