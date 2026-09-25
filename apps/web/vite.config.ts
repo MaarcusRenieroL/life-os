@@ -26,7 +26,14 @@ export default defineConfig({
             if (/[\\/]node_modules[\\/](react|react-dom|react-router-dom)[\\/]/.test(id)) {
               return 'vendor-react';
             }
-            if (id.includes('node_modules/radix-ui')) {
+            // The `radix-ui` meta-package is a thin re-export shim; the actual component code
+            // lives in its scoped `@radix-ui/react-*` dependencies. Under pnpm's virtual store
+            // those are nested as `node_modules/.pnpm/@radix-ui+react-x@.../node_modules/
+            // @radix-ui/react-x/...`, so the id contains "node_modules/@radix-ui", not
+            // "node_modules/radix-ui" (the leading `@` breaks that substring match) - which is
+            // why this rule matched nothing and every Radix primitive ended up in whichever
+            // anonymous chunk Rollup happened to put it in instead of one cache-friendly bundle.
+            if (id.includes('node_modules/radix-ui') || id.includes('node_modules/@radix-ui')) {
               return 'vendor-radix';
             }
             if (id.includes('node_modules/@tanstack/react-query')) {
