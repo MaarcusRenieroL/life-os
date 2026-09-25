@@ -163,6 +163,7 @@ export interface NoteListFilters {
   noteType?: NoteType;
   archived?: boolean;
   favorite?: boolean;
+  pinned?: boolean;
   page?: number;
   size?: number;
 }

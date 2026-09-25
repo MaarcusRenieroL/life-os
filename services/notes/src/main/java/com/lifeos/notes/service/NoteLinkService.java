@@ -10,6 +10,8 @@ import com.lifeos.notes.repository.NoteLinkRepository;
 import com.lifeos.notes.repository.NoteRepository;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,16 @@ public class NoteLinkService {
   private final NoteLinkRepository noteLinkRepository;
   private final NoteRepository noteRepository;
 
+  // A link shows up on BOTH notes' detail responses - as an outgoing link on
+  // the source and as a backlink on the target - so both cached entries have
+  // to go, not just the source's.
+  @Caching(
+      evict = {
+        @CacheEvict(
+            value = NoteService.NOTE_DETAIL_CACHE,
+            key = "#userId + ':' + #sourceNoteId"),
+        @CacheEvict(value = NoteService.NOTE_DETAIL_CACHE, key = "#userId + ':' + #targetNoteId")
+      })
   public void addLink(UUID userId, UUID sourceNoteId, UUID targetNoteId) {
     if (sourceNoteId.equals(targetNoteId)) {
       throw new NoteValidationException("Cannot link a note to itself");
@@ -45,6 +57,13 @@ public class NoteLinkService {
             .build());
   }
 
+  @Caching(
+      evict = {
+        @CacheEvict(
+            value = NoteService.NOTE_DETAIL_CACHE,
+            key = "#userId + ':' + #sourceNoteId"),
+        @CacheEvict(value = NoteService.NOTE_DETAIL_CACHE, key = "#userId + ':' + #targetNoteId")
+      })
   public void removeLink(UUID userId, UUID sourceNoteId, UUID targetNoteId) {
     requireOwned(userId, sourceNoteId);
     noteLinkRepository.deleteBySourceNoteIdAndTargetNoteId(sourceNoteId, targetNoteId);

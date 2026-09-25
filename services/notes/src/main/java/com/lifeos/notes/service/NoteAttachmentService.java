@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,6 +44,10 @@ public class NoteAttachmentService {
   @Value("${notes.attachments.storage-path:./data/note-attachments}")
   private String storagePath;
 
+  // attachments is part of the note-detail payload.
+  @CacheEvict(
+      value = NoteService.NOTE_DETAIL_CACHE,
+      key = NoteService.NOTE_DETAIL_KEY_BY_NOTE_ID)
   public AttachmentResponse upload(UUID userId, UUID noteId, MultipartFile file) {
     requireOwned(userId, noteId);
 
@@ -121,6 +126,9 @@ public class NoteAttachmentService {
     }
   }
 
+  @CacheEvict(
+      value = NoteService.NOTE_DETAIL_CACHE,
+      key = NoteService.NOTE_DETAIL_KEY_BY_NOTE_ID)
   public void delete(UUID userId, UUID noteId, UUID attachmentId) {
     NoteAttachment attachment = get(userId, noteId, attachmentId);
     attachment.setDeletedAt(Instant.now());
