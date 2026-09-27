@@ -29,6 +29,7 @@ public class HabitService {
   private final HabitLogRepository habitLogRepository;
   private final HabitScheduleService habitScheduleService;
 
+  @Transactional(readOnly = true)
   public List<HabitResponse> list(
       UUID userId, HabitStatus status, String category, UUID areaId, UUID goalId) {
     return habitRepository.findAllByUserId(userId).stream()
@@ -40,10 +41,12 @@ public class HabitService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public HabitResponse get(UUID userId, UUID id) {
     return toResponse(findOwned(userId, id));
   }
 
+  @Transactional(readOnly = true)
   public Habit findOwned(UUID userId, UUID id) {
     return habitRepository
         .findByIdAndUserId(id, userId)

@@ -25,12 +25,14 @@ public class AccountService {
   private final AccountRepository accountRepository;
   private final EncryptionService encryptionService;
 
+  @Transactional(readOnly = true)
   public List<AccountResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
     return accountRepository.findAllByUserId(userId).stream().map(this::toResponse).toList();
   }
 
+  @Transactional(readOnly = true)
   public AccountResponse get(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 

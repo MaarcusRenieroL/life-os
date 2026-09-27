@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { Activity, Flame, TrendingDown, TrendingUp } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,11 @@ import { habitsApi } from './habits-api';
 import type { CompletionTrendPoint, DayOfWeekPattern, HabitPerformance, HealthScore } from './types';
 
 const WINDOW_OPTIONS = [8, 12, 26] as const;
+
+// Stable references for the "analytics not loaded yet" fallback, so the useMemo below that
+// derives from these doesn't see a new array identity (and re-run its work) on every render.
+const EMPTY_PERFORMANCE: HabitPerformance[] = [];
+const EMPTY_TREND: CompletionTrendPoint[] = [];
 
 const DAY_LABELS: Record<number, string> = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
 
@@ -236,6 +241,50 @@ export function HabitsAnalyticsPage() {
     queryFn: () => habitsApi.analytics(weeks),
   });
 
+  // Hooks must run unconditionally on every render, so this is computed before the loading/empty
+  // early return below rather than after it - falls back to empty inputs while analytics is
+  // still undefined, which the early return makes moot anyway (this render is discarded).
+  const habitPerformance = analytics?.habitPerformance ?? EMPTY_PERFORMANCE;
+  const trend = analytics?.trend ?? EMPTY_TREND;
+
+  const {
+    best,
+    worst,
+    overallRate,
+    totalCompletions,
+    totalScheduled,
+    latestWeek,
+    weekDelta,
+    longestStreak,
+    currentBestStreak,
+  } = useMemo(() => {
+    const ranked = habitPerformance.filter((entry) => entry.scheduledOccurrences > 0);
+    const bestRanked = ranked.slice(0, 5);
+    // Worst performers, weakest first, skipping any habit already shown as a best performer.
+    const worstRanked = ranked
+      .slice(-5)
+      .reverse()
+      .filter((entry) => !bestRanked.some((b) => b.habitId === entry.habitId));
+
+    const totalCompletions = trend.reduce((sum, point) => sum + point.completions, 0);
+    const totalScheduled = trend.reduce((sum, point) => sum + point.scheduledOccurrences, 0);
+
+    const latestWeek = trend.at(-1);
+    const previousWeek = trend.at(-2);
+
+    return {
+      best: bestRanked,
+      worst: worstRanked,
+      overallRate: totalScheduled > 0 ? totalCompletions / totalScheduled : 0,
+      totalCompletions,
+      totalScheduled,
+      latestWeek,
+      weekDelta: latestWeek && previousWeek ? percent(latestWeek.score) - percent(previousWeek.score) : null,
+      longestStreak: habitPerformance.reduce((max, entry) => Math.max(max, entry.longestStreak), 0),
+      currentBestStreak: habitPerformance.reduce((max, entry) => Math.max(max, entry.currentStreak), 0),
+    };
+  }, [habitPerformance, trend]);
+
   if (isLoading || !analytics) {
     return (
       <div className="flex flex-col gap-6">
@@ -250,27 +299,7 @@ export function HabitsAnalyticsPage() {
     );
   }
 
-  const { healthScore, habitPerformance, trend, dayOfWeekPattern } = analytics;
-
-  const ranked = habitPerformance.filter((entry) => entry.scheduledOccurrences > 0);
-  const best = ranked.slice(0, 5);
-  // Worst performers, weakest first, skipping any habit already shown as a best performer.
-  const worst = ranked
-    .slice(-5)
-    .reverse()
-    .filter((entry) => !best.some((b) => b.habitId === entry.habitId));
-
-  const totalCompletions = trend.reduce((sum, point) => sum + point.completions, 0);
-  const totalScheduled = trend.reduce((sum, point) => sum + point.scheduledOccurrences, 0);
-  const overallRate = totalScheduled > 0 ? totalCompletions / totalScheduled : 0;
-
-  const latestWeek = trend.at(-1);
-  const previousWeek = trend.at(-2);
-  const weekDelta =
-    latestWeek && previousWeek ? percent(latestWeek.score) - percent(previousWeek.score) : null;
-
-  const longestStreak = habitPerformance.reduce((max, entry) => Math.max(max, entry.longestStreak), 0);
-  const currentBestStreak = habitPerformance.reduce((max, entry) => Math.max(max, entry.currentStreak), 0);
+  const { healthScore, dayOfWeekPattern } = analytics;
 
   return (
     <div className="flex flex-col gap-6">

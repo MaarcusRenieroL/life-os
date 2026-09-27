@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/features/auth/auth-api';
@@ -44,6 +45,7 @@ export function SecurityPage() {
 
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   const currentDeviceId = tokenStore.getDeviceSessionId();
   const otherDevices = sessions.filter((s) => s.id !== currentDeviceId);
@@ -54,7 +56,8 @@ export function SecurityPage() {
   }
 
   async function signOutAllOthers() {
-    if (!confirm('Sign out all other sessions?')) return;
+    const ok = await confirm({ title: 'Sign out all other sessions?', confirmLabel: 'Sign out' });
+    if (!ok) return;
     for (const device of otherDevices) {
       await authApi.revokeSession(device.id);
     }
@@ -118,6 +121,7 @@ export function SecurityPage() {
 
       <ChangeMasterPasswordDialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen} />
       <RecoveryCodesDialog open={recoveryOpen} onOpenChange={setRecoveryOpen} />
+      {dialog}
     </div>
   );
 }

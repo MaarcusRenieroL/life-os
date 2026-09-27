@@ -1,6 +1,8 @@
 package com.lifeos.vault.service;
 
 import com.lifeos.common.events.AuditEventType;
+import com.lifeos.common.events.NotificationEventPublisher;
+import com.lifeos.common.events.NotificationEventType;
 import com.lifeos.vault.domains.dto.response.VaultStatusResponse;
 import com.lifeos.vault.domains.entity.PaymentCard;
 import com.lifeos.vault.domains.entity.VaultEntry;
@@ -8,7 +10,7 @@ import com.lifeos.vault.domains.entity.VaultMasterPassword;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
 import com.lifeos.vault.exception.InvalidMasterPasswordException;
 import com.lifeos.vault.exception.MasterPasswordAlreadySetException;
-import com.lifeos.vault.publisher.AuditEventPublisher;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.vault.repository.PaymentCardRepository;
 import com.lifeos.vault.repository.RecoveryCodeRepository;
 import com.lifeos.vault.repository.VaultEntryRepository;
@@ -40,6 +42,7 @@ public class VaultMasterPasswordService {
   private final VaultKeyStore vaultKeyStore;
 
   private final AuditEventPublisher auditEventPublisher;
+  private final NotificationEventPublisher notificationEventPublisher;
 
   public void setup(UUID userId, String masterPassword) {
     if (vaultMasterPasswordRepository.existsByUserId(userId)) {
@@ -73,6 +76,7 @@ public class VaultMasterPasswordService {
         userId, new VaultKeyRecord(key, Instant.now().plusSeconds(VAULT_UNLOCK_DURATION_SECONDS)));
   }
 
+  @Transactional(readOnly = true)
   public VaultStatusResponse getStatus(UUID userId) {
     var vaultMasterPassword = vaultMasterPasswordRepository.findByUserId(userId).orElse(null);
 
@@ -190,5 +194,11 @@ public class VaultMasterPasswordService {
 
     auditEventPublisher.publish(
         userId, AuditEventType.MASTER_PASSWORD_CHANGED, "Master Password Updated", null);
+
+    notificationEventPublisher.publish(
+        userId,
+        NotificationEventType.VAULT_MASTER_PASSWORD_CHANGED,
+        "Vault master password changed",
+        "Your vault master password was changed. If this wasn't you, secure your account immediately.");
   }
 }

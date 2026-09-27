@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -30,6 +32,7 @@ export function NoteTemplatesPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editing, setEditing] = useState<NoteTemplate | null>(null);
   const [form, setForm] = useState({ name: '', content: '', category: '' });
+  const { confirm, dialog } = useConfirmDialog();
 
   function openCreate() {
     setEditing(null);
@@ -54,7 +57,8 @@ export function NoteTemplatesPage() {
   }
 
   async function deleteTemplate(template: NoteTemplate) {
-    if (!confirm(`Delete "${template.name}"? This can't be undone.`)) return;
+    const ok = await confirm({ title: `Delete "${template.name}"? This can't be undone.`, confirmLabel: 'Delete' });
+    if (!ok) return;
     await templatesApi.delete(template.id);
     if (selected?.id === template.id) setSelected(null);
     queryClient.invalidateQueries({ queryKey: ['notes', 'templates'] });
@@ -94,7 +98,7 @@ export function NoteTemplatesPage() {
               </button>
             );
           })}
-          {templates.length === 0 && <p className="text-sm text-muted-foreground">No templates yet.</p>}
+          {templates.length === 0 && <EmptyState message="No templates yet." />}
         </div>
 
         {selected && (
@@ -150,6 +154,7 @@ export function NoteTemplatesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {dialog}
     </div>
   );
 }

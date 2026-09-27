@@ -11,7 +11,14 @@ import { router } from '@/routes/app-routes';
 import './index.css';
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+    },
+  },
 });
 
 createRoot(document.getElementById('root')!).render(

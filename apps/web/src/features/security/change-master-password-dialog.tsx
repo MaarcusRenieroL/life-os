@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { vaultApi } from '@/features/vault/vault-api';
+import { getErrorMessage } from '@/lib/error';
 
 export function ChangeMasterPasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -26,10 +27,7 @@ export function ChangeMasterPasswordDialog({ open, onOpenChange }: { open: boole
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
-      setError(
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
-          'Unable to change master password.',
-      );
+      setError(getErrorMessage(err, 'Unable to change master password.'));
     } finally {
       setBusy(false);
     }

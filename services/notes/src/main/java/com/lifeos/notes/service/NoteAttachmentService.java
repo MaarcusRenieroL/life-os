@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,6 +44,10 @@ public class NoteAttachmentService {
   @Value("${notes.attachments.storage-path:./data/note-attachments}")
   private String storagePath;
 
+  // attachments is part of the note-detail payload.
+  @CacheEvict(
+      value = NoteService.NOTE_DETAIL_CACHE,
+      key = NoteService.NOTE_DETAIL_KEY_BY_NOTE_ID)
   public AttachmentResponse upload(UUID userId, UUID noteId, MultipartFile file) {
     requireOwned(userId, noteId);
 
@@ -84,6 +89,7 @@ public class NoteAttachmentService {
     }
   }
 
+  @Transactional(readOnly = true)
   public List<AttachmentResponse> listForNote(UUID userId, UUID noteId) {
     requireOwned(userId, noteId);
     return noteAttachmentRepository.findAllByNoteIdAndDeletedAtIsNull(noteId).stream()
@@ -96,10 +102,12 @@ public class NoteAttachmentService {
   // host; the expected attachment count per user is small enough that the
   // frontend can search/filter the full list client-side without a second
   // query round trip per keystroke.
+  @Transactional(readOnly = true)
   public List<GlobalAttachmentResponse> listAllForUser(UUID userId) {
     return noteAttachmentRepository.findAllForUser(userId).stream().map(this::toGlobalResponse).toList();
   }
 
+  @Transactional(readOnly = true)
   public NoteAttachment get(UUID userId, UUID noteId, UUID attachmentId) {
     requireOwned(userId, noteId);
     return noteAttachmentRepository
@@ -107,6 +115,7 @@ public class NoteAttachmentService {
         .orElseThrow(() -> new NoteAttachmentNotFoundException(attachmentId));
   }
 
+  @Transactional(readOnly = true)
   public InputStream download(UUID userId, UUID noteId, UUID attachmentId) {
     NoteAttachment attachment = get(userId, noteId, attachmentId);
 
@@ -117,6 +126,9 @@ public class NoteAttachmentService {
     }
   }
 
+  @CacheEvict(
+      value = NoteService.NOTE_DETAIL_CACHE,
+      key = NoteService.NOTE_DETAIL_KEY_BY_NOTE_ID)
   public void delete(UUID userId, UUID noteId, UUID attachmentId) {
     NoteAttachment attachment = get(userId, noteId, attachmentId);
     attachment.setDeletedAt(Instant.now());

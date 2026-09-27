@@ -4,9 +4,15 @@ server:
 spring:
   application:
     name: batches
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: validate
+    open-in-view: false
   flyway:
     schemas: batches_schema
     default-schema: batches_schema
@@ -35,6 +41,13 @@ owner:
 
 backup:
   cron: ${BACKUP_CRON:0 0 3 * * *}
+
+audit:
+  # audit_events grows without bound (every module publishes to it over Kafka), so old rows are
+  # purged on a schedule - see AuditEventRetentionScheduler.
+  retention-days: ${AUDIT_RETENTION_DAYS:180}
+  retention:
+    cron: ${AUDIT_RETENTION_CRON:0 30 3 * * *}
 
 encryption:
   secret: ${GMAIL_ENCRYPTION_SECRET}

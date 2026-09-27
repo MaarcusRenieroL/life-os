@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { authApi } from '@/features/auth/auth-api';
 import { vaultApi } from '@/features/vault/vault-api';
+import { getErrorMessage } from '@/lib/error';
 import { tokenStore } from '@/lib/token';
 import {
   AlertDialog,
@@ -35,7 +36,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
       await vaultApi.deleteAccount();
     } catch (err) {
       setDeleting(false);
-      setError(errorMessage(err, 'Unable to delete account.'));
+      setError(getErrorMessage(err, 'Unable to delete account.'));
       return;
     }
 
@@ -48,7 +49,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
     } catch (err) {
       setDeleting(false);
       setError(
-        errorMessage(
+        getErrorMessage(
           err,
           'Vault data was deleted, but the account itself could not be removed. Try again.',
         ),
@@ -83,8 +84,4 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
       </AlertDialogContent>
     </AlertDialog>
   );
-}
-
-function errorMessage(err: unknown, fallback: string): string {
-  return (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? fallback;
 }

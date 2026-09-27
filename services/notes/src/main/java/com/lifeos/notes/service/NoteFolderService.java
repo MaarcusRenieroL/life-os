@@ -31,6 +31,7 @@ public class NoteFolderService {
   private final NoteRepository noteRepository;
 
   @Cacheable(value = "user-folders", key = "#userId")
+  @Transactional(readOnly = true)
   public List<FolderResponse> getTree(UUID userId) {
     List<NoteFolder> all = noteFolderRepository.findAllByUserId(userId);
     Map<UUID, Long> counts =
@@ -152,6 +153,10 @@ public class NoteFolderService {
 
   // Note ownership is verified by the caller (NoteService) before these run -
   // this service only owns folder-side invariants.
+  // folderIds is part of the note-detail payload.
+  @CacheEvict(
+      value = NoteService.NOTE_DETAIL_CACHE,
+      key = NoteService.NOTE_DETAIL_KEY_BY_NOTE_ID)
   public void assignNoteToFolder(UUID userId, UUID noteId, UUID folderId) {
     requireOwned(userId, folderId);
 
@@ -162,11 +167,15 @@ public class NoteFolderService {
     }
   }
 
+  @CacheEvict(
+      value = NoteService.NOTE_DETAIL_CACHE,
+      key = NoteService.NOTE_DETAIL_KEY_BY_NOTE_ID)
   public void removeNoteFromFolder(UUID userId, UUID noteId, UUID folderId) {
     requireOwned(userId, folderId);
     noteFolderAssignmentRepository.deleteByNoteIdAndFolderId(noteId, folderId);
   }
 
+  @Transactional(readOnly = true)
   public List<UUID> getFolderIdsForNote(UUID noteId) {
     return noteFolderAssignmentRepository.findAllByNoteId(noteId).stream()
         .map(NoteFolderAssignment::getFolderId)

@@ -8,7 +8,7 @@ import com.lifeos.vault.domains.entity.PaymentCard;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
 import com.lifeos.vault.exception.PaymentCardNotFoundException;
 import com.lifeos.vault.exception.VaultLockedException;
-import com.lifeos.vault.publisher.AuditEventPublisher;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.vault.repository.PaymentCardRepository;
 import com.lifeos.vault.store.VaultKeyStore;
 import java.util.List;
@@ -32,6 +32,7 @@ public class CardService {
 
   private final AuditEventPublisher auditEventPublisher;
 
+  @Transactional(readOnly = true)
   public List<CardResponse> getCards(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
     SecretKey key = requireUnlockedKey(userId);
@@ -41,6 +42,7 @@ public class CardService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public CardResponse getCard(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
     SecretKey key = requireUnlockedKey(userId);

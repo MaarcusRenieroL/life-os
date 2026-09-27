@@ -1,6 +1,6 @@
 # Life OS
 
-A personal operating system built with Spring Boot microservices, React, Angular, and Tauri.
+A personal operating system built with Spring Boot microservices, React, React Native, and Tauri.
 
 ## Quick Start
 
@@ -29,15 +29,19 @@ curl http://localhost/health
 ```
 life-os/
 ├── services/          # Spring Boot microservices
-│   ├── auth/         # Authentication & sessions
-│   ├── vault/        # Password management
-│   ├── job-tracker/  # Job search & tracking
-│   └── core/         # Productivity & intelligence
+│   ├── auth/             # Authentication & sessions
+│   ├── vault/            # Password management
+│   ├── finance-tracker/  # Budgets, transactions, analytics
+│   ├── job-tracker/      # Job search & tracking
+│   ├── habit-tracker/    # Habits, streaks, reminders
+│   ├── notes/            # Notes, folders, attachments
+│   ├── batches/          # Scheduled jobs (Gmail sync, backups)
+│   ├── core/             # Per-user module settings
+│   └── common/           # Shared library (auth, Kafka, caching config)
 ├── apps/             # Frontend applications
 │   ├── mobile/       # React Native (Expo)
-│   ├── web/          # Angular
+│   ├── web/          # React + Vite
 │   └── desktop/      # Tauri + React
-├── packages/         # Shared libraries
 ├── docs/             # Documentation
 └── .github/          # CI/CD pipelines
 ```
@@ -65,25 +69,29 @@ life-os/
 | Auth | 8001 | User identity & sessions |
 | Vault | 8002 | Password manager |
 | Job Tracker | 8003 | Job search & interviews |
-| Core | 8004 | Productivity & intelligence |
+| Core | 8004 | Per-user module settings |
+| Batches | 8005 | Scheduled jobs (Gmail sync, backups) |
+| Finance Tracker | 8006 | Budgets, transactions, analytics |
+| Notes | 8007 | Notes, folders, attachments |
+| Habit Tracker | 8008 | Habits, streaks, reminders |
 | Nginx | 80 | API Gateway |
 
 ## Tech Stack
 
-- **Backend:** Spring Boot 3.x, Java 21
+- **Backend:** Spring Boot 4, Java 21
 - **Database:** PostgreSQL
 - **Cache:** Redis
 - **Messaging:** Kafka
-- **Web:** Angular
+- **Web:** React + Vite
 - **Mobile:** React Native + Expo
 - **Desktop:** Tauri + React
 - **Monorepo:** pnpm + Turborepo
 
 ## CI/CD
 
-- GitHub Actions on PR to `dev`/`main`
-- Automated lint, test, build, and deploy
-- Docker image builds & registry push
-- Rollback available on production
+- GitHub Actions on push/PR to `main`/`dev`/`feature/**`
+- Backend: per-service `mvn test` for every service with a test suite
+- Frontend: lint + typecheck + build for web and mobile
 
-See `.github/workflows/` for details.
+See `.github/workflows/ci.yml` for the current pipeline. There is no automated deploy or
+Docker registry push configured yet — deploys are manual.

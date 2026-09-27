@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
+import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-import { analyticsApi } from './analytics-api';
 import { budgetApi } from './budget-api';
 import { categoryApi } from './category-api';
+import { useCategoryComparisons } from './category-comparison-query';
 import { downloadBlob, reportApi } from './report-api';
 import { formatINR } from './utils';
 
@@ -21,14 +22,16 @@ function defaultTaxYear(): number {
 }
 
 export function ReportPage() {
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
   const { data: budgets = [] } = useQuery({ queryKey: ['finance', 'budgets'], queryFn: budgetApi.getBudgets });
-  const expenseCategoryIds = categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id);
-  const { data: comparisons = [] } = useQuery({
-    queryKey: ['finance', 'comparisons', expenseCategoryIds],
-    queryFn: () => Promise.all(expenseCategoryIds.map((id) => analyticsApi.getCategoryComparison(id))),
-    enabled: expenseCategoryIds.length > 0,
-  });
+  // The shared hook returns comparisons for every category so all four finance pages hit one cache
+  // entry. The spend rollups below are expense-only, so they use the filtered list; budget
+  // performance looks up by the budget's own categoryId and uses the full set.
+  const allComparisons = useCategoryComparisons(categories);
+  const comparisons = useMemo(() => {
+    const expenseIds = new Set(categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id));
+    return allComparisons.filter((c) => expenseIds.has(c.categoryId));
+  }, [allComparisons, categories]);
 
   const [taxYear, setTaxYear] = useState(defaultTaxYear());
   const [exporting, setExporting] = useState(false);
@@ -47,7 +50,7 @@ export function ReportPage() {
   );
 
   const budgetPerformance = budgets.map((b) => {
-    const spend = comparisons.find((c) => c.categoryId === b.categoryId)?.currentMonthSpend ?? 0;
+    const spend = allComparisons.find((c) => c.categoryId === b.categoryId)?.currentMonthSpend ?? 0;
     const pct = b.budgetAmount > 0 ? (spend / b.budgetAmount) * 100 : 0;
     return {
       name: categories.find((c) => c.id === b.categoryId)?.name ?? 'Unknown',
@@ -111,7 +114,7 @@ export function ReportPage() {
       <section className="mt-4 rounded-lg border bg-card p-5">
         <SectionHeading>Expense breakdown</SectionHeading>
         {expenseSegments.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">No categorized spend yet.</p>
+          <EmptyState className="mt-2" message="No categorized spend yet." />
         ) : (
           <>
             <div className="mt-3 flex h-6 overflow-hidden rounded-full">
@@ -136,7 +139,7 @@ export function ReportPage() {
           {budgetPerformance.map((b) => (
             <li key={b.name} className="flex justify-between"><span>{b.name}</span><span>{b.text}</span></li>
           ))}
-          {budgetPerformance.length === 0 && <p className="text-sm text-muted-foreground">No budgets set up yet.</p>}
+          {budgetPerformance.length === 0 && <EmptyState message="No budgets set up yet." />}
         </ul>
       </section>
 
@@ -156,7 +159,7 @@ export function ReportPage() {
             ))}
           </tbody>
         </table>
-        {monthOverMonth.length === 0 && <p className="mt-2 text-sm text-muted-foreground">Not enough history yet.</p>}
+        {monthOverMonth.length === 0 && <EmptyState className="mt-2" message="Not enough history yet." />}
       </section>
     </div>
   );

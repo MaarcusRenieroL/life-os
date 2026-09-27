@@ -10,6 +10,7 @@ import com.lifeos.notes.repository.NoteRepository;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,10 @@ public class NoteModuleLinkService {
   private final NoteModuleLinkRepository noteModuleLinkRepository;
   private final NoteRepository noteRepository;
 
+  // moduleLinks is part of the note-detail payload.
+  @CacheEvict(
+      value = NoteService.NOTE_DETAIL_CACHE,
+      key = NoteService.NOTE_DETAIL_KEY_BY_NOTE_ID)
   public NoteModuleLinkResponse addLink(
       UUID userId, UUID noteId, NoteModuleType moduleType, UUID moduleId) {
     requireOwned(userId, noteId);
@@ -36,11 +41,15 @@ public class NoteModuleLinkService {
     return toResponse(link);
   }
 
+  @CacheEvict(
+      value = NoteService.NOTE_DETAIL_CACHE,
+      key = NoteService.NOTE_DETAIL_KEY_BY_NOTE_ID)
   public void removeLink(UUID userId, UUID noteId, UUID linkId) {
     requireOwned(userId, noteId);
     noteModuleLinkRepository.deleteByIdAndNoteId(linkId, noteId);
   }
 
+  @Transactional(readOnly = true)
   public List<NoteModuleLinkResponse> listForNote(UUID userId, UUID noteId) {
     requireOwned(userId, noteId);
     return noteModuleLinkRepository.findAllByNoteId(noteId).stream().map(this::toResponse).toList();

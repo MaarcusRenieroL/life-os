@@ -3,6 +3,7 @@ package com.lifeos.batches.service;
 import com.lifeos.batches.domains.enums.TransactionType;
 import com.lifeos.batches.domains.record.ParsedStatementRow;
 import com.lifeos.batches.exception.StatementParseException;
+import com.lifeos.common.finance.MerchantNameNormalizer;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Path;

@@ -10,7 +10,6 @@ import type {
   HabitAnalytics,
   HabitListFilters,
   HabitLog,
-  HabitNotification,
   HabitReminder,
   HabitStreak,
   LoggingTimePattern,
@@ -89,11 +88,6 @@ export const habitsApi = {
 
   loggingTimes(): Promise<LoggingTimePattern> {
     return unwrap(api.get(`${baseUrl}/analytics/logging-times`, { params: { zone: browserZone() } }));
-  },
-
-  /** In-app notification feed, computed live - nothing is stored or marked read. */
-  notifications(): Promise<HabitNotification[]> {
-    return unwrap(api.get(`${baseUrl}/notifications`, { params: { zone: browserZone() } }));
   },
 
   upsertLog(habitId: string, request: UpsertHabitLogRequest): Promise<HabitLog> {

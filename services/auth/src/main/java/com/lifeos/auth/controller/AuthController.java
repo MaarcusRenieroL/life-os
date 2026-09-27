@@ -16,10 +16,12 @@ import com.lifeos.auth.domains.entity.DeviceSession;
 import com.lifeos.auth.service.AccountService;
 import com.lifeos.auth.service.AuthService;
 import com.lifeos.auth.service.UserService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,7 +31,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/v1/auth")
@@ -66,9 +70,35 @@ public class AuthController {
     return ResponseEntity.ok(ApiResponse.success(null, "Account deleted successfully"));
   }
 
+  @PostMapping(path = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<ApiResponse<UserProfileResponse>> updateAvatar(
+      Authentication authentication, @RequestParam("file") MultipartFile file) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return ResponseEntity.ok(
+        ApiResponse.success(userService.updateAvatar(userId, file), "Avatar updated successfully"));
+  }
+
+  @GetMapping("/me/avatar")
+  public ResponseEntity<byte[]> getAvatar(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+    byte[] bytes = userService.getAvatarBytes(userId);
+
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType(userService.getAvatarContentType(userId)))
+        .body(bytes);
+  }
+
+  @DeleteMapping("/me/avatar")
+  public ResponseEntity<ApiResponse<UserProfileResponse>> deleteAvatar(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return ResponseEntity.ok(ApiResponse.success(userService.deleteAvatar(userId), "Avatar removed"));
+  }
+
   @PostMapping("/register")
   public ResponseEntity<ApiResponse<Void>> register(
-      @RequestBody UserRegisterRequest userRegisterRequest) {
+      @Valid @RequestBody UserRegisterRequest userRegisterRequest) {
     authService.register(userRegisterRequest.getEmail(), userRegisterRequest.getRawPassword());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(ApiResponse.success(null, "User registered successfully"));
@@ -76,7 +106,7 @@ public class AuthController {
 
   @PostMapping("/login")
   public ResponseEntity<ApiResponse<AuthResponse>> login(
-      @RequestBody UserLoginRequest userLoginRequest) {
+      @Valid @RequestBody UserLoginRequest userLoginRequest) {
     AuthResponse authResponse =
         authService.login(
             userLoginRequest.getEmail(),

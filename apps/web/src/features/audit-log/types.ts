@@ -18,6 +18,18 @@ export type AuditEventType =
   | 'HABIT_STREAK_MILESTONE'
   | 'HABIT_REMINDER_DUE';
 
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  numberOfElements: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
 export interface AuditEventResponse {
   eventId: string;
   service: string;

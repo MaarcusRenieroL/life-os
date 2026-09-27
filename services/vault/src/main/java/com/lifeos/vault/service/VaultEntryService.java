@@ -11,7 +11,7 @@ import com.lifeos.vault.domains.entity.VaultEntry;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
 import com.lifeos.vault.exception.VaultEntryNotFoundException;
 import com.lifeos.vault.exception.VaultLockedException;
-import com.lifeos.vault.publisher.AuditEventPublisher;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.vault.repository.VaultEntryRepository;
 import com.lifeos.vault.store.VaultKeyStore;
 import java.util.ArrayList;
@@ -34,12 +34,14 @@ public class VaultEntryService {
   private final VaultKeyStore vaultKeyStore;
   private final AuditEventPublisher auditEventPublisher;
 
+  @Transactional(readOnly = true)
   public List<VaultEntrySummaryResponse> getEntries(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
     return vaultEntryRepository.findAllByUserId(userId).stream().map(this::toSummary).toList();
   }
 
+  @Transactional(readOnly = true)
   public VaultEntryResponse getEntry(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
     SecretKey key = requireUnlockedKey(userId);

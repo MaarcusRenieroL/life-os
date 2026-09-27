@@ -25,6 +25,7 @@ public class NoteTemplateService {
   private final NoteTemplateRepository noteTemplateRepository;
   private final NoteService noteService;
 
+  @Transactional(readOnly = true)
   public Page<TemplateResponse> list(UUID userId, String category, Pageable pageable) {
     Page<NoteTemplate> page =
         StringUtils.hasText(category)

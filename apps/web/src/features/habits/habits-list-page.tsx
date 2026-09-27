@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,6 +44,7 @@ export function HabitsListPage() {
   const [view, setView] = useState<ViewMode>('table');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Habit | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['habits'] });
@@ -110,7 +112,8 @@ export function HabitsListPage() {
   }
 
   async function deleteHabit(habit: Habit) {
-    if (!confirm(`Delete "${habit.name}"? This cannot be undone.`)) return;
+    const ok = await confirm({ title: `Delete "${habit.name}"? This cannot be undone.`, confirmLabel: 'Delete' });
+    if (!ok) return;
     try {
       await habitsApi.delete(habit.id);
       toast.success(`Deleted "${habit.name}"`);
@@ -189,10 +192,20 @@ export function HabitsListPage() {
           </SelectContent>
         </Select>
         <div className="ml-auto flex gap-1">
-          <Button size="icon" variant={view === 'table' ? 'secondary' : 'ghost'} onClick={() => setView('table')}>
+          <Button
+            size="icon"
+            variant={view === 'table' ? 'secondary' : 'ghost'}
+            onClick={() => setView('table')}
+            aria-label="Table view"
+          >
             <ListIcon className="size-4" />
           </Button>
-          <Button size="icon" variant={view === 'card' ? 'secondary' : 'ghost'} onClick={() => setView('card')}>
+          <Button
+            size="icon"
+            variant={view === 'card' ? 'secondary' : 'ghost'}
+            onClick={() => setView('card')}
+            aria-label="Card view"
+          >
             <LayoutGrid className="size-4" />
           </Button>
         </div>
@@ -316,6 +329,7 @@ export function HabitsListPage() {
       )}
 
       <HabitFormDialog open={formOpen} onOpenChange={setFormOpen} editing={editing} onSaved={invalidate} />
+      {dialog}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import com.lifeos.finance_tracker.domains.entity.Merchant;
 import com.lifeos.finance_tracker.domains.entity.RecurringPattern;
 import com.lifeos.finance_tracker.domains.entity.Transaction;
 import com.lifeos.finance_tracker.domains.enums.RecurringFrequency;
-import com.lifeos.finance_tracker.publisher.AuditEventPublisher;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.finance_tracker.repository.MerchantRepository;
 import com.lifeos.finance_tracker.repository.RecurringPatternRepository;
 import com.lifeos.finance_tracker.repository.TransactionRepository;

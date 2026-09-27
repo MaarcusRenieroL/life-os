@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Award, CalendarClock, MessageSquareReply, Send, UserCheck, XCircle } from 'lucide-react';
 import { useMemo, type ComponentType } from 'react';
 
+import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 
 import { jobAnalyticsApi } from './job-api';
@@ -73,7 +74,7 @@ export function JobAnalyticsPage() {
       <section className="mt-4 rounded-lg border bg-card p-5">
         <SectionHeading>Applications per week</SectionHeading>
         {weekBars.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">Not enough history yet.</p>
+          <EmptyState message="Not enough history yet." className="mt-2" />
         ) : (
           <div className="mt-4 flex h-32 gap-1.5">
             {weekBars.map((w, i) => (
@@ -94,7 +95,7 @@ export function JobAnalyticsPage() {
         <section className="rounded-lg border bg-card p-5">
           <SectionHeading>Best-performing sources</SectionHeading>
           {sourceRows.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No source data yet.</p>
+            <EmptyState message="No source data yet." className="mt-2" />
           ) : (
             <ul className="mt-3 flex flex-col gap-2.5">
               {sourceRows.map((s) => (
@@ -115,7 +116,7 @@ export function JobAnalyticsPage() {
         <section className="rounded-lg border bg-card p-5">
           <SectionHeading>Most common missing skills</SectionHeading>
           {skillRows.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">No gaps detected across your jobs yet.</p>
+            <EmptyState message="No gaps detected across your jobs yet." className="mt-2" />
           ) : (
             <ul className="mt-3 flex flex-col gap-2.5">
               {skillRows.map((s) => (
@@ -137,7 +138,7 @@ export function JobAnalyticsPage() {
       <section className="mt-4 rounded-lg border bg-card p-5">
         <SectionHeading>Average time in each stage</SectionHeading>
         {data.averageTimeInStage.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">Not enough transitions yet.</p>
+          <EmptyState message="Not enough transitions yet." className="mt-2" />
         ) : (
           <ul className="mt-3 flex flex-col gap-2">
             {data.averageTimeInStage.map((s) => (

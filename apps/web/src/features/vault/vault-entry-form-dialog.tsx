@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { getErrorMessage } from '@/lib/error';
 
 import { vaultCategoryApi } from './category-api';
 import { PasswordGeneratorDialog } from './password-generator-dialog';
@@ -57,6 +59,7 @@ export function VaultEntryFormDialog({ open, onOpenChange, entryId, onSaved, onD
   const { data: categories = [] } = useQuery({
     queryKey: ['vault', 'categories'],
     queryFn: vaultCategoryApi.getCategories,
+    staleTime: 5 * 60_000,
   });
 
   const [form, setForm] = useState<VaultEntryWriteRequest>(BLANK);
@@ -64,6 +67,7 @@ export function VaultEntryFormDialog({ open, onOpenChange, entryId, onSaved, onD
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   useEffect(() => {
     if (!open) return;
@@ -108,17 +112,16 @@ export function VaultEntryFormDialog({ open, onOpenChange, entryId, onSaved, onD
       onSaved();
       onOpenChange(false);
     } catch (err) {
-      setError(
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
-          'Unable to save this entry.',
-      );
+      setError(getErrorMessage(err, 'Unable to save this entry.'));
     } finally {
       setSaving(false);
     }
   }
 
   async function remove() {
-    if (!entryId || !confirm('Delete this vault entry?')) return;
+    if (!entryId) return;
+    const ok = await confirm({ title: 'Delete this vault entry?', confirmLabel: 'Delete' });
+    if (!ok) return;
     await vaultApi.deleteEntry(entryId);
     queryClient.invalidateQueries({ queryKey: ['vault'] });
     onDeleted();
@@ -220,6 +223,7 @@ export function VaultEntryFormDialog({ open, onOpenChange, entryId, onSaved, onD
         onOpenChange={setGeneratorOpen}
         onUse={(password) => set('password', password)}
       />
+      {dialog}
     </Dialog>
   );
 }

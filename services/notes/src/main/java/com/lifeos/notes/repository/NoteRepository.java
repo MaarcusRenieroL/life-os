@@ -73,4 +73,14 @@ public interface NoteRepository extends JpaRepository<Note, UUID>, JpaSpecificat
   // Auto-archive scheduler target for a single user.
   List<Note> findAllByUserIdAndIsArchivedFalseAndDeletedAtIsNullAndUpdatedAtBefore(
       UUID userId, Instant cutoff);
+
+  // NoteFollowUpScanner target - notes whose follow-up lands strictly within [dayStart, dayEnd),
+  // i.e. "due today" - across all users, since the scanner itself resolves each note's owner.
+  List<Note> findAllByFollowUpAtGreaterThanEqualAndFollowUpAtLessThanAndDeletedAtIsNull(
+      Instant dayStart, Instant dayEnd);
+
+  // Internal Today endpoint target for a single user - due today or overdue (anything not in the
+  // future), so a missed follow-up keeps surfacing instead of silently disappearing after its day.
+  List<Note> findAllByUserIdAndFollowUpAtIsNotNullAndFollowUpAtLessThanAndDeletedAtIsNull(
+      UUID userId, Instant before);
 }

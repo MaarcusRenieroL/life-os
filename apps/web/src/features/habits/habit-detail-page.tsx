@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +23,7 @@ export function HabitDetailPage() {
   const queryClient = useQueryClient();
   const [period, setPeriod] = useState<ConsistencyPeriod>('week');
   const [editOpen, setEditOpen] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   const { data: habit, isLoading } = useQuery({
     queryKey: ['habits', id],
@@ -40,9 +43,16 @@ export function HabitDetailPage() {
     enabled: !!id,
   });
 
+  // Bounded to the last 12 months rather than the habit's whole history - the log history table
+  // below renders every row unbounded, so a habit tracked for a couple of years was shipping and
+  // rendering hundreds of rows on every detail-page open.
+  const logsFrom = new Date();
+  logsFrom.setFullYear(logsFrom.getFullYear() - 1);
+  const logsFromIso = logsFrom.toISOString().slice(0, 10);
+
   const { data: logs = [], isLoading: logsLoading } = useQuery({
-    queryKey: ['habits', id, 'logs', 'all'],
-    queryFn: () => habitsApi.logs(id!),
+    queryKey: ['habits', id, 'logs', logsFromIso],
+    queryFn: () => habitsApi.logs(id!, logsFromIso),
     enabled: !!id,
   });
 
@@ -52,7 +62,8 @@ export function HabitDetailPage() {
 
   async function deleteLog(logId: string) {
     if (!id) return;
-    if (!confirm('Undo this log entry?')) return;
+    const ok = await confirm({ title: 'Undo this log entry?', confirmLabel: 'Undo' });
+    if (!ok) return;
     try {
       await habitsApi.deleteLog(id, logId);
       queryClient.invalidateQueries({ queryKey: ['habits', id, 'logs'] });
@@ -184,7 +195,7 @@ export function HabitDetailPage() {
           {logsLoading ? (
             <Skeleton className="h-32 w-full" />
           ) : sortedLogs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No logs yet.</p>
+            <EmptyState message="No logs yet." />
           ) : (
             <Table>
               <TableHeader>
@@ -219,6 +230,7 @@ export function HabitDetailPage() {
       </Card>
 
       <HabitFormDialog open={editOpen} onOpenChange={setEditOpen} editing={habit} onSaved={invalidateAll} />
+      {dialog}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { FormattedText } from '@/components/formatted-text';
 import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
@@ -330,7 +331,7 @@ export function JobDetailPage() {
                 {job.jobDescriptionText ? (
                   <FormattedText text={job.jobDescriptionText} />
                 ) : (
-                  <p className="text-sm text-muted-foreground">No description on file.</p>
+                  <EmptyState message="No description on file." />
                 )}
               </div>
             </CardContent>

@@ -3,6 +3,7 @@ import { addDays, format, startOfWeek } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { EmptyState } from '@/components/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -85,7 +86,7 @@ export function HabitsWeeklyGridPage() {
           ))}
         </div>
       ) : habits.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">No active habits to show.</p>
+        <EmptyState className="mt-6" message="No active habits to show." />
       ) : (
         <div className="mt-6 overflow-x-auto">
           <table className="w-full border-collapse text-sm">

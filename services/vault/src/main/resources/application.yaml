@@ -4,9 +4,15 @@ server:
 spring:
   application:
     name: vault
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: validate
+    open-in-view: false
   flyway:
     schemas: vault_schema
     default-schema: vault_schema

@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 /**
  * Streak milestones are derived on the fly from the streak data the backend already returns
  * (currentStreak / longestStreak) - there is no badges table and nothing is awarded or stored.
- * Thresholds mirror HabitNotificationService.MILESTONES on the backend.
+ * Thresholds are this module's own; HabitAttentionScanner on the backend uses a narrower set
+ * (7/30/100) for the HABIT_STREAK_MILESTONE notification.
  */
 export const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 365] as const;
 

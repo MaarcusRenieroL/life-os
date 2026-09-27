@@ -32,6 +32,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,6 +42,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class JobListingService {
 
   private static final Logger log = LoggerFactory.getLogger(JobListingService.class);
+
+  // The job listing (GET /v1/jobs) endpoint returns a flat array the frontend consumes directly
+  // (apps/web/src/features/job-tracker/jobs-list-page.tsx expects JobListing[], not a Page). To
+  // avoid a frontend/API contract break, list() stays a flat List but is capped here instead of
+  // pulling every job a user has ever added - ordered by fit score desc as before, so this only
+  // ever trims the long tail of old/low-fit listings off the end.
+  private static final int LIST_LIMIT = 200;
 
   private final JobListingRepository jobListingRepository;
   private final CompanyRepository companyRepository;
@@ -54,7 +62,7 @@ public class JobListingService {
 
   @Transactional(readOnly = true)
   public List<JobListing> list(UUID userId) {
-    return jobListingRepository.findAllForUser(userId);
+    return jobListingRepository.findAllForUser(userId, PageRequest.of(0, LIST_LIMIT));
   }
 
   @Transactional(readOnly = true)
@@ -145,6 +153,43 @@ public class JobListingService {
 
     scoreQuietly(userId, job);
     job = jobListingRepository.save(job);
+    recordStatusChange(userId, job.getId(), null, job.getStatus());
+    return job;
+  }
+
+  /**
+   * Seeds a minimal {@link JobListing} from core's quick-capture flow - the candidate typed one
+   * line of free text somewhere in the app (e.g. "applied to Stripe for backend engineer"), core's
+   * AI classifier extracted a company and title from it, and that's all we get here: no URL, no
+   * description text to parse or score against. Starts at {@link JobStatus#INTERESTED} like every
+   * other creation path in this service ({@link #createFromLink}, the email digest path via {@code
+   * EmailEventService.createDigestJobs}) - the candidate's pipeline stage is a deliberate,
+   * separate action via {@link #updateStatus}, never inferred at creation time even when the
+   * captured text says "applied".
+   */
+  @Transactional
+  public JobListing createFromQuickCapture(UUID userId, String company, String title) {
+    if (isBlank(company) && isBlank(title)) {
+      throw new InvalidRequestException("Quick capture needs at least a company or a title");
+    }
+
+    String companyName = isBlank(company) ? "Unknown company" : company.trim();
+    Company companyEntity = resolveCompany(userId, companyName);
+
+    JobListing job =
+        jobListingRepository.save(
+            JobListing.builder()
+                .userId(userId)
+                .companyId(companyEntity == null ? null : companyEntity.getId())
+                .title(isBlank(title) ? "Untitled role" : title.trim())
+                .company(companyName)
+                .source("quick-capture")
+                .ingestedBy(IngestSource.MANUAL)
+                .visaSponsorship(VisaSponsorship.UNKNOWN)
+                .status(JobStatus.INTERESTED)
+                .parseStatus(ProcessingStatus.COMPLETED)
+                .build());
+
     recordStatusChange(userId, job.getId(), null, job.getStatus());
     return job;
   }

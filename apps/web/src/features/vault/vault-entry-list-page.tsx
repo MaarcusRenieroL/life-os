@@ -1,8 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +23,7 @@ import { useClipboard } from '@/lib/use-clipboard';
 import { vaultCategoryApi } from './category-api';
 import { VaultCategoryDialog } from './vault-category-dialog';
 import { VaultEntryFormDialog } from './vault-entry-form-dialog';
-import type { VaultEntrySummary } from './types';
+import type { VaultCategory, VaultEntrySummary } from './types';
 import { buildEntryStrengthMap, type EntryStrengthLabel } from './utils/entry-security';
 import { vaultApi } from './vault-api';
 import { useVaultState } from './vault-state';
@@ -29,23 +31,21 @@ import { useVaultState } from './vault-state';
 type QuickChip = 'all' | 'favorites' | string;
 
 export function VaultEntryListPage() {
-  const { unlocked, setUnlocked } = useVaultState();
+  // This page only ever renders inside <VaultUnlockGuard>'s <Outlet>, which already did its own
+  // fresh GET /v1/vault/status before allowing that render and wrote the result into this same
+  // shared context - a second status fetch here just repeated it for no reason.
+  const { unlocked } = useVaultState();
   const queryClient = useQueryClient();
   const { copyWithAutoClear } = useClipboard();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: entries = [] } = useQuery({ queryKey: ['vault', 'entries'], queryFn: vaultApi.getEntries });
-  const { data: categories = [] } = useQuery({ queryKey: ['vault', 'categories'], queryFn: vaultCategoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['vault', 'categories'], queryFn: vaultCategoryApi.getCategories, staleTime: 5 * 60_000 });
   const { data: health } = useQuery({
     queryKey: ['vault', 'health'],
     queryFn: vaultApi.getHealthSummary,
     retry: false,
   });
-
-  useEffect(() => {
-    vaultApi.getStatus().then((s) => setUnlocked(s.unlocked));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const [search, setSearch] = useState('');
   const [quickChip, setQuickChip] = useState<QuickChip>('all');
@@ -54,6 +54,7 @@ export function VaultEntryListPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   useEffect(() => {
     const editId = searchParams.get('edit');
@@ -86,10 +87,6 @@ export function VaultEntryListPage() {
     return list;
   }, [entries, search, quickChip]);
 
-  function entryStrength(id: string): EntryStrengthLabel {
-    return strengthMap.get(id) ?? 'Strong';
-  }
-
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['vault'] });
   }
@@ -99,43 +96,56 @@ export function VaultEntryListPage() {
     setFormOpen(true);
   }
 
-  function openEdit(id: string) {
+  // useCallback so these keep a stable identity across renders - they're passed as props to the
+  // memoized EntryRow below, and a new function identity every render would defeat that memo just
+  // as badly as not memoizing at all.
+  const openEdit = useCallback((id: string) => {
     setEditingId(id);
     setFormOpen(true);
-  }
+  }, []);
 
-  async function duplicateEntry(entry: VaultEntrySummary) {
-    const detail = await vaultApi.getEntry(entry.id);
-    await vaultApi.createEntry({ ...detail, title: `${detail.title} (copy)`, favorite: false });
-    invalidate();
-  }
+  const duplicateEntry = useCallback(
+    async (entry: VaultEntrySummary) => {
+      const detail = await vaultApi.getEntry(entry.id);
+      await vaultApi.createEntry({ ...detail, title: `${detail.title} (copy)`, favorite: false });
+      invalidate();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
-  async function deleteEntry(id: string) {
-    if (!confirm('Delete this vault entry?')) return;
+  const deleteEntry = useCallback(async (id: string) => {
+    const ok = await confirm({ title: 'Delete this vault entry?', confirmLabel: 'Delete' });
+    if (!ok) return;
     await vaultApi.deleteEntry(id);
     invalidate();
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  async function moveToFolder(id: string, categoryId: string) {
+  const moveToFolder = useCallback(async (id: string, categoryId: string) => {
     const detail = await vaultApi.getEntry(id);
     await vaultApi.updateEntry(id, { ...detail, categoryId });
     invalidate();
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  function toggleSelect(id: string) {
+  const toggleSelect = useCallback((id: string) => {
     setSelected((s) => {
       const next = new Set(s);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }
+  }, []);
 
   async function deleteSelected() {
-    if (selected.size === 0 || !confirm(`Delete ${selected.size} selected entries?`)) return;
-    for (const id of selected) {
-      await vaultApi.deleteEntry(id);
-    }
+    if (selected.size === 0) return;
+    const ok = await confirm({
+      title: `Delete ${selected.size} selected entries?`,
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+    await Promise.all([...selected].map((id) => vaultApi.deleteEntry(id)));
     setSelected(new Set());
     invalidate();
   }
@@ -206,70 +216,23 @@ export function VaultEntryListPage() {
       </div>
 
       <ul className="mt-4 flex flex-col gap-1.5">
-        {filteredEntries.map((entry) => {
-          const strength = entryStrength(entry.id);
-          return (
-            <li key={entry.id} className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5">
-              <input type="checkbox" checked={selected.has(entry.id)} onChange={() => toggleSelect(entry.id)} />
-              <button className="flex flex-1 items-center gap-3 text-left" onClick={() => setOpenEntryId(entry.id)}>
-                {entry.icon ? (
-                  <img src={entry.icon} alt="" className="size-6 rounded" />
-                ) : (
-                  <div className="flex size-6 items-center justify-center rounded bg-muted text-[10px]">
-                    {entry.title.slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">
-                    {entry.title} {entry.favorite && <span className="text-primary">★</span>}
-                  </div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {entry.username || entry.email || entry.url || '—'}
-                  </div>
-                </div>
-              </button>
-              <Badge
-                variant={strength === 'Strong' ? 'secondary' : 'outline'}
-                className={strength !== 'Strong' ? 'border-destructive text-destructive' : undefined}
-              >
-                {strength}
-              </Badge>
-              <button
-                className="text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => copyWithAutoClear(entry.username || entry.email || '', `row-${entry.id}`)}
-              >
-                Copy
-              </button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon-sm">⋯</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => openEdit(entry.id)}>Edit</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => void duplicateEntry(entry)}>Duplicate</DropdownMenuItem>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger disabled={categories.length === 0}>
-                      Move to folder
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      {categories.map((c) => (
-                        <DropdownMenuItem key={c.id} onClick={() => void moveToFolder(entry.id, c.id)}>
-                          {c.name}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                  <DropdownMenuItem disabled>Share</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive" onClick={() => void deleteEntry(entry.id)}>
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </li>
-          );
-        })}
-        {filteredEntries.length === 0 && <p className="text-sm text-muted-foreground">No entries found.</p>}
+        {filteredEntries.map((entry) => (
+          <EntryRow
+            key={entry.id}
+            entry={entry}
+            strength={strengthMap.get(entry.id) ?? 'Strong'}
+            selected={selected.has(entry.id)}
+            categories={categories}
+            onToggleSelect={toggleSelect}
+            onOpen={setOpenEntryId}
+            onCopy={copyWithAutoClear}
+            onEdit={openEdit}
+            onDuplicate={duplicateEntry}
+            onMoveToFolder={moveToFolder}
+            onDelete={deleteEntry}
+          />
+        ))}
+        {filteredEntries.length === 0 && <EmptyState message="No entries found." />}
       </ul>
 
       {openEntry && (
@@ -292,9 +255,101 @@ export function VaultEntryListPage() {
       />
 
       <VaultCategoryDialog open={categoriesOpen} onOpenChange={setCategoriesOpen} />
+      {dialog}
     </div>
   );
 }
+
+// Memoized so typing in the search box (which re-renders the parent on every keystroke) doesn't
+// re-render every row - each row's radix DropdownMenu only needs to re-render when its own props
+// actually change. Callback props must stay referentially stable (useCallback in the parent) or
+// this memo is defeated.
+const EntryRow = memo(function EntryRow({
+  entry,
+  strength,
+  selected,
+  categories,
+  onToggleSelect,
+  onOpen,
+  onCopy,
+  onEdit,
+  onDuplicate,
+  onMoveToFolder,
+  onDelete,
+}: {
+  entry: VaultEntrySummary;
+  strength: EntryStrengthLabel;
+  selected: boolean;
+  categories: VaultCategory[];
+  onToggleSelect: (id: string) => void;
+  onOpen: (id: string) => void;
+  onCopy: (value: string, fieldKey: string) => void;
+  onEdit: (id: string) => void;
+  onDuplicate: (entry: VaultEntrySummary) => void;
+  onMoveToFolder: (id: string, categoryId: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <li className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5">
+      <input type="checkbox" checked={selected} onChange={() => onToggleSelect(entry.id)} />
+      <button className="flex flex-1 items-center gap-3 text-left" onClick={() => onOpen(entry.id)}>
+        {entry.icon ? (
+          <img src={entry.icon} alt="" className="size-6 rounded" />
+        ) : (
+          <div className="flex size-6 items-center justify-center rounded bg-muted text-[10px]">
+            {entry.title.slice(0, 1).toUpperCase()}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">
+            {entry.title} {entry.favorite && <span className="text-primary">★</span>}
+          </div>
+          <div className="truncate text-xs text-muted-foreground">
+            {entry.username || entry.email || entry.url || '—'}
+          </div>
+        </div>
+      </button>
+      <Badge
+        variant={strength === 'Strong' ? 'secondary' : 'outline'}
+        className={strength !== 'Strong' ? 'border-destructive text-destructive' : undefined}
+      >
+        {strength}
+      </Badge>
+      <button
+        className="text-xs text-muted-foreground hover:text-foreground"
+        onClick={() => onCopy(entry.username || entry.email || '', `row-${entry.id}`)}
+      >
+        Copy
+      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon-sm">⋯</Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onEdit(entry.id)}>Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => void onDuplicate(entry)}>Duplicate</DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger disabled={categories.length === 0}>
+              Move to folder
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {categories.map((c) => (
+                <DropdownMenuItem key={c.id} onClick={() => void onMoveToFolder(entry.id, c.id)}>
+                  {c.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuItem disabled>Share</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="text-destructive" onClick={() => void onDelete(entry.id)}>
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </li>
+  );
+});
 
 function StatTile({ label, value, destructive }: { label: string; value: number; destructive?: boolean }) {
   return (

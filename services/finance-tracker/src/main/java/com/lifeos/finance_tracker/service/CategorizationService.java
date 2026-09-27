@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +46,46 @@ public class CategorizationService {
     }
 
     return Optional.empty();
+  }
+
+  // Read-only load of a user's active rules, used by TransactionService#createFromCsvImportBatch
+  // to fetch the rule set once for the whole batch instead of once per row (see the overload of
+  // categorize below).
+  @Transactional(readOnly = true)
+  public List<CategorizationRule> loadActiveRules(UUID userId) {
+    return categorizationRuleRepository.findAllByUserIdAndIsActiveTrueOrderByPriorityDesc(userId);
+  }
+
+  // Batch-import counterpart of categorize(Transaction) - matches against an already-loaded rule
+  // list instead of re-querying per row. Hit-count increments are applied in memory only; the
+  // caller persists every touched rule once for the whole batch (see
+  // TransactionService#createFromCsvImportBatch), not per row.
+  public Optional<UUID> categorize(Transaction transaction, List<CategorizationRule> categorizationRules) {
+    for (CategorizationRule rule : categorizationRules) {
+      String value = extractValue(transaction, rule.getMatchField());
+
+      if (value == null) {
+        continue;
+      }
+
+      if (matches(value, rule)) {
+        rule.setHitCount(rule.getHitCount() + 1);
+
+        return Optional.of(rule.getCategoryId());
+      }
+    }
+
+    return Optional.empty();
+  }
+
+  // Persists every rule whose hitCount changed via the batch categorize(Transaction, List)
+  // overload above, once for the whole batch.
+  public void saveAllTouched(List<CategorizationRule> categorizationRules) {
+    if (categorizationRules.isEmpty()) {
+      return;
+    }
+
+    categorizationRuleRepository.saveAll(categorizationRules);
   }
 
   // Called whenever a user manually sets/changes a transaction's category. Builds (or

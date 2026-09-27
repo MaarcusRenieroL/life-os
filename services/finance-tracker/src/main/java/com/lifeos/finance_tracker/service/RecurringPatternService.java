@@ -19,6 +19,7 @@ public class RecurringPatternService {
 
   private final RecurringPatternRepository recurringPatternRepository;
 
+  @Transactional(readOnly = true)
   public List<RecurringPatternResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -27,6 +28,7 @@ public class RecurringPatternService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public RecurringPatternResponse get(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 

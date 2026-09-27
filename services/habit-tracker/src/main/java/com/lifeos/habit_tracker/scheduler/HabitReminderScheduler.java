@@ -1,6 +1,8 @@
 package com.lifeos.habit_tracker.scheduler;
 
 import com.lifeos.common.events.AuditEventType;
+import com.lifeos.common.events.NotificationEventPublisher;
+import com.lifeos.common.events.NotificationEventType;
 import com.lifeos.habit_tracker.domains.entity.HabitReminder;
 import com.lifeos.habit_tracker.publisher.HabitEventPublisher;
 import com.lifeos.habit_tracker.repository.HabitReminderRepository;
@@ -20,9 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
  * the poll window) and configured days-of-week match "now". Runs every 5 minutes by default - fine
  * grained enough for a reminder without polling every minute.
  *
- * TODO(maarcus): no notification delivery service exists yet in this repo; this only publishes an
- * event onto the shared activity-events topic (the same one every other service's audit events go
- * through) - actual push/email dispatch needs a consumer built elsewhere.
+ * <p>Publishes to both the audit trail (activity-events, via HabitEventPublisher - a durable
+ * record that this reminder fired) and the notification pipeline (notification-events, via
+ * NotificationEventPublisher - what actually surfaces in the bell/Today view). These were
+ * previously the same publish call, which is why this used to be a dead end: activity-events has
+ * no delivery consumer, it's an audit log. Notification delivery now exists (core consumes
+ * notification-events into the notifications table), so this is the fix for the TODO that used
+ * to live here.
  */
 @Component
 @RequiredArgsConstructor
@@ -33,6 +39,7 @@ public class HabitReminderScheduler {
   private final HabitReminderRepository habitReminderRepository;
   private final HabitRepository habitRepository;
   private final HabitEventPublisher habitEventPublisher;
+  private final NotificationEventPublisher notificationEventPublisher;
 
   @Scheduled(cron = "${habit.reminder.dispatch.cron:0 */5 * * * *}")
   @Transactional(readOnly = true)
@@ -50,14 +57,22 @@ public class HabitReminderScheduler {
       habitRepository
           .findById(reminder.getHabitId())
           .ifPresent(
-              habit ->
-                  habitEventPublisher.publish(
-                      habit.getUserId(),
-                      AuditEventType.HABIT_REMINDER_DUE,
-                      "Habit reminder due",
-                      Map.of(
-                          "habitId", habit.getId().toString(),
-                          "reminderId", reminder.getId().toString())));
+              habit -> {
+                Map<String, String> metadata =
+                    Map.of(
+                        "habitId", habit.getId().toString(),
+                        "reminderId", reminder.getId().toString());
+
+                habitEventPublisher.publish(
+                    habit.getUserId(), AuditEventType.HABIT_REMINDER_DUE, "Habit reminder due", metadata);
+
+                notificationEventPublisher.publish(
+                    habit.getUserId(),
+                    NotificationEventType.HABIT_REMINDER_DUE,
+                    "Time for " + habit.getName(),
+                    habit.getWhy(),
+                    metadata);
+              });
     }
   }
 

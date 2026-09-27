@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
+import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 
 import { vaultApi } from './vault-api';
@@ -93,9 +94,7 @@ export function VaultHealthPage() {
               </li>
             );
           })}
-          {health.actionRequired.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nothing needs attention.</p>
-          )}
+          {health.actionRequired.length === 0 && <EmptyState message="Nothing needs attention." />}
         </ul>
       </section>
 

@@ -40,6 +40,21 @@ public class AnalyticsController {
         ApiResponse.success(data, "Category trend comparisons fetched successfully"));
   }
 
+  /**
+   * Aggregate of {@link #getCategoryAnalytics} for a whole set of categories, so a page showing
+   * many categories makes one request instead of one per category. Ids are passed as a repeated or
+   * comma-separated {@code categoryIds} query param.
+   */
+  @GetMapping("/categories")
+  public ResponseEntity<ApiResponse<List<CategoryComparison>>> getCategoryAnalyticsBulk(
+      Authentication authentication,
+      @RequestParam(name = "categoryIds", required = false) List<UUID> categoryIds) {
+    List<CategoryComparison> data =
+        analyticsService.getCategoryAnalyticsBulk(authentication, categoryIds);
+    return ResponseEntity.ok(
+        ApiResponse.success(data, "Category trend comparisons fetched successfully"));
+  }
+
   @GetMapping("/trends")
   public ResponseEntity<ApiResponse<List<MonthlyTrend>>> getTrends(Authentication authentication) {
     List<MonthlyTrend> data = analyticsService.getMonthlyTrends(authentication);

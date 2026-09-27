@@ -38,4 +38,21 @@ export const authApi = {
   async deleteAccount(): Promise<void> {
     await api.delete(`${baseUrl}/me`);
   },
+
+  updateAvatar(file: File): Promise<UserProfileResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return unwrap(api.post(`${baseUrl}/me/avatar`, formData));
+  },
+
+  async deleteAvatar(): Promise<UserProfileResponse> {
+    return unwrap(api.delete(`${baseUrl}/me/avatar`));
+  },
+
+  // <img src> can't carry the Authorization header, so the avatar image is fetched as a blob
+  // and turned into an object URL instead of pointing an <img> straight at the endpoint.
+  async getAvatarObjectUrl(): Promise<string> {
+    const response = await api.get(`${baseUrl}/me/avatar`, { responseType: 'blob' });
+    return URL.createObjectURL(response.data as Blob);
+  },
 };

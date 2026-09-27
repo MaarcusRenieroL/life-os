@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
+import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -58,7 +59,7 @@ function formatRange(startDate: string | null, endDate: string | null, current: 
 
 export function ResumePage() {
   const queryClient = useQueryClient();
-  const { data: bundle } = useQuery({ queryKey: ['career-profile'], queryFn: careerProfileApi.get });
+  const { data: bundle } = useQuery({ queryKey: ['career-profile'], queryFn: careerProfileApi.get, staleTime: 5 * 60_000 });
 
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [experienceDialog, setExperienceDialog] = useState<{ open: boolean; editing: WorkExperience | null }>({
@@ -181,7 +182,7 @@ export function ResumePage() {
           </Button>
         </div>
         <div className="mt-2 flex flex-col gap-2">
-          {experiences.length === 0 && <p className="text-sm text-muted-foreground">Nothing added yet.</p>}
+          {experiences.length === 0 && <EmptyState message="Nothing added yet." />}
           {experiences.map((e) => (
             <Card key={e.id}>
               <CardContent className="p-4 text-sm">
@@ -225,7 +226,7 @@ export function ResumePage() {
           </Button>
         </div>
         <div className="mt-2 flex flex-col gap-2">
-          {projects.length === 0 && <p className="text-sm text-muted-foreground">Nothing added yet.</p>}
+          {projects.length === 0 && <EmptyState message="Nothing added yet." />}
           {projects.map((p) => (
             <Card key={p.id}>
               <CardContent className="p-4 text-sm">

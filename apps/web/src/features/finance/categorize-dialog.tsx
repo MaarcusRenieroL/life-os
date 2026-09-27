@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function CategorizeDialog({ open, onOpenChange, transactionLabel, initialCategoryIds = [], onSave }: Props) {
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
   const [selected, setSelected] = useState<string[]>(initialCategoryIds);
 
   useEffect(() => {

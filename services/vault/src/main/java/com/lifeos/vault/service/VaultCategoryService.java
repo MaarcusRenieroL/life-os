@@ -20,6 +20,7 @@ public class VaultCategoryService {
 
   private final VaultCategoryRepository vaultCategoryRepository;
 
+  @Transactional(readOnly = true)
   public List<VaultCategoryResponse> getCategories(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -48,6 +49,7 @@ public class VaultCategoryService {
     return toResponse(vaultCategory);
   }
 
+  @Transactional(readOnly = true)
   public VaultCategoryResponse getCategory(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 

@@ -8,15 +8,17 @@ import {
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
+import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 
 import { BudgetDialog } from './budget-dialog';
 import { budgetApi } from './budget-api';
 import { categoryApi } from './category-api';
-import { analyticsApi } from './analytics-api';
+import { useCategoryComparisons } from './category-comparison-query';
 import type { BudgetResponse } from './types';
 import { formatINR } from './utils';
 
@@ -31,26 +33,29 @@ interface BudgetRow extends BudgetResponse {
 export function BudgetsPage() {
   const queryClient = useQueryClient();
   const { data: budgets = [] } = useQuery({ queryKey: ['finance', 'budgets'], queryFn: budgetApi.getBudgets });
-  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories });
+  const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
 
-  const expenseCategoryIds = categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id);
-  const comparisonIds = Array.from(new Set([...expenseCategoryIds, ...budgets.map((b) => b.categoryId)]));
-  const { data: comparisons = [] } = useQuery({
-    queryKey: ['finance', 'comparisons', comparisonIds],
-    queryFn: () => Promise.all(comparisonIds.map((id) => analyticsApi.getCategoryComparison(id))),
-    enabled: comparisonIds.length > 0,
-  });
+  // Memoized so its identity is stable across unrelated re-renders - it's a dependency of the
+  // uncapped memo below, which would otherwise recompute on every render of this page.
+  const expenseCategoryIds = useMemo(
+    () => categories.filter((c) => c.type === 'EXPENSE').map((c) => c.id),
+    [categories],
+  );
+
+  const comparisons = useCategoryComparisons(categories);
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BudgetResponse | null>(null);
+  const { confirm, dialog } = useConfirmDialog();
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['finance', 'budgets'] });
   }
 
   async function remove(budget: BudgetResponse) {
-    if (!confirm('Delete this budget?')) return;
+    const ok = await confirm({ title: 'Delete this budget?', confirmLabel: 'Delete' });
+    if (!ok) return;
     await budgetApi.deleteBudget(budget.id);
     invalidate();
   }
@@ -163,7 +168,7 @@ export function BudgetsPage() {
       )}
 
       {rows.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">No budgets yet — set a cap on a category to start tracking it.</p>
+        <EmptyState className="mt-6" message="No budgets yet — set a cap on a category to start tracking it." />
       ) : (
         <div className="mt-4">
           <DataTable table={table} onRowClick={openEdit} />
@@ -185,6 +190,7 @@ export function BudgetsPage() {
       )}
 
       <BudgetDialog open={dialogOpen} onOpenChange={setDialogOpen} editing={editing} onSaved={invalidate} />
+      {dialog}
     </div>
   );
 }

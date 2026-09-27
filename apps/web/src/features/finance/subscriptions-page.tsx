@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 
+import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 
 import { CategorizeDialog } from './categorize-dialog';
@@ -109,7 +110,7 @@ export function SubscriptionsPage() {
             </div>
           </li>
         ))}
-        {filtered.length === 0 && <p className="text-sm text-muted-foreground">No subscriptions match.</p>}
+        {filtered.length === 0 && <EmptyState message="No subscriptions match." />}
       </ul>
 
       <CategorizeDialog

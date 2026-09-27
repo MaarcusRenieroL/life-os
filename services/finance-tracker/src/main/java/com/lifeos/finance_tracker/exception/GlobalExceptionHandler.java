@@ -59,6 +59,12 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(NoDefaultAccountException.class)
+  public ResponseEntity<ApiResponse<Void>> handleNoDefaultAccount(NoDefaultAccountException exception) {
+    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
     String message =

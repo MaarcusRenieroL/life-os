@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { vaultApi } from '@/features/vault/vault-api';
+import { getErrorMessage } from '@/lib/error';
 
 export function RecoveryCodesDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -20,10 +21,7 @@ export function RecoveryCodesDialog({ open, onOpenChange }: { open: boolean; onO
       const result = await vaultApi.generateRecoveryCodes(currentPassword);
       setCodes(result.codes);
     } catch (err) {
-      setError(
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message ??
-          'Unable to generate recovery codes.',
-      );
+      setError(getErrorMessage(err, 'Unable to generate recovery codes.'));
     } finally {
       setBusy(false);
     }

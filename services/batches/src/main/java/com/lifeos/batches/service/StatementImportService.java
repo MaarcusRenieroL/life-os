@@ -43,25 +43,29 @@ public class StatementImportService {
       List<ParsedStatementRow> rows = parse(tempFile, password);
       log.info("Parsed {} rows from statement {}", rows.size(), fileName);
 
-      int imported = 0;
-      for (ParsedStatementRow row : rows) {
-        try {
-          financeTrackerClient.createCsvImportTransaction(
-              CreateCsvImportTransactionRequest.builder()
-                  .userId(userId)
-                  .accountId(accountId)
-                  .transactionDate(row.transactionDate())
-                  .description(row.description())
-                  .amount(row.amount())
-                  .type(row.type())
-                  .build());
-          imported++;
-        } catch (Exception e) {
-          log.error("Failed to import a parsed statement row: {}", e.getMessage());
-        }
+      if (rows.isEmpty()) {
+        return new StatementImportResult(0, 0);
       }
 
-      return new StatementImportResult(rows.size(), imported);
+      // One request for the whole statement instead of one per row - finance-tracker resolves
+      // the account once and applies every row's balance/categorization/dedup logic server-side,
+      // reporting back how many actually got imported (a row can still be skipped there as a
+      // dedup match, same as before).
+      List<CreateCsvImportTransactionRequest> requests =
+          rows.stream()
+              .map(
+                  row ->
+                      CreateCsvImportTransactionRequest.builder()
+                          .userId(userId)
+                          .accountId(accountId)
+                          .transactionDate(row.transactionDate())
+                          .description(row.description())
+                          .amount(row.amount())
+                          .type(row.type())
+                          .build())
+              .toList();
+
+      return financeTrackerClient.createCsvImportTransactionsBatch(requests);
     } finally {
       Files.deleteIfExists(tempFile);
     }

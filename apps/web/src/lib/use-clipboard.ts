@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 /**
  * Copies a sensitive value (vault passwords, card numbers) and auto-clears the
@@ -11,7 +11,10 @@ export function useClipboard() {
   const pendingClear = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCopiedValue = useRef<string | null>(null);
 
-  function copyWithAutoClear(value: string, fieldKey: string, timeoutMs = 30000) {
+  // useCallback with an empty dep array: the body only closes over refs and a setState setter,
+  // both stable across renders, so this is safe to memoize - keeping its identity stable matters
+  // for callers (e.g. the vault entry list) that pass it down to a memoized child component.
+  const copyWithAutoClear = useCallback((value: string, fieldKey: string, timeoutMs = 30000) => {
     navigator.clipboard
       .writeText(value)
       .then(() => {
@@ -42,7 +45,7 @@ export function useClipboard() {
         // clipboard write denied (permissions, insecure context, etc.) - don't
         // show "Copied!" for something that didn't actually copy
       });
-  }
+  }, []);
 
   return { copiedField, copyWithAutoClear };
 }

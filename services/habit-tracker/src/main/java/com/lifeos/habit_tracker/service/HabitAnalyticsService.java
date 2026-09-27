@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,6 +84,7 @@ public class HabitAnalyticsService {
 
   // ---------------------------------------------------------------- analytics
 
+  @Cacheable(value = "habit-analytics", key = "#userId + ':' + #weeksParam")
   public HabitAnalyticsResponse analytics(UUID userId, Integer weeksParam) {
     int weeks = weeksParam != null ? weeksParam : DEFAULT_WEEKS;
     if (weeks < 1 || weeks > MAX_WEEKS) {
@@ -299,6 +301,7 @@ public class HabitAnalyticsService {
 
   // -------------------------------------------------------- weekly summary
 
+  @Cacheable(value = "habit-weekly-summary", key = "#userId + ':' + #asOf")
   public WeeklySummaryResponse weeklySummary(UUID userId, LocalDate asOf) {
     LocalDate reference = asOf != null ? asOf : LocalDate.now();
     LocalDate weekStart = reference.with(DayOfWeek.MONDAY);
@@ -485,10 +488,6 @@ public class HabitAnalyticsService {
     return habitRepository.findAllByUserId(userId).stream()
         .filter(h -> h.getStatus() != HabitStatus.ARCHIVED)
         .toList();
-  }
-
-  List<Habit> activeHabits(UUID userId) {
-    return habitRepository.findAllByUserIdAndStatus(userId, HabitStatus.ACTIVE);
   }
 
   private Map<UUID, List<HabitLog>> logsByHabit(

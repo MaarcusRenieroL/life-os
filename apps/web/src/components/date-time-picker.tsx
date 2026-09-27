@@ -107,7 +107,7 @@ export function DateTimePicker({ value, onChange, placeholder = 'Pick a date & t
       </Popover>
       <Input type="time" className="w-28" value={date ? format(date, 'HH:mm') : ''} onChange={(e) => pickTime(e.target.value)} />
       {date && (
-        <Button type="button" variant="ghost" size="icon" onClick={() => onChange(null)}>
+        <Button type="button" variant="ghost" size="icon" aria-label="Clear date" onClick={() => onChange(null)}>
           <XIcon className="size-4" />
         </Button>
       )}

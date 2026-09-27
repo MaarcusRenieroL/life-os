@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { auditLogApi } from '@/features/audit-log/audit-log-api';
 import { DeleteAccountDialog } from '@/features/settings/delete-account-dialog';
 import { vaultApi } from '@/features/vault/vault-api';
 import type { VaultEntryWriteRequest } from '@/features/vault/types';
+import { getErrorMessage } from '@/lib/error';
 
 import { backupApi } from './backup-api';
 import { parseCsv } from './parse-csv';
@@ -18,6 +20,7 @@ export function DataManagementPage() {
   const [importError, setImportError] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   async function exportVault() {
     const data = await vaultApi.exportVault();
@@ -60,14 +63,17 @@ export function DataManagementPage() {
       const result = await vaultApi.bulkCreateEntries(entries);
       setImportResult(result);
     } catch (err) {
-      setImportError(
-        (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Import failed.',
-      );
+      setImportError(getErrorMessage(err, 'Import failed.'));
     }
   }
 
   async function restore() {
-    if (!confirm('Restore from the latest backup? This overwrites current vault data.')) return;
+    const ok = await confirm({
+      title: 'Restore from the latest backup?',
+      description: 'This overwrites current vault data.',
+      confirmLabel: 'Restore',
+    });
+    if (!ok) return;
     setRestoring(true);
     try {
       await backupApi.restoreBackup();
@@ -162,6 +168,7 @@ export function DataManagementPage() {
       </section>
 
       <DeleteAccountDialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen} />
+      {dialog}
     </div>
   );
 }

@@ -10,6 +10,7 @@ export function JobTrackerOnboardingGuard() {
   const { data, isLoading } = useQuery({
     queryKey: ['career-profile'],
     queryFn: careerProfileApi.get,
+    staleTime: 5 * 60_000,
   });
 
   if (isLoading) return null;
