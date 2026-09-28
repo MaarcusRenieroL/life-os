@@ -64,6 +64,7 @@ services:
       - batches
       - habit-tracker
       - tasks
+      - calendar
 
   auth:
     build:
@@ -286,6 +287,22 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
     ports:
       - "8009:8009"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  calendar:
+    build:
+      context: .
+      dockerfile: services/calendar/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+    ports:
+      - "8010:8010"
     depends_on:
       postgres:
         condition: service_healthy
