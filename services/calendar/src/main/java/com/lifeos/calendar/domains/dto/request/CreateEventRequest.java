@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -47,4 +48,6 @@ public class CreateEventRequest {
   UUID goalId;
 
   UUID sourceTaskId;
+
+  List<Integer> reminderMinutesBefore;
 }

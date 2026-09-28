@@ -112,6 +112,18 @@ public class Event {
 
   UUID recurringParentId;
 
+  // Each entry is "minutes before startAt" to fire a reminder (0 = at start time, 1440 = 1 day
+  // before) - requires a timed event (see EventReminderScheduler); an all-day event has no
+  // specific time to count backwards from. Mirrors tasks' reminderMinutesBefore/remindersSent
+  // exactly, including the "cleared on reschedule" semantics.
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  List<Integer> reminderMinutesBefore;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  List<Integer> remindersSent;
+
   @CreationTimestamp Instant createdAt;
 
   @UpdateTimestamp Instant updatedAt;

@@ -90,9 +90,22 @@ export interface CalendarEvent {
   recurrenceSkippedDates: string[] | null;
   /** Set only on a generated occurrence, pointing back at the definition event. */
   recurringParentId: string | null;
+  /** Each entry is "minutes before startAt" to fire a reminder - only meaningful for a timed
+   * event (see services/calendar's EventReminderScheduler). */
+  reminderMinutesBefore: number[] | null;
+  remindersSent: number[] | null;
   createdAt: string;
   updatedAt: string;
 }
+
+/** Mirrors tasks' REMINDER_PRESETS. */
+export const REMINDER_PRESETS: { minutes: number; label: string }[] = [
+  { minutes: 0, label: 'At time' },
+  { minutes: 15, label: '15 min before' },
+  { minutes: 30, label: '30 min before' },
+  { minutes: 60, label: '1 hour before' },
+  { minutes: 1440, label: '1 day before' },
+];
 
 export interface SetEventRecurrenceRequest {
   pattern: EventRecurrencePattern;
@@ -126,6 +139,7 @@ export interface CreateEventRequest {
   projectId?: string | null;
   goalId?: string | null;
   sourceTaskId?: string | null;
+  reminderMinutesBefore?: number[];
 }
 
 export type UpdateEventRequest = Partial<CreateEventRequest>;

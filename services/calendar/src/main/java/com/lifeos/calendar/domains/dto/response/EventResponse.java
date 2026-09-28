@@ -67,6 +67,10 @@ public class EventResponse {
 
   UUID recurringParentId;
 
+  List<Integer> reminderMinutesBefore;
+
+  List<Integer> remindersSent;
+
   Instant createdAt;
 
   Instant updatedAt;

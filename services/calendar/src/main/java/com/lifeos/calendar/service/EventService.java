@@ -116,6 +116,7 @@ public class EventService {
             .projectId(request.getProjectId())
             .goalId(request.getGoalId())
             .sourceTaskId(request.getSourceTaskId())
+            .reminderMinutesBefore(Boolean.TRUE.equals(request.getAllDay()) ? null : request.getReminderMinutesBefore())
             .build();
 
     return toResponse(eventRepository.save(event));
@@ -134,10 +135,18 @@ public class EventService {
     if (request.getProjectId() != null) event.setProjectId(request.getProjectId());
     if (request.getGoalId() != null) event.setGoalId(request.getGoalId());
     if (request.getAllDay() != null) event.setAllDay(request.getAllDay());
+    // A reschedule should let reminders fire again against the new time - mirrors tasks'
+    // TaskService.applyUpdate - so clear remindersSent whenever startAt actually moves.
+    boolean startMoved = request.getStartAt() != null && !request.getStartAt().equals(event.getStartAt());
     if (request.getStartAt() != null) event.setStartAt(request.getStartAt());
     if (request.getEndAt() != null) event.setEndAt(request.getEndAt());
     if (request.getStartDate() != null) event.setStartDate(request.getStartDate());
     if (request.getEndDate() != null) event.setEndDate(request.getEndDate());
+    if (startMoved) event.setRemindersSent(null);
+    if (request.getReminderMinutesBefore() != null) {
+      event.setReminderMinutesBefore(request.getReminderMinutesBefore());
+      event.setRemindersSent(null);
+    }
 
     return toResponse(eventRepository.save(event));
   }
@@ -166,6 +175,7 @@ public class EventService {
             .area(original.getArea())
             .projectId(original.getProjectId())
             .goalId(original.getGoalId())
+            .reminderMinutesBefore(original.getReminderMinutesBefore())
             .build();
     return toResponse(eventRepository.save(copy));
   }
@@ -194,6 +204,8 @@ public class EventService {
         .recurrencePaused(event.getRecurrencePaused())
         .recurrenceSkippedDates(event.getRecurrenceSkippedDates())
         .recurringParentId(event.getRecurringParentId())
+        .reminderMinutesBefore(event.getReminderMinutesBefore())
+        .remindersSent(event.getRemindersSent())
         .createdAt(event.getCreatedAt())
         .updatedAt(event.getUpdatedAt())
         .build();
