@@ -5,6 +5,7 @@ import com.lifeos.calendar.domains.dto.request.SetRecurrenceRequest;
 import com.lifeos.calendar.domains.dto.request.SkipOccurrenceRequest;
 import com.lifeos.calendar.domains.dto.request.UpdateEventRequest;
 import com.lifeos.calendar.domains.dto.response.EventResponse;
+import com.lifeos.calendar.domains.dto.response.FreeSlotResponse;
 import com.lifeos.calendar.domains.enums.EventCategory;
 import com.lifeos.calendar.domains.enums.LifeArea;
 import com.lifeos.calendar.service.EventRecurrenceService;
@@ -12,6 +13,7 @@ import com.lifeos.calendar.service.EventService;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +52,19 @@ public class EventController {
         ApiResponse.success(
             eventService.list(userId(authentication), from, to, category, area, projectId, goalId, q),
             "Events fetched successfully"));
+  }
+
+  @GetMapping("/free-slots")
+  public ResponseEntity<ApiResponse<List<FreeSlotResponse>>> freeSlots(
+      Authentication authentication,
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+      @RequestParam(required = false, defaultValue = "30") int minDurationMinutes,
+      @RequestParam(required = false, defaultValue = "9") int dayStartHour,
+      @RequestParam(required = false, defaultValue = "18") int dayEndHour) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            eventService.freeSlots(userId(authentication), date, minDurationMinutes, dayStartHour, dayEndHour),
+            "Free slots computed"));
   }
 
   @GetMapping("/{id}")

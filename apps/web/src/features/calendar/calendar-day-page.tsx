@@ -29,6 +29,10 @@ export function CalendarDayPage() {
     queryFn: () => calendarApi.list({ from: dayStart.toISOString(), to: dayEnd.toISOString() }),
   });
   const { data: tasks = [] } = useTasksInRange(dayStart, dayEnd);
+  const { data: freeSlots = [] } = useQuery({
+    queryKey: ['calendar', 'free-slots', anchor],
+    queryFn: () => calendarApi.freeSlots(anchor),
+  });
 
   const rescheduleMutation = useMutation({
     mutationFn: ({ event, startAt, endAt }: { event: CalendarEvent; startAt: Date; endAt: Date }) =>
@@ -89,6 +93,24 @@ export function CalendarDayPage() {
           {tasks.map((task) => (
             <TaskChip key={task.id} task={task} onClick={() => openTask(task)} />
           ))}
+        </div>
+      )}
+
+      {freeSlots.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Free slots today</p>
+          <div className="flex flex-wrap gap-1.5">
+            {freeSlots.map((slot) => (
+              <button
+                key={slot.startAt}
+                className="rounded-full border px-2.5 py-1 text-[11px] hover:bg-muted"
+                onClick={openCreate}
+              >
+                {format(new Date(slot.startAt), 'HH:mm')}–{format(new Date(slot.endAt), 'HH:mm')}
+                <span className="ml-1 text-muted-foreground">({slot.durationMinutes}m)</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

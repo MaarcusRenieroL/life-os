@@ -107,6 +107,12 @@ export const REMINDER_PRESETS: { minutes: number; label: string }[] = [
   { minutes: 1440, label: '1 day before' },
 ];
 
+export interface FreeSlot {
+  startAt: string;
+  endAt: string;
+  durationMinutes: number;
+}
+
 export interface SetEventRecurrenceRequest {
   pattern: EventRecurrencePattern;
   config?: Record<string, unknown>;
