@@ -7,6 +7,7 @@ import { HabitsLayout } from '@/features/habits/habits-layout';
 import { JobTrackerLayout } from '@/features/job-tracker/job-tracker-layout';
 import { JobTrackerOnboardingGuard } from '@/features/job-tracker/job-tracker-onboarding-guard';
 import { NotesLayout } from '@/features/notes/notes-layout';
+import { TasksLayout } from '@/features/tasks/tasks-layout';
 import { VaultLayout } from '@/features/vault/vault-layout';
 import { VaultUnlockGuard } from '@/features/vault/vault-unlock-guard';
 import { VaultStateProvider } from '@/features/vault/vault-state';
@@ -129,6 +130,18 @@ export const router = createBrowserRouter([
           },
           // Must stay after the static habits/* subpaths above so it doesn't shadow them.
           { path: 'habits/:id', lazy: page(() => import('@/features/habits/habit-detail-page'), 'HabitDetailPage') },
+          {
+            path: 'tasks',
+            element: <TasksLayout />,
+            children: [
+              { index: true, lazy: page(() => import('@/features/tasks/tasks-today-page'), 'TasksTodayPage') },
+              { path: 'upcoming', lazy: page(() => import('@/features/tasks/tasks-upcoming-page'), 'TasksUpcomingPage') },
+              { path: 'list', lazy: page(() => import('@/features/tasks/tasks-list-page'), 'TasksListPage') },
+              { path: 'board', lazy: page(() => import('@/features/tasks/tasks-board-page'), 'TasksBoardPage') },
+              { path: 'completed', lazy: page(() => import('@/features/tasks/tasks-completed-page'), 'TasksCompletedPage') },
+              { path: 'analytics', lazy: page(() => import('@/features/tasks/tasks-analytics-page'), 'TasksAnalyticsPage') },
+            ],
+          },
           // Catch-all: any unmatched path inside the shell (bad link, stale bookmark,
           // a deep link to what's really just a client-side tab) gets a styled 404
           // instead of falling through to React Router's raw default error page.

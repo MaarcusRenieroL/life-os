@@ -42,4 +42,11 @@ public class InternalRestClientConfig {
       @Value("${notes.internal-base-url}") String baseUrl) {
     return builder.clone().baseUrl(baseUrl).build();
   }
+
+  @Bean
+  public RestClient tasksRestClient(
+      @Qualifier("internalRestClientBuilder") RestClient.Builder builder,
+      @Value("${tasks.internal-base-url}") String baseUrl) {
+    return builder.clone().baseUrl(baseUrl).build();
+  }
 }

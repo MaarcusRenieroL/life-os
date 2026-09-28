@@ -32,6 +32,7 @@ public class TodayService {
   private final RestClient jobTrackerRestClient;
   private final RestClient financeTrackerRestClient;
   private final RestClient notesRestClient;
+  private final RestClient tasksRestClient;
   private final String internalApiKey;
 
   public TodayService(
@@ -39,11 +40,13 @@ public class TodayService {
       RestClient jobTrackerRestClient,
       RestClient financeTrackerRestClient,
       RestClient notesRestClient,
+      RestClient tasksRestClient,
       @Value("${internal.api-key}") String internalApiKey) {
     this.habitTrackerRestClient = habitTrackerRestClient;
     this.jobTrackerRestClient = jobTrackerRestClient;
     this.financeTrackerRestClient = financeTrackerRestClient;
     this.notesRestClient = notesRestClient;
+    this.tasksRestClient = tasksRestClient;
     this.internalApiKey = internalApiKey;
   }
 
@@ -71,7 +74,9 @@ public class TodayService {
                         userId,
                         "finance-tracker")),
             CompletableFuture.supplyAsync(
-                () -> fetch(notesRestClient, "/v1/notes/internal/today", userId, "notes")));
+                () -> fetch(notesRestClient, "/v1/notes/internal/today", userId, "notes")),
+            CompletableFuture.supplyAsync(
+                () -> fetch(tasksRestClient, "/v1/tasks/internal/today", userId, "tasks")));
 
     return pending.stream()
         .map(CompletableFuture::join)

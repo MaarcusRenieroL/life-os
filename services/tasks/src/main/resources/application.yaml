@@ -1,0 +1,34 @@
+server:
+  port: 8009
+
+spring:
+  application:
+    name: tasks
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    schemas: tasks_schema
+    default-schema: tasks_schema
+
+jwt:
+  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+
+internal:
+  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+
+# tasks doesn't use EncryptionService itself, but it's component-scanned in from
+# com.lifeos.common (see TasksApplication's @ComponentScan) and its constructor
+# requires this property to be resolvable, so it needs a value.
+encryption:
+  secret: ${ENCRYPTION_SECRET:pQ0+9m8lXwZk3aC7dR1sVh2yTf5eNb4uJq6oGp8zLxA=}
+
+tasks:
+  upcoming:
+    default-window-days: ${TASKS_UPCOMING_WINDOW_DAYS:7}
