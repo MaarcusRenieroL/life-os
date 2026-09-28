@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { DatePicker } from '@/components/date-time-picker';
+import { SearchableSelect } from '@/components/searchable-select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -13,12 +14,16 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 
 import {
+  LIFE_AREAS,
+  LIFE_AREA_LABELS,
   TASK_PRIORITIES,
   TASK_PRIORITY_LABELS,
   type CreateTaskRequest,
+  type LifeArea,
   type Task,
   type TaskPriority,
 } from './types';
+import { useProjectsAndGoals } from './use-projects-goals';
 
 export interface TaskFormValue {
   title: string;
@@ -26,9 +31,9 @@ export interface TaskFormValue {
   priority: TaskPriority;
   dueDate: string | null;
   dueTime: string;
-  areaId: string;
-  projectId: string;
-  goalId: string;
+  area: LifeArea | null;
+  projectId: string | null;
+  goalId: string | null;
   tags: string;
   estimateMinutes: string;
   /** Not user-editable in the form body - set once at creation time (see "+ Subtask" in
@@ -43,9 +48,9 @@ function emptyValue(parentTaskId: string | null = null): TaskFormValue {
     priority: 'MEDIUM',
     dueDate: null,
     dueTime: '',
-    areaId: '',
-    projectId: '',
-    goalId: '',
+    area: null,
+    projectId: null,
+    goalId: null,
     tags: '',
     estimateMinutes: '',
     parentTaskId,
@@ -59,9 +64,9 @@ function valueFromTask(task: Task): TaskFormValue {
     priority: task.priority,
     dueDate: task.dueDate,
     dueTime: task.dueTime ? task.dueTime.slice(0, 5) : '',
-    areaId: task.areaId ?? '',
-    projectId: task.projectId ?? '',
-    goalId: task.goalId ?? '',
+    area: task.area,
+    projectId: task.projectId,
+    goalId: task.goalId,
     tags: (task.tags ?? []).join(', '),
     estimateMinutes: task.estimateMinutes != null ? String(task.estimateMinutes) : '',
     parentTaskId: task.parentTaskId,
@@ -76,9 +81,9 @@ export function taskFormToRequest(value: TaskFormValue): CreateTaskRequest {
     dueDate: value.dueDate,
     dueTime: value.dueDate && value.dueTime ? `${value.dueTime}:00` : null,
     allDay: !(value.dueDate && value.dueTime),
-    areaId: value.areaId.trim() || null,
-    projectId: value.projectId.trim() || null,
-    goalId: value.goalId.trim() || null,
+    area: value.area,
+    projectId: value.projectId,
+    goalId: value.goalId,
     parentTaskId: value.parentTaskId,
     tags: value.tags
       .split(',')
@@ -101,6 +106,8 @@ interface Props {
 
 /** Pure controlled form body - the caller (a dialog) owns the value, validation call, and submit. */
 export function TaskForm({ value, onChange }: Props) {
+  const { projectOptions, goalOptions, createProject, createGoal } = useProjectsAndGoals();
+
   function patch(partial: Partial<TaskFormValue>) {
     onChange({ ...value, ...partial });
   }
@@ -171,16 +178,45 @@ export function TaskForm({ value, onChange }: Props) {
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <Label className="mb-1.5 block">Area ID</Label>
-          <Input value={value.areaId} onChange={(e) => patch({ areaId: e.target.value })} placeholder="optional" />
+          <Label className="mb-1.5 block">Area</Label>
+          <Select
+            value={value.area ?? '__none__'}
+            onValueChange={(v) => patch({ area: v === '__none__' ? null : (v as LifeArea) })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">None</SelectItem>
+              {LIFE_AREAS.map((a) => (
+                <SelectItem key={a} value={a}>
+                  {LIFE_AREA_LABELS[a]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <Label className="mb-1.5 block">Project ID</Label>
-          <Input value={value.projectId} onChange={(e) => patch({ projectId: e.target.value })} placeholder="optional" />
+          <Label className="mb-1.5 block">Project</Label>
+          <SearchableSelect
+            options={projectOptions}
+            value={value.projectId}
+            onChange={(id) => patch({ projectId: id })}
+            onCreate={createProject}
+            placeholder="No project"
+            searchPlaceholder="Search projects…"
+          />
         </div>
         <div>
-          <Label className="mb-1.5 block">Goal ID</Label>
-          <Input value={value.goalId} onChange={(e) => patch({ goalId: e.target.value })} placeholder="optional" />
+          <Label className="mb-1.5 block">Goal</Label>
+          <SearchableSelect
+            options={goalOptions}
+            value={value.goalId}
+            onChange={(id) => patch({ goalId: id })}
+            onCreate={createGoal}
+            placeholder="No goal"
+            searchPlaceholder="Search goals…"
+          />
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ package com.lifeos.calendar.domains.dto.request;
 
 import com.lifeos.calendar.domains.enums.EventCategory;
 import com.lifeos.calendar.domains.enums.FreeBusy;
+import com.lifeos.calendar.domains.enums.LifeArea;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -39,7 +40,7 @@ public class CreateEventRequest {
 
   FreeBusy freeBusy;
 
-  UUID areaId;
+  LifeArea area;
 
   UUID projectId;
 

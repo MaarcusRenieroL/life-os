@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { SearchableSelect } from '@/components/searchable-select';
 import { DatePicker } from '@/components/date-time-picker';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -12,8 +13,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useProjectsAndGoals } from '@/features/tasks/use-projects-goals';
 
-import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS, type CalendarEvent, type CreateEventRequest, type EventCategory, type FreeBusy } from './types';
+import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS, LIFE_AREAS, LIFE_AREA_LABELS, type CalendarEvent, type CreateEventRequest, type EventCategory, type FreeBusy, type LifeArea } from './types';
 
 export interface EventFormValue {
   title: string;
@@ -26,9 +28,9 @@ export interface EventFormValue {
   endTime: string;
   endDate: string | null;
   freeBusy: FreeBusy;
-  areaId: string;
-  projectId: string;
-  goalId: string;
+  area: LifeArea | null;
+  projectId: string | null;
+  goalId: string | null;
 }
 
 function defaultTimes(): { startTime: string; endTime: string } {
@@ -51,9 +53,9 @@ function emptyValue(initialDate?: string): EventFormValue {
     date: initialDate ?? new Date().toISOString().slice(0, 10),
     endDate: null,
     freeBusy: 'BUSY',
-    areaId: '',
-    projectId: '',
-    goalId: '',
+    area: null,
+    projectId: null,
+    goalId: null,
     ...defaultTimes(),
   };
 }
@@ -69,9 +71,9 @@ function valueFromEvent(event: CalendarEvent): EventFormValue {
       date: event.startDate ?? new Date().toISOString().slice(0, 10),
       endDate: event.endDate,
       freeBusy: event.freeBusy,
-      areaId: event.areaId ?? '',
-      projectId: event.projectId ?? '',
-      goalId: event.goalId ?? '',
+      area: event.area,
+      projectId: event.projectId,
+      goalId: event.goalId,
       ...defaultTimes(),
     };
   }
@@ -86,9 +88,9 @@ function valueFromEvent(event: CalendarEvent): EventFormValue {
     date: start.toISOString().slice(0, 10),
     endDate: null,
     freeBusy: event.freeBusy,
-    areaId: event.areaId ?? '',
-    projectId: event.projectId ?? '',
-    goalId: event.goalId ?? '',
+    area: event.area,
+    projectId: event.projectId,
+    goalId: event.goalId,
     startTime: start.toTimeString().slice(0, 5),
     endTime: end.toTimeString().slice(0, 5),
   };
@@ -105,9 +107,9 @@ export function eventFormToRequest(value: EventFormValue): CreateEventRequest {
       startDate: value.date,
       endDate: value.endDate ?? value.date,
       freeBusy: value.freeBusy,
-      areaId: value.areaId.trim() || null,
-      projectId: value.projectId.trim() || null,
-      goalId: value.goalId.trim() || null,
+      area: value.area,
+      projectId: value.projectId,
+      goalId: value.goalId,
     };
   }
   const start = new Date(`${value.date}T${value.startTime || '09:00'}:00`);
@@ -121,9 +123,9 @@ export function eventFormToRequest(value: EventFormValue): CreateEventRequest {
     startAt: start.toISOString(),
     endAt: (end > start ? end : new Date(start.getTime() + 60 * 60 * 1000)).toISOString(),
     freeBusy: value.freeBusy,
-    areaId: value.areaId.trim() || null,
-    projectId: value.projectId.trim() || null,
-    goalId: value.goalId.trim() || null,
+    area: value.area,
+    projectId: value.projectId,
+    goalId: value.goalId,
   };
 }
 
@@ -140,6 +142,8 @@ interface Props {
 
 /** Pure controlled form body - the caller (a dialog) owns the value, validation call, and submit. */
 export function EventForm({ value, onChange }: Props) {
+  const { projectOptions, goalOptions, createProject, createGoal } = useProjectsAndGoals();
+
   function patch(partial: Partial<EventFormValue>) {
     onChange({ ...value, ...partial });
   }
@@ -226,16 +230,45 @@ export function EventForm({ value, onChange }: Props) {
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <Label className="mb-1.5 block">Area ID</Label>
-          <Input value={value.areaId} onChange={(e) => patch({ areaId: e.target.value })} placeholder="optional" />
+          <Label className="mb-1.5 block">Area</Label>
+          <Select
+            value={value.area ?? '__none__'}
+            onValueChange={(v) => patch({ area: v === '__none__' ? null : (v as LifeArea) })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">None</SelectItem>
+              {LIFE_AREAS.map((a) => (
+                <SelectItem key={a} value={a}>
+                  {LIFE_AREA_LABELS[a]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <Label className="mb-1.5 block">Project ID</Label>
-          <Input value={value.projectId} onChange={(e) => patch({ projectId: e.target.value })} placeholder="optional" />
+          <Label className="mb-1.5 block">Project</Label>
+          <SearchableSelect
+            options={projectOptions}
+            value={value.projectId}
+            onChange={(id) => patch({ projectId: id })}
+            onCreate={createProject}
+            placeholder="No project"
+            searchPlaceholder="Search projects…"
+          />
         </div>
         <div>
-          <Label className="mb-1.5 block">Goal ID</Label>
-          <Input value={value.goalId} onChange={(e) => patch({ goalId: e.target.value })} placeholder="optional" />
+          <Label className="mb-1.5 block">Goal</Label>
+          <SearchableSelect
+            options={goalOptions}
+            value={value.goalId}
+            onChange={(id) => patch({ goalId: id })}
+            onCreate={createGoal}
+            placeholder="No goal"
+            searchPlaceholder="Search goals…"
+          />
         </div>
       </div>
     </div>

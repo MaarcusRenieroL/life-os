@@ -1,5 +1,6 @@
 package com.lifeos.tasks.domains.dto.request;
 
+import com.lifeos.tasks.domains.enums.LifeArea;
 import com.lifeos.tasks.domains.enums.TaskPriority;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -29,7 +30,7 @@ public class CreateTaskRequest {
 
   Boolean allDay;
 
-  UUID areaId;
+  LifeArea area;
 
   UUID projectId;
 

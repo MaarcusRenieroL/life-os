@@ -2,6 +2,7 @@ package com.lifeos.calendar.domains.entity;
 
 import com.lifeos.calendar.domains.enums.EventCategory;
 import com.lifeos.calendar.domains.enums.FreeBusy;
+import com.lifeos.calendar.domains.enums.LifeArea;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -65,10 +66,14 @@ public class Event {
   @Builder.Default
   FreeBusy freeBusy = FreeBusy.BUSY;
 
-  // No FK/relationship - stored references to rows owned by other
-  // modules/schemas, same convention as tasks_schema.tasks' areaId/projectId/goalId.
-  UUID areaId;
+  // A closed enum (Career/Health/Finance/Learning/Relationships/Personal) - see tasks'
+  // LifeArea.java, which this mirrors.
+  @Enumerated(EnumType.STRING)
+  LifeArea area;
 
+  // No FK/relationship - stored references to tasks_schema.projects/goals, owned by the tasks
+  // service. Unlike tasks' own projectId/goalId (real FKs now that Project/Goal live in the same
+  // schema as Task), calendar has no local copy of those tables, so these stay bare UUIDs.
   UUID projectId;
 
   UUID goalId;

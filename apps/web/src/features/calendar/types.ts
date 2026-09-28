@@ -15,6 +15,21 @@ export const EVENT_CATEGORY_LABELS: Record<EventCategory, string> = {
 
 export type FreeBusy = 'FREE' | 'BUSY';
 
+/** Mirrors tasks' LifeArea - the same fixed six-category set (see services/calendar's own
+ * LifeArea.java, which duplicates services/tasks' rather than sharing it). */
+export type LifeArea = 'CAREER' | 'HEALTH' | 'FINANCE' | 'LEARNING' | 'RELATIONSHIPS' | 'PERSONAL';
+
+export const LIFE_AREAS: LifeArea[] = ['CAREER', 'HEALTH', 'FINANCE', 'LEARNING', 'RELATIONSHIPS', 'PERSONAL'];
+
+export const LIFE_AREA_LABELS: Record<LifeArea, string> = {
+  CAREER: 'Career',
+  HEALTH: 'Health',
+  FINANCE: 'Finance',
+  LEARNING: 'Learning',
+  RELATIONSHIPS: 'Relationships',
+  PERSONAL: 'Personal',
+};
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -30,7 +45,9 @@ export interface CalendarEvent {
   startDate: string | null;
   endDate: string | null;
   freeBusy: FreeBusy;
-  areaId: string | null;
+  area: LifeArea | null;
+  /** References tasks_schema.projects/goals - see event-form.tsx's use of useProjectsAndGoals
+   * (the tasks feature's own hook; calendar has no local copy of these tables). */
   projectId: string | null;
   goalId: string | null;
   sourceTaskId: string | null;
@@ -42,7 +59,7 @@ export interface EventListFilters {
   from?: string;
   to?: string;
   category?: EventCategory;
-  areaId?: string;
+  area?: LifeArea;
   projectId?: string;
   goalId?: string;
   q?: string;
@@ -60,7 +77,7 @@ export interface CreateEventRequest {
   startDate?: string | null;
   endDate?: string | null;
   freeBusy?: FreeBusy;
-  areaId?: string | null;
+  area?: LifeArea | null;
   projectId?: string | null;
   goalId?: string | null;
   sourceTaskId?: string | null;

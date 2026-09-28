@@ -1,5 +1,6 @@
 package com.lifeos.tasks.domains.dto.response;
 
+import com.lifeos.tasks.domains.enums.LifeArea;
 import com.lifeos.tasks.domains.enums.TaskPriority;
 import com.lifeos.tasks.domains.enums.TaskStatus;
 import java.time.Instant;
@@ -37,7 +38,7 @@ public class TaskResponse {
 
   Boolean allDay;
 
-  UUID areaId;
+  LifeArea area;
 
   UUID projectId;
 

@@ -6,6 +6,7 @@ import com.lifeos.calendar.domains.dto.response.EventResponse;
 import com.lifeos.calendar.domains.entity.Event;
 import com.lifeos.calendar.domains.enums.EventCategory;
 import com.lifeos.calendar.domains.enums.FreeBusy;
+import com.lifeos.calendar.domains.enums.LifeArea;
 import com.lifeos.calendar.exception.ResourceNotFoundException;
 import com.lifeos.calendar.repository.EventRepository;
 import java.time.Instant;
@@ -30,14 +31,14 @@ public class EventService {
       Instant from,
       Instant to,
       EventCategory category,
-      UUID areaId,
+      LifeArea area,
       UUID projectId,
       UUID goalId,
       String q) {
     return eventRepository.findAllByUserId(userId).stream()
         .filter(e -> overlapsRange(e, from, to))
         .filter(e -> category == null || e.getCategory() == category)
-        .filter(e -> areaId == null || areaId.equals(e.getAreaId()))
+        .filter(e -> area == null || area == e.getArea())
         .filter(e -> projectId == null || projectId.equals(e.getProjectId()))
         .filter(e -> goalId == null || goalId.equals(e.getGoalId()))
         .filter(e -> matchesSearch(e, q))
@@ -111,7 +112,7 @@ public class EventService {
             .startDate(allDay ? request.getStartDate() : null)
             .endDate(allDay ? request.getEndDate() : null)
             .freeBusy(request.getFreeBusy() != null ? request.getFreeBusy() : FreeBusy.BUSY)
-            .areaId(request.getAreaId())
+            .area(request.getArea())
             .projectId(request.getProjectId())
             .goalId(request.getGoalId())
             .sourceTaskId(request.getSourceTaskId())
@@ -129,7 +130,7 @@ public class EventService {
     if (request.getCategory() != null) event.setCategory(request.getCategory());
     if (request.getColor() != null) event.setColor(request.getColor());
     if (request.getFreeBusy() != null) event.setFreeBusy(request.getFreeBusy());
-    if (request.getAreaId() != null) event.setAreaId(request.getAreaId());
+    if (request.getArea() != null) event.setArea(request.getArea());
     if (request.getProjectId() != null) event.setProjectId(request.getProjectId());
     if (request.getGoalId() != null) event.setGoalId(request.getGoalId());
     if (request.getAllDay() != null) event.setAllDay(request.getAllDay());
@@ -162,7 +163,7 @@ public class EventService {
             .startDate(original.getStartDate())
             .endDate(original.getEndDate())
             .freeBusy(original.getFreeBusy())
-            .areaId(original.getAreaId())
+            .area(original.getArea())
             .projectId(original.getProjectId())
             .goalId(original.getGoalId())
             .build();
@@ -183,7 +184,7 @@ public class EventService {
         .startDate(event.getStartDate())
         .endDate(event.getEndDate())
         .freeBusy(event.getFreeBusy())
-        .areaId(event.getAreaId())
+        .area(event.getArea())
         .projectId(event.getProjectId())
         .goalId(event.getGoalId())
         .sourceTaskId(event.getSourceTaskId())
