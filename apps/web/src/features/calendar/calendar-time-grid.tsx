@@ -11,6 +11,11 @@ const HOURS = 24;
 const SNAP_MINUTES = 15;
 const MIN_DURATION_MINUTES = 15;
 const SCROLL_TO_HOUR = 7;
+// A day column narrower than this reads as an unusable sliver on a phone - a 7-day week view
+// scrolls horizontally below this width instead of shrinking columns further. Exported so the
+// week page can size its own day-header row's columns identically - see this component's root
+// div javadoc-style comment below for why that row lives outside this component.
+export const MIN_COLUMN_PX = 72;
 
 interface TimedEvent extends CalendarEvent {
   startAt: string;
@@ -132,10 +137,19 @@ export function CalendarTimeGrid({ days, events, onEventClick, onSlotClick, onEv
     window.addEventListener('pointerup', onUp);
   }
 
+  // Each day column has a floor of MIN_COLUMN_PX so a 7-day week view stays readable/tappable on
+  // a phone instead of squeezing every column down to nothing. This component does NOT own the
+  // horizontal scroll itself - the week page has its own day-header row above this grid that
+  // needs to scroll in lockstep with it, so the week page wraps both together in one shared
+  // overflow-x-auto container using this same minWidth formula (see calendar-week-page.tsx). The
+  // day page, which has no such header row, wraps just this component the same way for
+  // consistency even though a single day's minWidth never actually overflows a real viewport.
+  const minGridWidth = `calc(4rem + ${days.length} * ${MIN_COLUMN_PX}px)`;
+
   return (
-    <div className="mt-4 rounded-md border">
+    <div className="rounded-md border" style={{ minWidth: minGridWidth }}>
       {allDayEvents.length > 0 && (
-        <div className="grid border-b" style={{ gridTemplateColumns: `4rem repeat(${days.length}, 1fr)` }}>
+        <div className="grid border-b" style={{ gridTemplateColumns: `4rem repeat(${days.length}, minmax(${MIN_COLUMN_PX}px, 1fr))` }}>
           <div />
           {days.map((day) => {
             const key = format(day, 'yyyy-MM-dd');
@@ -158,7 +172,7 @@ export function CalendarTimeGrid({ days, events, onEventClick, onSlotClick, onEv
       )}
 
       <div ref={scrollRef} className="max-h-[65vh] overflow-y-auto">
-        <div className="grid" style={{ gridTemplateColumns: `4rem repeat(${days.length}, 1fr)` }}>
+        <div className="grid" style={{ gridTemplateColumns: `4rem repeat(${days.length}, minmax(${MIN_COLUMN_PX}px, 1fr))` }}>
           <div>
             {Array.from({ length: HOURS }).map((_, hour) => (
               <div key={hour} className="relative border-b" style={{ height: HOUR_HEIGHT_PX }}>

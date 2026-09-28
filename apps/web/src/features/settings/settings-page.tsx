@@ -432,7 +432,13 @@ function AdvancedSettingsSection() {
                   <span className="font-mono text-muted-foreground">
                     {s.module}.{s.key} = <span className="text-foreground">{s.value ?? '—'}</span>
                   </span>
-                  <Button variant="ghost" size="icon" className="size-6" onClick={() => void removeSetting(s.module, s.key)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    aria-label={`Remove setting ${s.module}.${s.key}`}
+                    onClick={() => void removeSetting(s.module, s.key)}
+                  >
                     <Trash2 className="size-3.5" />
                   </Button>
                 </div>
