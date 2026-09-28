@@ -14,6 +14,7 @@ import { TaskChip } from './task-chip';
 import type { CalendarEvent } from './types';
 import { useAnchorDate } from './use-anchor-date';
 import { useTasksInRange } from './use-tasks-in-range';
+import { UtilizationSummary } from './utilization-summary';
 
 export function CalendarWeekPage() {
   const queryClient = useQueryClient();
@@ -30,6 +31,10 @@ export function CalendarWeekPage() {
     queryFn: () => calendarApi.list({ from: weekStart.toISOString(), to: weekEnd.toISOString() }),
   });
   const { data: tasks = [] } = useTasksInRange(weekStart, weekEnd);
+  const { data: utilization } = useQuery({
+    queryKey: ['calendar', 'utilization', weekStart.toISOString(), weekEnd.toISOString()],
+    queryFn: () => calendarApi.utilization(weekStart.toISOString(), weekEnd.toISOString()),
+  });
 
   const rescheduleMutation = useMutation({
     mutationFn: ({ event, startAt, endAt }: { event: CalendarEvent; startAt: Date; endAt: Date }) =>
@@ -98,6 +103,8 @@ export function CalendarWeekPage() {
         onJump={setAnchor}
         onNew={() => openCreate(anchor)}
       />
+
+      {utilization && <UtilizationSummary utilization={utilization} />}
 
       <div className="mt-4 grid grid-cols-7 gap-2">
         {days.map((day) => {
