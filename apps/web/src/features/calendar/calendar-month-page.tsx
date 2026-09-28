@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 
 import { calendarApi } from './calendar-api';
 import { DateNavHeader } from './date-nav-header';
-import { CATEGORY_DOT_CLASSES } from './event-badges';
+import { CATEGORY_DOT_CLASSES, RecurringIcon } from './event-badges';
 import { EventFormDialog } from './event-form-dialog';
 import { downloadEventsIcs } from './ics-export';
 import { TaskChip } from './task-chip';
@@ -199,6 +199,7 @@ export function CalendarMonthPage() {
                   >
                     <span className={cn('size-1.5 shrink-0 rounded-full', CATEGORY_DOT_CLASSES[event.category])} />
                     <span className="truncate">{event.title}</span>
+                    {event.recurrencePattern && <RecurringIcon />}
                   </button>
                 ))}
                 {overflow > 0 && <span className="text-[10px] text-muted-foreground">+{overflow} more</span>}

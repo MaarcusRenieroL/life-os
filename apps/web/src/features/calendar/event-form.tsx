@@ -15,7 +15,25 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useProjectsAndGoals } from '@/features/tasks/use-projects-goals';
 
-import { EVENT_CATEGORIES, EVENT_CATEGORY_LABELS, LIFE_AREAS, LIFE_AREA_LABELS, type CalendarEvent, type CreateEventRequest, type EventCategory, type FreeBusy, type LifeArea } from './types';
+import {
+  DAY_CODE_TO_ISO,
+  DAYS_OF_WEEK,
+  EVENT_CATEGORIES,
+  EVENT_CATEGORY_LABELS,
+  EVENT_RECURRENCE_PATTERNS,
+  EVENT_RECURRENCE_PATTERN_LABELS,
+  ISO_TO_DAY_CODE,
+  LIFE_AREAS,
+  LIFE_AREA_LABELS,
+  type CalendarEvent,
+  type CreateEventRequest,
+  type DayOfWeek,
+  type EventCategory,
+  type EventRecurrencePattern,
+  type FreeBusy,
+  type LifeArea,
+  type SetEventRecurrenceRequest,
+} from './types';
 
 export interface EventFormValue {
   title: string;
@@ -31,6 +49,12 @@ export interface EventFormValue {
   area: LifeArea | null;
   projectId: string | null;
   goalId: string | null;
+  repeat: boolean;
+  recurrencePattern: EventRecurrencePattern;
+  recurrenceDaysOfWeek: DayOfWeek[];
+  recurrenceDayOfMonth: string;
+  recurrenceIntervalDays: string;
+  recurrenceEndDate: string | null;
 }
 
 function defaultTimes(): { startTime: string; endTime: string } {
@@ -56,7 +80,27 @@ function emptyValue(initialDate?: string): EventFormValue {
     area: null,
     projectId: null,
     goalId: null,
+    repeat: false,
+    recurrencePattern: 'DAILY',
+    recurrenceDaysOfWeek: [],
+    recurrenceDayOfMonth: '',
+    recurrenceIntervalDays: '',
+    recurrenceEndDate: null,
     ...defaultTimes(),
+  };
+}
+
+function recurrenceFields(event: CalendarEvent) {
+  const config = event.recurrenceConfig ?? {};
+  return {
+    repeat: event.recurrencePattern != null,
+    recurrencePattern: event.recurrencePattern ?? ('DAILY' as EventRecurrencePattern),
+    recurrenceDaysOfWeek: Array.isArray(config.daysOfWeek)
+      ? (config.daysOfWeek as number[]).map((iso) => ISO_TO_DAY_CODE[iso]).filter((d): d is DayOfWeek => Boolean(d))
+      : [],
+    recurrenceDayOfMonth: typeof config.dayOfMonth === 'number' ? String(config.dayOfMonth) : '',
+    recurrenceIntervalDays: typeof config.intervalDays === 'number' ? String(config.intervalDays) : '',
+    recurrenceEndDate: event.recurrenceEndDate,
   };
 }
 
@@ -74,6 +118,7 @@ function valueFromEvent(event: CalendarEvent): EventFormValue {
       area: event.area,
       projectId: event.projectId,
       goalId: event.goalId,
+      ...recurrenceFields(event),
       ...defaultTimes(),
     };
   }
@@ -91,8 +136,30 @@ function valueFromEvent(event: CalendarEvent): EventFormValue {
     area: event.area,
     projectId: event.projectId,
     goalId: event.goalId,
+    ...recurrenceFields(event),
     startTime: start.toTimeString().slice(0, 5),
     endTime: end.toTimeString().slice(0, 5),
+  };
+}
+
+/** Built separately from eventFormToRequest since recurrence goes through its own endpoint
+ * (POST /v1/calendar/events/{id}/recurrence), not the event create/update body - see
+ * event-form-dialog.tsx. */
+export function eventFormToRecurrenceRequest(value: EventFormValue): SetEventRecurrenceRequest {
+  const config: Record<string, unknown> = {};
+  if (value.recurrencePattern === 'WEEKLY' && value.recurrenceDaysOfWeek.length > 0) {
+    config.daysOfWeek = value.recurrenceDaysOfWeek.map((d) => DAY_CODE_TO_ISO[d]);
+  }
+  if (value.recurrencePattern === 'MONTHLY' && value.recurrenceDayOfMonth) {
+    config.dayOfMonth = Number(value.recurrenceDayOfMonth);
+  }
+  if (value.recurrencePattern === 'CUSTOM') {
+    config.intervalDays = Number(value.recurrenceIntervalDays) || 1;
+  }
+  return {
+    pattern: value.recurrencePattern,
+    config,
+    endDate: value.recurrenceEndDate,
   };
 }
 
@@ -132,16 +199,25 @@ export function eventFormToRequest(value: EventFormValue): CreateEventRequest {
 export function validateEventForm(value: EventFormValue): string | null {
   if (!value.title.trim()) return 'Title is required.';
   if (!value.date) return 'Date is required.';
+  if (value.repeat && value.recurrencePattern === 'WEEKLY' && value.recurrenceDaysOfWeek.length === 0) {
+    return 'Pick at least one day of the week for a weekly repeat.';
+  }
+  if (value.repeat && value.recurrencePattern === 'CUSTOM' && !value.recurrenceIntervalDays) {
+    return 'Enter the repeat interval in days.';
+  }
   return null;
 }
 
 interface Props {
   value: EventFormValue;
   onChange: (value: EventFormValue) => void;
+  /** Recurrence can only be set on a recurring definition, not on a generated occurrence - the
+   * dialog hides this section entirely in that case (see event-form-dialog.tsx). */
+  hideRecurrence?: boolean;
 }
 
 /** Pure controlled form body - the caller (a dialog) owns the value, validation call, and submit. */
-export function EventForm({ value, onChange }: Props) {
+export function EventForm({ value, onChange, hideRecurrence }: Props) {
   const { projectOptions, goalOptions, createProject, createGoal } = useProjectsAndGoals();
 
   function patch(partial: Partial<EventFormValue>) {
@@ -271,6 +347,95 @@ export function EventForm({ value, onChange }: Props) {
           />
         </div>
       </div>
+
+      {!hideRecurrence && (
+        <div className="rounded-md border p-3">
+          <Label className="flex items-center gap-1.5 text-sm font-normal">
+            <Checkbox checked={value.repeat} onCheckedChange={(checked) => patch({ repeat: Boolean(checked) })} />
+            Repeat this event
+          </Label>
+
+          {value.repeat && (
+            <div className="mt-3 flex flex-col gap-3">
+              <div>
+                <Label className="mb-1.5 block">Frequency</Label>
+                <Select
+                  value={value.recurrencePattern}
+                  onValueChange={(v) => patch({ recurrencePattern: v as EventRecurrencePattern })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EVENT_RECURRENCE_PATTERNS.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {EVENT_RECURRENCE_PATTERN_LABELS[p]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {value.recurrencePattern === 'WEEKLY' && (
+                <div>
+                  <Label className="mb-1.5 block">Days of the week</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {DAYS_OF_WEEK.map((day) => (
+                      <Label key={day} className="flex items-center gap-1.5 text-sm font-normal">
+                        <Checkbox
+                          checked={value.recurrenceDaysOfWeek.includes(day)}
+                          onCheckedChange={() => {
+                            const set = new Set(value.recurrenceDaysOfWeek);
+                            if (set.has(day)) set.delete(day);
+                            else set.add(day);
+                            patch({ recurrenceDaysOfWeek: Array.from(set) });
+                          }}
+                        />
+                        {day}
+                      </Label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {value.recurrencePattern === 'MONTHLY' && (
+                <div>
+                  <Label className="mb-1.5 block">Day of month</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={value.recurrenceDayOfMonth}
+                    onChange={(e) => patch({ recurrenceDayOfMonth: e.target.value })}
+                    placeholder={value.date ? new Date(value.date).getDate().toString() : undefined}
+                  />
+                </div>
+              )}
+
+              {value.recurrencePattern === 'CUSTOM' && (
+                <div>
+                  <Label className="mb-1.5 block">Repeat every N days</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={value.recurrenceIntervalDays}
+                    onChange={(e) => patch({ recurrenceIntervalDays: e.target.value })}
+                  />
+                </div>
+              )}
+
+              <div>
+                <Label className="mb-1.5 block">End date</Label>
+                <DatePicker
+                  value={value.recurrenceEndDate}
+                  onChange={(d) => patch({ recurrenceEndDate: d })}
+                  placeholder="Never ends"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
