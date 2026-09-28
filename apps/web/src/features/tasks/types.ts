@@ -89,9 +89,23 @@ export interface Task {
   recurrenceSkippedDates: string[] | null;
   /** Set only on a generated occurrence, pointing back at the definition task. */
   recurringParentId: string | null;
+  /** Each entry is "minutes before dueDate+dueTime" to fire a reminder (0 = at the due time, 1440
+   * = 1 day before) - requires dueTime, see services/tasks' TaskReminderScheduler. */
+  reminderMinutesBefore: number[] | null;
+  remindersSent: number[] | null;
   createdAt: string;
   updatedAt: string;
 }
+
+/** Preset reminder offsets for the UI, matching the product spec's named options - "custom" is
+ * just any other number of minutes, entered free-form rather than picked from this list. */
+export const REMINDER_PRESETS: { minutes: number; label: string }[] = [
+  { minutes: 0, label: 'At time' },
+  { minutes: 15, label: '15 min before' },
+  { minutes: 30, label: '30 min before' },
+  { minutes: 60, label: '1 hour before' },
+  { minutes: 1440, label: '1 day before' },
+];
 
 export interface SetRecurrenceRequest {
   pattern: TaskRecurrencePattern;
@@ -147,6 +161,7 @@ export interface CreateTaskRequest {
   parentTaskId?: string | null;
   tags?: string[];
   estimateMinutes?: number | null;
+  reminderMinutesBefore?: number[];
 }
 
 export type UpdateTaskRequest = Partial<CreateTaskRequest> & { status?: TaskStatus };

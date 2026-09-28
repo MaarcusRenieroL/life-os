@@ -116,6 +116,21 @@ public class Task {
   // both one-off tasks and on the definition task itself.
   UUID recurringParentId;
 
+  // Each entry is "minutes before dueDate+dueTime" to fire a reminder - 0 means "at the due
+  // time", 1440 means "1 day before", etc. Requires dueTime (see TaskReminderScheduler); an
+  // all-day task with no dueTime has nothing to count backwards from.
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  List<Integer> reminderMinutesBefore;
+
+  // Which of reminderMinutesBefore have already fired for the CURRENT dueDate+dueTime -
+  // TaskReminderScheduler checks this before publishing so a reminder never fires twice, and
+  // TaskService clears it whenever dueDate/dueTime changes (a snooze or reschedule should let
+  // reminders fire again against the new time).
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  List<Integer> remindersSent;
+
   @CreationTimestamp Instant createdAt;
 
   @UpdateTimestamp Instant updatedAt;

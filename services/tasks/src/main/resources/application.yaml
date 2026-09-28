@@ -16,6 +16,11 @@ spring:
   flyway:
     schemas: tasks_schema
     default-schema: tasks_schema
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 jwt:
   secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
@@ -34,3 +39,6 @@ tasks:
     default-window-days: ${TASKS_UPCOMING_WINDOW_DAYS:7}
   recurrence:
     generate-cron: ${TASKS_RECURRENCE_GENERATE_CRON:0 5 0 * * *}
+  reminder:
+    dispatch:
+      cron: ${TASKS_REMINDER_DISPATCH_CRON:0 */5 * * * *}
