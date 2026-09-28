@@ -70,6 +70,8 @@ public class TaskResponse {
 
   List<Integer> remindersSent;
 
+  Instant overdueNotifiedAt;
+
   Instant createdAt;
 
   Instant updatedAt;
