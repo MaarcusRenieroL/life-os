@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
+import { ShortcutsHelpDialog } from '@/components/shortcuts-help-dialog';
 import { useAuth } from '@/features/auth/auth-context';
 import { NotificationBell } from '@/features/core/notification-bell';
 import { QuickCaptureDialog } from '@/features/core/quick-capture-dialog';
@@ -212,6 +213,7 @@ export function AppShell() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ShortcutsHelpDialog />
     </SidebarProvider>
   );
 }
