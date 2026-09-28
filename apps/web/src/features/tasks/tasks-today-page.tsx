@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 
+import { PomodoroTimer } from './pomodoro-timer';
 import { TaskFormDialog } from './task-form-dialog';
 import { TaskList } from './task-list';
 import { tasksApi } from './tasks-api';
@@ -36,6 +37,10 @@ export function TasksTodayPage() {
         <Button onClick={openCreate}>
           <Plus /> New task
         </Button>
+      </div>
+
+      <div className="mt-4">
+        <PomodoroTimer />
       </div>
 
       <div className="mt-4">
