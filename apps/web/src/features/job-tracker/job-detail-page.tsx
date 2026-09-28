@@ -25,6 +25,8 @@ import { EmailEventReviewList } from './email-event-review-list';
 import { FitBreakdown } from './fit-breakdown';
 import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
+import { tasksApi } from '@/features/tasks/tasks-api';
+
 import { InterviewTrackingSection } from './interview-tracking-section';
 import { jobApi } from './job-api';
 import { ReferralTrackingSection } from './referral-tracking-section';
@@ -144,6 +146,26 @@ export function JobDetailPage() {
     queryClient.setQueryData(['jobs', jobId], updated);
   }
 
+  // "Create task automatically after job applied (Follow up in 1 week)" integration point -
+  // manually triggered here rather than truly automatic, since there's no event hook on the
+  // status transition to APPLIED to fire it from; one-directional, same pattern as the other
+  // module bridges (habits/notes -> tasks, tasks -> calendar).
+  async function createFollowUpTask() {
+    if (!job) return;
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 7);
+    try {
+      const task = await tasksApi.create({
+        title: `Follow up: ${job.company} — ${job.title}`,
+        dueDate: dueDate.toISOString().slice(0, 10),
+        priority: 'MEDIUM',
+      });
+      toast.success(`Created follow-up task, due ${task.dueDate}`);
+    } catch {
+      toast.error('Could not create the follow-up task. Please try again.');
+    }
+  }
+
   if (isLoading) {
     return (
       <div>
@@ -189,7 +211,12 @@ export function JobDetailPage() {
             )}
           </p>
         </div>
-        {fit.score !== null && <FitScoreBadge score={fit.score} />}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void createFollowUpTask()}>
+            Create follow-up task
+          </Button>
+          {fit.score !== null && <FitScoreBadge score={fit.score} />}
+        </div>
       </div>
 
       {pendingForJob.length > 0 && (
@@ -313,7 +340,7 @@ export function JobDetailPage() {
           <Card>
             <CardContent>
               <SectionHeading className="mb-2.5">interviews</SectionHeading>
-              <InterviewTrackingSection jobId={jobId!} />
+              <InterviewTrackingSection jobId={jobId!} company={job.company} />
             </CardContent>
           </Card>
 

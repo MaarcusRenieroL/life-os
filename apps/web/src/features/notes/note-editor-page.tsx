@@ -13,7 +13,9 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 
+import { tasksApi } from '@/features/tasks/tasks-api';
 import { useConfirmDialog } from '@/components/confirm-dialog';
 import { SectionHeading } from '@/components/section-heading';
 import { Badge } from '@/components/ui/badge';
@@ -158,6 +160,20 @@ export function NoteEditorPage() {
     navigate(`/notes/${copy.id}`);
   }
 
+  // "Create task from note" integration point - creates the task, then links it back via the
+  // same module-link mechanism the "Notes" section on a task's own edit dialog reads from
+  // (see features/notes/linked-notes.tsx), so it shows up there immediately.
+  async function createTaskFromNote() {
+    if (!id || !note) return;
+    try {
+      const task = await tasksApi.create({ title: note.title, description: note.description ?? undefined });
+      await notesApi.addModuleLink(id, 'TASK', task.id);
+      toast.success(`Created task "${task.title}"`);
+    } catch {
+      toast.error('Could not create a task from this note. Please try again.');
+    }
+  }
+
   async function deleteNote() {
     if (!id) return;
     const ok = await confirm({ title: 'Delete this note? You can restore it from Trash later.', confirmLabel: 'Delete' });
@@ -248,6 +264,9 @@ export function NoteEditorPage() {
           </Button>
           <Button size="sm" variant="ghost" onClick={() => void duplicateNote()}>
             Duplicate
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => void createTaskFromNote()}>
+            Create task
           </Button>
           <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteNote()}>
             Delete

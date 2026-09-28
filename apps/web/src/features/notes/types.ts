@@ -25,7 +25,7 @@ export const NOTE_TYPES: NoteType[] = [
   'DECISION',
 ];
 
-export type NoteModuleType = 'PROJECT' | 'GOAL' | 'TASK' | 'JOB_APPLICATION' | 'HABIT';
+export type NoteModuleType = 'PROJECT' | 'GOAL' | 'TASK' | 'JOB_APPLICATION' | 'HABIT' | 'EVENT';
 
 export const NOTE_MODULE_TYPES: NoteModuleType[] = [
   'PROJECT',
@@ -33,6 +33,7 @@ export const NOTE_MODULE_TYPES: NoteModuleType[] = [
   'TASK',
   'JOB_APPLICATION',
   'HABIT',
+  'EVENT',
 ];
 
 export interface PageResponse<T> {

@@ -7,7 +7,9 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
+import { calendarApi } from '@/features/calendar/calendar-api';
 import { useConfirmDialog } from '@/components/confirm-dialog';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
@@ -63,6 +65,29 @@ export function BudgetsPage() {
   function openEdit(budget: BudgetResponse) {
     setEditing(budget);
     setDialogOpen(true);
+  }
+
+  // "Display budget deadlines in calendar" integration point - one-directional, same pattern as
+  // the other module bridges built this pass.
+  async function addDeadlineToCalendar(budget: BudgetRow) {
+    if (!budget.endDate) {
+      toast.error('This budget has no end date.');
+      return;
+    }
+    try {
+      const date = budget.endDate.slice(0, 10);
+      await calendarApi.create({
+        title: `Budget reset: ${budget.categoryName}`,
+        description: `${formatINR(budget.budgetAmount)} / ${budget.period}`,
+        category: 'PERSONAL',
+        allDay: true,
+        startDate: date,
+        endDate: date,
+      });
+      toast.success('Added to calendar');
+    } catch {
+      toast.error('Could not add the budget deadline to the calendar. Please try again.');
+    }
   }
 
   const rows = useMemo<BudgetRow[]>(
@@ -134,6 +159,7 @@ export function BudgetsPage() {
         cell: ({ row }) => (
           <div className="flex gap-2 text-xs">
             <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); openEdit(row.original); }}>Edit</button>
+            <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); void addDeadlineToCalendar(row.original); }}>Add to calendar</button>
             <button className="text-destructive hover:underline" onClick={(e) => { e.stopPropagation(); void remove(row.original); }}>Delete</button>
           </div>
         ),
