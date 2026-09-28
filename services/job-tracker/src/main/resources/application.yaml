@@ -31,6 +31,9 @@ jwt:
 internal:
   api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
 
+calendar:
+  internal-base-url: ${CALENDAR_INTERNAL_BASE_URL:http://calendar:8010}
+
 # job-tracker doesn't use EncryptionService itself, but it's component-scanned
 # in from com.lifeos.common (see JobTrackerApplication's @ComponentScan) and its
 # constructor requires this property to be resolvable, so it needs a value.

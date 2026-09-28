@@ -14,7 +14,12 @@ import org.springframework.web.client.RestClient;
  * slow page load would spuriously fail), and not an AI call, so 120s is needlessly generous for
  * something that has a paste-the-description fallback if it times out.
  */
-@Configuration
+// Named explicitly - the default annotation-derived bean name ("httpClientConfig") collides with
+// common's own HttpClientConfig, which is component-scanned into every service (see
+// JobTrackerApplication's @ComponentScan) - ConflictingBeanDefinitionException on startup
+// otherwise. Same fix as the one previously applied on an unrelated branch for this exact
+// collision; reapplied here since this branch stack was cut from dev before that fix existed.
+@Configuration("jobTrackerHttpClientConfig")
 public class HttpClientConfig {
 
   @Bean
