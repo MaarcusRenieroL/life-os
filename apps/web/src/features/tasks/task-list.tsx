@@ -16,7 +16,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-import { isOverdue, OverdueBadge, PriorityBadge, StatusBadge } from './task-badges';
+import { isOverdue, OverdueBadge, PriorityBadge, RecurringIcon, StatusBadge } from './task-badges';
 import { SubtaskRows } from './subtask-rows';
 import { TaskFormDialog } from './task-form-dialog';
 import { tasksApi } from './tasks-api';
@@ -76,6 +76,27 @@ export function TaskList({ tasks, isLoading, emptyMessage, onEdit, invalidateKey
       invalidate();
     } catch {
       toast.error('Could not snooze the task. Please try again.');
+    }
+  }
+
+  async function togglePause(task: Task) {
+    try {
+      if (task.recurrencePaused) await tasksApi.resumeRecurrence(task.id);
+      else await tasksApi.pauseRecurrence(task.id);
+      invalidate();
+    } catch {
+      toast.error('Could not update the recurrence. Please try again.');
+    }
+  }
+
+  async function skipNext(task: Task) {
+    if (!task.dueDate) return;
+    try {
+      await tasksApi.skipOccurrence(task.id, task.dueDate);
+      toast.success(`Skipped "${task.title}" for ${task.dueDate}`);
+      invalidate();
+    } catch {
+      toast.error('Could not skip this occurrence. Please try again.');
     }
   }
 
@@ -281,6 +302,7 @@ export function TaskList({ tasks, isLoading, emptyMessage, onEdit, invalidateKey
                     >
                       {task.title}
                     </button>
+                    {task.recurrencePattern && <RecurringIcon />}
                   </div>
                   {task.description && (
                     <p className="max-w-72 truncate pl-6 text-xs text-muted-foreground">{task.description}</p>
@@ -308,6 +330,16 @@ export function TaskList({ tasks, isLoading, emptyMessage, onEdit, invalidateKey
                   <Button size="sm" variant="ghost" onClick={() => void snoozeToTomorrow(task)}>
                     Snooze
                   </Button>
+                  {task.recurrencePattern && (
+                    <>
+                      <Button size="sm" variant="ghost" onClick={() => void skipNext(task)}>
+                        Skip
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => void togglePause(task)}>
+                        {task.recurrencePaused ? 'Resume' : 'Pause'}
+                      </Button>
+                    </>
+                  )}
                   <Button size="sm" variant="ghost" onClick={() => void duplicate(task)}>
                     Duplicate
                   </Button>

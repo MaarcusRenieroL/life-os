@@ -5,7 +5,7 @@ import { LinkedNotes } from '@/features/notes/linked-notes';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
-import { TaskForm, taskFormToRequest, useTaskFormState, validateTaskForm } from './task-form';
+import { TaskForm, taskFormToRecurrenceRequest, taskFormToRequest, useTaskFormState, validateTaskForm } from './task-form';
 import { tasksApi } from './tasks-api';
 import type { Task } from './types';
 
@@ -34,7 +34,18 @@ export function TaskFormDialog({ open, onOpenChange, editing, parentTaskId = nul
     setSaving(true);
     try {
       const request = taskFormToRequest(value);
-      const task = editing ? await tasksApi.update(editing.id, request) : await tasksApi.create(request);
+      let task = editing ? await tasksApi.update(editing.id, request) : await tasksApi.create(request);
+
+      // Recurrence goes through its own endpoint, not the task create/update body - see
+      // task-form.tsx's taskFormToRecurrenceRequest. Only applies to a recurring definition
+      // (hidden on the form entirely for a generated occurrence - see hideRecurrence below).
+      const wasRecurring = editing?.recurrencePattern != null;
+      if (value.repeat) {
+        task = await tasksApi.setRecurrence(task.id, taskFormToRecurrenceRequest(value));
+      } else if (wasRecurring) {
+        await tasksApi.stopRecurrence(task.id);
+      }
+
       toast.success(editing ? `Updated "${task.title}"` : `Created "${task.title}"`);
       onSaved(task);
       onOpenChange(false);
@@ -51,7 +62,7 @@ export function TaskFormDialog({ open, onOpenChange, editing, parentTaskId = nul
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit task' : parentTaskId ? 'New subtask' : 'New task'}</DialogTitle>
         </DialogHeader>
-        <TaskForm value={value} onChange={setValue} />
+        <TaskForm value={value} onChange={setValue} hideRecurrence={editing?.recurringParentId != null} />
         {editing && <LinkedNotes moduleType="TASK" moduleId={editing.id} defaultTitle={editing.title} />}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <DialogFooter>

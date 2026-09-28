@@ -3,6 +3,7 @@ import { api, unwrap } from '@/lib/api-client';
 import type {
   BulkUpdateTaskRequest,
   CreateTaskRequest,
+  SetRecurrenceRequest,
   Task,
   TaskListFilters,
   UpdateTaskRequest,
@@ -53,5 +54,29 @@ export const tasksApi = {
 
   duplicate(id: string): Promise<Task> {
     return unwrap(api.post(`${baseUrl}/${id}/duplicate`, {}));
+  },
+
+  occurrences(id: string): Promise<Task[]> {
+    return unwrap(api.get(`${baseUrl}/${id}/occurrences`));
+  },
+
+  setRecurrence(id: string, request: SetRecurrenceRequest): Promise<Task> {
+    return unwrap(api.post(`${baseUrl}/${id}/recurrence`, request));
+  },
+
+  async stopRecurrence(id: string): Promise<void> {
+    await api.delete(`${baseUrl}/${id}/recurrence`);
+  },
+
+  pauseRecurrence(id: string): Promise<Task> {
+    return unwrap(api.post(`${baseUrl}/${id}/recurrence/pause`, {}));
+  },
+
+  resumeRecurrence(id: string): Promise<Task> {
+    return unwrap(api.post(`${baseUrl}/${id}/recurrence/resume`, {}));
+  },
+
+  async skipOccurrence(id: string, dueDate: string): Promise<void> {
+    await api.post(`${baseUrl}/${id}/recurrence/skip`, { dueDate });
   },
 };
