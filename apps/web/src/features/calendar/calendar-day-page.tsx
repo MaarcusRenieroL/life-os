@@ -1,12 +1,13 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { addDays, endOfDay, format, parse, startOfDay } from 'date-fns';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 import { TaskFormDialog } from '@/features/tasks/task-form-dialog';
 import type { Task } from '@/features/tasks/types';
 
-import { CategoryBadge } from './event-badges';
 import { calendarApi } from './calendar-api';
+import { CalendarTimeGrid } from './calendar-time-grid';
 import { DateNavHeader } from './date-nav-header';
 import { EventFormDialog } from './event-form-dialog';
 import { TaskChip } from './task-chip';
@@ -14,30 +15,38 @@ import type { CalendarEvent } from './types';
 import { useAnchorDate } from './use-anchor-date';
 import { useTasksInRange } from './use-tasks-in-range';
 
-function eventTimeLabel(event: CalendarEvent): string {
-  if (event.allDay) return 'All day';
-  const start = event.startAt ? format(new Date(event.startAt), 'HH:mm') : '';
-  const end = event.endAt ? format(new Date(event.endAt), 'HH:mm') : '';
-  return end ? `${start} – ${end}` : start;
-}
-
 export function CalendarDayPage() {
   const queryClient = useQueryClient();
   const [anchor, setAnchor] = useAnchorDate();
   const anchorDate = parse(anchor, 'yyyy-MM-dd', new Date());
   const dayStart = startOfDay(anchorDate);
   const dayEnd = endOfDay(anchorDate);
+  const days = useMemo(() => [anchorDate], [anchorDate]);
 
-  const { data: events = [], isLoading } = useQuery({
-    queryKey: ['calendar', 'events', dayStart.toISOString(), dayEnd.toISOString()],
+  const queryKey = ['calendar', 'events', dayStart.toISOString(), dayEnd.toISOString()];
+  const { data: events = [] } = useQuery({
+    queryKey,
     queryFn: () => calendarApi.list({ from: dayStart.toISOString(), to: dayEnd.toISOString() }),
   });
   const { data: tasks = [] } = useTasksInRange(dayStart, dayEnd);
 
-  const sorted = useMemo(
-    () => [...events].sort((a, b) => Number(b.allDay) - Number(a.allDay) || eventTimeLabel(a).localeCompare(eventTimeLabel(b))),
-    [events],
-  );
+  const rescheduleMutation = useMutation({
+    mutationFn: ({ event, startAt, endAt }: { event: CalendarEvent; startAt: Date; endAt: Date }) =>
+      calendarApi.update(event.id, { startAt: startAt.toISOString(), endAt: endAt.toISOString() }),
+    onMutate: async ({ event, startAt, endAt }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<CalendarEvent[]>(queryKey);
+      queryClient.setQueryData<CalendarEvent[]>(queryKey, (current) =>
+        current?.map((e) => (e.id === event.id ? { ...e, startAt: startAt.toISOString(), endAt: endAt.toISOString() } : e)),
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      toast.error('Failed to reschedule event');
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['calendar'] }),
+  });
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
@@ -75,33 +84,21 @@ export function CalendarDayPage() {
         onNew={openCreate}
       />
 
-      <div className="mt-4 flex flex-col gap-2">
-        {tasks.map((task) => (
-          <TaskChip key={task.id} task={task} onClick={() => openTask(task)} />
-        ))}
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : sorted.length === 0 && tasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nothing scheduled today.</p>
-        ) : (
-          sorted.map((event) => (
-            <button
-              key={event.id}
-              className="flex items-center justify-between rounded-md border p-3 text-left hover:bg-muted"
-              onClick={() => openEdit(event)}
-            >
-              <div>
-                <p className="font-medium">{event.title}</p>
-                {event.location && <p className="text-xs text-muted-foreground">{event.location}</p>}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{eventTimeLabel(event)}</span>
-                <CategoryBadge category={event.category} />
-              </div>
-            </button>
-          ))
-        )}
-      </div>
+      {tasks.length > 0 && (
+        <div className="mt-4 flex flex-col gap-2">
+          {tasks.map((task) => (
+            <TaskChip key={task.id} task={task} onClick={() => openTask(task)} />
+          ))}
+        </div>
+      )}
+
+      <CalendarTimeGrid
+        days={days}
+        events={events}
+        onEventClick={openEdit}
+        onSlotClick={openCreate}
+        onEventReschedule={(event, startAt, endAt) => rescheduleMutation.mutate({ event, startAt, endAt })}
+      />
 
       <EventFormDialog
         open={formOpen}
