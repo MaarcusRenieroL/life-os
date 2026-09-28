@@ -8,6 +8,7 @@ import { SectionHeading } from '@/components/section-heading';
 import { APP_MODULES, type AppModuleConfig } from '@/config/app-modules';
 import { auditLogApi } from '@/features/audit-log/audit-log-api';
 import { useAuth } from '@/features/auth/auth-context';
+import { coreApi } from '@/features/core/core-api';
 import { accountApi } from '@/features/finance/account-api';
 import { transactionApi } from '@/features/finance/transaction-api';
 import { formatINR } from '@/features/finance/utils';
@@ -88,6 +89,13 @@ export function HomePage() {
     throwOnError: false,
   });
   const recentEvents = recentEventsPage?.content ?? [];
+
+  const { data: goalOverview = [] } = useQuery({
+    queryKey: ['core', 'goals', 'overview'],
+    queryFn: coreApi.getGoalOverview,
+    retry: false,
+    throwOnError: false,
+  });
 
   const vaultActionRequired = (healthSummary?.weakCount ?? 0) + (healthSummary?.duplicateCount ?? 0);
   const financeTotalBalance = accounts?.reduce((sum, a) => sum + a.currentBalance, 0) ?? null;
@@ -239,6 +247,32 @@ export function HomePage() {
           </div>
         </div>
       </div>
+
+      {goalOverview.length > 0 && (
+        <div className="mb-8 rounded-lg border bg-card p-5">
+          <SectionHeading>goals</SectionHeading>
+          <div className="mt-3 flex flex-col gap-3">
+            {goalOverview.map((goal) => {
+              const percent = goal.totalTasks === 0 ? 0 : Math.round((goal.completedTasks / goal.totalTasks) * 100);
+              return (
+                <div key={goal.goalId} className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{goal.goalName}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {goal.completedTasks}/{goal.totalTasks} tasks
+                      {goal.activeHabitCount > 0 && ` · ${goal.activeHabitCount} habit${goal.activeHabitCount === 1 ? '' : 's'}`}
+                      {goal.upcomingEventCount > 0 && ` · ${goal.upcomingEventCount} upcoming`}
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {exploreModules.length > 0 && (
         <div>

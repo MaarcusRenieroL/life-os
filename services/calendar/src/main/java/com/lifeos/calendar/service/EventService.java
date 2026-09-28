@@ -168,6 +168,27 @@ public class EventService {
         .build();
   }
 
+  /** Upcoming (not yet started) event count per goal, for core's cross-module goal overview - see
+   * tasks' GoalProgressResponse javadoc for why the merge happens in core rather than here. A
+   * timed event counts as upcoming if its startAt hasn't passed yet; an all-day event counts if
+   * its startDate is today or later. */
+  @Transactional(readOnly = true)
+  public Map<UUID, Long> upcomingEventCountsByGoal(UUID userId) {
+    Instant now = Instant.now();
+    LocalDate today = LocalDate.now();
+    return eventRepository.findAllByUserId(userId).stream()
+        .filter(e -> e.getGoalId() != null)
+        .filter(e -> isUpcoming(e, now, today))
+        .collect(java.util.stream.Collectors.groupingBy(Event::getGoalId, java.util.stream.Collectors.counting()));
+  }
+
+  private boolean isUpcoming(Event event, Instant now, LocalDate today) {
+    if (Boolean.TRUE.equals(event.getAllDay())) {
+      return event.getStartDate() != null && !event.getStartDate().isBefore(today);
+    }
+    return event.getStartAt() != null && event.getStartAt().isAfter(now);
+  }
+
   @Transactional(readOnly = true)
   public EventResponse get(UUID userId, UUID id) {
     return toResponse(findOwned(userId, id));
