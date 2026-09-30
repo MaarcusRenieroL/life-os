@@ -54,6 +54,13 @@ tasks:
 calendar:
   internal-base-url: ${CALENDAR_INTERNAL_BASE_URL:http://calendar:8010}
 
+workouts:
+  internal-base-url: ${WORKOUTS_INTERNAL_BASE_URL:http://workouts:8011}
+
+# The zone analytics and automation schedules bucket days in (finance's own jobs use the same).
+analytics:
+  zone: ${ANALYTICS_ZONE:Asia/Kolkata}
+
 # core doesn't use EncryptionService itself, but it's component-scanned in from
 # com.lifeos.common (see CoreApplication's @ComponentScan) and its constructor
 # requires this property to be resolvable, so it needs a value even if unused here.

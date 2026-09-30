@@ -28,6 +28,7 @@ public class InternalTodayController {
 
   private final TodayService todayService;
   private final JobListingService jobListingService;
+  private final com.lifeos.job_tracker.service.ApplicationStatsService applicationStatsService;
 
   @GetMapping("/today")
   public ResponseEntity<ApiResponse<List<TodayItemResponse>>> today(@RequestParam UUID userId) {
@@ -39,5 +40,15 @@ public class InternalTodayController {
     JobListing job =
         jobListingService.createFromQuickCapture(request.userId(), request.company(), request.title());
     return ResponseEntity.ok(ApiResponse.success(job, "Job listing created from quick capture"));
+  }
+
+  @GetMapping("/application-stats")
+  public ResponseEntity<ApiResponse<com.lifeos.job_tracker.service.ApplicationStatsService.ApplicationStats>> applicationStats(
+      @RequestParam UUID userId,
+      @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+      @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to,
+      @RequestParam(required = false) String zone) {
+    java.time.ZoneId resolved = zone == null || zone.isBlank() ? java.time.ZoneId.systemDefault() : java.time.ZoneId.of(zone);
+    return ResponseEntity.ok(ApiResponse.success(applicationStatsService.stats(userId, from, to, resolved), "Application stats fetched"));
   }
 }

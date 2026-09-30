@@ -136,3 +136,61 @@ export function LineChart({
     </svg>
   );
 }
+
+export interface DonutSegment {
+  label: string;
+  value: number;
+  /** A Tailwind stroke class, e.g. `stroke-sky-500`. */
+  strokeClass: string;
+}
+
+/** Ring split into proportional segments, with the total in the middle - the "where does it come
+ * from" breakdown. Segments with a zero value are skipped. */
+export function DonutChart({
+  segments,
+  centerLabel,
+  size = 140,
+  ariaLabel,
+}: {
+  segments: DonutSegment[];
+  centerLabel?: string;
+  size?: number;
+  ariaLabel: string;
+}) {
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  const total = segments.reduce((sum, s) => sum + s.value, 0);
+  let offset = 0;
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 100 100" className="size-full -rotate-90" role="img" aria-label={ariaLabel}>
+        <circle cx="50" cy="50" r={radius} fill="none" strokeWidth="12" className="stroke-muted" />
+        {total > 0 &&
+          segments
+            .filter((s) => s.value > 0)
+            .map((s) => {
+              const length = (s.value / total) * circumference;
+              const circle = (
+                <circle
+                  key={s.label}
+                  cx="50"
+                  cy="50"
+                  r={radius}
+                  fill="none"
+                  strokeWidth="12"
+                  strokeDasharray={`${length} ${circumference - length}`}
+                  strokeDashoffset={-offset}
+                  className={s.strokeClass}
+                >
+                  <title>{`${s.label}: ${s.value}`}</title>
+                </circle>
+              );
+              offset += length;
+              return circle;
+            })}
+      </svg>
+      {centerLabel && <div className="absolute inset-0 flex items-center justify-center text-center text-sm font-semibold tabular-nums">{centerLabel}</div>}
+    </div>
+  );
+}

@@ -3,6 +3,7 @@ package com.lifeos.habit_tracker.controller;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.habit_tracker.domains.dto.response.GoalHabitStatsResponse;
 import com.lifeos.habit_tracker.service.GoalHabitStatsService;
+import com.lifeos.habit_tracker.service.HabitStatsService;
 import com.lifeos.habit_tracker.service.HabitService;
 import java.util.Map;
 import java.util.UUID;
@@ -23,6 +24,7 @@ public class InternalGoalController {
 
   private final HabitService habitService;
   private final GoalHabitStatsService goalHabitStatsService;
+  private final HabitStatsService habitStatsService;
 
   @GetMapping("/goal-habit-counts")
   public ResponseEntity<ApiResponse<Map<UUID, Long>>> goalHabitCounts(@RequestParam UUID userId) {
@@ -35,5 +37,13 @@ public class InternalGoalController {
       @RequestParam UUID userId) {
     return ResponseEntity.ok(
         ApiResponse.success(goalHabitStatsService.statsByGoal(userId), "Goal habit stats fetched successfully"));
+  }
+
+  @GetMapping("/daily-stats")
+  public ResponseEntity<ApiResponse<HabitStatsService.HabitStats>> dailyStats(
+      @RequestParam UUID userId,
+      @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+      @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to) {
+    return ResponseEntity.ok(ApiResponse.success(habitStatsService.stats(userId, from, to), "Habit stats fetched successfully"));
   }
 }

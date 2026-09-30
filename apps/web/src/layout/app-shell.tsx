@@ -6,6 +6,7 @@ import {
   ChevronsUpDown,
   Home as HomeIcon,
   ListChecks,
+  ChartNoAxesCombined,
   Dumbbell,
   Target,
   ListTodo,
@@ -76,6 +77,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Habits', to: '/habits', icon: ListChecks, enabled: true },
   { label: 'Goals', to: '/goals', icon: Target, enabled: true },
   { label: 'Workouts', to: '/workouts', icon: Dumbbell, enabled: true },
+  { label: 'Analytics', to: '/analytics', icon: ChartNoAxesCombined, enabled: true },
 ];
 
 /** The breadcrumb mirrors the real URL, not a made-up label, so it never drifts from the address bar. */

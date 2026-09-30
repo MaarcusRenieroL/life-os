@@ -15,6 +15,8 @@ public interface InterviewRepository extends JpaRepository<Interview, UUID> {
   Optional<Interview> findByIdAndUserId(UUID id, UUID userId);
 
   /** Cross-user - backs {@code JobAttentionScanner}'s daily interview-upcoming scan. */
+  List<Interview> findByUserIdAndScheduledAtBetween(UUID userId, Instant from, Instant to);
+
   List<Interview> findByResultAndScheduledAtBetween(InterviewResult result, Instant from, Instant to);
 
   /** Scoped to one user - backs the internal {@code /today} endpoint. */

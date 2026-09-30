@@ -1,6 +1,8 @@
 package com.lifeos.habit_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.common.events.AutomationEventPublisher;
+import com.lifeos.common.events.AutomationEventRecord;
 import com.lifeos.habit_tracker.domains.dto.request.CreateHabitLogRequest;
 import com.lifeos.habit_tracker.domains.dto.request.UpdateHabitLogRequest;
 import com.lifeos.habit_tracker.domains.dto.response.HabitLogResponse;
@@ -29,16 +31,26 @@ import org.springframework.web.bind.annotation.RestController;
 public class HabitLogController {
 
   private final HabitLogService habitLogService;
+  private final com.lifeos.habit_tracker.service.HabitService habitService;
+  private final AutomationEventPublisher automationEvents;
 
   @PostMapping
   public ResponseEntity<ApiResponse<HabitLogResponse>> upsert(
       Authentication authentication,
       @PathVariable UUID habitId,
       @Valid @RequestBody CreateHabitLogRequest request) {
-    return ResponseEntity.ok(
-        ApiResponse.success(
-            habitLogService.upsert(userId(authentication), habitId, request),
-            "Habit log saved successfully"));
+    HabitLogResponse saved = habitLogService.upsert(userId(authentication), habitId, request);
+    if (saved.getStatus() == com.lifeos.habit_tracker.domains.enums.HabitLogStatus.COMPLETED) {
+      // Published from the controller so only the user's own logging triggers automation rules.
+      automationEvents.publish(
+          userId(authentication),
+          "HABIT",
+          habitId,
+          AutomationEventRecord.Kind.COMPLETED,
+          habitService.get(userId(authentication), habitId).getName(),
+          java.util.Map.of("logDate", String.valueOf(saved.getLogDate())));
+    }
+    return ResponseEntity.ok(ApiResponse.success(saved, "Habit log saved successfully"));
   }
 
   @GetMapping
