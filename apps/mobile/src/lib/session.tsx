@@ -16,7 +16,6 @@ const Ctx = createContext<SessionValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [runtime, setRuntime] = useState<Runtime | null>(null);
   const [signedIn, setSignedIn] = useState(false);
   const markSignedOut = useCallback(() => setSignedIn(false), []);
 
@@ -24,16 +23,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     void loadSettings().then(setSettings);
   }, []);
 
+  // The runtime is a pure function of the settings, so derive it instead of mirroring it in state.
+  const runtime = useMemo<Runtime | null>(() => (settings ? buildRuntime(settings, markSignedOut) : null), [settings, markSignedOut]);
+
   useEffect(() => {
-    if (!settings) return;
+    if (!runtime) return;
     let cancelled = false;
-    const built = buildRuntime(settings, markSignedOut);
-    setRuntime(built);
-    void built.client.isSignedIn().then((yes) => !cancelled && setSignedIn(yes));
+    void runtime.client.isSignedIn().then((yes) => !cancelled && setSignedIn(yes));
     return () => {
       cancelled = true;
     };
-  }, [settings, markSignedOut]);
+  }, [runtime]);
 
   const value = useMemo<SessionValue>(
     () => ({

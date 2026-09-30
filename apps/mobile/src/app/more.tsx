@@ -15,7 +15,7 @@ const label = (x: string) => x.toLowerCase().replace(/_/g, ' ');
 
 function Jobs() {
   const api = useApi();
-  const jobs = useAsync(() => api.jobs.list(), [api]);
+  const jobs = useAsync(() => api.jobs.list(), api);
   const list = jobs.data ?? [];
   if (jobs.error && !jobs.data) return <ErrorNote message={jobs.error} onRetry={jobs.reload} />;
   if (list.length === 0 && !jobs.loading) return <Muted>No applications yet.</Muted>;
@@ -43,7 +43,7 @@ function Jobs() {
 
 function Finance() {
   const api = useApi();
-  const summary = useAsync(() => api.finance.summary(), [api]);
+  const summary = useAsync(() => api.finance.summary(), api);
   if (summary.error && !summary.data) return <ErrorNote message={summary.error} onRetry={summary.reload} />;
   const d = summary.data;
   const cell = (name: string, value: string) => (
@@ -106,7 +106,7 @@ function Settings() {
     <>
       <Panel title="Server">
         {field('baseUrl', 'Gateway address')}
-        <Muted style={{ marginBottom: 12 }}>Use your Mac's address on the same Wi-Fi (for example http://192.168.1.2), or https://life-os.maarcus.dev with an Access service token.</Muted>
+        <Muted style={{ marginBottom: 12 }}>Use your Mac&apos;s address on the same Wi-Fi (for example http://192.168.1.2), or https://life-os.maarcus.dev with an Access service token.</Muted>
         {field('cfClientId', 'Access client id (optional)')}
         {field('cfClientSecret', 'Access client secret (optional)', true)}
         <Pressable style={s.primary} onPress={() => void updateSettings({ ...draft, baseUrl: draft.baseUrl.trim().replace(/\/+$/, '') }).then(() => setSaved(true))}><Text style={s.primaryText}>SAVE</Text></Pressable>

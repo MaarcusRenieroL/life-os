@@ -12,7 +12,7 @@ const PRIORITY_COLOR = { URGENT: C.magenta, HIGH: C.gold, MEDIUM: C.muted, LOW: 
 
 export default function Tasks() {
   const api = useApi();
-  const tasks = useAsync(() => api.tasks.list(), [api]);
+  const tasks = useAsync(() => api.tasks.list(), api);
   const [title, setTitle] = useState('');
   const [showDone, setShowDone] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);

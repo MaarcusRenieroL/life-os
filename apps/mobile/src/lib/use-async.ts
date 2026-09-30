@@ -9,18 +9,27 @@ export interface AsyncState<T> {
   mutate: (next: T | ((prev: T | undefined) => T | undefined)) => void;
 }
 
-/** Loads `load()` on mount and whenever `deps` change; keeps showing old data while reloading. */
-export function useAsync<T>(load: () => Promise<T>, deps: unknown[]): AsyncState<T> {
+/**
+ * Loads on mount and again whenever `key` changes (pass the thing `load` closes over, e.g. the api);
+ * keeps showing the old data while reloading.
+ */
+export function useAsync<T>(load: () => Promise<T>, key: unknown): AsyncState<T> {
   const [data, setData] = useState<T>();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const latest = useRef(0);
+  const loadRef = useRef(load);
 
-  const reload = useCallback(async () => {
+  useEffect(() => {
+    loadRef.current = load;
+  });
+
+  // Fetches and stores the result. State is only touched after the await, never synchronously, so it
+  // is safe to start from an effect.
+  const run = useCallback(async () => {
     const ticket = ++latest.current;
-    setLoading(true);
     try {
-      const next = await load();
+      const next = await loadRef.current();
       if (ticket !== latest.current) return;
       setData(next);
       setError(null);
@@ -29,12 +38,16 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]): AsyncState
     } finally {
       if (ticket === latest.current) setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, []);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    await run();
+  }, [run]);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    void run();
+  }, [run, key]);
 
   return { data, error, loading, reload, mutate: (next) => setData((prev) => (typeof next === 'function' ? (next as (p: T | undefined) => T | undefined)(prev) : next)) };
 }

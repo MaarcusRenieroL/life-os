@@ -26,7 +26,7 @@ function Heatmap({ grid }: { grid: HeatCell[][] }) {
 export default function Home() {
   const api = useApi();
   const { player, reload } = usePlayer();
-  const today = useAsync(() => api.today(), [api]);
+  const today = useAsync(() => api.today(), api);
   const groups = groupQuests(toQuests(today.data ?? []));
   const [value, target] = player.challengeProgress;
   const almost = player.achievements.filter((a) => a.next != null).sort((a, b) => b.pct - a.pct).slice(0, 3);

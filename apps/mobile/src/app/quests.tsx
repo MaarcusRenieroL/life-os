@@ -17,7 +17,7 @@ const keyOf = (q: Quest) => `${q.item.module}:${q.item.type}:${q.item.entityId ?
 
 export default function Quests() {
   const api = useApi();
-  const today = useAsync(() => api.today(), [api]);
+  const today = useAsync(() => api.today(), api);
   const [cleared, setCleared] = useState<Set<string>>(new Set());
   const [pending, setPending] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);

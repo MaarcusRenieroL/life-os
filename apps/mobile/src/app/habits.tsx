@@ -8,7 +8,7 @@ import { Check, ErrorNote, Muted, Panel, s, success } from '@/ui';
 
 export default function Habits() {
   const api = useApi();
-  const habits = useAsync(() => api.habits.today(), [api]);
+  const habits = useAsync(() => api.habits.today(), api);
   const [failure, setFailure] = useState<string | null>(null);
   const list = habits.data ?? [];
   const done = list.filter((h) => h.todayLog?.status === 'COMPLETED').length;
