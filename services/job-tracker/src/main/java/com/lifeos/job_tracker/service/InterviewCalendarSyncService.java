@@ -68,11 +68,23 @@ public class InterviewCalendarSyncService {
     }
   }
 
-  /** Updates the linked event's title/time to match the interview - a no-op if the interview was
-   * never successfully linked (calendarEventId null). */
-  public void updateLinkedEvent(UUID userId, Interview interview, String companyName) {
-    if (interview.getCalendarEventId() == null || interview.getScheduledAt() == null) return;
+  /** Keeps the linked event in sync with the interview's current scheduledAt. A no-op if the
+   * interview was never successfully linked (calendarEventId null). If scheduledAt has been
+   * cleared (the interview was unscheduled), deletes the now-meaningless linked event instead of
+   * leaving it stranded at the old time forever - the caller should store the returned value back
+   * onto calendarEventId (null after a delete) so a later reschedule creates a fresh link rather
+   * than silently no-op'ing against a link this method already tore down. */
+  public UUID syncLinkedEvent(UUID userId, Interview interview, String companyName) {
+    if (interview.getCalendarEventId() == null) return null;
+    if (interview.getScheduledAt() == null) {
+      deleteLinkedEvent(userId, interview);
+      return null;
+    }
+    updateLinkedEvent(userId, interview, companyName);
+    return interview.getCalendarEventId();
+  }
 
+  private void updateLinkedEvent(UUID userId, Interview interview, String companyName) {
     UpdateEventPayload payload =
         new UpdateEventPayload(title(interview, companyName), interview.getScheduledAt(), interview.getScheduledAt().plus(DEFAULT_DURATION));
 

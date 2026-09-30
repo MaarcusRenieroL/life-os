@@ -47,7 +47,6 @@ interface DragState {
   pointerStartY: number;
   previewStart: Date;
   previewEnd: Date;
-  moved: boolean;
 }
 
 export interface CalendarTimeGridProps {
@@ -93,15 +92,16 @@ export function CalendarTimeGrid({ days, events, onEventClick, onSlotClick, onEv
       pointerStartY: pointerDown.clientY,
       previewStart: originalStart,
       previewEnd: originalEnd,
-      moved: false,
     });
 
     function onMove(moveEvent: PointerEvent) {
       setDrag((current) => {
         if (!current) return current;
         const deltaMinutes = snapMinutes(Math.round(((moveEvent.clientY - current.pointerStartY) / HOUR_HEIGHT_PX) * 60));
-        if (deltaMinutes === 0) return { ...current, moved: current.moved };
 
+        // Always recompute from the original anchor, including when deltaMinutes is 0 - dragging
+        // an event away and back to its starting position must snap the preview back to the
+        // original times exactly, not freeze at whatever the last non-zero delta happened to be.
         let previewStart = current.originalStart;
         let previewEnd = current.originalEnd;
 
@@ -120,7 +120,7 @@ export function CalendarTimeGrid({ days, events, onEventClick, onSlotClick, onEv
           }
         }
 
-        return { ...current, previewStart, previewEnd, moved: true };
+        return { ...current, previewStart, previewEnd };
       });
     }
 
@@ -128,7 +128,13 @@ export function CalendarTimeGrid({ days, events, onEventClick, onSlotClick, onEv
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       setDrag((current) => {
-        if (current?.moved) onEventReschedule(event, current.previewStart, current.previewEnd);
+        // Derive "did this actually change anything" from the final preview vs. the original
+        // times, rather than a separate sticky flag that could drift out of sync with them.
+        const moved =
+          current != null &&
+          (current.previewStart.getTime() !== current.originalStart.getTime() ||
+            current.previewEnd.getTime() !== current.originalEnd.getTime());
+        if (moved) onEventReschedule(event, current!.previewStart, current!.previewEnd);
         return null;
       });
     }
@@ -153,7 +159,10 @@ export function CalendarTimeGrid({ days, events, onEventClick, onSlotClick, onEv
           <div />
           {days.map((day) => {
             const key = format(day, 'yyyy-MM-dd');
-            const dayAllDay = allDayEvents.filter((e) => e.startDate === key);
+            // Span the event across every day it covers, not just its startDate - a 3-day
+            // conference should show up in Tuesday's and Wednesday's columns too, not just
+            // Monday's.
+            const dayAllDay = allDayEvents.filter((e) => e.startDate! <= key && (e.endDate ?? e.startDate!) >= key);
             return (
               <div key={key} className="flex flex-col gap-1 border-l p-1">
                 {dayAllDay.map((event) => (

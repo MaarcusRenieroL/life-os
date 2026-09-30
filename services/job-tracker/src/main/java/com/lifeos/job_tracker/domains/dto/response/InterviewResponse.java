@@ -17,6 +17,7 @@ public record InterviewResponse(
     String questionsAsked,
     String performanceNotes,
     String result,
+    UUID calendarEventId,
     Instant createdAt) {
 
   public static InterviewResponse from(Interview interview) {
@@ -32,6 +33,7 @@ public record InterviewResponse(
         interview.getQuestionsAsked(),
         interview.getPerformanceNotes(),
         interview.getResult() == null ? null : interview.getResult().name(),
+        interview.getCalendarEventId(),
         interview.getCreatedAt());
   }
 }

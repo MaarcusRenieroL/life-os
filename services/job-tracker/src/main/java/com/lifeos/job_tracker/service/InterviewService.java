@@ -75,7 +75,7 @@ public class InterviewService {
 
     String companyName = jobListingService.get(userId, interview.getJobId()).getCompany();
     if (interview.getCalendarEventId() != null) {
-      calendarSyncService.updateLinkedEvent(userId, interview, companyName);
+      interview.setCalendarEventId(calendarSyncService.syncLinkedEvent(userId, interview, companyName));
     } else if (!java.util.Objects.equals(previousScheduledAt, interview.getScheduledAt())) {
       // Wasn't linked before (e.g. scheduledAt was null, or the original create-time call to
       // calendar failed) - try again now that there's a concrete time to schedule against.

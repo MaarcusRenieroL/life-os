@@ -141,6 +141,9 @@ export interface Interview {
   questionsAsked: string | null;
   performanceNotes: string | null;
   result: InterviewResultStatus | null;
+  /** Set once the backend auto-creates a linked calendar event for this interview (see
+   * InterviewCalendarSyncService) - null if never scheduled, or if creating the link failed. */
+  calendarEventId: string | null;
   createdAt: string;
 }
 
