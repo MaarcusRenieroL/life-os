@@ -45,4 +45,6 @@ public class UpdateTaskRequest {
   List<String> tags;
 
   Integer estimateMinutes;
+
+  List<Integer> reminderMinutesBefore;
 }

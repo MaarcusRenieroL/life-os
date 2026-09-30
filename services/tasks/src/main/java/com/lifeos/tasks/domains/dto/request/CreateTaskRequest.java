@@ -41,4 +41,6 @@ public class CreateTaskRequest {
   List<String> tags;
 
   Integer estimateMinutes;
+
+  List<Integer> reminderMinutesBefore;
 }

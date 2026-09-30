@@ -143,6 +143,7 @@ public class TaskService {
             .parentTaskId(request.getParentTaskId())
             .tags(request.getTags())
             .estimateMinutes(request.getEstimateMinutes())
+            .reminderMinutesBefore(request.getReminderMinutesBefore())
             .build();
 
     return toResponse(taskRepository.save(task));
@@ -158,8 +159,14 @@ public class TaskService {
     if (request.getTitle() != null) task.setTitle(request.getTitle());
     if (request.getDescription() != null) task.setDescription(request.getDescription());
     if (request.getPriority() != null) task.setPriority(request.getPriority());
+    // A reschedule should let reminders fire again against the new time - see Task.java's
+    // remindersSent javadoc - so clear it whenever either half of the due moment actually moves.
+    boolean dueMoved =
+        (request.getDueDate() != null && !request.getDueDate().equals(task.getDueDate()))
+            || (request.getDueTime() != null && !request.getDueTime().equals(task.getDueTime()));
     if (request.getDueDate() != null) task.setDueDate(request.getDueDate());
     if (request.getDueTime() != null) task.setDueTime(request.getDueTime());
+    if (dueMoved) task.setRemindersSent(null);
     if (request.getAllDay() != null) task.setAllDay(request.getAllDay());
     if (request.getArea() != null) task.setArea(request.getArea());
     if (request.getProjectId() != null) task.setProjectId(request.getProjectId());
@@ -167,6 +174,10 @@ public class TaskService {
     if (request.getParentTaskId() != null) task.setParentTaskId(request.getParentTaskId());
     if (request.getTags() != null) task.setTags(request.getTags());
     if (request.getEstimateMinutes() != null) task.setEstimateMinutes(request.getEstimateMinutes());
+    if (request.getReminderMinutesBefore() != null) {
+      task.setReminderMinutesBefore(request.getReminderMinutesBefore());
+      task.setRemindersSent(null);
+    }
     if (request.getStatus() != null) {
       task.setStatus(request.getStatus());
       task.setCompletedAt(request.getStatus() == TaskStatus.DONE ? Instant.now() : null);
@@ -196,6 +207,7 @@ public class TaskService {
   public TaskResponse snooze(UUID userId, UUID id, SnoozeTaskRequest request) {
     Task task = findOwned(userId, id);
     task.setDueDate(request.getNewDueDate());
+    task.setRemindersSent(null);
     return toResponse(taskRepository.save(task));
   }
 
@@ -216,6 +228,7 @@ public class TaskService {
             .goalId(original.getGoalId())
             .tags(original.getTags())
             .estimateMinutes(original.getEstimateMinutes())
+            .reminderMinutesBefore(original.getReminderMinutesBefore())
             .build();
     return toResponse(taskRepository.save(copy));
   }
@@ -265,6 +278,8 @@ public class TaskService {
         .recurrencePaused(task.getRecurrencePaused())
         .recurrenceSkippedDates(task.getRecurrenceSkippedDates())
         .recurringParentId(task.getRecurringParentId())
+        .reminderMinutesBefore(task.getReminderMinutesBefore())
+        .remindersSent(task.getRemindersSent())
         .createdAt(task.getCreatedAt())
         .updatedAt(task.getUpdatedAt())
         .build();

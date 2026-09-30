@@ -29,6 +29,13 @@ public enum NotificationEventType {
   // notes
   NOTE_FOLLOWUP_DUE,
 
+  // tasks
+  TASK_DUE,
+  TASK_OVERDUE,
+
+  // calendar
+  EVENT_STARTING,
+
   // batches
   GMAIL_SYNC_FAILED,
   BACKUP_FAILED,

@@ -18,4 +18,6 @@ public interface TaskRepository extends JpaRepository<Task, UUID>, JpaSpecificat
   List<Task> findAllByRecurringParentId(UUID recurringParentId);
 
   List<Task> findAllByRecurrencePatternIsNotNullAndRecurringParentIdIsNull();
+
+  List<Task> findAllByDueDateIsNotNullAndDueTimeIsNotNullAndReminderMinutesBeforeIsNotNull();
 }
