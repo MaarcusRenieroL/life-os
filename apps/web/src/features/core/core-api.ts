@@ -48,6 +48,17 @@ export interface TodayItem {
   priority: 'info' | 'warning' | 'urgent' | string;
 }
 
+/** A goal that has at least one linked task - see core's GoalOverviewService for why goals with
+ * only linked habits/events (no tasks) don't appear here. */
+export interface GoalOverview {
+  goalId: string;
+  goalName: string;
+  totalTasks: number;
+  completedTasks: number;
+  activeHabitCount: number;
+  upcomingEventCount: number;
+}
+
 const baseUrl = '/v1/core';
 
 export const coreApi = {
@@ -97,6 +108,10 @@ export const coreApi = {
 
   getToday(): Promise<TodayItem[]> {
     return unwrap(api.get(`${baseUrl}/today`));
+  },
+
+  getGoalOverview(): Promise<GoalOverview[]> {
+    return unwrap(api.get(`${baseUrl}/goals/overview`));
   },
 
   quickCapture(text: string, useClaudeFallback = false): Promise<QuickCaptureResult> {

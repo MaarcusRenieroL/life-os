@@ -41,6 +41,18 @@ public class HabitService {
         .toList();
   }
 
+  /** Active-habit count per goal, for core's cross-module goal overview (see tasks'
+   * GoalProgressResponse javadoc for why the merge happens there rather than here). Paused/
+   * archived habits are excluded - a goal overview should reflect what's actually being worked
+   * on, not habits the user has stopped pursuing. */
+  @Transactional(readOnly = true)
+  public Map<UUID, Long> activeHabitCountsByGoal(UUID userId) {
+    return habitRepository.findAllByUserId(userId).stream()
+        .filter(h -> h.getGoalId() != null)
+        .filter(h -> h.getStatus() == HabitStatus.ACTIVE)
+        .collect(Collectors.groupingBy(Habit::getGoalId, Collectors.counting()));
+  }
+
   @Transactional(readOnly = true)
   public HabitResponse get(UUID userId, UUID id) {
     return toResponse(findOwned(userId, id));
