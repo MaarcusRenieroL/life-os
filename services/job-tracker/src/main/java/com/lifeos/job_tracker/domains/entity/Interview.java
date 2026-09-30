@@ -74,6 +74,14 @@ public class Interview {
   @Builder.Default
   InterviewResult result = InterviewResult.PENDING;
 
+  // Set when InterviewCalendarSyncService successfully creates a linked calendar event for this
+  // interview - a stored reference into calendar_schema.events, never joined against here (same
+  // one-directional, stored-reference convention as calendar's own sourceTaskId). Null if the
+  // interview has no scheduledAt yet, or if calendar was unreachable when this interview was
+  // created/updated - the link is best-effort, not guaranteed.
+  @Column(name = "calendar_event_id")
+  UUID calendarEventId;
+
   @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;
