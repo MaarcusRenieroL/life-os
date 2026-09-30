@@ -5,6 +5,7 @@ import com.lifeos.calendar.domains.enums.FreeBusy;
 import com.lifeos.calendar.domains.enums.LifeArea;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -44,4 +45,6 @@ public class UpdateEventRequest {
   UUID projectId;
 
   UUID goalId;
+
+  List<Integer> reminderMinutesBefore;
 }

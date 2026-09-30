@@ -1,7 +1,10 @@
+import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { SearchableSelect } from '@/components/searchable-select';
 import { DatePicker } from '@/components/date-time-picker';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,6 +28,7 @@ import {
   ISO_TO_DAY_CODE,
   LIFE_AREAS,
   LIFE_AREA_LABELS,
+  REMINDER_PRESETS,
   type CalendarEvent,
   type CreateEventRequest,
   type DayOfWeek,
@@ -55,6 +59,8 @@ export interface EventFormValue {
   recurrenceDayOfMonth: string;
   recurrenceIntervalDays: string;
   recurrenceEndDate: string | null;
+  reminderMinutesBefore: number[];
+  customReminderMinutes: string;
 }
 
 function defaultTimes(): { startTime: string; endTime: string } {
@@ -86,6 +92,8 @@ function emptyValue(initialDate?: string): EventFormValue {
     recurrenceDayOfMonth: '',
     recurrenceIntervalDays: '',
     recurrenceEndDate: null,
+    reminderMinutesBefore: [],
+    customReminderMinutes: '',
     ...defaultTimes(),
   };
 }
@@ -119,6 +127,8 @@ function valueFromEvent(event: CalendarEvent): EventFormValue {
       projectId: event.projectId,
       goalId: event.goalId,
       ...recurrenceFields(event),
+      reminderMinutesBefore: [],
+      customReminderMinutes: '',
       ...defaultTimes(),
     };
   }
@@ -137,6 +147,8 @@ function valueFromEvent(event: CalendarEvent): EventFormValue {
     projectId: event.projectId,
     goalId: event.goalId,
     ...recurrenceFields(event),
+    reminderMinutesBefore: event.reminderMinutesBefore ?? [],
+    customReminderMinutes: '',
     startTime: start.toTimeString().slice(0, 5),
     endTime: end.toTimeString().slice(0, 5),
   };
@@ -193,6 +205,7 @@ export function eventFormToRequest(value: EventFormValue): CreateEventRequest {
     area: value.area,
     projectId: value.projectId,
     goalId: value.goalId,
+    reminderMinutesBefore: value.reminderMinutesBefore,
   };
 }
 
@@ -287,6 +300,67 @@ export function EventForm({ value, onChange, hideRecurrence }: Props) {
           <div>
             <Label className="mb-1.5 block">End time</Label>
             <Input type="time" value={value.endTime} onChange={(e) => patch({ endTime: e.target.value })} />
+          </div>
+        </div>
+      )}
+
+      {!value.allDay && (
+        <div>
+          <Label className="mb-1.5 block">Reminders</Label>
+          <div className="flex flex-wrap gap-3">
+            {REMINDER_PRESETS.map((preset) => (
+              <Label key={preset.minutes} className="flex items-center gap-1.5 text-sm font-normal">
+                <Checkbox
+                  checked={value.reminderMinutesBefore.includes(preset.minutes)}
+                  onCheckedChange={() => {
+                    const set = new Set(value.reminderMinutesBefore);
+                    if (set.has(preset.minutes)) set.delete(preset.minutes);
+                    else set.add(preset.minutes);
+                    patch({ reminderMinutesBefore: Array.from(set) });
+                  }}
+                />
+                {preset.label}
+              </Label>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              className="w-32"
+              placeholder="Custom (min)"
+              value={value.customReminderMinutes}
+              onChange={(e) => patch({ customReminderMinutes: e.target.value })}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!value.customReminderMinutes}
+              onClick={() => {
+                const minutes = Number(value.customReminderMinutes);
+                if (!minutes || value.reminderMinutesBefore.includes(minutes)) return;
+                patch({
+                  reminderMinutesBefore: [...value.reminderMinutesBefore, minutes],
+                  customReminderMinutes: '',
+                });
+              }}
+            >
+              Add
+            </Button>
+            {value.reminderMinutesBefore
+              .filter((m) => !REMINDER_PRESETS.some((p) => p.minutes === m))
+              .map((m) => (
+                <Badge key={m} variant="outline" className="gap-1">
+                  {m} min before
+                  <button
+                    onClick={() => patch({ reminderMinutesBefore: value.reminderMinutesBefore.filter((x) => x !== m) })}
+                    aria-label={`Remove ${m}-minute reminder`}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </Badge>
+              ))}
           </div>
         </div>
       )}

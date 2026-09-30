@@ -16,4 +16,6 @@ public interface EventRepository extends JpaRepository<Event, UUID>, JpaSpecific
   List<Event> findAllByRecurringParentId(UUID recurringParentId);
 
   List<Event> findAllByRecurrencePatternIsNotNullAndRecurringParentIdIsNull();
+
+  List<Event> findAllByStartAtIsNotNullAndReminderMinutesBeforeIsNotNull();
 }

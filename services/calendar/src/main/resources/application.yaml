@@ -16,6 +16,11 @@ spring:
   flyway:
     schemas: calendar_schema
     default-schema: calendar_schema
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 jwt:
   secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
@@ -32,3 +37,6 @@ encryption:
 calendar:
   recurrence:
     generate-cron: ${CALENDAR_RECURRENCE_GENERATE_CRON:0 10 0 * * *}
+  reminder:
+    dispatch:
+      cron: ${CALENDAR_REMINDER_DISPATCH_CRON:0 */5 * * * *}
