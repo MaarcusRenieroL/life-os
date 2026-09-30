@@ -25,3 +25,13 @@ export const CATEGORY_DOT_CLASSES: Record<EventCategory, string> = {
 export function CategoryBadge({ category }: { category: EventCategory }) {
   return <Badge className={cn(CATEGORY_CLASSES[category])}>{EVENT_CATEGORY_LABELS[category]}</Badge>;
 }
+
+/** Shown on a recurring definition (recurrencePattern set, recurringParentId null) - mirrors
+ * tasks' RecurringIcon. */
+export function RecurringIcon() {
+  return (
+    <span title="Repeats" aria-label="Repeats" className="text-xs">
+      🔁
+    </span>
+  );
+}

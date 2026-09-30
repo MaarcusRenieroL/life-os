@@ -28,3 +28,7 @@ internal:
 # requires this property to be resolvable, so it needs a value.
 encryption:
   secret: ${ENCRYPTION_SECRET:d3F6xLp8N2vB0kR9wYtC7uJmZ4hQ1sEaX5oGn6iPqTk=}
+
+calendar:
+  recurrence:
+    generate-cron: ${CALENDAR_RECURRENCE_GENERATE_CRON:0 10 0 * * *}

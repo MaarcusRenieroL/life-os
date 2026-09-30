@@ -1,8 +1,10 @@
 package com.lifeos.calendar.domains.entity;
 
 import com.lifeos.calendar.domains.enums.EventCategory;
+import com.lifeos.calendar.domains.enums.EventRecurrencePattern;
 import com.lifeos.calendar.domains.enums.FreeBusy;
 import com.lifeos.calendar.domains.enums.LifeArea;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -12,7 +14,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -81,6 +87,30 @@ public class Event {
   // Set when this event was created via "convert task to event" - a stored reference into
   // tasks_schema.tasks, never joined against here.
   UUID sourceTaskId;
+
+  // Mirrors tasks_schema.tasks' recurrence fields (see Task.java's javadoc) - a recurring
+  // "definition" is an ordinary row (its own start is the first occurrence), generated
+  // occurrences point back via recurringParentId with recurrencePattern null.
+  @Enumerated(EnumType.STRING)
+  EventRecurrencePattern recurrencePattern;
+
+  // Shape depends on recurrencePattern, same convention as tasks' recurrenceConfig:
+  //  - WEEKLY: {"daysOfWeek": [1,3,5]}
+  //  - MONTHLY: {"dayOfMonth": 15}
+  //  - CUSTOM: {"intervalDays": 3}
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  Map<String, Object> recurrenceConfig;
+
+  LocalDate recurrenceEndDate;
+
+  @Builder.Default Boolean recurrencePaused = false;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  List<LocalDate> recurrenceSkippedDates;
+
+  UUID recurringParentId;
 
   @CreationTimestamp Instant createdAt;
 

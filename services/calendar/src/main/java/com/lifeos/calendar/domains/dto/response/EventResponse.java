@@ -1,10 +1,13 @@
 package com.lifeos.calendar.domains.dto.response;
 
 import com.lifeos.calendar.domains.enums.EventCategory;
+import com.lifeos.calendar.domains.enums.EventRecurrencePattern;
 import com.lifeos.calendar.domains.enums.FreeBusy;
 import com.lifeos.calendar.domains.enums.LifeArea;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -51,6 +54,18 @@ public class EventResponse {
   UUID goalId;
 
   UUID sourceTaskId;
+
+  EventRecurrencePattern recurrencePattern;
+
+  Map<String, Object> recurrenceConfig;
+
+  LocalDate recurrenceEndDate;
+
+  Boolean recurrencePaused;
+
+  List<LocalDate> recurrenceSkippedDates;
+
+  UUID recurringParentId;
 
   Instant createdAt;
 

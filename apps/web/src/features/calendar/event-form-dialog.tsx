@@ -7,7 +7,7 @@ import { useConfirmDialog } from '@/components/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 import { calendarApi } from './calendar-api';
-import { EventForm, eventFormToRequest, useEventFormState, validateEventForm } from './event-form';
+import { EventForm, eventFormToRecurrenceRequest, eventFormToRequest, useEventFormState, validateEventForm } from './event-form';
 import type { CalendarEvent } from './types';
 
 interface Props {
@@ -35,7 +35,15 @@ export function EventFormDialog({ open, onOpenChange, editing, initialDate, onSa
     setSaving(true);
     try {
       const request = eventFormToRequest(value);
-      const event = editing ? await calendarApi.update(editing.id, request) : await calendarApi.create(request);
+      let event = editing ? await calendarApi.update(editing.id, request) : await calendarApi.create(request);
+
+      const wasRecurring = editing?.recurrencePattern != null;
+      if (value.repeat) {
+        event = await calendarApi.setRecurrence(event.id, eventFormToRecurrenceRequest(value));
+      } else if (wasRecurring) {
+        await calendarApi.stopRecurrence(event.id);
+      }
+
       toast.success(editing ? `Updated "${event.title}"` : `Created "${event.title}"`);
       onSaved(event);
       onOpenChange(false);
@@ -78,7 +86,7 @@ export function EventFormDialog({ open, onOpenChange, editing, initialDate, onSa
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit event' : 'New event'}</DialogTitle>
         </DialogHeader>
-        <EventForm value={value} onChange={setValue} />
+        <EventForm value={value} onChange={setValue} hideRecurrence={editing?.recurringParentId != null} />
         {editing && <LinkedNotes moduleType="EVENT" moduleId={editing.id} defaultTitle={editing.title} />}
         {error && <p className="text-sm text-destructive">{error}</p>}
         <DialogFooter className="sm:justify-between">

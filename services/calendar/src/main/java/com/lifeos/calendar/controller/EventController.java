@@ -1,10 +1,13 @@
 package com.lifeos.calendar.controller;
 
 import com.lifeos.calendar.domains.dto.request.CreateEventRequest;
+import com.lifeos.calendar.domains.dto.request.SetRecurrenceRequest;
+import com.lifeos.calendar.domains.dto.request.SkipOccurrenceRequest;
 import com.lifeos.calendar.domains.dto.request.UpdateEventRequest;
 import com.lifeos.calendar.domains.dto.response.EventResponse;
 import com.lifeos.calendar.domains.enums.EventCategory;
 import com.lifeos.calendar.domains.enums.LifeArea;
+import com.lifeos.calendar.service.EventRecurrenceService;
 import com.lifeos.calendar.service.EventService;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -31,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class EventController {
 
   private final EventService eventService;
+  private final EventRecurrenceService eventRecurrenceService;
 
   @GetMapping
   public ResponseEntity<ApiResponse<List<EventResponse>>> list(
@@ -78,6 +82,47 @@ public class EventController {
   public ResponseEntity<ApiResponse<EventResponse>> duplicate(Authentication authentication, @PathVariable UUID id) {
     return ResponseEntity.ok(
         ApiResponse.success(eventService.duplicate(userId(authentication), id), "Event duplicated"));
+  }
+
+  @GetMapping("/{id}/occurrences")
+  public ResponseEntity<ApiResponse<List<EventResponse>>> occurrences(
+      Authentication authentication, @PathVariable UUID id) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            eventRecurrenceService.occurrences(userId(authentication), id), "Occurrences fetched successfully"));
+  }
+
+  @PostMapping("/{id}/recurrence")
+  public ResponseEntity<ApiResponse<EventResponse>> setRecurrence(
+      Authentication authentication, @PathVariable UUID id, @Valid @RequestBody SetRecurrenceRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            eventRecurrenceService.setRecurrence(userId(authentication), id, request), "Recurrence set"));
+  }
+
+  @DeleteMapping("/{id}/recurrence")
+  public ResponseEntity<ApiResponse<Void>> stopRecurrence(Authentication authentication, @PathVariable UUID id) {
+    eventRecurrenceService.stopRecurrence(userId(authentication), id);
+    return ResponseEntity.ok(ApiResponse.success(null, "Recurrence stopped"));
+  }
+
+  @PostMapping("/{id}/recurrence/pause")
+  public ResponseEntity<ApiResponse<EventResponse>> pauseRecurrence(Authentication authentication, @PathVariable UUID id) {
+    return ResponseEntity.ok(
+        ApiResponse.success(eventRecurrenceService.pause(userId(authentication), id), "Recurrence paused"));
+  }
+
+  @PostMapping("/{id}/recurrence/resume")
+  public ResponseEntity<ApiResponse<EventResponse>> resumeRecurrence(Authentication authentication, @PathVariable UUID id) {
+    return ResponseEntity.ok(
+        ApiResponse.success(eventRecurrenceService.resume(userId(authentication), id), "Recurrence resumed"));
+  }
+
+  @PostMapping("/{id}/recurrence/skip")
+  public ResponseEntity<ApiResponse<Void>> skipOccurrence(
+      Authentication authentication, @PathVariable UUID id, @Valid @RequestBody SkipOccurrenceRequest request) {
+    eventRecurrenceService.skipOccurrence(userId(authentication), id, request.getOccurrenceDate());
+    return ResponseEntity.ok(ApiResponse.success(null, "Occurrence skipped"));
   }
 
   private UUID userId(Authentication authentication) {

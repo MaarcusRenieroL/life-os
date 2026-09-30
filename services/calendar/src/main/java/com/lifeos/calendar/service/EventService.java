@@ -188,6 +188,12 @@ public class EventService {
         .projectId(event.getProjectId())
         .goalId(event.getGoalId())
         .sourceTaskId(event.getSourceTaskId())
+        .recurrencePattern(event.getRecurrencePattern())
+        .recurrenceConfig(event.getRecurrenceConfig())
+        .recurrenceEndDate(event.getRecurrenceEndDate())
+        .recurrencePaused(event.getRecurrencePaused())
+        .recurrenceSkippedDates(event.getRecurrenceSkippedDates())
+        .recurringParentId(event.getRecurringParentId())
         .createdAt(event.getCreatedAt())
         .updatedAt(event.getUpdatedAt())
         .build();
