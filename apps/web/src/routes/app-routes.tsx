@@ -3,6 +3,7 @@ import { Navigate, createBrowserRouter, type LazyRouteFunction, type RouteObject
 import { LoginPage } from '@/features/auth/login-page';
 import { ProtectedRoute } from '@/features/auth/protected-route';
 import { FinanceLayout } from '@/features/finance/finance-layout';
+import { GoalsLayout } from '@/features/goals/goals-layout';
 import { HabitsLayout } from '@/features/habits/habits-layout';
 import { JobTrackerLayout } from '@/features/job-tracker/job-tracker-layout';
 import { JobTrackerOnboardingGuard } from '@/features/job-tracker/job-tracker-onboarding-guard';
@@ -143,6 +144,17 @@ export const router = createBrowserRouter([
               { path: 'analytics', lazy: page(() => import('@/features/tasks/tasks-analytics-page'), 'TasksAnalyticsPage') },
             ],
           },
+          {
+            path: 'goals',
+            element: <GoalsLayout />,
+            children: [
+              { index: true, lazy: page(() => import('@/features/goals/goals-list-page'), 'GoalsListPage') },
+              { path: 'timeline', lazy: page(() => import('@/features/goals/goals-timeline-page'), 'GoalsTimelinePage') },
+              { path: 'reviews', lazy: page(() => import('@/features/goals/goals-reviews-page'), 'GoalsReviewsPage') },
+            ],
+          },
+          // Must stay after the static goals/* subpaths above so it doesn't shadow them.
+          { path: 'goals/:id', lazy: page(() => import('@/features/goals/goal-detail-page'), 'GoalDetailPage') },
           {
             path: 'calendar',
             element: <CalendarLayout />,

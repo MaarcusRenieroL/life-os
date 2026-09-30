@@ -79,7 +79,17 @@ export const APP_MODULES: AppModuleConfig[] = [
   { code: 'JR', name: 'Journal', enabled: false },
   { code: 'WK', name: 'Workouts', enabled: false },
   { code: 'SB', name: 'Subscriptions', enabled: false },
-  { code: 'GL', name: 'Goals', enabled: false },
+  {
+    code: 'GL',
+    name: 'Goals',
+    enabled: true,
+    path: '/goals',
+    tabs: [
+      { label: 'Goals', path: '/goals' },
+      { label: 'Timeline', path: '/goals/timeline' },
+      { label: 'Reviews', path: '/goals/reviews' },
+    ],
+  },
   {
     code: 'HB',
     name: 'Habits',

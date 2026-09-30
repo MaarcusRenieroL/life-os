@@ -33,6 +33,10 @@ public enum NotificationEventType {
   TASK_DUE,
   TASK_OVERDUE,
 
+  // goals (served by the tasks service)
+  GOAL_REVIEW_DUE,
+  GOAL_AT_RISK,
+
   // calendar
   EVENT_STARTING,
 
