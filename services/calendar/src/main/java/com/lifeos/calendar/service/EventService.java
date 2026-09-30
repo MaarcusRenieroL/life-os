@@ -3,14 +3,18 @@ package com.lifeos.calendar.service;
 import com.lifeos.calendar.domains.dto.request.CreateEventRequest;
 import com.lifeos.calendar.domains.dto.request.UpdateEventRequest;
 import com.lifeos.calendar.domains.dto.response.EventResponse;
+import com.lifeos.calendar.domains.dto.response.FreeSlotResponse;
 import com.lifeos.calendar.domains.entity.Event;
 import com.lifeos.calendar.domains.enums.EventCategory;
 import com.lifeos.calendar.domains.enums.FreeBusy;
 import com.lifeos.calendar.domains.enums.LifeArea;
 import com.lifeos.calendar.exception.ResourceNotFoundException;
 import com.lifeos.calendar.repository.EventRepository;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -82,6 +86,48 @@ public class EventService {
       return event.getStartDate() != null ? event.getStartDate().atStartOfDay(java.time.ZoneOffset.UTC).toInstant() : null;
     }
     return event.getStartAt();
+  }
+
+  /** Free-slot finder for a single day: sweeps every timed, BUSY event overlapping
+   * [dayStartHour, dayEndHour) on `date` (in the server's local zone, same convention as
+   * EventReminderScheduler) and returns the gaps between them that are at least
+   * minDurationMinutes long. All-day events and events marked FREE don't block a slot - an
+   * all-day event has no specific time to occupy, and FREE is the user's explicit "this doesn't
+   * count as busy" signal. Only a single day is supported (not an arbitrary range) since the one
+   * UI use case this serves - "what's open today" in the day view - never needs more, and a
+   * multi-day version would need to decide how to represent per-day working windows; a reasonable
+   * follow-up if a range ever becomes necessary. */
+  @Transactional(readOnly = true)
+  public List<FreeSlotResponse> freeSlots(UUID userId, LocalDate date, int minDurationMinutes, int dayStartHour, int dayEndHour) {
+    ZoneId zone = ZoneId.systemDefault();
+    Instant windowStart = date.atTime(dayStartHour, 0).atZone(zone).toInstant();
+    Instant windowEnd = date.atTime(dayEndHour, 0).atZone(zone).toInstant();
+
+    List<Event> busyEvents =
+        eventRepository.findAllByUserId(userId).stream()
+            .filter(e -> !Boolean.TRUE.equals(e.getAllDay()))
+            .filter(e -> e.getFreeBusy() == FreeBusy.BUSY)
+            .filter(e -> e.getStartAt() != null && e.getEndAt() != null)
+            .filter(e -> e.getStartAt().isBefore(windowEnd) && e.getEndAt().isAfter(windowStart))
+            .sorted(Comparator.comparing(Event::getStartAt))
+            .toList();
+
+    List<FreeSlotResponse> slots = new ArrayList<>();
+    Instant cursor = windowStart;
+    for (Event event : busyEvents) {
+      Instant busyStart = event.getStartAt().isBefore(windowStart) ? windowStart : event.getStartAt();
+      Instant busyEnd = event.getEndAt().isAfter(windowEnd) ? windowEnd : event.getEndAt();
+      if (busyStart.isAfter(cursor)) addSlotIfLongEnough(slots, cursor, busyStart, minDurationMinutes);
+      if (busyEnd.isAfter(cursor)) cursor = busyEnd;
+    }
+    addSlotIfLongEnough(slots, cursor, windowEnd, minDurationMinutes);
+    return slots;
+  }
+
+  private void addSlotIfLongEnough(List<FreeSlotResponse> slots, Instant start, Instant end, int minDurationMinutes) {
+    long minutes = Duration.between(start, end).toMinutes();
+    if (minutes < minDurationMinutes) return;
+    slots.add(FreeSlotResponse.builder().startAt(start).endAt(end).durationMinutes(minutes).build());
   }
 
   @Transactional(readOnly = true)
