@@ -142,10 +142,10 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
       RESUME_STORAGE_DIR: /data/resumes
-      # Ollama runs as the "ollama" service below; pull the model once: docker compose exec ollama ollama pull mistral
+      # Ollama runs as the "ollama" service below; pull the model once: docker compose exec ollama ollama pull qwen2.5:3b
       OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-mistral}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
       AI_ROUTE_RESUME_PARSE: ${AI_ROUTE_RESUME_PARSE:-ollama}
       AI_ROUTE_JOB_PARSE: ${AI_ROUTE_JOB_PARSE:-ollama}
       AI_ROUTE_EMAIL_CLASSIFY: ${AI_ROUTE_EMAIL_CLASSIFY:-ollama}
@@ -183,7 +183,7 @@ services:
       # not in a container, so quick-capture's classifier reaches it the same way.
       OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-mistral}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
     ports:
