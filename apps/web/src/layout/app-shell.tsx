@@ -5,6 +5,7 @@ import {
   ChevronsUpDown,
   Home as HomeIcon,
   ListChecks,
+  ListTodo,
   LogOut,
   Settings,
   ShieldCheck,
@@ -62,6 +63,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Today', to: '/today', icon: CalendarCheck, enabled: true },
   { label: 'Home', to: '/home', icon: HomeIcon, enabled: true },
+  { label: 'Tasks', to: '/tasks', icon: ListTodo, enabled: true },
   { label: 'Job Tracker', to: '/jobs', icon: Briefcase, enabled: true },
   { label: 'Notes', to: '/notes', icon: StickyNote, enabled: true },
   { label: 'Password Manager', to: '/vault', icon: ShieldCheck, enabled: true },

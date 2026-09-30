@@ -43,7 +43,20 @@ export const APP_MODULES: AppModuleConfig[] = [
       { label: 'Analytics', path: '/jobs/analytics' },
     ],
   },
-  { code: 'TK', name: 'Tasks', enabled: false },
+  {
+    code: 'TK',
+    name: 'Tasks',
+    enabled: true,
+    path: '/tasks',
+    tabs: [
+      { label: 'Today', path: '/tasks' },
+      { label: 'Upcoming', path: '/tasks/upcoming' },
+      { label: 'List', path: '/tasks/list' },
+      { label: 'Board', path: '/tasks/board' },
+      { label: 'Completed', path: '/tasks/completed' },
+      { label: 'Analytics', path: '/tasks/analytics' },
+    ],
+  },
   {
     code: 'FN',
     name: 'Finance',

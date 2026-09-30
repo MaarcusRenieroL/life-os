@@ -48,6 +48,9 @@ finance:
 notes:
   internal-base-url: ${NOTES_INTERNAL_BASE_URL:http://notes:8007}
 
+tasks:
+  internal-base-url: ${TASKS_INTERNAL_BASE_URL:http://tasks:8009}
+
 # core doesn't use EncryptionService itself, but it's component-scanned in from
 # com.lifeos.common (see CoreApplication's @ComponentScan) and its constructor
 # requires this property to be resolvable, so it needs a value even if unused here.
