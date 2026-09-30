@@ -1,302 +1,94 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
 
-import { formatDistanceToNow } from 'date-fns';
-
-import { SectionHeading } from '@/components/section-heading';
-import { APP_MODULES, type AppModuleConfig } from '@/config/app-modules';
 import { auditLogApi } from '@/features/audit-log/audit-log-api';
 import { useAuth } from '@/features/auth/auth-context';
 import { coreApi } from '@/features/core/core-api';
+import { emailHubApi } from '@/features/email-hub/email-hub-api';
 import { accountApi } from '@/features/finance/account-api';
 import { transactionApi } from '@/features/finance/transaction-api';
 import { formatINR } from '@/features/finance/utils';
 import { aiUsageApi, jobApi } from '@/features/job-tracker/job-api';
 import { notesApi } from '@/features/notes/notes-api';
+import { HomeView } from '@/features/player/home-view';
+import { toQuests } from '@/features/player/player-model';
+import { usePlayer } from '@/features/player/use-player';
 import { vaultApi } from '@/features/vault/vault-api';
 
-interface ModuleTile {
-  code: string;
-  name: string;
-  enabled: boolean;
-  path?: string;
-  subtitle: string;
-}
+/** Best-effort read: a module that is down or locked just leaves its slot empty instead of breaking Home. */
+const soft = { retry: false, throwOnError: false } as const;
 
 export function HomePage() {
   const { user } = useAuth();
-  const firstName = (user?.name ?? user?.email ?? '').split(' ')[0];
+  const player = usePlayer();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const name = (user?.name ?? user?.email ?? 'Player').split(/[\s@]/)[0];
 
-  const { data: entries = [] } = useQuery({ queryKey: ['vault', 'entries'], queryFn: vaultApi.getEntries });
-  // Best-effort - requires the vault to be unlocked, so this silently stays
-  // undefined if it's locked.
-  const { data: healthSummary } = useQuery({
-    queryKey: ['vault', 'health'],
-    queryFn: vaultApi.getHealthSummary,
-    retry: false,
-    throwOnError: false,
-  });
-  const { data: notesPage } = useQuery({
-    queryKey: ['notes', 'list', 'home-count'],
-    queryFn: () => notesApi.list({ page: 0, size: 1 }),
-    retry: false,
-    throwOnError: false,
-  });
-  // Keyed exactly as the finance module keys it (['finance','accounts'], same staleTime) so the two
-  // actually share one cache entry - this used to sit under a 'home' suffix and duplicate the fetch.
-  const { data: accounts } = useQuery({
-    queryKey: ['finance', 'accounts'],
-    queryFn: accountApi.getAccounts,
-    staleTime: 5 * 60_000,
-    retry: false,
-    throwOnError: false,
-  });
-  // A count endpoint rather than 50 full transaction objects just to .filter().length them - which
-  // also silently undercounted once there were more than 50 uncategorized.
-  const { data: financeNeedsReview = 0 } = useQuery({
-    queryKey: ['finance', 'transactions', 'needs-review-count'],
-    queryFn: transactionApi.getNeedsReviewCount,
-    retry: false,
-    throwOnError: false,
-  });
-  const { data: jobs } = useQuery({
-    queryKey: ['jobs', 'list'],
-    queryFn: jobApi.list,
-    retry: false,
-    throwOnError: false,
-  });
-  const { data: pendingJobEmails } = useQuery({
-    queryKey: ['jobs', 'email-events', 'needs-review'],
-    queryFn: jobApi.needsReviewEmailEvents,
-    retry: false,
-    throwOnError: false,
-  });
-  const { data: aiUsage } = useQuery({
-    queryKey: ['jobs', 'ai-usage', 'summary'],
-    queryFn: aiUsageApi.getSummary,
-    retry: false,
-    throwOnError: false,
-  });
-  // The audit-events endpoint is paginated now, and this only ever shows the 6 most recent - so ask
-  // for one small page instead of the whole (unbounded) table.
-  const { data: recentEventsPage } = useQuery({
-    queryKey: ['audit-log', 'events', 'home'],
-    queryFn: () => auditLogApi.getEvents(0, 6),
-    retry: false,
-    throwOnError: false,
-  });
-  const recentEvents = recentEventsPage?.content ?? [];
+  const { data: today = [] } = useQuery({ queryKey: ['core', 'today'], queryFn: coreApi.getToday, ...soft });
+  const { data: entries = [] } = useQuery({ queryKey: ['vault', 'entries'], queryFn: vaultApi.getEntries, ...soft });
+  // Needs the vault unlocked, so this quietly stays empty while it's locked.
+  const { data: vaultHealth } = useQuery({ queryKey: ['vault', 'health'], queryFn: vaultApi.getHealthSummary, ...soft });
+  const { data: notesPage } = useQuery({ queryKey: ['notes', 'list', 'home-count'], queryFn: () => notesApi.list({ page: 0, size: 1 }), ...soft });
+  // Same key and staleTime as the finance module, so Home and Finance share one cache entry.
+  const { data: accounts } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts, staleTime: 5 * 60_000, ...soft });
+  const { data: financeNeedsReview = 0 } = useQuery({ queryKey: ['finance', 'transactions', 'needs-review-count'], queryFn: transactionApi.getNeedsReviewCount, ...soft });
+  const { data: jobs } = useQuery({ queryKey: ['jobs', 'list'], queryFn: jobApi.list, ...soft });
+  const { data: pendingJobEmails = [] } = useQuery({ queryKey: ['jobs', 'email-events', 'needs-review'], queryFn: jobApi.needsReviewEmailEvents, ...soft });
+  const { data: emailPending = 0 } = useQuery({ queryKey: ['email-hub', 'pending-count'], queryFn: emailHubApi.pendingCount, ...soft });
+  const { data: aiUsage } = useQuery({ queryKey: ['jobs', 'ai-usage', 'summary'], queryFn: aiUsageApi.getSummary, ...soft });
+  // Paginated endpoint: ask for one small page, since only the latest few are shown.
+  const { data: auditPage } = useQuery({ queryKey: ['audit-log', 'events', 'home'], queryFn: () => auditLogApi.getEvents(0, 6), ...soft });
 
-  const { data: goalOverview = [] } = useQuery({
-    queryKey: ['core', 'goals', 'overview'],
-    queryFn: coreApi.getGoalOverview,
-    retry: false,
-    throwOnError: false,
-  });
+  const quests = useMemo(() => toQuests(today), [today]);
+  const vaultAttention = (vaultHealth?.weakCount ?? 0) + (vaultHealth?.duplicateCount ?? 0);
+  const balance = accounts?.reduce((sum, a) => sum + a.currentBalance, 0);
 
-  const vaultActionRequired = (healthSummary?.weakCount ?? 0) + (healthSummary?.duplicateCount ?? 0);
-  const financeTotalBalance = accounts?.reduce((sum, a) => sum + a.currentBalance, 0) ?? null;
-  const modulesActiveCount = APP_MODULES.filter((m) => m.enabled).length;
+  const portalStatus: Record<string, string> = {
+    '/tasks': `${today.filter((i) => i.module === 'tasks').length} on the board`,
+    '/vault': `${entries.length} items`,
+    '/jobs': jobs ? `${jobs.length} tracked` : 'loading…',
+    '/notes': notesPage ? `${notesPage.totalElements} notes` : 'loading…',
+    '/finance': balance == null ? 'loading…' : `${formatINR(balance)} balance`,
+    '/habits': player.streak.current > 0 ? `${player.streak.current}-day streak` : 'start a streak',
+    '/email': emailPending > 0 ? `${emailPending} awaiting your OK` : 'inbox is read',
+    '/achievements': `${player.achievements.reduce((n, a) => n + a.tier, 0)} medals earned`,
+  };
+  const portalAlerts: Record<string, number> = {
+    '/vault': vaultAttention,
+    '/finance': financeNeedsReview,
+    '/jobs': pendingJobEmails.length,
+    '/email': emailPending,
+  };
 
-  // Built, working modules sort ahead of not-yet-built ones so the grid always
-  // leads with something clickable.
-  const orderedModules = useMemo(() => {
-    const enabled = APP_MODULES.filter((m) => m.enabled);
-    const disabled = APP_MODULES.filter((m) => !m.enabled);
-    return [...enabled, ...disabled];
-  }, []);
-
-  function toModuleTile(module: AppModuleConfig): ModuleTile {
-    if (module.code === 'PM') {
-      const subtitle = vaultActionRequired > 0 ? `${entries.length} items · ${vaultActionRequired} need attention` : `${entries.length} items`;
-      return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
-    }
-    if (module.code === 'NT') {
-      const count = notesPage?.totalElements;
-      const subtitle = count === undefined ? 'loading…' : `${count} ${count === 1 ? 'note' : 'notes'}`;
-      return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
-    }
-    if (module.code === 'JT') {
-      const subtitle = jobs === undefined ? 'loading…' : `${jobs.length} ${jobs.length === 1 ? 'job' : 'jobs'} tracked`;
-      return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
-    }
-    if (module.code === 'FN') {
-      const subtitle =
-        financeTotalBalance === null
-          ? 'loading…'
-          : financeNeedsReview > 0
-            ? `${formatINR(financeTotalBalance)} balance · ${financeNeedsReview} need review`
-            : `${formatINR(financeTotalBalance)} balance`;
-      return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle };
-    }
-    if (!module.enabled) {
-      return { code: module.code, name: module.name, enabled: false, subtitle: 'not set up yet' };
-    }
-    return { code: module.code, name: module.name, enabled: true, path: module.path, subtitle: 'open module' };
-  }
-
-  const homeModuleTiles = orderedModules.slice(0, 4).map(toModuleTile);
-  const exploreModules = orderedModules.slice(4);
-
-  const attentionItems = useMemo(() => {
-    const items: { title: string; meta: string; link: string }[] = [];
-    const weakEntry = healthSummary?.actionRequired.find((item) => item.issue.toLowerCase().includes('weak'));
-    if (weakEntry) {
-      items.push({ title: `Change weak password — ${weakEntry.title}`, meta: 'flagged by password health', link: '/vault/health' });
-    }
-    if (financeNeedsReview > 0) {
-      items.push({ title: `${financeNeedsReview} transaction(s) need review`, meta: 'finance', link: '/finance/transactions' });
-    }
-    if (pendingJobEmails && pendingJobEmails.length > 0) {
-      items.push({
-        title: `${pendingJobEmails.length} job email(s) detected — confirm or dismiss`,
-        meta: 'job tracker',
-        link: '/jobs',
-      });
-    }
-    return items;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [healthSummary, financeNeedsReview, pendingJobEmails]);
+  const attention: { title: string; meta: string; link: string }[] = [];
+  const weak = vaultHealth?.actionRequired.find((i) => i.issue.toLowerCase().includes('weak'));
+  if (weak) attention.push({ title: `Change weak password — ${weak.title}`, meta: 'vault', link: '/vault/health' });
+  if (financeNeedsReview > 0) attention.push({ title: `${financeNeedsReview} transaction(s) need review`, meta: 'finance', link: '/finance/transactions' });
+  if (pendingJobEmails.length > 0) attention.push({ title: `${pendingJobEmails.length} job email(s) detected — confirm or dismiss`, meta: 'jobs', link: '/jobs' });
+  if (emailPending > 0) attention.push({ title: `${emailPending} email action(s) waiting for your OK`, meta: 'email', link: '/email' });
+  for (const a of player.anomalies.filter((x) => x.severity !== 'INFO').slice(0, 2)) attention.push({ title: a.title, meta: 'analytics', link: '/analytics' });
 
   return (
-    <div>
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs text-primary">
-            <span className="text-muted-foreground">$</span> whoami
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{greeting}, {firstName}</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} — here's where things stand
-          </p>
-        </div>
-      </div>
-
-      <div className="mb-8 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        <StatCard value={modulesActiveCount} label="modules active" />
-        <StatCard value={vaultActionRequired} label="vault items need attention" destructive={vaultActionRequired > 0} />
-        {aiUsage && <StatCard value={`$${aiUsage.costThisMonthUsd.toFixed(2)}`} label="claude usage this month" />}
-      </div>
-
-      <SectionHeading className="mb-3">your modules</SectionHeading>
-      <div className="mb-8 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-        {homeModuleTiles.map((tile) =>
-          tile.enabled ? (
-            <Link
-              key={tile.code}
-              to={tile.path ?? '#'}
-              className="group flex flex-col gap-3 rounded-lg border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-[0_0_0_1px_var(--primary)_inset]"
-            >
-              <span className="flex size-8 items-center justify-center rounded-md bg-primary/15 text-[11px] font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                {tile.code}
-              </span>
-              <span className="text-sm font-semibold">{tile.name}</span>
-              <span className="text-[11px] text-muted-foreground">{tile.subtitle}</span>
-            </Link>
-          ) : (
-            <div key={tile.code} className="flex flex-col gap-3 rounded-lg border border-dashed bg-muted/10 p-4 opacity-50">
-              <span className="flex size-8 items-center justify-center rounded-md bg-foreground/8 text-[11px] font-bold">{tile.code}</span>
-              <span className="text-sm font-semibold">{tile.name}</span>
-              <span className="text-[11px] text-muted-foreground">{tile.subtitle}</span>
-            </div>
-          ),
-        )}
-      </div>
-
-      <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <div className="rounded-lg border bg-card p-5">
-          <div className="flex items-center justify-between">
-            <SectionHeading>recent activity</SectionHeading>
-            <Link to="/vault/audit-log" className="text-[11px] text-muted-foreground hover:text-primary">
-              View all
-            </Link>
-          </div>
-          {recentEvents.length === 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">Nothing yet.</p>
-          ) : (
-            <ul className="mt-3 flex flex-col gap-2.5">
-              {recentEvents.slice(0, 6).map((event) => (
-                <li key={event.eventId} className="flex items-center justify-between gap-2 text-sm">
-                  <span className="truncate">{event.description}</span>
-                  <span className="shrink-0 text-[11px] text-muted-foreground">
-                    {formatDistanceToNow(new Date(event.occurredAt), { addSuffix: true })}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="rounded-lg border bg-card p-5">
-          <SectionHeading>needs your attention</SectionHeading>
-          <div className="mt-3 flex flex-col gap-2.5">
-            {attentionItems.map((item, i) => (
-              <Link key={i} to={item.link} className="flex items-center justify-between text-sm hover:text-primary">
-                <span>{item.title}</span>
-                <span className="text-xs text-muted-foreground">{item.meta}</span>
-              </Link>
-            ))}
-            {attentionItems.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                <span className="text-primary">✓</span> nothing needs attention right now
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {goalOverview.length > 0 && (
-        <div className="mb-8 rounded-lg border bg-card p-5">
-          <SectionHeading>goals</SectionHeading>
-          <div className="mt-3 flex flex-col gap-3">
-            {goalOverview.map((goal) => {
-              const percent = goal.totalTasks === 0 ? 0 : Math.round((goal.completedTasks / goal.totalTasks) * 100);
-              return (
-                <div key={goal.goalId} className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">{goal.goalName}</span>
-                    <span className="text-[11px] text-muted-foreground">
-                      {goal.completedTasks}/{goal.totalTasks} tasks
-                      {goal.activeHabitCount > 0 && ` · ${goal.activeHabitCount} habit${goal.activeHabitCount === 1 ? '' : 's'}`}
-                      {goal.upcomingEventCount > 0 && ` · ${goal.upcomingEventCount} upcoming`}
-                    </span>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {exploreModules.length > 0 && (
-        <div>
-          <SectionHeading className="mb-3">explore</SectionHeading>
-          <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
-            {exploreModules.map((m) => (
-              <div key={m.code} className="flex flex-col gap-3 rounded-lg border border-dashed bg-muted/10 p-4 opacity-50">
-                <span className="flex size-8 items-center justify-center rounded-md bg-foreground/8 text-[11px] font-bold">{m.code}</span>
-                <span className="text-sm font-semibold">{m.name}</span>
-                <span className="text-[11px] text-muted-foreground">not set up yet</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function StatCard({ value, label, destructive }: { value: number | string; label: string; destructive?: boolean }) {
-  return (
-    <div className="rounded-lg border bg-card px-4 py-4">
-      <div className={`text-2xl font-semibold tabular-nums ${destructive ? 'text-destructive' : 'text-primary'}`}>{value}</div>
-      <div className="mt-0.5 text-[11px] tracking-wide text-muted-foreground uppercase">{label}</div>
-    </div>
+    <HomeView
+      name={name}
+      greeting={greeting}
+      progress={player.progress}
+      rank={player.rank}
+      streak={player.streak}
+      xpToday={player.earnedToday}
+      attributes={player.attributes}
+      week={player.week}
+      quests={quests}
+      clearedToday={(player.today?.tasksCompleted ?? 0) + (player.today?.habitsCompleted ?? 0)}
+      portalStatus={portalStatus}
+      portalAlerts={portalAlerts}
+      activity={(auditPage?.content ?? []).map((e) => ({ id: e.eventId, text: e.description, at: e.occurredAt }))}
+      attention={attention}
+      aiCostUsd={aiUsage?.costThisMonthUsd}
+      challenge={{ challenge: player.challenge, done: player.challengeDone, progress: player.challengeProgress }}
+      achievements={player.achievements}
+      heatmap={player.heatmap}
+    />
   );
 }

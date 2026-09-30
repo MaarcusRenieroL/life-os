@@ -2,11 +2,13 @@ import path from 'node:path';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Unit tests live beside the code; e2e/ belongs to Playwright and must not be picked up here.
+  test: { include: ['src/**/*.test.ts'] },
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

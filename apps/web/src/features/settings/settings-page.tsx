@@ -215,7 +215,7 @@ export function SettingsPage() {
         </nav>
 
         <div className="flex flex-col gap-4">
-          <section id="profile" className="rounded-lg border bg-card p-5">
+          <section id="profile" className="hud-panel p-5">
             <SectionHeading className="mb-3.5">Profile</SectionHeading>
 
             <div className="mb-4 flex items-center gap-3.5">
@@ -279,7 +279,7 @@ export function SettingsPage() {
             </div>
           </section>
 
-          <section id="modules" className="rounded-lg border bg-card p-5">
+          <section id="modules" className="hud-panel p-5">
             <SectionHeading className="mb-3.5">Modules</SectionHeading>
             {modulesError && <p className="mb-3 text-[11px] text-destructive">{modulesError}</p>}
             <div className="flex flex-col">
@@ -299,7 +299,7 @@ export function SettingsPage() {
           </section>
 
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <section id="appearance" className="rounded-lg border bg-card p-5">
+            <section id="appearance" className="hud-panel p-5">
               <SectionHeading className="mb-3.5">Appearance</SectionHeading>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-foreground/75">Theme</span>
@@ -318,7 +318,7 @@ export function SettingsPage() {
               </div>
             </section>
 
-            <section id="notifications" className="rounded-lg border bg-card p-5">
+            <section id="notifications" className="hud-panel p-5">
               <SectionHeading className="mb-1.5">Notifications</SectionHeading>
               <div className="text-[11px] text-muted-foreground">
                 In-app notifications (the bell, top right) are live across every module. Email
@@ -326,7 +326,7 @@ export function SettingsPage() {
               </div>
             </section>
 
-            <section id="integrations" className="rounded-lg border bg-card p-5">
+            <section id="integrations" className="hud-panel p-5">
               <SectionHeading className="mb-1.5">Integrations</SectionHeading>
               <div className="text-[11px] text-muted-foreground">
                 Connect third-party services (calendars, job boards, banks) once those integrations
@@ -334,7 +334,7 @@ export function SettingsPage() {
               </div>
             </section>
 
-            <section id="data-privacy" className="rounded-lg border bg-card p-5">
+            <section id="data-privacy" className="hud-panel p-5">
               <SectionHeading className="mb-1.5">Data &amp; privacy</SectionHeading>
               <div className="text-[11px] text-muted-foreground">
                 Export, import and backup live on the{' '}
@@ -408,7 +408,7 @@ function AdvancedSettingsSection() {
   }
 
   return (
-    <section id="advanced" className="rounded-lg border bg-card p-5">
+    <section id="advanced" className="hud-panel p-5">
       <button
         type="button"
         className="flex w-full items-center justify-between text-left"

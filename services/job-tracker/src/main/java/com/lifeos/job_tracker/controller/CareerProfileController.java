@@ -12,7 +12,6 @@ import com.lifeos.job_tracker.domains.dto.response.WorkExperienceResponse;
 import com.lifeos.job_tracker.service.CareerProfileService;
 import com.lifeos.job_tracker.service.SkillService;
 import jakarta.validation.Valid;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;

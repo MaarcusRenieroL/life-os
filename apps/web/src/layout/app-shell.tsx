@@ -1,28 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
-  Briefcase,
-  Calendar as CalendarIcon,
-  CalendarCheck,
   ChevronsUpDown,
-  Home as HomeIcon,
-  ListChecks,
-  ChartNoAxesCombined,
-  Dumbbell,
-  Target,
-  ListTodo,
   LogOut,
-  Mail,
   Settings,
-  ShieldCheck,
-  StickyNote,
-  Wallet,
 } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { ShortcutsHelpDialog } from '@/components/shortcuts-help-dialog';
 import { useAuth } from '@/features/auth/auth-context';
 import { emailHubApi } from '@/features/email-hub/email-hub-api';
+import { AchievementWatcher } from '@/features/player/achievement-watcher';
+import { LevelUpBanner } from '@/features/player/level-up';
+import { PlayerChip } from '@/features/player/player-chip';
+import { SidebarPlayer } from '@/features/player/sidebar-player';
+import { SoundToggle } from '@/features/player/sound-toggle';
+import { NAV_ITEMS } from '@/layout/nav-items';
 import { NotificationBell } from '@/features/core/notification-bell';
 import { QuickCaptureDialog } from '@/features/core/quick-capture-dialog';
 import {
@@ -61,29 +54,6 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 
-interface NavItem {
-  label: string;
-  to: string;
-  icon: typeof HomeIcon;
-  /** Modules not ported to React yet render a disabled, greyed-out entry. */
-  enabled: boolean;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Today', to: '/today', icon: CalendarCheck, enabled: true },
-  { label: 'Home', to: '/home', icon: HomeIcon, enabled: true },
-  { label: 'Email', to: '/email', icon: Mail, enabled: true },
-  { label: 'Tasks', to: '/tasks', icon: ListTodo, enabled: true },
-  { label: 'Calendar', to: '/calendar', icon: CalendarIcon, enabled: true },
-  { label: 'Job Tracker', to: '/jobs', icon: Briefcase, enabled: true },
-  { label: 'Notes', to: '/notes', icon: StickyNote, enabled: true },
-  { label: 'Password Manager', to: '/vault', icon: ShieldCheck, enabled: true },
-  { label: 'Finance', to: '/finance', icon: Wallet, enabled: true },
-  { label: 'Habits', to: '/habits', icon: ListChecks, enabled: true },
-  { label: 'Goals', to: '/goals', icon: Target, enabled: true },
-  { label: 'Workouts', to: '/workouts', icon: Dumbbell, enabled: true },
-  { label: 'Analytics', to: '/analytics', icon: ChartNoAxesCombined, enabled: true },
-];
 
 /** The breadcrumb mirrors the real URL, not a made-up label, so it never drifts from the address bar. */
 function currentPathSegment(pathname: string): string {
@@ -107,13 +77,14 @@ export function AppShell() {
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-1.5">
-            <span className="text-primary">■</span>
-            <span className="text-sm font-semibold tracking-widest uppercase group-data-[collapsible=icon]:hidden">
+            <span className="text-primary text-glow">◆</span>
+            <span className="font-display text-sm font-bold tracking-[0.3em] uppercase group-data-[collapsible=icon]:hidden">
               Life_OS
             </span>
           </div>
         </SidebarHeader>
-        <SidebarSeparator className="mx-0" />
+        <SidebarPlayer />
+        <SidebarSeparator className="mx-0 mt-2" />
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupLabel className="font-mono text-[10px] tracking-widest uppercase">Modules</SidebarGroupLabel>
@@ -123,19 +94,12 @@ export function AppShell() {
                   const isActive = location.pathname.startsWith(item.to);
                   return (
                     <SidebarMenuItem key={item.to}>
-                      {item.enabled ? (
-                        <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                          <NavLink to={item.to}>
-                            <item.icon className={isActive ? 'text-primary' : undefined} />
-                            <span>{item.label}</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      ) : (
-                        <SidebarMenuButton disabled tooltip={`${item.label} - coming soon`}>
-                          <item.icon />
+                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                        <NavLink to={item.to}>
+                          <item.icon className={isActive ? 'text-primary' : undefined} />
                           <span>{item.label}</span>
-                        </SidebarMenuButton>
-                      )}
+                        </NavLink>
+                      </SidebarMenuButton>
                       {item.to === '/email' && emailPending > 0 && <SidebarMenuBadge>{emailPending}</SidebarMenuBadge>}
                     </SidebarMenuItem>
                   );
@@ -193,20 +157,25 @@ export function AppShell() {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-12 items-center gap-3 border-b px-4">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur">
           <SidebarTrigger />
           <div className="h-4 w-px bg-border" />
           <span className="font-mono text-xs tracking-wide text-muted-foreground">
             <span className="text-primary">~/</span>
             {currentPathSegment(location.pathname)}
           </span>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
+            <PlayerChip />
+            <SoundToggle />
             <QuickCaptureDialog />
             <NotificationBell />
           </div>
         </header>
-        <main className="flex-1 p-6">
-          <Outlet />
+        <main className="hud-bg flex-1 p-4 sm:p-6">
+          {/* Keyed on the path so every navigation fades in instead of snapping. */}
+          <div key={location.pathname} className="animate-hud-in">
+            <Outlet />
+          </div>
         </main>
       </SidebarInset>
 
@@ -233,6 +202,8 @@ export function AppShell() {
         </AlertDialogContent>
       </AlertDialog>
       <ShortcutsHelpDialog />
+      <LevelUpBanner />
+      <AchievementWatcher />
     </SidebarProvider>
   );
 }

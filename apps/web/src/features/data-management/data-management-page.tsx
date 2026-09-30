@@ -86,7 +86,7 @@ export function DataManagementPage() {
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">Data management</h1>
 
-      <section className="mt-6 rounded-lg border bg-card p-5">
+      <section className="mt-6 hud-panel p-5">
         <SectionHeading>Export vault</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">Downloads every entry and card, fully decrypted, as JSON.</p>
         <Button size="sm" variant="outline" className="mt-3" onClick={() => void exportVault()}>
@@ -94,7 +94,7 @@ export function DataManagementPage() {
         </Button>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Import from another manager</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">
           CSV with at least a "title" column. "url", "username", "password" are matched by header name if present.
@@ -128,7 +128,7 @@ export function DataManagementPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Backup &amp; recovery</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">
           Last backup: {latestBackup ? new Date(latestBackup.createdAt).toLocaleString() : 'No backups yet'}
@@ -138,13 +138,13 @@ export function DataManagementPage() {
         </Button>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Encryption</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">AES-256, zero-knowledge — only you hold the key.</p>
         <span className="mt-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">active</span>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Download everything</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">Vault entries, cards, and audit log in one file.</p>
         <Button size="sm" variant="outline" className="mt-3" onClick={() => void downloadEverything()}>

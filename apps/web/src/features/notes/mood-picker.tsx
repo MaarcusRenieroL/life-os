@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 
 import { ENERGY_LABELS, MOOD_LABELS } from './journal-types';
 
-export const MOOD_ICONS = [Angry, Frown, Meh, Smile, Laugh];
-export const ENERGY_ICONS = [BatteryLow, BatteryLow, BatteryMedium, BatteryFull, Zap];
+const MOOD_ICONS = [Angry, Frown, Meh, Smile, Laugh];
+const ENERGY_ICONS = [BatteryLow, BatteryLow, BatteryMedium, BatteryFull, Zap];
 
 /** The scale colours run cool-to-warm-to-green so a glance at a list of entries reads as a mood
  * curve; they're the same classes the goal status badges use. */

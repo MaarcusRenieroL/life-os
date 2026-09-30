@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
  * Thresholds are this module's own; HabitAttentionScanner on the backend uses a narrower set
  * (7/30/100) for the HABIT_STREAK_MILESTONE notification.
  */
-export const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 365] as const;
+const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100, 365] as const;
 
 export type StreakMilestone = (typeof STREAK_MILESTONES)[number];
 
@@ -24,7 +24,7 @@ const MILESTONE_LABELS: Record<StreakMilestone, string> = {
 };
 
 /** The highest threshold a streak of `days` has reached, or null below the first one. */
-export function milestoneFor(days: number): StreakMilestone | null {
+function milestoneFor(days: number): StreakMilestone | null {
   let reached: StreakMilestone | null = null;
   for (const threshold of STREAK_MILESTONES) {
     if (days >= threshold) reached = threshold;
@@ -33,7 +33,7 @@ export function milestoneFor(days: number): StreakMilestone | null {
 }
 
 /** Every threshold a streak of `days` has passed, for the "badges earned" list. */
-export function milestonesEarned(days: number): StreakMilestone[] {
+function milestonesEarned(days: number): StreakMilestone[] {
   return STREAK_MILESTONES.filter((threshold) => days >= threshold);
 }
 
@@ -43,7 +43,7 @@ export function nextMilestone(days: number): { target: StreakMilestone; remainin
   return target ? { target, remaining: target - days } : null;
 }
 
-export function milestoneLabel(threshold: StreakMilestone): string {
+function milestoneLabel(threshold: StreakMilestone): string {
   return MILESTONE_LABELS[threshold];
 }
 

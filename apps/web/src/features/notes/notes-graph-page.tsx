@@ -56,7 +56,7 @@ export function NotesGraphPage() {
         {nodes.length} notes · {edges.length} links. Drag to pan, scroll to zoom.
       </p>
 
-      <div className="mt-4 overflow-hidden rounded-lg border bg-card">
+      <div className="mt-4 overflow-hidden hud-panel">
         <svg
           viewBox={`0 0 ${CANVAS_WIDTH} ${CANVAS_HEIGHT}`}
           className="h-[600px] w-full cursor-grab active:cursor-grabbing"

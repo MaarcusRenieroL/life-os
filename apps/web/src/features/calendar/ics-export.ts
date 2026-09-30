@@ -34,7 +34,7 @@ function eventToVEvent(event: CalendarEvent): string {
   return lines.join('\r\n');
 }
 
-export function eventsToIcs(events: CalendarEvent[]): string {
+function eventsToIcs(events: CalendarEvent[]): string {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',

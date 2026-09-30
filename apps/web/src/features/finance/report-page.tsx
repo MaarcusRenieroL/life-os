@@ -90,7 +90,7 @@ export function ReportPage() {
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">Report</h1>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Monthly report</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">Full breakdown for the current calendar month, as a PDF.</p>
         <Button size="sm" variant="outline" className="mt-3" onClick={() => void exportPdf()} disabled={exporting}>
@@ -98,7 +98,7 @@ export function ReportPage() {
         </Button>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Tax report</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">
           Full financial-year transaction CSV (1 Apr {taxYear} – 31 Mar {taxYear + 1}) for ITR filing.
@@ -111,7 +111,7 @@ export function ReportPage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Expense breakdown</SectionHeading>
         {expenseSegments.length === 0 ? (
           <EmptyState className="mt-2" message="No categorized spend yet." />
@@ -133,7 +133,7 @@ export function ReportPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Budget performance</SectionHeading>
         <ul className="mt-2 flex flex-col gap-1.5 text-sm">
           {budgetPerformance.map((b) => (
@@ -143,7 +143,7 @@ export function ReportPage() {
         </ul>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Month over month</SectionHeading>
         <table className="mt-2 w-full text-sm">
           <thead className="text-left text-xs text-muted-foreground">

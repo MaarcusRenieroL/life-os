@@ -145,7 +145,7 @@ export function TransactionDetailPage() {
 
       <Button className="mt-4" onClick={() => void save()} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
 
-      <section className="mt-6 rounded-lg border bg-card p-4">
+      <section className="mt-6 hud-panel p-4">
         <SectionHeading>Details</SectionHeading>
         <dl className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
           <dt>Status</dt><dd className="text-foreground">{tx.status}</dd>
@@ -155,7 +155,7 @@ export function TransactionDetailPage() {
         </dl>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-4">
+      <section className="mt-4 hud-panel p-4">
         <SectionHeading>History</SectionHeading>
         <dl className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
           {tx.importedAt && (<><dt>Imported</dt><dd className="text-foreground">{new Date(tx.importedAt).toLocaleString()}</dd></>)}

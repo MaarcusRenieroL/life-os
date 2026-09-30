@@ -21,8 +21,8 @@ export function TabNav({ tabs, trailing }: { tabs: TabNavItem[]; trailing?: Reac
             end={tab.end}
             className={({ isActive }) =>
               cn(
-                'border-b-2 px-3 py-2 text-xs font-medium tracking-wide text-muted-foreground uppercase transition-colors hover:text-foreground',
-                isActive ? 'border-primary text-primary' : 'border-transparent',
+                'border-b-2 px-3 py-2 font-display text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase transition-colors hover:text-foreground',
+                isActive ? 'border-primary text-primary text-glow' : 'border-transparent',
               )
             }
           >

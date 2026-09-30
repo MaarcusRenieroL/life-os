@@ -13,7 +13,7 @@ const API_TO_UI_NETWORK: Record<ApiCardNetwork, CardNetwork> = {
   DISCOVER: 'Discover',
 };
 
-export function apiNetworkToCardNetwork(network: ApiCardNetwork): CardNetwork {
+function apiNetworkToCardNetwork(network: ApiCardNetwork): CardNetwork {
   return API_TO_UI_NETWORK[network];
 }
 
@@ -37,7 +37,7 @@ export interface CardApiResponse {
 
 /** Masks using only the last-4-digits the API actually returns - amex uses a
  * 15-digit grouping, everything else 16. */
-export function maskFromLastFour(lastFourDigits: number, network: ApiCardNetwork): string {
+function maskFromLastFour(lastFourDigits: number, network: ApiCardNetwork): string {
   const last4 = String(lastFourDigits).padStart(4, '0');
   if (network === 'AMEX') return `**** ****** *${last4}`;
   return `**** **** **** ${last4}`;

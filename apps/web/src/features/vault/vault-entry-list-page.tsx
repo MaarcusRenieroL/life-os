@@ -290,7 +290,7 @@ const EntryRow = memo(function EntryRow({
   onDelete: (id: string) => void;
 }) {
   return (
-    <li className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5">
+    <li className="flex items-center gap-3 hud-panel px-3 py-2.5">
       <input type="checkbox" checked={selected} onChange={() => onToggleSelect(entry.id)} />
       <button className="flex flex-1 items-center gap-3 text-left" onClick={() => onOpen(entry.id)}>
         {entry.icon ? (
@@ -353,7 +353,7 @@ const EntryRow = memo(function EntryRow({
 
 function StatTile({ label, value, destructive }: { label: string; value: number; destructive?: boolean }) {
   return (
-    <div className="rounded-lg border bg-card px-4 py-3">
+    <div className="hud-panel px-4 py-3">
       <div className={`text-xl font-semibold ${destructive ? 'text-destructive' : ''}`}>{value}</div>
       <div className="text-[11px] text-muted-foreground">{label}</div>
     </div>
@@ -379,7 +379,7 @@ function EntryDetailDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="w-full max-w-md rounded-lg border bg-card p-5" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md hud-panel p-5" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-semibold">{entry.title}</h2>
         {detail && (
           <div className="mt-3 flex flex-col gap-2 text-sm">

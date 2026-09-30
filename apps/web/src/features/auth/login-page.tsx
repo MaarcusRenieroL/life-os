@@ -40,10 +40,14 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-background p-4">
+    <div className="hud-bg flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-4">
+      <div className="text-center">
+        <div className="font-display text-4xl font-bold tracking-[0.35em] text-primary text-glow">LIFE_OS</div>
+        <div className="hud-label mt-2">press start</div>
+      </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl">Sign in to Life OS</CardTitle>
+          <CardTitle className="font-display text-lg tracking-wide">Sign in</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="flex flex-col gap-4">

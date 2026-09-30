@@ -16,7 +16,6 @@ import com.lifeos.notes.domains.dto.response.NoteModuleLinkResponse;
 import com.lifeos.notes.domains.dto.response.NoteResponse;
 import com.lifeos.notes.domains.dto.response.NoteSummaryResponse;
 import com.lifeos.notes.domains.dto.response.NoteVersionResponse;
-import com.lifeos.notes.domains.dto.response.TagResponse;
 import com.lifeos.notes.domains.dto.response.TrashedNoteResponse;
 import com.lifeos.notes.domains.entity.NoteAttachment;
 import com.lifeos.notes.domains.enums.NoteModuleType;

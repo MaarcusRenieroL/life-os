@@ -125,7 +125,7 @@ export function JobDashboardPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_1fr]">
-        <section className="rounded-lg border bg-card p-5">
+        <section className="hud-panel p-5">
           <div className="flex items-center justify-between">
             <SectionHeading>Pipeline by stage</SectionHeading>
             <Link to="/jobs/list" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
@@ -151,7 +151,7 @@ export function JobDashboardPage() {
           )}
         </section>
 
-        <section className="rounded-lg border bg-card p-5">
+        <section className="hud-panel p-5">
           <SectionHeading>Needs your attention</SectionHeading>
           <ul className="mt-3 flex flex-col gap-2.5">
             {pendingEmails.length > 0 && (
@@ -192,7 +192,7 @@ export function JobDashboardPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_1fr]">
-        <section className="rounded-lg border bg-card p-5">
+        <section className="hud-panel p-5">
           <div className="flex items-center justify-between">
             <SectionHeading>Recently added</SectionHeading>
             <Link to="/jobs/list" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
@@ -222,7 +222,7 @@ export function JobDashboardPage() {
           </ul>
         </section>
 
-        <section className="rounded-lg border bg-card p-5">
+        <section className="hud-panel p-5">
           <SectionHeading>This month</SectionHeading>
           <ul className="mt-3 flex flex-col gap-2.5 text-sm">
             <li className="flex items-center justify-between">
@@ -257,7 +257,7 @@ export function JobDashboardPage() {
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="hud-panel p-4">
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className="text-xl font-semibold">{value}</div>
     </div>

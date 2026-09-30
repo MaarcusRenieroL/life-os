@@ -228,7 +228,7 @@ function RestTimer({ until, onDismiss }: { until: number; onDismiss: () => void 
   const seconds = String(remaining % 60).padStart(2, '0');
 
   return (
-    <div className="fixed right-4 bottom-4 z-40 flex items-center gap-3 rounded-lg border bg-card px-4 py-3 shadow-lg" role="timer" aria-label="Rest timer">
+    <div className="fixed right-4 bottom-4 z-40 flex items-center gap-3 hud-panel px-4 py-3 shadow-lg" role="timer" aria-label="Rest timer">
       <div>
         <p className="text-[10px] tracking-widest text-muted-foreground uppercase">Rest</p>
         <p className="text-2xl font-semibold tabular-nums">
