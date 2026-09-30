@@ -9,10 +9,13 @@ public record GoalProgressBreakdownResponse(
     Integer taskPct,
     Integer habitPct,
     Integer metricPct,
+    Integer workoutPct,
     Integer expectedPct,
     int milestonesDone,
     int milestonesTotal,
     int tasksDone,
     int tasksTotal,
     int activeHabits,
-    int metricsCount) {}
+    int metricsCount,
+    int workoutSessions,
+    Integer weeklyWorkoutTarget) {}

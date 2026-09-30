@@ -71,8 +71,8 @@ class GoalManagementServiceTest {
   }
 
   private GoalProgressAssembler.GoalProgress progressFor(Goal goal) {
-    var result = new GoalProgressCalculator.Result(0, null, null, null, null, null);
-    return new GoalProgressAssembler.GoalProgress(result, goal.getStatus(), 0, 0, 0, 0, 0, 0);
+    var result = new GoalProgressCalculator.Result(0, null, null, null, null, null, null);
+    return new GoalProgressAssembler.GoalProgress(result, goal.getStatus(), 0, 0, 0, 0, 0, 0, 0);
   }
 
   private Goal goal(String name, GoalStatus status, LifeArea area, int priority) {
@@ -80,7 +80,7 @@ class GoalManagementServiceTest {
   }
 
   private SaveGoalRequest request(String name, LocalDate start, LocalDate target, GoalReviewFrequency frequency) {
-    return new SaveGoalRequest(name, "  desc  ", LifeArea.HEALTH, 2, start, target, frequency);
+    return new SaveGoalRequest(name, "  desc  ", LifeArea.HEALTH, 2, start, target, frequency, null);
   }
 
   @Test
@@ -91,6 +91,16 @@ class GoalManagementServiceTest {
     assertThat(response.description()).isEqualTo("desc");
     assertThat(response.priority()).isEqualTo(2);
     assertThat(response.nextReviewDate()).isEqualTo(LocalDate.now().plusWeeks(2));
+  }
+
+  @Test
+  void theWeeklyWorkoutTargetIsSavedAndSurfacedOnTheSummary() {
+    var request = new SaveGoalRequest("Get fit", null, LifeArea.HEALTH, 2, null, null, null, 4);
+
+    GoalSummaryResponse created = service.create(userId, request);
+
+    assertThat(created.progress().weeklyWorkoutTarget()).isEqualTo(4);
+    assertThat(service.create(userId, this.request("No target", null, null, null)).progress().weeklyWorkoutTarget()).isNull();
   }
 
   @Test

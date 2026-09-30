@@ -35,6 +35,9 @@ life-os/
 │   ├── job-tracker/      # Job search & tracking
 │   ├── habit-tracker/    # Habits, streaks, reminders
 │   ├── notes/            # Notes, folders, attachments
+│   ├── tasks/            # Tasks, projects, and the Goals module
+│   ├── calendar/         # Events, reminders, recurrence
+│   ├── workouts/         # Routines, sessions, records, measurements
 │   ├── batches/          # Scheduled jobs (Gmail sync, backups)
 │   ├── core/             # Per-user module settings
 │   └── common/           # Shared library (auth, Kafka, caching config)
@@ -74,6 +77,9 @@ life-os/
 | Finance Tracker | 8006 | Budgets, transactions, analytics |
 | Notes | 8007 | Notes, folders, attachments |
 | Habit Tracker | 8008 | Habits, streaks, reminders |
+| Tasks | 8009 | Tasks, projects, and goals (`/v1/goals`) |
+| Calendar | 8010 | Events, reminders, recurrence |
+| Workouts | 8011 | Routines, sessions, PRs, body measurements |
 | Nginx | 80 | API Gateway |
 
 ## Tech Stack

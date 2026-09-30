@@ -80,7 +80,7 @@ class GoalItemsServiceTest {
 
   private GoalProgressAssembler.GoalProgress progress(int overall, GoalStatus status) {
     return new GoalProgressAssembler.GoalProgress(
-        new GoalProgressCalculator.Result(overall, null, null, null, null, null), status, 0, 0, 0, 0, 0, 0);
+        new GoalProgressCalculator.Result(overall, null, null, null, null, null, null), status, 0, 0, 0, 0, 0, 0, 0);
   }
 
   // ---- milestones ----

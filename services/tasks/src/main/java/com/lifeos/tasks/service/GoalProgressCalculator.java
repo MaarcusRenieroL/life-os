@@ -9,12 +9,16 @@ import java.util.List;
 
 /** Pure progress/status maths for a goal, kept free of repositories so it's directly unit-testable.
  *
- * <p>A goal's progress is the plain average of whichever of its four components actually have
- * something to measure: milestones done, linked tasks done, linked habits' recent consistency, and
- * custom metrics' distance travelled. A component with nothing behind it (no milestones, no linked
- * tasks...) is left out rather than counted as 0%, so a goal that's only tracked through a metric
- * isn't dragged down by three empty categories. */
+ * <p>A goal's progress is the plain average of whichever of its five components actually have
+ * something to measure: milestones done, linked tasks done, linked habits' recent consistency,
+ * custom metrics' distance travelled, and (when the goal sets a weekly target) linked workouts.
+ * A component with nothing behind it (no milestones, no linked tasks...) is left out rather than
+ * counted as 0%, so a goal that's only tracked through a metric isn't dragged down by empty
+ * categories. */
 public final class GoalProgressCalculator {
+
+  /** Matches the 28-day window workouts' goal-workout-stats reports. */
+  public static final int WORKOUT_WINDOW_WEEKS = 4;
 
   private GoalProgressCalculator() {}
 
@@ -27,6 +31,8 @@ public final class GoalProgressCalculator {
       int habitCompletions,
       int habitScheduled,
       List<Double> metricFractions,
+      int workoutSessions,
+      Integer weeklyWorkoutTarget,
       LocalDate startDate,
       LocalDate targetDate,
       LocalDate today) {}
@@ -39,6 +45,7 @@ public final class GoalProgressCalculator {
       Integer taskPct,
       Integer habitPct,
       Integer metricPct,
+      Integer workoutPct,
       Integer expectedPct) {}
 
   public static Result calculate(Inputs in) {
@@ -55,8 +62,15 @@ public final class GoalProgressCalculator {
       metricPct = (int) Math.round(average * 100);
     }
 
+    // Workouts only count once the goal declares a weekly target - then the last 28 days' linked
+    // sessions are measured against four weeks of that target.
+    Integer workoutPct =
+        in.weeklyWorkoutTarget() == null
+            ? null
+            : Math.min(100, pct(in.workoutSessions(), in.weeklyWorkoutTarget() * WORKOUT_WINDOW_WEEKS));
+
     List<Integer> present =
-        java.util.stream.Stream.of(milestonePct, taskPct, habitPct, metricPct)
+        java.util.stream.Stream.of(milestonePct, taskPct, habitPct, metricPct, workoutPct)
             .filter(java.util.Objects::nonNull)
             .toList();
     int overall =
@@ -68,6 +82,7 @@ public final class GoalProgressCalculator {
         taskPct,
         habitPct,
         metricPct,
+        workoutPct,
         expectedPct(in.startDate(), in.targetDate(), in.today()));
   }
 

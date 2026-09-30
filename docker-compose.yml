@@ -65,6 +65,7 @@ services:
       - habit-tracker
       - tasks
       - calendar
+      - workouts
 
   auth:
     build:
@@ -287,8 +288,29 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       HABIT_TRACKER_INTERNAL_BASE_URL: http://habit-tracker:8008
+      WORKOUTS_INTERNAL_BASE_URL: http://workouts:8011
     ports:
       - "8009:8009"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  workouts:
+    build:
+      context: .
+      dockerfile: services/workouts/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CALENDAR_INTERNAL_BASE_URL: http://calendar:8010
+    ports:
+      - "8011:8011"
     depends_on:
       postgres:
         condition: service_healthy

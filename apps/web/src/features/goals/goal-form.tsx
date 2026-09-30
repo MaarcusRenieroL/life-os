@@ -26,10 +26,11 @@ export interface GoalFormValue {
   startDate: string | null;
   targetDate: string | null;
   reviewFrequency: GoalReviewFrequency | typeof NONE;
+  weeklyWorkoutTarget: string;
 }
 
 function emptyValue(): GoalFormValue {
-  return { name: '', description: '', area: NONE, priority: '3', startDate: null, targetDate: null, reviewFrequency: NONE };
+  return { name: '', description: '', area: NONE, priority: '3', startDate: null, targetDate: null, reviewFrequency: NONE, weeklyWorkoutTarget: '' };
 }
 
 function valueFrom(goal: GoalSummary): GoalFormValue {
@@ -41,6 +42,7 @@ function valueFrom(goal: GoalSummary): GoalFormValue {
     startDate: goal.startDate,
     targetDate: goal.targetDate,
     reviewFrequency: goal.reviewFrequency ?? NONE,
+    weeklyWorkoutTarget: goal.progress.weeklyWorkoutTarget == null ? '' : String(goal.progress.weeklyWorkoutTarget),
   };
 }
 
@@ -60,6 +62,10 @@ export function validateGoalForm(value: GoalFormValue): string | null {
   if (value.startDate && value.targetDate && value.targetDate < value.startDate) {
     return 'The target date can’t be before the start date.';
   }
+  if (value.weeklyWorkoutTarget.trim() !== '') {
+    const target = Number(value.weeklyWorkoutTarget);
+    if (!Number.isInteger(target) || target < 1 || target > 14) return 'Workouts per week must be a whole number from 1 to 14.';
+  }
   return null;
 }
 
@@ -72,6 +78,7 @@ export function goalFormToRequest(value: GoalFormValue): SaveGoalRequest {
     startDate: value.startDate,
     targetDate: value.targetDate,
     reviewFrequency: value.reviewFrequency === NONE ? null : value.reviewFrequency,
+    weeklyWorkoutTarget: value.weeklyWorkoutTarget.trim() === '' ? null : Number(value.weeklyWorkoutTarget),
   };
 }
 
@@ -138,6 +145,21 @@ export function GoalForm({ value, onChange }: { value: GoalFormValue; onChange: 
           <Label>Target date</Label>
           <DatePicker value={value.targetDate} onChange={(d) => set('targetDate', d)} placeholder="No deadline" />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="goal-workouts">Workouts per week</Label>
+        <Input
+          id="goal-workouts"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={14}
+          value={value.weeklyWorkoutTarget}
+          onChange={(e) => set('weeklyWorkoutTarget', e.target.value)}
+          placeholder="Optional - for fitness goals"
+        />
+        <p className="text-xs text-muted-foreground">Workouts you link to this goal count toward its progress against this weekly target.</p>
       </div>
 
       <div className="flex flex-col gap-1.5">

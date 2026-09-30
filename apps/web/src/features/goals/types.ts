@@ -70,6 +70,7 @@ export interface GoalProgressBreakdown {
   taskPct: number | null;
   habitPct: number | null;
   metricPct: number | null;
+  workoutPct: number | null;
   expectedPct: number | null;
   milestonesDone: number;
   milestonesTotal: number;
@@ -77,6 +78,9 @@ export interface GoalProgressBreakdown {
   tasksTotal: number;
   activeHabits: number;
   metricsCount: number;
+  /** Linked workouts completed in the last 28 days. */
+  workoutSessions: number;
+  weeklyWorkoutTarget: number | null;
 }
 
 export interface GoalSummary {
@@ -176,6 +180,7 @@ export interface SaveGoalRequest {
   startDate?: string | null;
   targetDate?: string | null;
   reviewFrequency?: GoalReviewFrequency | null;
+  weeklyWorkoutTarget?: number | null;
 }
 
 export interface SaveMilestoneRequest {

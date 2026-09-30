@@ -46,6 +46,14 @@ function segments(p: GoalProgressBreakdown): Segment[] {
       bar: 'bg-amber-500',
       text: 'text-amber-600 dark:text-amber-400',
     },
+    {
+      key: 'workouts',
+      label: 'Workouts',
+      pct: p.workoutPct,
+      detail: `${p.workoutSessions} in the last 4 weeks · target ${p.weeklyWorkoutTarget ?? '—'} / week`,
+      bar: 'bg-rose-500',
+      text: 'text-rose-600 dark:text-rose-400',
+    },
   ];
 }
 

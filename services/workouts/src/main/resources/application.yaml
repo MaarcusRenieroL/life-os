@@ -1,0 +1,39 @@
+server:
+  port: 8011
+
+spring:
+  application:
+    name: workouts
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    schemas: workouts_schema
+    default-schema: workouts_schema
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+jwt:
+  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+
+internal:
+  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+
+# workouts doesn't use EncryptionService itself, but it's component-scanned in from
+# com.lifeos.common (see WorkoutsApplication's @ComponentScan) and its constructor
+# requires this property to be resolvable, so it needs a value.
+encryption:
+  secret: ${ENCRYPTION_SECRET:pQ0+9m8lXwZk3aC7dR1sVh2yTf5eNb4uJq6oGp8zLxA=}
+
+# Workouts appear on the calendar as GYM events - see WorkoutCalendarSyncService.
+calendar:
+  internal-base-url: ${CALENDAR_INTERNAL_BASE_URL:http://calendar:8010}

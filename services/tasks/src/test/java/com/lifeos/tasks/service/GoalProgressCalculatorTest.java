@@ -14,7 +14,7 @@ class GoalProgressCalculatorTest {
 
   private GoalProgressCalculator.Inputs inputs(
       int msTotal, int msDone, int tasksTotal, int tasksDone, LocalDate start, LocalDate target) {
-    return new GoalProgressCalculator.Inputs(msTotal, msDone, tasksTotal, tasksDone, 0, 0, 0, List.of(), start, target, TODAY);
+    return new GoalProgressCalculator.Inputs(msTotal, msDone, tasksTotal, tasksDone, 0, 0, 0, List.of(), 0, null, start, target, TODAY);
   }
 
   @Test
@@ -36,16 +36,16 @@ class GoalProgressCalculatorTest {
 
   @Test
   void habitComponentIsCompletionsOverScheduledAndCappedAtOneHundred() {
-    var in = new GoalProgressCalculator.Inputs(0, 0, 0, 0, 2, 9, 12, List.of(), null, null, TODAY);
+    var in = new GoalProgressCalculator.Inputs(0, 0, 0, 0, 2, 9, 12, List.of(), 0, null, null, null, TODAY);
     assertThat(GoalProgressCalculator.calculate(in).habitPct()).isEqualTo(75);
 
-    var overshoot = new GoalProgressCalculator.Inputs(0, 0, 0, 0, 1, 14, 12, List.of(), null, null, TODAY);
+    var overshoot = new GoalProgressCalculator.Inputs(0, 0, 0, 0, 1, 14, 12, List.of(), 0, null, null, null, TODAY);
     assertThat(GoalProgressCalculator.calculate(overshoot).habitPct()).isEqualTo(100);
   }
 
   @Test
   void linkedHabitsWithNothingScheduledYetAreNoDataNotZeroPercent() {
-    var in = new GoalProgressCalculator.Inputs(2, 2, 0, 0, 1, 0, 0, List.of(), null, null, TODAY);
+    var in = new GoalProgressCalculator.Inputs(2, 2, 0, 0, 1, 0, 0, List.of(), 0, null, null, null, TODAY);
     var result = GoalProgressCalculator.calculate(in);
 
     assertThat(result.habitPct()).isNull();
@@ -54,8 +54,36 @@ class GoalProgressCalculatorTest {
 
   @Test
   void metricComponentAveragesEveryMetricsFraction() {
-    var in = new GoalProgressCalculator.Inputs(0, 0, 0, 0, 0, 0, 0, List.of(0.5, 1.0), null, null, TODAY);
+    var in = new GoalProgressCalculator.Inputs(0, 0, 0, 0, 0, 0, 0, List.of(0.5, 1.0), 0, null, null, null, TODAY);
     assertThat(GoalProgressCalculator.calculate(in).metricPct()).isEqualTo(75);
+  }
+
+  @Test
+  void workoutComponentMeasuresLinkedSessionsAgainstFourWeeksOfTheWeeklyTarget() {
+    // Target 3/week -> 12 sessions expected in the 28-day window; 6 done is 50%.
+    var half = new GoalProgressCalculator.Inputs(0, 0, 0, 0, 0, 0, 0, List.of(), 6, 3, null, null, TODAY);
+    var result = GoalProgressCalculator.calculate(half);
+    assertThat(result.workoutPct()).isEqualTo(50);
+    assertThat(result.overallPct()).isEqualTo(50);
+
+    var over = new GoalProgressCalculator.Inputs(0, 0, 0, 0, 0, 0, 0, List.of(), 20, 3, null, null, TODAY);
+    assertThat(GoalProgressCalculator.calculate(over).workoutPct()).isEqualTo(100);
+  }
+
+  @Test
+  void workoutsDontCountUntilTheGoalSetsAWeeklyTarget() {
+    var noTarget = new GoalProgressCalculator.Inputs(2, 1, 0, 0, 0, 0, 0, List.of(), 9, null, null, null, TODAY);
+    var result = GoalProgressCalculator.calculate(noTarget);
+
+    assertThat(result.workoutPct()).isNull();
+    assertThat(result.overallPct()).isEqualTo(50);
+  }
+
+  @Test
+  void aWorkoutTargetWithNoSessionsYetPullsProgressDownRatherThanBeingIgnored() {
+    var idle = new GoalProgressCalculator.Inputs(2, 2, 0, 0, 0, 0, 0, List.of(), 0, 3, null, null, TODAY);
+
+    assertThat(GoalProgressCalculator.calculate(idle).overallPct()).isEqualTo(50);
   }
 
   @Test
