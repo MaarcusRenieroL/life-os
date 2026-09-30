@@ -7,6 +7,7 @@ import {
   Flag,
   GraduationCap,
   Map,
+  NotebookPen,
   Search,
   Users,
 } from 'lucide-react';
@@ -33,12 +34,15 @@ const NOTE_TYPE_META: Record<NoteType, NoteTypeMeta> = {
   CHECKLIST: { label: 'Checklist', icon: CheckSquare, colorVar: 'var(--chart-5)' },
   TRAVEL: { label: 'Travel', icon: Map, colorVar: 'var(--destructive)' },
   DECISION: { label: 'Decision', icon: Flag, colorVar: 'var(--destructive)' },
+  JOURNAL: { label: 'Journal', icon: NotebookPen, colorVar: 'var(--chart-2)' },
 };
 
 export function noteTypeMeta(type: NoteType | null | undefined): NoteTypeMeta {
   return NOTE_TYPE_META[type ?? 'GENERAL'] ?? NOTE_TYPE_META.GENERAL;
 }
 
+// Journal entries carry a date/mood/energy row and are created from the Journal tab; picking JOURNAL
+// on a plain note would give it none of that, so it's not offered where a note's type is chosen.
 export const NOTE_TYPE_LIST: { label: string; value: NoteType; icon: typeof File }[] = (
-  Object.keys(NOTE_TYPE_META) as NoteType[]
+  (Object.keys(NOTE_TYPE_META) as NoteType[]).filter((value) => value !== 'JOURNAL')
 ).map((value) => ({ value, label: NOTE_TYPE_META[value].label, icon: NOTE_TYPE_META[value].icon }));

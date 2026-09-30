@@ -91,6 +91,8 @@ export const router = createBrowserRouter([
             element: <NotesLayout />,
             children: [
               { index: true, lazy: page(() => import('@/features/notes/notes-list-page'), 'NotesListPage') },
+              { path: 'journal', lazy: page(() => import('@/features/notes/journal-page'), 'JournalPage') },
+              { path: 'journal/:noteId', lazy: page(() => import('@/features/notes/journal-editor-page'), 'JournalEditorPage') },
               { path: 'search', lazy: page(() => import('@/features/notes/note-search-page'), 'NoteSearchPage') },
               { path: 'templates', lazy: page(() => import('@/features/notes/note-templates-page'), 'NoteTemplatesPage') },
               { path: 'graph', lazy: page(() => import('@/features/notes/notes-graph-page'), 'NotesGraphPage') },

@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getErrorMessage } from '@/lib/error';
 
-import { LineChart } from './charts';
+import { LineChart } from '@/components/charts';
 import type { Measurement } from './types';
 import { formatNumber, parseNumber } from './utils';
 import { workoutsApi } from './workouts-api';

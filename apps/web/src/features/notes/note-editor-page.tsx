@@ -12,7 +12,7 @@ import {
   Underline,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { tasksApi } from '@/features/tasks/tasks-api';
@@ -235,6 +235,10 @@ export function NoteEditorPage() {
     setNoteLinkDialogOpen(false);
     invalidate();
   }
+
+  // A journal entry's content is rendered from its structured fields, so editing the HTML here
+  // would be overwritten (or overwrite them) - it's edited in the journal editor instead.
+  if (note?.noteType === 'JOURNAL') return <Navigate to={`/notes/journal/${note.id}`} replace />;
 
   if (!note) {
     return (

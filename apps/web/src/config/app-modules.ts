@@ -76,7 +76,6 @@ export const APP_MODULES: AppModuleConfig[] = [
       { label: 'Merchants', path: '/finance/merchants' },
     ],
   },
-  { code: 'JR', name: 'Journal', enabled: false },
   {
     code: 'WK',
     name: 'Workouts',
@@ -134,6 +133,7 @@ export const APP_MODULES: AppModuleConfig[] = [
     path: '/notes',
     tabs: [
       { label: 'All Notes', path: '/notes' },
+      { label: 'Journal', path: '/notes/journal' },
       { label: 'Search', path: '/notes/search' },
       { label: 'Templates', path: '/notes/templates' },
       { label: 'Graph', path: '/notes/graph' },

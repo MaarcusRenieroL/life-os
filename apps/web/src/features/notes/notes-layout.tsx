@@ -4,6 +4,7 @@ import { TabNav } from '@/components/tab-nav';
 
 const TABS = [
   { label: 'All Notes', to: '/notes', end: true },
+  { label: 'Journal', to: '/notes/journal', end: false },
   { label: 'Search', to: '/notes/search', end: false },
   { label: 'Templates', to: '/notes/templates', end: false },
   { label: 'Graph', to: '/notes/graph', end: false },
