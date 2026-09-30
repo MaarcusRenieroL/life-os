@@ -158,52 +158,10 @@ export interface UpsertInterviewRequest {
   result: InterviewResultStatus;
 }
 
-export type ReferralStatus = 'NOT_CONTACTED' | 'MESSAGE_DRAFTED' | 'CONTACTED' | 'RESPONDED' | 'REFERRED' | 'DECLINED';
-
-export const REFERRAL_STATUSES: ReferralStatus[] = [
-  'NOT_CONTACTED',
-  'MESSAGE_DRAFTED',
-  'CONTACTED',
-  'RESPONDED',
-  'REFERRED',
-  'DECLINED',
-];
-
-export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
-  NOT_CONTACTED: 'Not contacted',
-  MESSAGE_DRAFTED: 'Message drafted',
-  CONTACTED: 'Contacted',
-  RESPONDED: 'Responded',
-  REFERRED: 'Referred',
-  DECLINED: 'Declined',
-};
-
-export interface Referral {
-  id: string;
-  jobId: string;
-  contactName: string;
-  contactTitle: string | null;
-  contactLinkedinUrl: string | null;
-  contactEmail: string | null;
-  relationship: string | null;
-  status: ReferralStatus | null;
-  draftMessage: string | null;
-  notes: string | null;
-  contactedAt: string | null;
-  followUpAt: string | null;
-  createdAt: string;
-}
-
-export interface UpsertReferralRequest {
-  contactName: string;
-  contactTitle: string | null;
-  contactLinkedinUrl: string | null;
-  contactEmail: string | null;
-  relationship: string | null;
-  status: ReferralStatus;
-  notes: string | null;
-  contactedAt: string | null;
-  followUpAt: string | null;
+/** Someone the candidate already knows at a company - where a referral ask should start. */
+export interface KnownPerson {
+  name: string;
+  note: string | null;
 }
 
 export interface JobFitResult {
@@ -377,7 +335,6 @@ export interface JobAnalytics {
   rejectionRatePct: number;
   interviewConversionRatePct: number;
   offerRatePct: number;
-  referralResponseRatePct: number;
   bestPerformingSources: SourcePerformance[];
   mostCommonMissingSkills: SkillFrequency[];
   averageTimeInStage: StageDwellTime[];

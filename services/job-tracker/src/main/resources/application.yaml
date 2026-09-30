@@ -75,7 +75,12 @@ job-tracker:
   storage:
     resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}
   attention:
-    # Once a day is enough for "interview coming up" / "referral follow-up due" nudges - these
+    # Once a day is enough for "interview coming up" nudges - these
     # aren't time-sensitive to the minute like a habit reminder. Runs at 08:00 UTC.
     scan:
       cron: ${JOB_ATTENTION_SCAN_CRON:0 0 8 * * *}
+  discovery:
+    # Re-reads every watched company's career board once a day (06:30 UTC) and raises one
+    # "new openings" notification per user for anything that clears their alert threshold.
+    scan:
+      cron: ${JOB_DISCOVERY_SCAN_CRON:0 30 6 * * *}

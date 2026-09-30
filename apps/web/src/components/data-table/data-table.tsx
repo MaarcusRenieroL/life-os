@@ -10,6 +10,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
+declare module '@tanstack/react-table' {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData, TValue> {
+    /** Classes added to this column's header and cells - e.g. `hidden lg:table-cell` to drop a
+     * low-priority column on narrow screens instead of forcing the table to scroll sideways. */
+    className?: string;
+  }
+}
+
 interface DataTableProps<TData> {
   table: TanstackTable<TData>;
   onRowClick?: (row: TData) => void;
@@ -28,7 +37,11 @@ export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent">
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}>
+                <TableHead
+                  key={header.id}
+                  className={header.column.columnDef.meta?.className}
+                  style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
+                >
                   {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
@@ -45,7 +58,9 @@ export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results
                 className={onRowClick ? 'cursor-pointer' : undefined}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                  <TableCell key={cell.id} className={cell.column.columnDef.meta?.className}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
                 ))}
               </TableRow>
             ))

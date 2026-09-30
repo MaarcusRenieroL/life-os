@@ -11,7 +11,6 @@ public record JobAnalyticsResponse(
     double rejectionRatePct,
     double interviewConversionRatePct,
     double offerRatePct,
-    double referralResponseRatePct,
     List<SourcePerformance> bestPerformingSources,
     List<SkillFrequency> mostCommonMissingSkills,
     List<StageDwellTime> averageTimeInStage) {

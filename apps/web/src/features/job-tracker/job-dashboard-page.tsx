@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 import { FitScoreBadge } from './fit-score-badge';
-import { aiUsageApi, jobAnalyticsApi, jobApi, referralApi } from './job-api';
+import { aiUsageApi, jobAnalyticsApi, jobApi } from './job-api';
 import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
 
 const ACTIVE_STATUSES: JobStatus[] = ['INTERESTED', 'WAITING_FOR_REFERRAL', 'REFERRED', 'APPLIED', 'INTERVIEWING', 'WAITING_FOR_HR'];
@@ -40,10 +40,6 @@ export function JobDashboardPage() {
     queryFn: jobApi.needsReviewEmailEvents,
   });
   const { data: aiUsage } = useQuery({ queryKey: ['jobs', 'ai-usage', 'summary'], queryFn: aiUsageApi.getSummary });
-  const { data: referralFollowUps = [] } = useQuery({
-    queryKey: ['jobs', 'referrals', 'upcoming-follow-ups'],
-    queryFn: referralApi.upcomingFollowUps,
-  });
 
   const activeJobs = useMemo(() => jobs.filter((j) => j.status && ACTIVE_STATUSES.includes(j.status)), [jobs]);
   const closedJobs = useMemo(() => jobs.filter((j) => j.status && CLOSED_STATUSES.includes(j.status)), [jobs]);
@@ -82,11 +78,8 @@ export function JobDashboardPage() {
     const jobFollowUps = jobs
       .filter((j) => j.followUpAt)
       .map((j) => ({ kind: 'job' as const, id: j.id, label: `Follow up on ${j.title}`, days: daysUntil(j.followUpAt!), link: `/jobs/${j.id}` }));
-    const contactFollowUps = referralFollowUps
-      .filter((r) => r.followUpAt)
-      .map((r) => ({ kind: 'referral' as const, id: r.id, label: `Follow up with ${r.contactName}`, days: daysUntil(r.followUpAt!), link: `/jobs/${r.jobId}` }));
-    return [...jobFollowUps, ...contactFollowUps].filter((f) => f.days <= 7).sort((a, b) => a.days - b.days);
-  }, [jobs, referralFollowUps]);
+    return jobFollowUps.filter((f) => f.days <= 7).sort((a, b) => a.days - b.days);
+  }, [jobs]);
 
   const attentionCount = pendingEmails.length + upcomingDeadlines.length + dueFollowUps.length;
 

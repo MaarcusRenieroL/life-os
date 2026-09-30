@@ -64,7 +64,7 @@ export function JobsListPage() {
   async function remove(job: JobListing) {
     const ok = await confirm({
       title: `Remove "${job.title}"?`,
-      description: `This removes it from your tracker along with any interviews, referrals, and notes on it. This cannot be undone.`,
+      description: `This removes it from your tracker along with any interviews and notes on it. This cannot be undone.`,
       confirmLabel: 'Remove',
     });
     if (!ok) return;
@@ -100,7 +100,7 @@ export function JobsListPage() {
         accessorKey: 'title',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Role" />,
         cell: ({ row }) => (
-          <div className="min-w-0">
+          <div className="max-w-[14rem] min-w-0 lg:max-w-xs">
             <div className="truncate font-medium">{row.original.title}</div>
             <div className="truncate text-xs text-muted-foreground">{row.original.company}</div>
           </div>
@@ -108,10 +108,11 @@ export function JobsListPage() {
       },
       {
         id: 'location',
+        meta: { className: 'hidden xl:table-cell' },
         accessorFn: (j) => [j.location, j.workModel].filter(Boolean).join(' · '),
         header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
         cell: ({ row }) => (
-          <span className="text-muted-foreground">
+          <span className="block max-w-48 truncate text-muted-foreground">
             {[row.original.location, row.original.workModel].filter(Boolean).join(' · ') || '—'}
           </span>
         ),
@@ -124,7 +125,7 @@ export function JobsListPage() {
             value={row.original.status ?? 'INTERESTED'}
             onValueChange={(v) => void setStatus(row.original, v as JobStatus)}
           >
-            <SelectTrigger size="sm" className="min-w-40 text-xs" onClick={(e) => e.stopPropagation()}>
+            <SelectTrigger size="sm" className="w-36 text-xs" onClick={(e) => e.stopPropagation()}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -142,6 +143,7 @@ export function JobsListPage() {
       },
       {
         accessorKey: 'createdAt',
+        meta: { className: 'hidden lg:table-cell' },
         header: ({ column }) => <DataTableColumnHeader column={column} title="Added" />,
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.createdAt.slice(0, 10)}</span>,
       },
@@ -230,13 +232,66 @@ export function JobsListPage() {
             </div>
           )}
 
-          <div className="mt-3">
+          <div className="mt-3 hidden md:block">
             <DataTable
               table={table}
               onRowClick={(job) => navigate(`/jobs/${job.id}`)}
               emptyMessage={isLoading ? 'Loading jobs…' : 'No jobs match this filter.'}
             />
           </div>
+
+          {/* Below md a seven-column table cannot fit, so each job becomes a card instead of the
+              table scrolling sideways. Same rows, same sorting/filtering/pagination state. */}
+          <ul className="mt-3 flex flex-col gap-2 md:hidden">
+            {table.getRowModel().rows.length === 0 && (
+              <li className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+                {isLoading ? 'Loading jobs…' : 'No jobs match this filter.'}
+              </li>
+            )}
+            {table.getRowModel().rows.map((row) => {
+              const job = row.original;
+              const place = [job.location, job.workModel].filter(Boolean).join(' · ');
+              return (
+                <li
+                  key={row.id}
+                  className="cursor-pointer rounded-lg border p-3 active:bg-muted/50"
+                  onClick={() => navigate(`/jobs/${job.id}`)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-medium break-words">{job.title}</div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {job.company}
+                        {place ? ` · ${place}` : ''}
+                      </div>
+                    </div>
+                    {job.fitScore !== null && <FitScoreBadge score={job.fitScore} />}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <Select value={job.status ?? 'INTERESTED'} onValueChange={(v) => void setStatus(job, v as JobStatus)}>
+                      <SelectTrigger size="sm" className="w-44 text-xs" onClick={(e) => e.stopPropagation()}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {JOB_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>{JOB_STATUS_LABELS[s]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <button
+                      className="text-xs text-destructive hover:underline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void remove(job);
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
 
           <DataTablePagination table={table} />
         </>

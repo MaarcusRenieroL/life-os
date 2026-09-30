@@ -13,6 +13,8 @@ import com.lifeos.job_tracker.exception.ResourceNotFoundException;
 import com.lifeos.job_tracker.integration.AiAssistant;
 import com.lifeos.job_tracker.repository.EmailEventRepository;
 import com.lifeos.job_tracker.repository.JobListingRepository;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +35,10 @@ import org.springframework.transaction.annotation.Transactional;
  * job by company - everything else (ambiguous match, no match, low/medium confidence, or any
  * OFFER, since accept/reject is never inferable from the email itself) is left for the candidate
  * to confirm in the review queue instead of guessing.
+ *
+ * <p>The one exception is an "application received" email that matches nothing already tracked:
+ * that is the candidate telling us, by applying, about a job we have never heard of (an easy-apply
+ * on a job board, say), so it becomes a new APPLIED job rather than a dead-end review item.
  */
 @Service
 @RequiredArgsConstructor
@@ -49,7 +55,8 @@ public class EmailEventService {
   // Deliberately not @Transactional: createFromLink/updateStatus below are each transactional on
   // their own, and one digest posting failing (a dead link, a 404) must not roll back the sibling
   // postings that succeeded, or the final event row that records what happened.
-  public void ingest(UUID userId, String gmailMessageId, String fromAddress, String subject, String body) {
+  public void ingest(
+      UUID userId, String gmailMessageId, String fromAddress, String subject, String body, Instant receivedAt) {
     if (emailEventRepository.existsByUserIdAndGmailMessageId(userId, gmailMessageId)) {
       return;
     }
@@ -83,8 +90,24 @@ public class EmailEventService {
       return;
     }
 
-    JobListing matched = matchJob(userId, classification.company(), classification.title());
+    JobListing matched =
+        matchJob(userId, classification.company(), classification.title(), type == EmailEventType.APPLICATION_CONFIRMATION);
     JobStatus suggested = suggestedStatusFor(type);
+
+    if (matched == null
+        && type == EmailEventType.APPLICATION_CONFIRMATION
+        && confidence != Confidence.LOW
+        && classification.company() != null
+        && !classification.company().isBlank()) {
+      JobListing created =
+          jobListingService.createFromEmail(
+              userId, classification.company(), classification.title(), receivedAt == null ? null : receivedAt.atZone(ZoneId.systemDefault()).toLocalDate());
+      save(
+          userId, gmailMessageId, fromAddress, subject, snippet, type, confidence, created.getId(), JobStatus.APPLIED, 1,
+          EmailEventStatus.APPLIED_AUTOMATICALLY);
+      return;
+    }
+
     boolean autoApply = type != EmailEventType.OFFER && matched != null && confidence == Confidence.HIGH;
 
     if (autoApply) {
@@ -153,8 +176,13 @@ public class EmailEventService {
   }
 
   /** Matches by company first (exact or substring, case-insensitive) - if more than one job at
-   * that company, the one whose title shares the most words with Claude's guess wins. */
-  private JobListing matchJob(UUID userId, String company, String title) {
+   * that company, the one whose title shares the most words with Claude's guess wins.
+   *
+   * @param requireTitleOverlap for an application confirmation: applying to a second role at a
+   *     company you already track is a new job, not an update to the first, so a candidate whose
+   *     title shares no words with the email's is not a match. Interview and rejection emails keep
+   *     the looser company-only match, since they often name no role at all. */
+  private JobListing matchJob(UUID userId, String company, String title, boolean requireTitleOverlap) {
     if (company == null || company.isBlank()) return null;
 
     List<JobListing> candidates =
@@ -163,11 +191,15 @@ public class EmailEventService {
             .toList();
 
     if (candidates.isEmpty()) return null;
-    if (candidates.size() == 1) return candidates.get(0);
 
-    return candidates.stream()
-        .max(Comparator.comparingInt(job -> titleOverlap(job.getTitle(), title)))
-        .orElse(null);
+    JobListing best =
+        candidates.stream()
+            .max(Comparator.comparingInt(job -> titleOverlap(job.getTitle(), title)))
+            .orElse(null);
+    if (requireTitleOverlap && title != null && !title.isBlank() && titleOverlap(best.getTitle(), title) == 0) {
+      return null;
+    }
+    return best;
   }
 
   private static JobStatus suggestedStatusFor(EmailEventType type) {

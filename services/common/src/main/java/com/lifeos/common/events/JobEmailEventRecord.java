@@ -1,5 +1,6 @@
 package com.lifeos.common.events;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /** Published by batches' Gmail job-search poller to the {@code job-email-events} topic, one per
@@ -7,4 +8,11 @@ import java.util.UUID;
  * shared record (like {@link AuditEventRecord}) rather than a service-specific DTO so the producer
  * (batches) and consumer (job-tracker) deserialize the exact same shape. */
 public record JobEmailEventRecord(
-    UUID userId, String gmailMessageId, String fromAddress, String subject, String body) {}
+    UUID userId,
+    String gmailMessageId,
+    String fromAddress,
+    String subject,
+    String body,
+    /** When Gmail received it - the application date for a confirmation. Null on events published
+     * before this field existed. */
+    Instant receivedAt) {}

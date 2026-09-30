@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -50,8 +51,13 @@ public class JobEmailSyncService {
   private final KafkaTemplate<String, JobEmailEventRecord> jobEmailEventKafkaTemplate;
   private final NotificationEventPublisher notificationEventPublisher;
 
+  /**
+   * Looks back a week rather than two days. Re-sending is free - job-tracker dedupes on the Gmail
+   * message id before doing any AI work - and a wider window means a stretch of downtime (or Kafka
+   * being unreachable) no longer loses the emails that arrived during it.
+   */
   public int syncRecent() throws IOException {
-    return processEmails(gmailMessageService.fetchByQuery(searchClause(), "newer_than:2d"));
+    return processEmails(gmailMessageService.fetchByQuery(searchClause(), "newer_than:7d"));
   }
 
   public int syncAll() throws IOException {
@@ -77,9 +83,11 @@ public class JobEmailSyncService {
       try {
         JobEmailEventRecord event =
             new JobEmailEventRecord(
-                userId, email.messageId(), email.fromAddress(), email.subject(), email.body());
+                userId, email.messageId(), email.fromAddress(), email.subject(), email.body(), email.receivedAt());
 
-        jobEmailEventKafkaTemplate.send("job-email-events", userId.toString(), event);
+        // Wait for the broker's acknowledgement. Fire-and-forget hid the case where Kafka was
+        // unreachable: the email looked "processed" here and was silently dropped.
+        jobEmailEventKafkaTemplate.send("job-email-events", userId.toString(), event).get(10, TimeUnit.SECONDS);
         processed++;
       } catch (Exception e) {
         log.error("Failed to publish job email {}: {}", email.messageId(), e.getMessage(), e);

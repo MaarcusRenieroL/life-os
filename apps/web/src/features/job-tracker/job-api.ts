@@ -8,10 +8,9 @@ import type {
   JobFitResult,
   JobListing,
   JobStatus,
-  Referral,
+  KnownPerson,
   UpdateJobDetailsRequest,
   UpsertInterviewRequest,
-  UpsertReferralRequest,
 } from './types';
 
 export interface ReviewEmailEventRequest {
@@ -49,6 +48,20 @@ export const jobApi = {
 
   generateCoverLetter(jobId: string): Promise<JobListing> {
     return unwrap(api.post(`${baseUrl}/${jobId}/cover-letter`, {}));
+  },
+
+  /** The candidate's standard referral ask for this job; `contactName` personalises the greeting. */
+  referralMessage(jobId: string, contactName?: string): Promise<string> {
+    return unwrap(api.get(`${baseUrl}/${jobId}/referral-message`, { params: { contactName } }));
+  },
+
+  /** People noted at this job's company; shared by every role there. */
+  knownPeople(jobId: string): Promise<KnownPerson[]> {
+    return unwrap(api.get(`${baseUrl}/${jobId}/known-people`));
+  },
+
+  saveKnownPeople(jobId: string, people: KnownPerson[]): Promise<KnownPerson[]> {
+    return unwrap(api.put(`${baseUrl}/${jobId}/known-people`, people));
   },
 
   rescore(jobId: string): Promise<JobFitResult> {
@@ -106,29 +119,10 @@ export const interviewApi = {
   },
 };
 
-export const referralApi = {
-  list(jobId: string): Promise<Referral[]> {
-    return unwrap(api.get(`${baseUrl}/${jobId}/referrals`));
-  },
-
-  create(jobId: string, request: UpsertReferralRequest): Promise<Referral> {
-    return unwrap(api.post(`${baseUrl}/${jobId}/referrals`, request));
-  },
-
-  update(jobId: string, referralId: string, request: UpsertReferralRequest): Promise<Referral> {
-    return unwrap(api.put(`${baseUrl}/${jobId}/referrals/${referralId}`, request));
-  },
-
-  generateDraftMessage(jobId: string, referralId: string): Promise<Referral> {
-    return unwrap(api.post(`${baseUrl}/${jobId}/referrals/${referralId}/draft-message`, {}));
-  },
-
-  async delete(jobId: string, referralId: string): Promise<void> {
-    await api.delete(`${baseUrl}/${jobId}/referrals/${referralId}`);
-  },
-
-  upcomingFollowUps(): Promise<Referral[]> {
-    return unwrap(api.get(`${baseUrl}/referrals/upcoming-follow-ups`));
+export const jobEmailApi = {
+  /** Pulls the last week of job emails through the classifier now instead of at the next poll. */
+  syncNow(): Promise<number> {
+    return unwrap(api.post('/v1/batches/gmail/jobs/sync-recent', {}));
   },
 };
 

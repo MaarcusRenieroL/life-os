@@ -58,6 +58,15 @@ public class GmailController {
     return ResponseEntity.ok(ApiResponse.success(processed, processed + " transactions synced"));
   }
 
+  // The last week of job emails, on demand - what the "Check email" button in the job tracker calls,
+  // so a fresh application confirmation doesn't wait for the next scheduled poll.
+  @PostMapping("/jobs/sync-recent")
+  public ResponseEntity<ApiResponse<Integer>> syncRecentJobEmails() throws IOException {
+    int processed = jobEmailSyncService.syncRecent();
+
+    return ResponseEntity.ok(ApiResponse.success(processed, processed + " job emails queued"));
+  }
+
   // Same idea as /sync-all above, for the job-tracking email pipeline instead of bank alerts.
   @PostMapping("/jobs/sync-all")
   public ResponseEntity<ApiResponse<Integer>> syncAllJobEmails() throws IOException {
