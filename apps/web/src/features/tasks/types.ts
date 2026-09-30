@@ -53,6 +53,17 @@ export interface Goal {
   createdAt: string;
 }
 
+export type TaskRecurrencePattern = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
+
+export const TASK_RECURRENCE_PATTERNS: TaskRecurrencePattern[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM'];
+
+export const TASK_RECURRENCE_PATTERN_LABELS: Record<TaskRecurrencePattern, string> = {
+  DAILY: 'Daily',
+  WEEKLY: 'Weekly',
+  MONTHLY: 'Monthly',
+  CUSTOM: 'Custom interval',
+};
+
 export interface Task {
   id: string;
   title: string;
@@ -69,9 +80,43 @@ export interface Task {
   tags: string[] | null;
   estimateMinutes: number | null;
   completedAt: string | null;
+  /** Set on a recurring "definition" task (see services/tasks' Task.java javadoc) - null on both
+   * one-off tasks and on generated occurrences. */
+  recurrencePattern: TaskRecurrencePattern | null;
+  recurrenceConfig: Record<string, unknown> | null;
+  recurrenceEndDate: string | null;
+  recurrencePaused: boolean;
+  recurrenceSkippedDates: string[] | null;
+  /** Set only on a generated occurrence, pointing back at the definition task. */
+  recurringParentId: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface SetRecurrenceRequest {
+  pattern: TaskRecurrencePattern;
+  config?: Record<string, unknown>;
+  endDate?: string | null;
+}
+
+/** Day-of-week codes for the UI only, matching habits' own DAYS_OF_WEEK - the API uses ISO
+ * day-of-week integers (1=Monday..7=Sunday) for recurrenceConfig.daysOfWeek. */
+export const DAYS_OF_WEEK = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const;
+export type DayOfWeek = (typeof DAYS_OF_WEEK)[number];
+
+export const DAY_CODE_TO_ISO: Record<DayOfWeek, number> = {
+  MON: 1,
+  TUE: 2,
+  WED: 3,
+  THU: 4,
+  FRI: 5,
+  SAT: 6,
+  SUN: 7,
+};
+
+export const ISO_TO_DAY_CODE: Record<number, DayOfWeek> = Object.fromEntries(
+  DAYS_OF_WEEK.map((day) => [DAY_CODE_TO_ISO[day], day]),
+) as Record<number, DayOfWeek>;
 
 export interface TaskListFilters {
   view?: TaskViewName;

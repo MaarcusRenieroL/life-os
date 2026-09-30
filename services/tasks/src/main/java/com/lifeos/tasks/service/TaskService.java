@@ -259,6 +259,12 @@ public class TaskService {
         .tags(task.getTags())
         .estimateMinutes(task.getEstimateMinutes())
         .completedAt(task.getCompletedAt())
+        .recurrencePattern(task.getRecurrencePattern())
+        .recurrenceConfig(task.getRecurrenceConfig())
+        .recurrenceEndDate(task.getRecurrenceEndDate())
+        .recurrencePaused(task.getRecurrencePaused())
+        .recurrenceSkippedDates(task.getRecurrenceSkippedDates())
+        .recurringParentId(task.getRecurringParentId())
         .createdAt(task.getCreatedAt())
         .updatedAt(task.getUpdatedAt())
         .build();

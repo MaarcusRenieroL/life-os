@@ -28,3 +28,13 @@ export function isOverdue(dueDate: string | null, status: TaskStatus): boolean {
   if (!dueDate || status === 'DONE') return false;
   return dueDate < new Date().toISOString().slice(0, 10);
 }
+
+/** Shown on a recurring definition (recurrencePattern set, recurringParentId null) - a generated
+ * occurrence doesn't itself recur, so it never shows this. */
+export function RecurringIcon() {
+  return (
+    <span title="Repeats" aria-label="Repeats" className="text-xs">
+      🔁
+    </span>
+  );
+}

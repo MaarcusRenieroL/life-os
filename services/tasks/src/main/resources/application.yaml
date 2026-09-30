@@ -32,3 +32,5 @@ encryption:
 tasks:
   upcoming:
     default-window-days: ${TASKS_UPCOMING_WINDOW_DAYS:7}
+  recurrence:
+    generate-cron: ${TASKS_RECURRENCE_GENERATE_CRON:0 5 0 * * *}

@@ -3,6 +3,8 @@ package com.lifeos.tasks.controller;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.tasks.domains.dto.request.BulkUpdateTaskRequest;
 import com.lifeos.tasks.domains.dto.request.CreateTaskRequest;
+import com.lifeos.tasks.domains.dto.request.SetRecurrenceRequest;
+import com.lifeos.tasks.domains.dto.request.SkipOccurrenceRequest;
 import com.lifeos.tasks.domains.dto.request.SnoozeTaskRequest;
 import com.lifeos.tasks.domains.dto.request.UpdateTaskRequest;
 import com.lifeos.tasks.domains.dto.response.TaskResponse;
@@ -10,6 +12,7 @@ import com.lifeos.tasks.domains.enums.LifeArea;
 import com.lifeos.tasks.domains.enums.TaskPriority;
 import com.lifeos.tasks.domains.enums.TaskStatus;
 import com.lifeos.tasks.domains.enums.TaskView;
+import com.lifeos.tasks.service.TaskRecurrenceService;
 import com.lifeos.tasks.service.TaskService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -35,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class TaskController {
 
   private final TaskService taskService;
+  private final TaskRecurrenceService taskRecurrenceService;
 
   @GetMapping
   public ResponseEntity<ApiResponse<List<TaskResponse>>> list(
@@ -121,6 +125,47 @@ public class TaskController {
   public ResponseEntity<ApiResponse<TaskResponse>> duplicate(Authentication authentication, @PathVariable UUID id) {
     return ResponseEntity.ok(
         ApiResponse.success(taskService.duplicate(userId(authentication), id), "Task duplicated"));
+  }
+
+  @GetMapping("/{id}/occurrences")
+  public ResponseEntity<ApiResponse<List<TaskResponse>>> occurrences(
+      Authentication authentication, @PathVariable UUID id) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            taskRecurrenceService.occurrences(userId(authentication), id), "Occurrences fetched successfully"));
+  }
+
+  @PostMapping("/{id}/recurrence")
+  public ResponseEntity<ApiResponse<TaskResponse>> setRecurrence(
+      Authentication authentication, @PathVariable UUID id, @Valid @RequestBody SetRecurrenceRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            taskRecurrenceService.setRecurrence(userId(authentication), id, request), "Recurrence set"));
+  }
+
+  @DeleteMapping("/{id}/recurrence")
+  public ResponseEntity<ApiResponse<Void>> stopRecurrence(Authentication authentication, @PathVariable UUID id) {
+    taskRecurrenceService.stopRecurrence(userId(authentication), id);
+    return ResponseEntity.ok(ApiResponse.success(null, "Recurrence stopped"));
+  }
+
+  @PostMapping("/{id}/recurrence/pause")
+  public ResponseEntity<ApiResponse<TaskResponse>> pauseRecurrence(Authentication authentication, @PathVariable UUID id) {
+    return ResponseEntity.ok(
+        ApiResponse.success(taskRecurrenceService.pause(userId(authentication), id), "Recurrence paused"));
+  }
+
+  @PostMapping("/{id}/recurrence/resume")
+  public ResponseEntity<ApiResponse<TaskResponse>> resumeRecurrence(Authentication authentication, @PathVariable UUID id) {
+    return ResponseEntity.ok(
+        ApiResponse.success(taskRecurrenceService.resume(userId(authentication), id), "Recurrence resumed"));
+  }
+
+  @PostMapping("/{id}/recurrence/skip")
+  public ResponseEntity<ApiResponse<Void>> skipOccurrence(
+      Authentication authentication, @PathVariable UUID id, @Valid @RequestBody SkipOccurrenceRequest request) {
+    taskRecurrenceService.skipOccurrence(userId(authentication), id, request.getDueDate());
+    return ResponseEntity.ok(ApiResponse.success(null, "Occurrence skipped"));
   }
 
   private UUID userId(Authentication authentication) {

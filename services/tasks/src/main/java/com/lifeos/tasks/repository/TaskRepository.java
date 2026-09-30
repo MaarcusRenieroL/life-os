@@ -14,4 +14,8 @@ public interface TaskRepository extends JpaRepository<Task, UUID>, JpaSpecificat
   Optional<Task> findByIdAndUserId(UUID id, UUID userId);
 
   List<Task> findAllByParentTaskId(UUID parentTaskId);
+
+  List<Task> findAllByRecurringParentId(UUID recurringParentId);
+
+  List<Task> findAllByRecurrencePatternIsNotNullAndRecurringParentIdIsNull();
 }
