@@ -6,8 +6,6 @@ import com.lifeos.workouts.service.WorkoutAnalyticsService;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import com.lifeos.common.domains.dto.response.ApiResponse;
-import jakarta.validation.Valid;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

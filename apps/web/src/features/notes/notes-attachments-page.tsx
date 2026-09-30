@@ -87,7 +87,7 @@ export function NotesAttachmentsPage() {
               <li key={a.id}>
                 <button
                   onClick={() => setSelected(a)}
-                  className="flex w-full items-center gap-3 rounded-lg border bg-card px-3 py-2 text-left hover:border-primary/40"
+                  className="flex w-full items-center gap-3 hud-panel px-3 py-2 text-left hover:border-primary/40"
                 >
                   <Icon className="size-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
@@ -104,7 +104,7 @@ export function NotesAttachmentsPage() {
         </ul>
 
         {selected && (
-          <div className="rounded-lg border bg-card p-4">
+          <div className="hud-panel p-4">
             {fileKind(selected.fileName) === 'image' ? (
               // Matches the Angular app's existing behavior: a raw <img src> to the API
               // route bypasses the JWT-attaching client, same latent gap as the original.

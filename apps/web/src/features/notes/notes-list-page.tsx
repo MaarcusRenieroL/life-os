@@ -197,7 +197,7 @@ export function NotesListPage() {
               <Link
                 key={note.id}
                 to={`/notes/${note.id}`}
-                className="flex flex-col gap-2 rounded-lg border bg-card p-4 transition-colors hover:border-primary/40"
+                className="flex flex-col gap-2 hud-panel p-4 transition-colors hover:border-primary/40"
               >
                 <div className="flex items-center justify-between">
                   <Icon className="size-4" style={{ color: meta.colorVar }} />

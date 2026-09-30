@@ -73,7 +73,7 @@ export function NotesSettingsPage() {
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">Notes settings</h1>
 
-      <section className="mt-6 rounded-lg border bg-card p-5">
+      <section className="mt-6 hud-panel p-5">
         <SectionHeading>Default note type</SectionHeading>
         <RadioGroup
           value={settings?.defaultNoteType}
@@ -89,7 +89,7 @@ export function NotesSettingsPage() {
         </RadioGroup>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <div className="flex items-center justify-between">
           <SectionHeading>Auto-archive</SectionHeading>
           <Switch checked={settings?.autoArchiveEnabled ?? false} onCheckedChange={(v) => void toggleAutoArchive(v)} />
@@ -111,7 +111,7 @@ export function NotesSettingsPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Templates</SectionHeading>
         <p className="mt-1 text-sm text-muted-foreground">
           {templatePage?.totalElements ?? 0} templates —{' '}
@@ -119,7 +119,7 @@ export function NotesSettingsPage() {
         </p>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Export all notes</SectionHeading>
         <div className="mt-2 flex gap-2 text-xs">
           <a className="text-primary hover:underline" href={noteSettingsApi.exportAllUrl('markdown')}>Markdown (.zip)</a>
@@ -128,7 +128,7 @@ export function NotesSettingsPage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Trash</SectionHeading>
         <p className="mt-1 text-[11px] text-muted-foreground">Emptied automatically after 30 days.</p>
         <ul className="mt-2 flex flex-col gap-1.5">

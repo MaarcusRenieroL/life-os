@@ -68,7 +68,7 @@ export function SecurityPage() {
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">Security</h1>
 
-      <section className="mt-6 rounded-lg border bg-card p-5">
+      <section className="mt-6 hud-panel p-5">
         <SectionHeading>Master password</SectionHeading>
         {vaultStatus?.masterPasswordStrength && (
           <>
@@ -89,7 +89,7 @@ export function SecurityPage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <div className="flex items-center justify-between">
           <SectionHeading>Active sessions</SectionHeading>
           {otherDevices.length > 0 && (

@@ -6,7 +6,7 @@ const DOC_EXTENSIONS = new Set(['doc', 'docx']);
 
 export type FileKind = 'image' | 'pdf' | 'doc' | 'other';
 
-export function fileExtension(fileName: string): string {
+function fileExtension(fileName: string): string {
   const dot = fileName.lastIndexOf('.');
   return dot >= 0 ? fileName.slice(dot + 1).toLowerCase() : '';
 }

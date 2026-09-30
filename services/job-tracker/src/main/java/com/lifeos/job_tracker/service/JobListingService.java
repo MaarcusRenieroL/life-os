@@ -18,7 +18,6 @@ import com.lifeos.job_tracker.domains.record.AtsSuggestions;
 import com.lifeos.job_tracker.domains.record.ExtractedSkill;
 import com.lifeos.job_tracker.domains.record.KnownPerson;
 import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
-import com.lifeos.job_tracker.domains.record.ParsedResume;
 import com.lifeos.job_tracker.exception.InvalidRequestException;
 import com.lifeos.job_tracker.exception.JobLinkUnreadableException;
 import com.lifeos.job_tracker.exception.ResourceNotFoundException;

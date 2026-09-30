@@ -73,7 +73,7 @@ export function ImportPage() {
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">Import</h1>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Upload a statement</SectionHeading>
         {accounts.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">Add an account first — statements need to be linked to one.</p>
@@ -129,7 +129,7 @@ export function ImportPage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Gmail sync</SectionHeading>
         {gmailStatus?.connected ? (
           <div className="mt-2 text-sm">

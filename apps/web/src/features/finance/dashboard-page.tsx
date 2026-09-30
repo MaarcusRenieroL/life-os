@@ -169,7 +169,7 @@ export function FinanceDashboardPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-lg border bg-card p-4">
+        <div className="hud-panel p-4">
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span>Monthly income</span>
             {!editingIncome && (
@@ -207,7 +207,7 @@ export function FinanceDashboardPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <section className="rounded-lg border bg-card p-5">
+        <section className="hud-panel p-5">
           <SectionHeading>Spending trend</SectionHeading>
           {trendBars.length === 0 ? (
             <EmptyState className="mt-2" message="Not enough history yet." />
@@ -226,7 +226,7 @@ export function FinanceDashboardPage() {
           )}
         </section>
 
-        <section className="rounded-lg border bg-card p-5">
+        <section className="hud-panel p-5">
           <SectionHeading>Needs your attention</SectionHeading>
           <ul className="mt-2 flex flex-col gap-2">
             {attentionItems.map((item, i) => (
@@ -240,7 +240,7 @@ export function FinanceDashboardPage() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <section className="rounded-lg border bg-card p-5">
+        <section className="hud-panel p-5">
           <SectionHeading>Top spend categories</SectionHeading>
           {categorySpend.length === 0 ? (
             <EmptyState className="mt-2" message="No categorized spend yet." />
@@ -256,7 +256,7 @@ export function FinanceDashboardPage() {
           )}
         </section>
 
-        <section className="rounded-lg border bg-card p-5">
+        <section className="hud-panel p-5">
           <SectionHeading>Budgets</SectionHeading>
           {budgetRows.length === 0 ? (
             <EmptyState className="mt-2" message="No budgets set up yet." />
@@ -280,7 +280,7 @@ export function FinanceDashboardPage() {
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="hud-panel p-4">
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className="text-xl font-semibold">{value}</div>
     </div>

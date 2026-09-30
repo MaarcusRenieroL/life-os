@@ -206,7 +206,7 @@ export function BudgetsPage() {
           <SectionHeading>Uncapped spend</SectionHeading>
           <ul className="mt-2 flex flex-col gap-1.5">
             {uncapped.map((c) => (
-              <li key={c.categoryId} className="flex justify-between rounded-lg border bg-card px-3 py-2 text-sm">
+              <li key={c.categoryId} className="flex justify-between hud-panel px-3 py-2 text-sm">
                 <span>{c.name}</span>
                 <span>{formatINR(c.currentMonthSpend)}</span>
               </li>
@@ -223,7 +223,7 @@ export function BudgetsPage() {
 
 function SummaryTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-card p-3 text-center">
+    <div className="hud-panel p-3 text-center">
       <div className="text-lg font-semibold">{value}</div>
       <div className="text-[11px] text-muted-foreground">{label}</div>
     </div>

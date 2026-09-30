@@ -31,11 +31,9 @@ export const HABIT_FREQUENCY_TYPE_LABELS: Record<HabitFrequencyType, string> = {
 
 export type HabitStatus = 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
 
-export const HABIT_STATUSES: HabitStatus[] = ['ACTIVE', 'PAUSED', 'ARCHIVED'];
 
 export type HabitLogStatus = 'COMPLETED' | 'SKIPPED' | 'MISSED' | 'PARTIAL';
 
-export const HABIT_LOG_STATUSES: HabitLogStatus[] = ['COMPLETED', 'SKIPPED', 'MISSED', 'PARTIAL'];
 
 /** Day-of-week codes for the UI only. The API uses ISO day-of-week integers (1=Monday..7=Sunday) for
  * both frequencyConfig.daysOfWeek and reminder.daysOfWeek - see DAY_CODE_TO_ISO/ISO_TO_DAY_CODE below. */

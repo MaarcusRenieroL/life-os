@@ -81,7 +81,7 @@ export function EmailEventReviewList({ jobId }: { jobId?: string }) {
   return (
     <div className="flex flex-col gap-3">
       {filtered.map((event) => (
-        <div key={event.id} className="rounded-lg border bg-card p-3 text-sm">
+        <div key={event.id} className="hud-panel p-3 text-sm">
           <div className="flex items-center justify-between gap-2">
             <span className="font-medium">{EMAIL_EVENT_TYPE_LABELS[event.detectedType]}</span>
             <Badge variant="outline" className={CONFIDENCE_TONE[event.confidence]}>{event.confidence}</Badge>

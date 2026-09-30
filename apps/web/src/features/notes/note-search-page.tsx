@@ -85,7 +85,7 @@ export function NoteSearchPage() {
           {results.content.length === 0 && <EmptyState message="No results." />}
           {results.content.map((r) => (
             <li key={r.id}>
-              <Link to={`/notes/${r.id}`} className="block rounded-lg border bg-card p-3 hover:border-primary/40">
+              <Link to={`/notes/${r.id}`} className="block hud-panel p-3 hover:border-primary/40">
                 <div className="text-sm font-semibold">{r.title}</div>
                 <p
                   className="mt-1 text-xs text-muted-foreground [&_mark]:bg-primary/25 [&_mark]:text-foreground"

@@ -5,12 +5,9 @@ import com.lifeos.workouts.service.SessionService;
 import com.lifeos.workouts.service.WorkoutStatsService;
 import java.util.Map;
 import com.lifeos.common.domains.dto.response.ApiResponse;
-import jakarta.validation.Valid;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 // Called by the Goals module (served by tasks) via the internal API key, not by end users - same

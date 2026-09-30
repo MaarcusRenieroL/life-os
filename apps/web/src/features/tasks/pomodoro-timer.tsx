@@ -98,7 +98,7 @@ export function PomodoroTimer() {
   if (isLoading) return null;
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border bg-card p-5">
+    <div className="flex flex-col items-center gap-3 hud-panel p-5">
       <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
         {active ? (active.type === 'WORK' ? 'Focusing' : 'On a break') : 'Focus timer'}
       </span>

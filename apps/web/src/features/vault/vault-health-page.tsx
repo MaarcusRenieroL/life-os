@@ -84,7 +84,7 @@ export function VaultHealthPage() {
           {health.actionRequired.map((item) => {
             const isWeak = item.issue.toLowerCase().includes('weak');
             return (
-              <li key={item.id} className="flex items-center justify-between rounded-lg border bg-card px-3 py-2 text-sm">
+              <li key={item.id} className="flex items-center justify-between hud-panel px-3 py-2 text-sm">
                 <span>
                   {item.title} — <span className={isWeak ? 'text-yellow-600' : 'text-destructive'}>{item.issue}</span>
                 </span>
@@ -98,7 +98,7 @@ export function VaultHealthPage() {
         </ul>
       </section>
 
-      <section className="mt-6 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+      <section className="mt-6 hud-panel p-4 text-sm text-muted-foreground">
         Dark web monitoring — not configured.
       </section>
     </div>
@@ -107,7 +107,7 @@ export function VaultHealthPage() {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border bg-card px-4 py-3 text-center">
+    <div className="hud-panel px-4 py-3 text-center">
       <div className="text-xl font-semibold">{value}</div>
       <div className="text-[11px] text-muted-foreground">{label}</div>
     </div>

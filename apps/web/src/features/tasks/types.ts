@@ -97,16 +97,6 @@ export interface Task {
   updatedAt: string;
 }
 
-/** Preset reminder offsets for the UI, matching the product spec's named options - "custom" is
- * just any other number of minutes, entered free-form rather than picked from this list. */
-export const REMINDER_PRESETS: { minutes: number; label: string }[] = [
-  { minutes: 0, label: 'At time' },
-  { minutes: 15, label: '15 min before' },
-  { minutes: 30, label: '30 min before' },
-  { minutes: 60, label: '1 hour before' },
-  { minutes: 1440, label: '1 day before' },
-];
-
 export interface SetRecurrenceRequest {
   pattern: TaskRecurrencePattern;
   config?: Record<string, unknown>;

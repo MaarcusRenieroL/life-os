@@ -89,7 +89,7 @@ export function NoteTemplatesPage() {
               <button
                 key={t.id}
                 onClick={() => setSelected(t)}
-                className="flex flex-col gap-1.5 rounded-lg border bg-card p-3 text-left hover:border-primary/40"
+                className="flex flex-col gap-1.5 hud-panel p-3 text-left hover:border-primary/40"
               >
                 <Icon className="size-4" style={{ color: categoryColor(t.category) }} />
                 <div className="text-sm font-semibold">{t.name}</div>
@@ -102,7 +102,7 @@ export function NoteTemplatesPage() {
         </div>
 
         {selected && (
-          <div className="rounded-lg border bg-card p-4">
+          <div className="hud-panel p-4">
             <h2 className="text-sm font-semibold">{selected.name}</h2>
             <p className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{selected.preview}</p>
             <div className="mt-3 flex gap-2">

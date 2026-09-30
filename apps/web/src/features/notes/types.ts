@@ -13,20 +13,6 @@ export type NoteType =
   | 'DECISION'
   | 'JOURNAL';
 
-export const NOTE_TYPES: NoteType[] = [
-  'GENERAL',
-  'MEETING',
-  'BOOK',
-  'LEARNING',
-  'TECHNICAL',
-  'SNIPPET',
-  'RESEARCH',
-  'CHECKLIST',
-  'TRAVEL',
-  'DECISION',
-  'JOURNAL',
-];
-
 export type NoteModuleType = 'PROJECT' | 'GOAL' | 'TASK' | 'JOB_APPLICATION' | 'HABIT' | 'EVENT';
 
 export const NOTE_MODULE_TYPES: NoteModuleType[] = [

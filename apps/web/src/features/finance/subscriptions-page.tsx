@@ -25,7 +25,7 @@ const CYCLE_LABELS = { WEEKLY: 'week', MONTHLY: 'month', QUARTERLY: 'quarter', Y
 
 function Tile({ label, value, destructive }: { label: string; value: string; destructive?: boolean }) {
   return (
-    <div className="rounded-lg border bg-card p-3 text-center">
+    <div className="hud-panel p-3 text-center">
       <div className={`text-lg font-semibold ${destructive ? 'text-destructive' : ''}`}>{value}</div>
       <div className="text-[11px] text-muted-foreground">{label}</div>
     </div>

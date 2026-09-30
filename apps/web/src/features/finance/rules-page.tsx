@@ -147,7 +147,7 @@ export function RulesPage() {
         <StatTile label="Rules" value={String(rules.length)} />
       </div>
 
-      <section className="mt-4 rounded-lg border bg-card p-4">
+      <section className="mt-4 hud-panel p-4">
         <SectionHeading>Test a pattern</SectionHeading>
         <div className="mt-2 flex gap-2">
           <Input value={testText} onChange={(e) => setTestText(e.target.value)} placeholder="e.g. SWIGGY BANGALORE" />
@@ -187,7 +187,7 @@ export function RulesPage() {
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-card p-3 text-center">
+    <div className="hud-panel p-3 text-center">
       <div className="text-lg font-semibold">{value}</div>
       <div className="text-[11px] text-muted-foreground">{label}</div>
     </div>

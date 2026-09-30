@@ -70,7 +70,7 @@ export function JobAnalyticsPage() {
         <StatTile icon={XCircle} label="Rejection rate" value={`${data.rejectionRatePct}%`} />
       </div>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Applications per week</SectionHeading>
         {weekBars.length === 0 ? (
           <EmptyState message="Not enough history yet." className="mt-2" />
@@ -91,7 +91,7 @@ export function JobAnalyticsPage() {
       </section>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <section className="rounded-lg border bg-card p-5">
+        <section className="hud-panel p-5">
           <SectionHeading>Best-performing sources</SectionHeading>
           {sourceRows.length === 0 ? (
             <EmptyState message="No source data yet." className="mt-2" />
@@ -112,7 +112,7 @@ export function JobAnalyticsPage() {
           )}
         </section>
 
-        <section className="rounded-lg border bg-card p-5">
+        <section className="hud-panel p-5">
           <SectionHeading>Most common missing skills</SectionHeading>
           {skillRows.length === 0 ? (
             <EmptyState message="No gaps detected across your jobs yet." className="mt-2" />
@@ -134,7 +134,7 @@ export function JobAnalyticsPage() {
         </section>
       </div>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Average time in each stage</SectionHeading>
         {data.averageTimeInStage.length === 0 ? (
           <EmptyState message="Not enough transitions yet." className="mt-2" />
@@ -167,7 +167,7 @@ function StatTile({
   accent?: string;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="hud-panel p-4">
       <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <Icon className="size-3.5" />
         {label}

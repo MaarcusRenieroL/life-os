@@ -129,7 +129,7 @@ export function DetectedSubscriptions({ onTracked }: { onTracked?: () => void })
 
       <ul className="mt-4 flex flex-col gap-1.5">
         {filtered.map((r) => (
-          <li key={r.id} className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5">
+          <li key={r.id} className="flex items-center gap-3 hud-panel px-3 py-2.5">
             <div className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">{r.initials}</div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">{r.merchantName}</div>
@@ -162,7 +162,7 @@ export function DetectedSubscriptions({ onTracked }: { onTracked?: () => void })
 
 function StatTile({ label, value, destructive }: { label: string; value: string; destructive?: boolean }) {
   return (
-    <div className="rounded-lg border bg-card p-3 text-center">
+    <div className="hud-panel p-3 text-center">
       <div className={`text-lg font-semibold ${destructive ? 'text-destructive' : ''}`}>{value}</div>
       <div className="text-[11px] text-muted-foreground">{label}</div>
     </div>

@@ -86,7 +86,7 @@ export function AnalyticsPage() {
         <StatTile label="Lowest month" value={lowestMonth ? `${lowestMonth.month} · ${formatINR(lowestMonth.totalSpend)}` : '—'} />
       </div>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Spending trend</SectionHeading>
         {trendBars.length === 0 ? (
           <EmptyState className="mt-2" message="Not enough history yet." />
@@ -102,7 +102,7 @@ export function AnalyticsPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Category trends</SectionHeading>
         {categoryRows.length === 0 ? (
           <EmptyState className="mt-2" message="No categorized spend yet." />
@@ -128,7 +128,7 @@ export function AnalyticsPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Top merchants</SectionHeading>
         {merchants.length === 0 ? (
           <EmptyState className="mt-2" message="No merchant data yet." />
@@ -144,7 +144,7 @@ export function AnalyticsPage() {
         )}
       </section>
 
-      <section className="mt-4 rounded-lg border bg-card p-5">
+      <section className="mt-4 hud-panel p-5">
         <SectionHeading>Insights</SectionHeading>
         {insights.length === 0 ? (
           <EmptyState className="mt-2" message="Not enough data yet for insights." />
@@ -165,7 +165,7 @@ export function AnalyticsPage() {
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="hud-panel p-4">
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className="text-lg font-semibold">{value}</div>
     </div>

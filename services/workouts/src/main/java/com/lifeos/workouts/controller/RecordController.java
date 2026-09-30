@@ -3,7 +3,6 @@ package com.lifeos.workouts.controller;
 import com.lifeos.workouts.domains.dto.response.ExerciseRecordsResponse;
 import com.lifeos.workouts.service.PersonalRecordService;
 import com.lifeos.common.domains.dto.response.ApiResponse;
-import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;

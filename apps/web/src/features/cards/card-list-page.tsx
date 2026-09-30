@@ -39,7 +39,7 @@ export function CardListPage() {
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
-          <div key={card.id} className="group relative rounded-lg border bg-card p-4">
+          <div key={card.id} className="group relative hud-panel p-4">
             <button
               className="absolute right-2 top-2 hidden text-xs text-destructive group-hover:block"
               onClick={() => void deleteCard(card.id)}
