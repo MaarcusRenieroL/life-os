@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,11 @@ const MODULE_LABELS: Record<string, string> = {
   job: 'Job Tracker',
   note: 'Notes',
 };
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+}
 
 /** The frictionless-capture entry point: one box, type anything, it figures out where it
  * belongs. Ollama classifies first (free); if that fails, this shows the same
@@ -31,6 +36,19 @@ export function QuickCaptureDialog() {
     setText('');
     setNeedsApproval(false);
   }
+
+  // "C: Quick capture" - the global shortcut from the shortcuts-help dialog's listing, same
+  // ignored-while-typing guard as tasks' "N" / calendar's "E".
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key.toLowerCase() !== 'c' || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (isTypingTarget(e.target)) return;
+      e.preventDefault();
+      setOpen(true);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   async function submit(useClaudeFallback: boolean) {
     if (!text.trim()) return;
