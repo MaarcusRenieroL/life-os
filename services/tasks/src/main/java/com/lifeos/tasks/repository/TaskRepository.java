@@ -1,6 +1,7 @@
 package com.lifeos.tasks.repository;
 
 import com.lifeos.tasks.domains.entity.Task;
+import com.lifeos.tasks.domains.enums.TaskStatus;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,4 +21,6 @@ public interface TaskRepository extends JpaRepository<Task, UUID>, JpaSpecificat
   List<Task> findAllByRecurrencePatternIsNotNullAndRecurringParentIdIsNull();
 
   List<Task> findAllByDueDateIsNotNullAndDueTimeIsNotNullAndReminderMinutesBeforeIsNotNull();
+
+  List<Task> findAllByDueDateIsNotNullAndOverdueNotifiedAtIsNullAndStatusNot(TaskStatus status);
 }

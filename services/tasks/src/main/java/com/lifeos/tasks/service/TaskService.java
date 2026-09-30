@@ -166,7 +166,10 @@ public class TaskService {
             || (request.getDueTime() != null && !request.getDueTime().equals(task.getDueTime()));
     if (request.getDueDate() != null) task.setDueDate(request.getDueDate());
     if (request.getDueTime() != null) task.setDueTime(request.getDueTime());
-    if (dueMoved) task.setRemindersSent(null);
+    if (dueMoved) {
+      task.setRemindersSent(null);
+      task.setOverdueNotifiedAt(null);
+    }
     if (request.getAllDay() != null) task.setAllDay(request.getAllDay());
     if (request.getArea() != null) task.setArea(request.getArea());
     if (request.getProjectId() != null) task.setProjectId(request.getProjectId());
@@ -201,6 +204,7 @@ public class TaskService {
     Task task = findOwned(userId, id);
     task.setStatus(TaskStatus.TODO);
     task.setCompletedAt(null);
+    task.setOverdueNotifiedAt(null);
     return toResponse(taskRepository.save(task));
   }
 
@@ -208,6 +212,7 @@ public class TaskService {
     Task task = findOwned(userId, id);
     task.setDueDate(request.getNewDueDate());
     task.setRemindersSent(null);
+    task.setOverdueNotifiedAt(null);
     return toResponse(taskRepository.save(task));
   }
 
@@ -280,6 +285,7 @@ public class TaskService {
         .recurringParentId(task.getRecurringParentId())
         .reminderMinutesBefore(task.getReminderMinutesBefore())
         .remindersSent(task.getRemindersSent())
+        .overdueNotifiedAt(task.getOverdueNotifiedAt())
         .createdAt(task.getCreatedAt())
         .updatedAt(task.getUpdatedAt())
         .build();

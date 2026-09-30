@@ -42,3 +42,6 @@ tasks:
   reminder:
     dispatch:
       cron: ${TASKS_REMINDER_DISPATCH_CRON:0 */5 * * * *}
+  overdue:
+    sweep:
+      cron: ${TASKS_OVERDUE_SWEEP_CRON:0 15 0 * * *}

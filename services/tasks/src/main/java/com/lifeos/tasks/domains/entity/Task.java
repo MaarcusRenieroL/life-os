@@ -131,6 +131,12 @@ public class Task {
   @Column(columnDefinition = "jsonb")
   List<Integer> remindersSent;
 
+  // Set the first time TaskOverdueScheduler's daily sweep fires TASK_OVERDUE for this task, so the
+  // sweep never re-notifies the same overdue task every day. Cleared whenever the task stops being
+  // overdue in a way the user caused - dueDate moves (applyUpdate/snooze) or the task is reopened
+  // from DONE - so it can fire again if it becomes overdue again.
+  Instant overdueNotifiedAt;
+
   @CreationTimestamp Instant createdAt;
 
   @UpdateTimestamp Instant updatedAt;
