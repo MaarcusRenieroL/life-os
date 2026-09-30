@@ -65,6 +65,9 @@ jobs:
       - name: Run Habit Tracker Tests
         run: cd services/habit-tracker && mvn clean test
 
+      - name: Run Tasks Tests
+        run: cd services/tasks && mvn clean test
+
   lint-and-build:
     runs-on: ubuntu-latest
 

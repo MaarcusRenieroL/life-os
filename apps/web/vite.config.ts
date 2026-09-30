@@ -70,6 +70,7 @@ export default defineConfig({
       '/v1/templates': { target: 'http://localhost:8007', changeOrigin: true },
       '/v1/habits': { target: 'http://localhost:8008', changeOrigin: true },
       '/v1/tasks': { target: 'http://localhost:8009', changeOrigin: true },
+      '/v1/goals': { target: 'http://localhost:8009', changeOrigin: true },
       '/v1/calendar': { target: 'http://localhost:8010', changeOrigin: true },
     },
   },

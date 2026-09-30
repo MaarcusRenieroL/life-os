@@ -45,3 +45,11 @@ tasks:
   overdue:
     sweep:
       cron: ${TASKS_OVERDUE_SWEEP_CRON:0 15 0 * * *}
+
+# habit-tracker feeds a goal's habit-consistency progress - see HabitStatsClient.
+habit-tracker:
+  internal-base-url: ${HABIT_TRACKER_INTERNAL_BASE_URL:http://habit-tracker:8008}
+
+goals:
+  sweep:
+    cron: ${GOALS_SWEEP_CRON:0 30 8 * * *}
