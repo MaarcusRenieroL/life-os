@@ -2,6 +2,7 @@ package com.lifeos.calendar.domains.dto.response;
 
 import com.lifeos.calendar.domains.enums.EventCategory;
 import com.lifeos.calendar.domains.enums.FreeBusy;
+import com.lifeos.calendar.domains.enums.LifeArea;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -43,7 +44,7 @@ public class EventResponse {
 
   FreeBusy freeBusy;
 
-  UUID areaId;
+  LifeArea area;
 
   UUID projectId;
 

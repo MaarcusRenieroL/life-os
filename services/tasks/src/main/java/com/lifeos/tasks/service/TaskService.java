@@ -6,6 +6,7 @@ import com.lifeos.tasks.domains.dto.request.SnoozeTaskRequest;
 import com.lifeos.tasks.domains.dto.request.UpdateTaskRequest;
 import com.lifeos.tasks.domains.dto.response.TaskResponse;
 import com.lifeos.tasks.domains.entity.Task;
+import com.lifeos.tasks.domains.enums.LifeArea;
 import com.lifeos.tasks.domains.enums.TaskPriority;
 import com.lifeos.tasks.domains.enums.TaskStatus;
 import com.lifeos.tasks.domains.enums.TaskView;
@@ -38,7 +39,7 @@ public class TaskService {
       TaskView view,
       TaskStatus status,
       TaskPriority priority,
-      UUID areaId,
+      LifeArea area,
       UUID projectId,
       UUID goalId,
       String tag,
@@ -55,7 +56,7 @@ public class TaskService {
             .filter(t -> matchesDueRange(t, dueFrom, dueTo))
             .filter(t -> status == null || t.getStatus() == status)
             .filter(t -> priority == null || t.getPriority() == priority)
-            .filter(t -> areaId == null || areaId.equals(t.getAreaId()))
+            .filter(t -> area == null || area == t.getArea())
             .filter(t -> projectId == null || projectId.equals(t.getProjectId()))
             .filter(t -> goalId == null || goalId.equals(t.getGoalId()))
             .filter(t -> tag == null || (t.getTags() != null && t.getTags().contains(tag)))
@@ -88,7 +89,7 @@ public class TaskService {
               && !task.getDueDate().isAfter(today.plusDays(upcomingDays));
       case OVERDUE -> !done && task.getDueDate() != null && task.getDueDate().isBefore(today);
       case INBOX ->
-          !done && task.getAreaId() == null && task.getProjectId() == null && task.getGoalId() == null;
+          !done && task.getArea() == null && task.getProjectId() == null && task.getGoalId() == null;
       case COMPLETED -> done;
       case PLAIN -> true;
     };
@@ -136,7 +137,7 @@ public class TaskService {
             .dueDate(request.getDueDate())
             .dueTime(request.getDueTime())
             .allDay(request.getAllDay() != null ? request.getAllDay() : request.getDueTime() == null)
-            .areaId(request.getAreaId())
+            .area(request.getArea())
             .projectId(request.getProjectId())
             .goalId(request.getGoalId())
             .parentTaskId(request.getParentTaskId())
@@ -160,7 +161,7 @@ public class TaskService {
     if (request.getDueDate() != null) task.setDueDate(request.getDueDate());
     if (request.getDueTime() != null) task.setDueTime(request.getDueTime());
     if (request.getAllDay() != null) task.setAllDay(request.getAllDay());
-    if (request.getAreaId() != null) task.setAreaId(request.getAreaId());
+    if (request.getArea() != null) task.setArea(request.getArea());
     if (request.getProjectId() != null) task.setProjectId(request.getProjectId());
     if (request.getGoalId() != null) task.setGoalId(request.getGoalId());
     if (request.getParentTaskId() != null) task.setParentTaskId(request.getParentTaskId());
@@ -210,7 +211,7 @@ public class TaskService {
             .dueDate(original.getDueDate())
             .dueTime(original.getDueTime())
             .allDay(original.getAllDay())
-            .areaId(original.getAreaId())
+            .area(original.getArea())
             .projectId(original.getProjectId())
             .goalId(original.getGoalId())
             .tags(original.getTags())
@@ -251,7 +252,7 @@ public class TaskService {
         .dueDate(task.getDueDate())
         .dueTime(task.getDueTime())
         .allDay(task.getAllDay())
-        .areaId(task.getAreaId())
+        .area(task.getArea())
         .projectId(task.getProjectId())
         .goalId(task.getGoalId())
         .parentTaskId(task.getParentTaskId())

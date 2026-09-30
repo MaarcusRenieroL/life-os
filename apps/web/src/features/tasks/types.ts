@@ -26,6 +26,33 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
  * omitted) applies no view-specific date/inbox shaping, just the explicit filters alongside it. */
 export type TaskViewName = 'PLAIN' | 'TODAY' | 'UPCOMING' | 'OVERDUE' | 'INBOX' | 'COMPLETED';
 
+/** The fixed six life categories from the product spec - a closed set, not a user-managed lookup
+ * like Project/Goal (see ./projects-goals-api.ts for those). */
+export type LifeArea = 'CAREER' | 'HEALTH' | 'FINANCE' | 'LEARNING' | 'RELATIONSHIPS' | 'PERSONAL';
+
+export const LIFE_AREAS: LifeArea[] = ['CAREER', 'HEALTH', 'FINANCE', 'LEARNING', 'RELATIONSHIPS', 'PERSONAL'];
+
+export const LIFE_AREA_LABELS: Record<LifeArea, string> = {
+  CAREER: 'Career',
+  HEALTH: 'Health',
+  FINANCE: 'Finance',
+  LEARNING: 'Learning',
+  RELATIONSHIPS: 'Relationships',
+  PERSONAL: 'Personal',
+};
+
+export interface Project {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface Goal {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -35,7 +62,7 @@ export interface Task {
   dueDate: string | null;
   dueTime: string | null;
   allDay: boolean;
-  areaId: string | null;
+  area: LifeArea | null;
   projectId: string | null;
   goalId: string | null;
   parentTaskId: string | null;
@@ -50,7 +77,7 @@ export interface TaskListFilters {
   view?: TaskViewName;
   status?: TaskStatus;
   priority?: TaskPriority;
-  areaId?: string;
+  area?: LifeArea;
   projectId?: string;
   goalId?: string;
   tag?: string;
@@ -69,7 +96,7 @@ export interface CreateTaskRequest {
   dueDate?: string | null;
   dueTime?: string | null;
   allDay?: boolean;
-  areaId?: string | null;
+  area?: LifeArea | null;
   projectId?: string | null;
   goalId?: string | null;
   parentTaskId?: string | null;

@@ -15,7 +15,8 @@ import {
 import { TaskFormDialog } from './task-form-dialog';
 import { TaskList } from './task-list';
 import { tasksApi } from './tasks-api';
-import { TASK_PRIORITIES, TASK_PRIORITY_LABELS, TASK_STATUSES, TASK_STATUS_LABELS, type Task, type TaskPriority, type TaskStatus } from './types';
+import { LIFE_AREA_LABELS, TASK_PRIORITIES, TASK_PRIORITY_LABELS, TASK_STATUSES, TASK_STATUS_LABELS, type Task, type TaskPriority, type TaskStatus } from './types';
+import { useProjectsAndGoals } from './use-projects-goals';
 
 type StatusFilter = 'ALL' | TaskStatus;
 type PriorityFilter = 'ALL' | TaskPriority;
@@ -25,12 +26,12 @@ type GroupKey = 'none' | 'area' | 'project' | 'status' | 'priority' | 'dueDate';
 const PRIORITY_ORDER: TaskPriority[] = ['URGENT', 'HIGH', 'MEDIUM', 'LOW'];
 const UNGROUPED = 'Unassigned';
 
-function groupLabel(task: Task, groupKey: GroupKey): string {
+function groupLabel(task: Task, groupKey: GroupKey, projectNameById: Map<string, string>): string {
   switch (groupKey) {
     case 'area':
-      return task.areaId ?? UNGROUPED;
+      return task.area ? LIFE_AREA_LABELS[task.area] : UNGROUPED;
     case 'project':
-      return task.projectId ?? UNGROUPED;
+      return (task.projectId && projectNameById.get(task.projectId)) ?? UNGROUPED;
     case 'status':
       return TASK_STATUS_LABELS[task.status];
     case 'priority':
@@ -76,6 +77,8 @@ export function TasksListPage() {
     queryKey: ['tasks', 'view', 'PLAIN'],
     queryFn: () => tasksApi.list(),
   });
+  const { projectOptions } = useProjectsAndGoals();
+  const projectNameById = useMemo(() => new Map(projectOptions.map((p) => [p.id, p.label])), [projectOptions]);
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('ALL');
@@ -95,7 +98,7 @@ export function TasksListPage() {
       tasks.filter((t) => {
         if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
         if (priorityFilter !== 'ALL' && t.priority !== priorityFilter) return false;
-        if (inboxOnly && (t.areaId || t.projectId || t.goalId)) return false;
+        if (inboxOnly && (t.area || t.projectId || t.goalId)) return false;
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
           const inTitle = t.title.toLowerCase().includes(q);
@@ -129,12 +132,12 @@ export function TasksListPage() {
     if (groupKey === 'none') return [[null, sorted] as const];
     const map = new Map<string, Task[]>();
     for (const task of sorted) {
-      const label = groupLabel(task, groupKey);
+      const label = groupLabel(task, groupKey, projectNameById);
       if (!map.has(label)) map.set(label, []);
       map.get(label)!.push(task);
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [sorted, groupKey]);
+  }, [sorted, groupKey, projectNameById]);
 
   function openCreate() {
     setEditing(null);

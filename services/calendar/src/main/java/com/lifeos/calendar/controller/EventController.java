@@ -4,6 +4,7 @@ import com.lifeos.calendar.domains.dto.request.CreateEventRequest;
 import com.lifeos.calendar.domains.dto.request.UpdateEventRequest;
 import com.lifeos.calendar.domains.dto.response.EventResponse;
 import com.lifeos.calendar.domains.enums.EventCategory;
+import com.lifeos.calendar.domains.enums.LifeArea;
 import com.lifeos.calendar.service.EventService;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -37,13 +38,13 @@ public class EventController {
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
       @RequestParam(required = false) EventCategory category,
-      @RequestParam(required = false) UUID areaId,
+      @RequestParam(required = false) LifeArea area,
       @RequestParam(required = false) UUID projectId,
       @RequestParam(required = false) UUID goalId,
       @RequestParam(required = false) String q) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            eventService.list(userId(authentication), from, to, category, areaId, projectId, goalId, q),
+            eventService.list(userId(authentication), from, to, category, area, projectId, goalId, q),
             "Events fetched successfully"));
   }
 

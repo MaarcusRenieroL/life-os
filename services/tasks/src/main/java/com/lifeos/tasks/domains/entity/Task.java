@@ -1,5 +1,6 @@
 package com.lifeos.tasks.domains.entity;
 
+import com.lifeos.tasks.domains.enums.LifeArea;
 import com.lifeos.tasks.domains.enums.TaskPriority;
 import com.lifeos.tasks.domains.enums.TaskStatus;
 import jakarta.persistence.Column;
@@ -59,12 +60,14 @@ public class Task {
 
   @Builder.Default Boolean allDay = true;
 
-  // No FK/relationship - stored references to rows owned by other
-  // modules/schemas, same convention as habit_tracker_schema.habits'
-  // areaId/goalId. areaId in particular has no backing table anywhere in this
-  // codebase yet (life areas are still aspirational) - it's a free UUID today.
-  UUID areaId;
+  // A closed enum (Career/Health/Finance/Learning/Relationships/Personal) - see LifeArea's
+  // javadoc. Unlike projectId/goalId below, this isn't a lookup-table reference.
+  @Enumerated(EnumType.STRING)
+  LifeArea area;
 
+  // References tasks_schema.projects/goals - real FKs now that both tables live in this same
+  // schema (see Project/Goal's javadocs), unlike calendar's own projectId/goalId, which stay bare
+  // cross-service UUIDs since calendar has no local copy of these tables.
   UUID projectId;
 
   UUID goalId;

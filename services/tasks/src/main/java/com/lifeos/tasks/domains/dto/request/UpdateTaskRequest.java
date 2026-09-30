@@ -1,5 +1,6 @@
 package com.lifeos.tasks.domains.dto.request;
 
+import com.lifeos.tasks.domains.enums.LifeArea;
 import com.lifeos.tasks.domains.enums.TaskPriority;
 import com.lifeos.tasks.domains.enums.TaskStatus;
 import java.time.LocalDate;
@@ -33,7 +34,7 @@ public class UpdateTaskRequest {
 
   Boolean allDay;
 
-  UUID areaId;
+  LifeArea area;
 
   UUID projectId;
 

@@ -6,6 +6,7 @@ import com.lifeos.tasks.domains.dto.request.CreateTaskRequest;
 import com.lifeos.tasks.domains.dto.request.SnoozeTaskRequest;
 import com.lifeos.tasks.domains.dto.request.UpdateTaskRequest;
 import com.lifeos.tasks.domains.dto.response.TaskResponse;
+import com.lifeos.tasks.domains.enums.LifeArea;
 import com.lifeos.tasks.domains.enums.TaskPriority;
 import com.lifeos.tasks.domains.enums.TaskStatus;
 import com.lifeos.tasks.domains.enums.TaskView;
@@ -41,7 +42,7 @@ public class TaskController {
       @RequestParam(required = false) TaskView view,
       @RequestParam(required = false) TaskStatus status,
       @RequestParam(required = false) TaskPriority priority,
-      @RequestParam(required = false) UUID areaId,
+      @RequestParam(required = false) LifeArea area,
       @RequestParam(required = false) UUID projectId,
       @RequestParam(required = false) UUID goalId,
       @RequestParam(required = false) String tag,
@@ -52,7 +53,7 @@ public class TaskController {
     return ResponseEntity.ok(
         ApiResponse.success(
             taskService.list(
-                userId(authentication), view, status, priority, areaId, projectId, goalId, tag, q, upcomingDays,
+                userId(authentication), view, status, priority, area, projectId, goalId, tag, q, upcomingDays,
                 dueFrom, dueTo),
             "Tasks fetched successfully"));
   }
