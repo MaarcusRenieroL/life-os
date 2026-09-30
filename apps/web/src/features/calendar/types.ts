@@ -113,6 +113,12 @@ export interface FreeSlot {
   durationMinutes: number;
 }
 
+export interface Utilization {
+  totalMinutes: number;
+  minutesByCategory: Partial<Record<EventCategory, number>>;
+  minutesByArea: Partial<Record<LifeArea, number>>;
+}
+
 export interface SetEventRecurrenceRequest {
   pattern: EventRecurrencePattern;
   config?: Record<string, unknown>;

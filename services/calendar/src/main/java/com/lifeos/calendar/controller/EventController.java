@@ -6,6 +6,7 @@ import com.lifeos.calendar.domains.dto.request.SkipOccurrenceRequest;
 import com.lifeos.calendar.domains.dto.request.UpdateEventRequest;
 import com.lifeos.calendar.domains.dto.response.EventResponse;
 import com.lifeos.calendar.domains.dto.response.FreeSlotResponse;
+import com.lifeos.calendar.domains.dto.response.UtilizationResponse;
 import com.lifeos.calendar.domains.enums.EventCategory;
 import com.lifeos.calendar.domains.enums.LifeArea;
 import com.lifeos.calendar.service.EventRecurrenceService;
@@ -65,6 +66,15 @@ public class EventController {
         ApiResponse.success(
             eventService.freeSlots(userId(authentication), date, minDurationMinutes, dayStartHour, dayEndHour),
             "Free slots computed"));
+  }
+
+  @GetMapping("/utilization")
+  public ResponseEntity<ApiResponse<UtilizationResponse>> utilization(
+      Authentication authentication,
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+    return ResponseEntity.ok(
+        ApiResponse.success(eventService.utilization(userId(authentication), from, to), "Utilization computed"));
   }
 
   @GetMapping("/{id}")

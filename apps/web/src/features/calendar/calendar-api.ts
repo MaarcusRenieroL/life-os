@@ -1,6 +1,14 @@
 import { api, unwrap } from '@/lib/api-client';
 
-import type { CalendarEvent, CreateEventRequest, EventListFilters, FreeSlot, SetEventRecurrenceRequest, UpdateEventRequest } from './types';
+import type {
+  CalendarEvent,
+  CreateEventRequest,
+  EventListFilters,
+  FreeSlot,
+  SetEventRecurrenceRequest,
+  UpdateEventRequest,
+  Utilization,
+} from './types';
 
 const baseUrl = '/v1/calendar/events';
 
@@ -14,6 +22,10 @@ export const calendarApi = {
     params: { minDurationMinutes?: number; dayStartHour?: number; dayEndHour?: number } = {},
   ): Promise<FreeSlot[]> {
     return unwrap(api.get(`${baseUrl}/free-slots`, { params: { date, ...params } }));
+  },
+
+  utilization(from: string, to: string): Promise<Utilization> {
+    return unwrap(api.get(`${baseUrl}/utilization`, { params: { from, to } }));
   },
 
   get(id: string): Promise<CalendarEvent> {

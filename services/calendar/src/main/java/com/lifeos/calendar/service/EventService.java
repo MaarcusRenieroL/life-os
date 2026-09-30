@@ -4,6 +4,7 @@ import com.lifeos.calendar.domains.dto.request.CreateEventRequest;
 import com.lifeos.calendar.domains.dto.request.UpdateEventRequest;
 import com.lifeos.calendar.domains.dto.response.EventResponse;
 import com.lifeos.calendar.domains.dto.response.FreeSlotResponse;
+import com.lifeos.calendar.domains.dto.response.UtilizationResponse;
 import com.lifeos.calendar.domains.entity.Event;
 import com.lifeos.calendar.domains.enums.EventCategory;
 import com.lifeos.calendar.domains.enums.FreeBusy;
@@ -16,7 +17,10 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -128,6 +132,40 @@ public class EventService {
     long minutes = Duration.between(start, end).toMinutes();
     if (minutes < minDurationMinutes) return;
     slots.add(FreeSlotResponse.builder().startAt(start).endAt(end).durationMinutes(minutes).build());
+  }
+
+  /** Sums BUSY, timed event duration in [from, to), clamped to the window at each end, broken
+   * down by category and (where set) area. All-day events are excluded - they have no specific
+   * duration to attribute - and FREE events are excluded for the same "doesn't count as busy"
+   * reasoning as freeSlots. Unlike freeSlots this takes an arbitrary Instant range rather than a
+   * single calendar day, since "how did I spend this week/month" is the natural question here. */
+  @Transactional(readOnly = true)
+  public UtilizationResponse utilization(UUID userId, Instant from, Instant to) {
+    Map<EventCategory, Long> byCategory = new EnumMap<>(EventCategory.class);
+    Map<LifeArea, Long> byArea = new HashMap<>();
+    long totalMinutes = 0;
+
+    for (Event event : eventRepository.findAllByUserId(userId)) {
+      if (Boolean.TRUE.equals(event.getAllDay())) continue;
+      if (event.getFreeBusy() != FreeBusy.BUSY) continue;
+      if (event.getStartAt() == null || event.getEndAt() == null) continue;
+      if (!overlapsRange(event, from, to)) continue;
+
+      Instant start = event.getStartAt().isBefore(from) ? from : event.getStartAt();
+      Instant end = event.getEndAt().isAfter(to) ? to : event.getEndAt();
+      long minutes = Duration.between(start, end).toMinutes();
+      if (minutes <= 0) continue;
+
+      totalMinutes += minutes;
+      byCategory.merge(event.getCategory(), minutes, Long::sum);
+      if (event.getArea() != null) byArea.merge(event.getArea(), minutes, Long::sum);
+    }
+
+    return UtilizationResponse.builder()
+        .totalMinutes(totalMinutes)
+        .minutesByCategory(byCategory)
+        .minutesByArea(byArea)
+        .build();
   }
 
   @Transactional(readOnly = true)
