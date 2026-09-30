@@ -148,9 +148,15 @@ export function InterviewTrackingSection({ jobId, company }: { jobId: string; co
                     <Button size="sm" variant="ghost" onClick={() => openEdit(interview)}>
                       Edit
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => void addToCalendar(interview)}>
-                      Add to calendar
-                    </Button>
+                    {/* The backend already auto-creates a linked event whenever scheduledAt is
+                     * set (see InterviewCalendarSyncService) - only offer this as a manual
+                     * fallback when that link doesn't exist yet, so it can't create a second,
+                     * duplicate, unlinked event alongside the real one. */}
+                    {!interview.calendarEventId && (
+                      <Button size="sm" variant="ghost" onClick={() => void addToCalendar(interview)}>
+                        Add to calendar
+                      </Button>
+                    )}
                     <Button size="sm" variant="ghost" onClick={() => void remove(interview)}>
                       Delete
                     </Button>

@@ -9,6 +9,7 @@ import com.lifeos.calendar.domains.entity.Event;
 import com.lifeos.calendar.domains.enums.EventCategory;
 import com.lifeos.calendar.domains.enums.FreeBusy;
 import com.lifeos.calendar.domains.enums.LifeArea;
+import com.lifeos.calendar.exception.InvalidRequestException;
 import com.lifeos.calendar.exception.ResourceNotFoundException;
 import com.lifeos.calendar.repository.EventRepository;
 import java.time.Duration;
@@ -224,6 +225,7 @@ public class EventService {
             .reminderMinutesBefore(Boolean.TRUE.equals(request.getAllDay()) ? null : request.getReminderMinutesBefore())
             .build();
 
+    validateTimeFields(event);
     return toResponse(eventRepository.save(event));
   }
 
@@ -253,7 +255,24 @@ public class EventService {
       event.setRemindersSent(null);
     }
 
+    validateTimeFields(event);
     return toResponse(eventRepository.save(event));
+  }
+
+  /** A timed event (allDay=false) must have both startAt and endAt; an all-day event must have a
+   * startDate. Enforced here, at the one place every create/update path converges, rather than
+   * only where the resulting bad state happens to be read - a client flipping allDay without
+   * supplying the other half's fields (e.g. PUT {"allDay":false} alone) used to leave a timed
+   * event with a null startAt, which crashed EventRecurrenceService's basisDate() with an NPE the
+   * moment such an event was or became a recurring definition. */
+  private void validateTimeFields(Event event) {
+    if (Boolean.TRUE.equals(event.getAllDay())) {
+      if (event.getStartDate() == null) {
+        throw new InvalidRequestException("An all-day event needs a startDate.");
+      }
+    } else if (event.getStartAt() == null || event.getEndAt() == null) {
+      throw new InvalidRequestException("A timed event needs both startAt and endAt.");
+    }
   }
 
   public void delete(UUID userId, UUID id) {

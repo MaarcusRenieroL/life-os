@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class EventRecurrenceService {
 
+  private static final Logger log = LoggerFactory.getLogger(EventRecurrenceService.class);
   private static final int GENERATION_HORIZON_DAYS = 30;
   private static final ZoneId ZONE = ZoneId.systemDefault();
 
@@ -43,6 +46,13 @@ public class EventRecurrenceService {
     Event event = eventService.findOwned(userId, eventId);
     if (event.getRecurringParentId() != null) {
       throw new InvalidRequestException("Cannot make a generated occurrence itself recurring.");
+    }
+    // basisDate() (used throughout generation) requires startDate for an all-day event or
+    // startAt for a timed one - reject up front rather than NPEing during the nightly sweep.
+    // EventService.validateTimeFields already guarantees a well-formed event never gets INTO this
+    // state going forward, but this still guards any row created before that fix.
+    if (Boolean.TRUE.equals(event.getAllDay()) ? event.getStartDate() == null : event.getStartAt() == null) {
+      throw new InvalidRequestException("Set a start date/time before making this event recurring.");
     }
     validateConfig(request.getPattern(), request.getConfig());
 
@@ -118,7 +128,14 @@ public class EventRecurrenceService {
     LocalDate horizon = LocalDate.now().plusDays(GENERATION_HORIZON_DAYS);
     for (Event definition : eventRepository.findAllByRecurrencePatternIsNotNullAndRecurringParentIdIsNull()) {
       if (Boolean.TRUE.equals(definition.getRecurrencePaused())) continue;
-      generateOccurrences(definition, horizon);
+      // Isolate each definition: one malformed row (or any other unexpected failure) must not
+      // abort generation - and roll back everything already generated earlier in this same
+      // pass - for every other user's recurring events tonight.
+      try {
+        generateOccurrences(definition, horizon);
+      } catch (Exception exception) {
+        log.warn("Recurrence generation failed for event definition {}, skipping it ({})", definition.getId(), exception.getMessage());
+      }
     }
   }
 
@@ -128,7 +145,11 @@ public class EventRecurrenceService {
 
   private void generateOccurrences(Event definition, LocalDate horizon) {
     LocalDate basis = basisDate(definition);
+    // Clamp to today - see TaskRecurrenceService's identical comment: a definition anchored long
+    // in the past must not backfill every historical date between then and now.
     LocalDate cursor = basis.plusDays(1);
+    LocalDate today = LocalDate.now();
+    if (cursor.isBefore(today)) cursor = today;
     LocalDate endDate = definition.getRecurrenceEndDate();
     LocalDate effectiveHorizon = endDate != null && endDate.isBefore(horizon) ? endDate : horizon;
     if (cursor.isAfter(effectiveHorizon)) return;
@@ -203,7 +224,8 @@ public class EventRecurrenceService {
             .area(definition.getArea())
             .projectId(definition.getProjectId())
             .goalId(definition.getGoalId())
-            .recurringParentId(definition.getId());
+            .recurringParentId(definition.getId())
+            .reminderMinutesBefore(definition.getReminderMinutesBefore());
 
     if (Boolean.TRUE.equals(definition.getAllDay())) {
       long durationDays =

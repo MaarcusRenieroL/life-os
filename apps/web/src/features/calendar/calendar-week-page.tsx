@@ -112,13 +112,17 @@ export function CalendarWeekPage() {
        * independently and drifting out of alignment. */}
       <div className="mt-4 overflow-x-auto">
         <div style={{ minWidth: `calc(4rem + ${days.length} * ${MIN_COLUMN_PX}px)` }}>
-          <div className="grid gap-2" style={{ gridTemplateColumns: `4rem repeat(${days.length}, minmax(${MIN_COLUMN_PX}px, 1fr))` }}>
+          {/* No gap here - it must use the exact same box model as CalendarTimeGrid's own grids
+           * (which have no gap) so their columns land on identical pixel boundaries. Visual
+           * spacing between columns comes from padding on each cell instead, which doesn't
+           * affect track sizing the way a grid `gap` does. */}
+          <div className="grid" style={{ gridTemplateColumns: `4rem repeat(${days.length}, minmax(${MIN_COLUMN_PX}px, 1fr))` }}>
             <div />
             {days.map((day) => {
               const key = format(day, 'yyyy-MM-dd');
               const dayTasks = tasksByDay.get(key) ?? [];
               return (
-                <div key={key} className="flex flex-col gap-1">
+                <div key={key} className="flex flex-col gap-1 px-1">
                   <div className="flex items-center justify-between text-xs font-medium">
                     <span>{format(day, 'EEE d')}</span>
                     <button className="text-muted-foreground hover:text-foreground" onClick={() => openCreate(key)}>

@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class TaskRecurrenceService {
 
+  private static final Logger log = LoggerFactory.getLogger(TaskRecurrenceService.class);
   private static final int GENERATION_HORIZON_DAYS = 30;
 
   private final TaskRepository taskRepository;
@@ -131,7 +134,12 @@ public class TaskRecurrenceService {
     LocalDate horizon = LocalDate.now().plusDays(GENERATION_HORIZON_DAYS);
     for (Task definition : taskRepository.findAllByRecurrencePatternIsNotNullAndRecurringParentIdIsNull()) {
       if (Boolean.TRUE.equals(definition.getRecurrencePaused())) continue;
-      generateOccurrences(definition, horizon);
+      // Isolate each definition - see EventRecurrenceService's identical guard.
+      try {
+        generateOccurrences(definition, horizon);
+      } catch (Exception exception) {
+        log.warn("Recurrence generation failed for task definition {}, skipping it ({})", definition.getId(), exception.getMessage());
+      }
     }
   }
 
@@ -140,7 +148,14 @@ public class TaskRecurrenceService {
   }
 
   private void generateOccurrences(Task definition, LocalDate horizon) {
+    // Clamp the start to today: a definition due long in the past (e.g. recurrence enabled on an
+    // old task) must not backfill every historical date between its dueDate and now - that would
+    // create hundreds of already-overdue occurrences in one shot. Only today-forward occurrences
+    // are ever generated; the definition's own dueDate remains "the first occurrence" for display
+    // purposes even if generation itself never materializes a past date.
     LocalDate cursor = definition.getDueDate().plusDays(1);
+    LocalDate today = LocalDate.now();
+    if (cursor.isBefore(today)) cursor = today;
     LocalDate endDate = definition.getRecurrenceEndDate();
     LocalDate effectiveHorizon = endDate != null && endDate.isBefore(horizon) ? endDate : horizon;
     if (cursor.isAfter(effectiveHorizon)) return;
@@ -209,6 +224,7 @@ public class TaskRecurrenceService {
         .tags(definition.getTags())
         .estimateMinutes(definition.getEstimateMinutes())
         .recurringParentId(definition.getId())
+        .reminderMinutesBefore(definition.getReminderMinutesBefore())
         .build();
   }
 
