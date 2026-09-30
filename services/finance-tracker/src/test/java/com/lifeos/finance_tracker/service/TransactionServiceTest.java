@@ -88,6 +88,37 @@ class TransactionServiceTest {
   }
 
   @Test
+  void subscriptionChargeIsBookedAsARecurringDebitWithItsSourceReferenceAndCategory() {
+    Account acct = account(true, false);
+    UUID categoryId = UUID.randomUUID();
+    when(transactionRepository.existsBySourceReference("subscription:x:2026-09-30")).thenReturn(false);
+    when(accountRepository.findByIdAndUserId(acct.getId(), userId)).thenReturn(Optional.of(acct));
+
+    Optional<Transaction> booked =
+        transactionService.createSubscriptionCharge(userId, acct.getId(), java.time.Instant.now(), "Netflix", new BigDecimal("649"), categoryId, "subscription:x:2026-09-30");
+
+    assertThat(booked).isPresent();
+    Transaction t = booked.get();
+    assertThat(t.getType()).isEqualTo(TransactionType.DEBIT);
+    assertThat(t.isRecurring()).isTrue();
+    assertThat(t.getSourceReference()).isEqualTo("subscription:x:2026-09-30");
+    assertThat(t.getCategoryId()).isEqualTo(categoryId);
+    assertThat(t.isCategoryManuallySet()).isTrue();
+    verify(categorizationService, never()).categorize(any(Transaction.class));
+  }
+
+  @Test
+  void subscriptionChargeIsSkippedWhenThatBillingWasAlreadyBooked() {
+    when(transactionRepository.existsBySourceReference("subscription:x:2026-09-30")).thenReturn(true);
+
+    Optional<Transaction> booked =
+        transactionService.createSubscriptionCharge(userId, UUID.randomUUID(), java.time.Instant.now(), "Netflix", BigDecimal.TEN, null, "subscription:x:2026-09-30");
+
+    assertThat(booked).isEmpty();
+    verify(transactionRepository, never()).save(any());
+  }
+
+  @Test
   void quickCaptureFailsClearlyWhenUserHasNoAccounts() {
     when(accountRepository.findAllByUserId(userId)).thenReturn(List.of());
 

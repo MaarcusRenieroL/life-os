@@ -258,6 +258,30 @@ public class TransactionService {
       SourceType sourceType,
       TransactionStatus status,
       boolean isReconciled) {
+    return createAndPersist(
+        account, userId, transactionDate, description, amount, type, notes, receiptUrl, sourceType, status,
+        isReconciled, false, null, null);
+  }
+
+  /** The full form - `recurring`, `sourceReference` (the unique dedup key, see
+   * idx_transactions_source_reference) and `forcedCategoryId` (used instead of auto-categorizing,
+   * and marked manually set so a later re-categorization pass leaves it alone) are only supplied
+   * by callers that know more than a plain manual entry does, i.e. subscription billing. */
+  private Transaction createAndPersist(
+      Account account,
+      UUID userId,
+      Instant transactionDate,
+      String description,
+      BigDecimal amount,
+      TransactionType type,
+      String notes,
+      String receiptUrl,
+      SourceType sourceType,
+      TransactionStatus status,
+      boolean isReconciled,
+      boolean recurring,
+      String sourceReference,
+      UUID forcedCategoryId) {
     Transaction transaction =
         Transaction.builder()
             .accountId(account.getId())
@@ -268,21 +292,75 @@ public class TransactionService {
             .type(type)
             .notes(notes)
             .receiptUrl(receiptUrl)
-            .isRecurring(false)
+            .isRecurring(recurring)
             .sourceType(sourceType)
+            .sourceReference(sourceReference)
             .isReconciled(isReconciled)
             .isDuplicate(false)
             .status(status)
             .importedAt(Instant.now())
             .build();
 
-    categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
+    if (forcedCategoryId != null) {
+      transaction.setCategoryId(forcedCategoryId);
+      transaction.setCategoryManuallySet(true);
+    } else {
+      categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
+    }
 
     applyToBalance(account, transaction.getAmount(), transaction.getType());
     merchantService.recordTransaction(userId, transaction.getDescription(), transaction.getAmount());
     recordBudgetSpendIfExpense(transaction);
 
     return transactionRepository.save(transaction);
+  }
+
+  /**
+   * Books one billing of a subscription as an expense, through the same balance/merchant/budget
+   * pipeline as a manual entry. Idempotent per {@code sourceReference} (subscription id + billing
+   * date): returns empty if that billing was already booked, so a re-run of the billing job - or
+   * a manual "charge now" racing the scheduler - can never double-book a cycle.
+   */
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
+  public java.util.Optional<Transaction> createSubscriptionCharge(
+      UUID userId,
+      UUID accountId,
+      Instant transactionDate,
+      String description,
+      BigDecimal amount,
+      UUID categoryId,
+      String sourceReference) {
+    if (transactionRepository.existsBySourceReference(sourceReference)) {
+      return java.util.Optional.empty();
+    }
+
+    Account account =
+        accountRepository
+            .findByIdAndUserId(accountId, userId)
+            .orElseThrow(() -> new AccountNotFoundException(accountId));
+
+    return java.util.Optional.of(
+        createAndPersist(
+            account,
+            userId,
+            transactionDate,
+            description,
+            amount,
+            TransactionType.DEBIT,
+            null,
+            null,
+            SourceType.API,
+            TransactionStatus.ACTIVE,
+            false,
+            true,
+            sourceReference,
+            categoryId));
   }
 
   @Caching(
