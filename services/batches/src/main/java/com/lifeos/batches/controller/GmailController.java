@@ -1,6 +1,7 @@
 package com.lifeos.batches.controller;
 
 import com.lifeos.batches.domains.record.GmailConnectionStatus;
+import com.lifeos.batches.service.EmailHubSyncService;
 import com.lifeos.batches.service.GmailOAuthService;
 import com.lifeos.batches.service.GmailSyncService;
 import com.lifeos.batches.service.JobEmailSyncService;
@@ -24,6 +25,7 @@ public class GmailController {
   private final GmailOAuthService gmailOAuthService;
   private final GmailSyncService gmailSyncService;
   private final JobEmailSyncService jobEmailSyncService;
+  private final EmailHubSyncService emailHubSyncService;
 
   @GetMapping("/status")
   public ResponseEntity<ApiResponse<GmailConnectionStatus>> status() {
@@ -65,6 +67,14 @@ public class GmailController {
     int processed = jobEmailSyncService.syncRecent();
 
     return ResponseEntity.ok(ApiResponse.success(processed, processed + " job emails queued"));
+  }
+
+  // The last three days of inbox mail, on demand - what the email inbox's "Check now" button calls.
+  @PostMapping("/hub/sync-recent")
+  public ResponseEntity<ApiResponse<Integer>> syncRecentHub() throws IOException {
+    int queued = emailHubSyncService.syncRecent();
+
+    return ResponseEntity.ok(ApiResponse.success(queued, queued + " emails queued"));
   }
 
   // Same idea as /sync-all above, for the job-tracking email pipeline instead of bank alerts.

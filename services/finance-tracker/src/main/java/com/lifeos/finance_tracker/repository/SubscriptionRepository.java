@@ -13,6 +13,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
 
   Optional<Subscription> findByIdAndUserId(UUID id, UUID userId);
 
+  Optional<Subscription> findFirstByUserIdAndNameIgnoreCase(UUID userId, String name);
+
   // The scheduled jobs sweep every user's subscriptions, not one user's.
   List<Subscription> findAllByStatus(SubscriptionStatus status);
 }

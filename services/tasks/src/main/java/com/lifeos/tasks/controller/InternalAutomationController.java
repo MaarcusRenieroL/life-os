@@ -17,6 +17,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,6 +48,13 @@ public class InternalAutomationController {
     CreateTaskRequest request = objectMapper.convertValue(body, CreateTaskRequest.class);
     if (request.getTitle() == null || request.getTitle().isBlank()) throw new InvalidRequestException("title is required");
     return ResponseEntity.ok(ApiResponse.success(taskService.create(userId, request), "Task created"));
+  }
+
+  /** Removes a task an automation or the email hub created - lets the candidate undo it. */
+  @DeleteMapping("/tasks/{id}")
+  public ResponseEntity<ApiResponse<Void>> deleteTask(@RequestParam UUID userId, @PathVariable UUID id) {
+    taskService.delete(userId, id);
+    return ResponseEntity.ok(ApiResponse.success(null, "Task deleted"));
   }
 
   @PutMapping("/tasks/{id}/status")

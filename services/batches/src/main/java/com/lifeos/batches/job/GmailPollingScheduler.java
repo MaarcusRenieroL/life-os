@@ -1,5 +1,6 @@
 package com.lifeos.batches.job;
 
+import com.lifeos.batches.service.EmailHubSyncService;
 import com.lifeos.batches.service.GmailSyncService;
 import com.lifeos.batches.service.JobEmailSyncService;
 import com.lifeos.common.events.NotificationEventPublisher;
@@ -20,6 +21,7 @@ public class GmailPollingScheduler {
 
   private final GmailSyncService gmailSyncService;
   private final JobEmailSyncService jobEmailSyncService;
+  private final EmailHubSyncService emailHubSyncService;
   private final NotificationEventPublisher notificationEventPublisher;
 
   @Value("${owner.user-id}")
@@ -49,6 +51,17 @@ public class GmailPollingScheduler {
           NotificationEventType.GMAIL_SYNC_FAILED,
           "Job email sync failed",
           "The scheduled job-email Gmail sync failed to run: " + e.getMessage());
+    }
+
+    try {
+      emailHubSyncService.syncRecent();
+    } catch (Exception e) {
+      log.error("Inbox (email hub) Gmail sync failed outright: {}", e.getMessage(), e);
+      notificationEventPublisher.publish(
+          userId,
+          NotificationEventType.GMAIL_SYNC_FAILED,
+          "Inbox sync failed",
+          "The scheduled inbox sync failed to run: " + e.getMessage());
     }
   }
 }
