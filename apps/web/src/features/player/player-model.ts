@@ -24,16 +24,55 @@ export type DayActivity = Pick<TrendPoint, 'date' | 'tasksCompleted' | 'habitPct
 
 export function dayXp(day: DayActivity): number {
   const habits = day.habitPct == null ? 0 : Math.round((Math.min(100, Math.max(0, day.habitPct)) / 100) * XP_PER.habitDay);
+  const challenge = challengeDone(challengeFor(day.date), day) ? CHALLENGE_BONUS : 0;
   return (
     day.tasksCompleted * XP_PER.task +
     day.workouts * XP_PER.workout +
     habits +
-    (day.mood == null ? 0 : XP_PER.reflection)
+    (day.mood == null ? 0 : XP_PER.reflection) +
+    challenge
   );
 }
 
 export function totalXp(days: DayActivity[]): number {
   return days.reduce((sum, day) => sum + dayXp(day), 0);
+}
+
+// -- Daily challenge --------------------------------------------------------
+
+export const CHALLENGE_BONUS = 50;
+
+export interface Challenge {
+  id: 'tasks3' | 'habits' | 'move' | 'reflect' | 'tasks5';
+  title: string;
+  hint: string;
+  /** How far along a day is, as [value, target]. */
+  progress: (day: DayActivity) => [number, number];
+}
+
+const CHALLENGES: Challenge[] = [
+  { id: 'tasks3', title: 'Clear 3 tasks', hint: 'Three quests down before bed.', progress: (d) => [d.tasksCompleted, 3] },
+  { id: 'habits', title: 'Keep every habit', hint: 'Every scheduled habit, no skips.', progress: (d) => [d.habitPct === 100 ? 1 : 0, 1] },
+  { id: 'move', title: 'Log a workout', hint: 'Any session counts.', progress: (d) => [d.workouts, 1] },
+  { id: 'reflect', title: 'Check in with yourself', hint: 'Log your mood or a journal entry.', progress: (d) => [d.mood == null ? 0 : 1, 1] },
+  { id: 'tasks5', title: 'Clear 5 tasks', hint: 'A big day. Five quests.', progress: (d) => [d.tasksCompleted, 5] },
+];
+
+/** Whole days since 1970 for a YYYY-MM-DD, so the rotation is the same on every device. */
+function dayNumber(date: string): number {
+  const [y, m, d] = date.split('-').map(Number);
+  return Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
+}
+
+/** The day's challenge. Deterministic, so past days can be scored retroactively like everything else. */
+export function challengeFor(date: string): Challenge {
+  const n = dayNumber(date);
+  return CHALLENGES[Number.isNaN(n) ? 0 : ((n % CHALLENGES.length) + CHALLENGES.length) % CHALLENGES.length];
+}
+
+export function challengeDone(challenge: Challenge, day: DayActivity): boolean {
+  const [value, target] = challenge.progress(day);
+  return value >= target;
 }
 
 // -- Levels -----------------------------------------------------------------
@@ -228,4 +267,120 @@ export function groupQuests(quests: Quest[]): Record<QuestTier, Quest[]> {
   // Most rewarding first within a tier, so the best move is always at the top.
   for (const tier of Object.keys(groups) as QuestTier[]) groups[tier].sort((a, b) => b.xp - a.xp);
   return groups;
+}
+
+// -- Lifetime stats & achievements ------------------------------------------
+
+export interface LifetimeStats {
+  tasks: number;
+  workouts: number;
+  perfectHabitDays: number;
+  reflectionDays: number;
+  activeDays: number;
+  challengesWon: number;
+  bestStreak: number;
+  level: number;
+}
+
+export function lifetimeStats(days: DayActivity[], today: string, level: number): LifetimeStats {
+  return {
+    tasks: days.reduce((n, d) => n + d.tasksCompleted, 0),
+    workouts: days.reduce((n, d) => n + d.workouts, 0),
+    perfectHabitDays: days.filter((d) => d.habitPct === 100).length,
+    reflectionDays: days.filter((d) => d.mood != null).length,
+    activeDays: days.filter((d) => dayXp(d) > 0).length,
+    challengesWon: days.filter((d) => challengeDone(challengeFor(d.date), d)).length,
+    bestStreak: streakOf(days, today).longest,
+    level,
+  };
+}
+
+export interface AchievementDef {
+  id: string;
+  name: string;
+  blurb: string;
+  unit: string;
+  /** Thresholds for Bronze, Silver, Gold (and Platinum when there is a fourth). */
+  tiers: number[];
+  value: (s: LifetimeStats) => number;
+}
+
+export const TIER_NAMES = ['Bronze', 'Silver', 'Gold', 'Platinum'] as const;
+
+export const ACHIEVEMENTS: AchievementDef[] = [
+  { id: 'tasks', name: 'Task Slayer', blurb: 'Tasks completed', unit: 'tasks', tiers: [10, 50, 250, 1000], value: (s) => s.tasks },
+  { id: 'workouts', name: 'Iron Pilgrim', blurb: 'Workouts logged', unit: 'workouts', tiers: [5, 25, 100], value: (s) => s.workouts },
+  { id: 'streak', name: 'Unbroken', blurb: 'Longest daily streak', unit: 'days', tiers: [3, 7, 30, 100], value: (s) => s.bestStreak },
+  { id: 'habits', name: 'Creature of Habit', blurb: 'Days with every habit kept', unit: 'days', tiers: [5, 20, 60], value: (s) => s.perfectHabitDays },
+  { id: 'reflect', name: 'Inner Compass', blurb: 'Days you checked in with yourself', unit: 'days', tiers: [5, 20, 60], value: (s) => s.reflectionDays },
+  { id: 'challenge', name: 'Challenger', blurb: 'Daily challenges won', unit: 'wins', tiers: [5, 20, 60], value: (s) => s.challengesWon },
+  { id: 'regular', name: 'Regular', blurb: 'Days you earned XP', unit: 'days', tiers: [10, 50, 200], value: (s) => s.activeDays },
+  { id: 'level', name: 'Ascendant', blurb: 'Player level', unit: 'level', tiers: [5, 10, 20, 30], value: (s) => s.level },
+];
+
+export interface AchievementState {
+  def: AchievementDef;
+  value: number;
+  /** 0 = locked, 1 = Bronze... */
+  tier: number;
+  /** The next threshold, or null once every tier is earned. */
+  next: number | null;
+  /** Progress from the previous threshold toward the next, 0-100 (100 when maxed). */
+  pct: number;
+}
+
+export function evaluateAchievements(stats: LifetimeStats): AchievementState[] {
+  return ACHIEVEMENTS.map((def) => {
+    const value = def.value(stats);
+    const tier = def.tiers.filter((t) => value >= t).length;
+    const next = tier < def.tiers.length ? def.tiers[tier] : null;
+    const floor = tier === 0 ? 0 : def.tiers[tier - 1];
+    const pct = next == null ? 100 : Math.min(100, Math.round(((value - floor) / (next - floor)) * 100));
+    return { def, value, tier, next, pct };
+  });
+}
+
+/** Medals earned since `seen` (id -> tier last acknowledged). */
+export function newlyUnlocked(seen: Record<string, number>, now: AchievementState[]): { id: string; name: string; tier: number }[] {
+  return now.filter((a) => a.tier > (seen[a.def.id] ?? 0)).map((a) => ({ id: a.def.id, name: a.def.name, tier: a.tier }));
+}
+
+// -- Activity heatmap -------------------------------------------------------
+
+export interface HeatCell {
+  date: string;
+  xp: number;
+  /** 0 = nothing, 4 = a huge day. */
+  intensity: 0 | 1 | 2 | 3 | 4;
+  future: boolean;
+}
+
+export function intensityOf(xp: number): HeatCell['intensity'] {
+  if (xp <= 0) return 0;
+  if (xp < 50) return 1;
+  if (xp < 100) return 2;
+  if (xp < 200) return 3;
+  return 4;
+}
+
+/**
+ * `weeks` columns of 7 days (Monday first), ending with the week that contains `today`. Days after
+ * today are padded and marked `future` so the last column lines up.
+ */
+export function activityGrid(days: DayActivity[], today: string, weeks = 12): HeatCell[][] {
+  const xpByDate = new Map(days.map((d) => [d.date, dayXp(d)]));
+  const weekday = (new Date(`${today}T12:00:00`).getDay() + 6) % 7; // Mon = 0
+  const lastMonday = shiftDay(today, -weekday);
+  const firstMonday = shiftDay(lastMonday, -7 * (weeks - 1));
+  const grid: HeatCell[][] = [];
+  for (let w = 0; w < weeks; w++) {
+    const column: HeatCell[] = [];
+    for (let d = 0; d < 7; d++) {
+      const date = shiftDay(firstMonday, w * 7 + d);
+      const xp = xpByDate.get(date) ?? 0;
+      column.push({ date, xp, intensity: intensityOf(xp), future: date > today });
+    }
+    grid.push(column);
+  }
+  return grid;
 }

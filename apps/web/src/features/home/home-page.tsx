@@ -52,6 +52,7 @@ export function HomePage() {
     '/finance': balance == null ? 'loading…' : `${formatINR(balance)} balance`,
     '/habits': player.streak.current > 0 ? `${player.streak.current}-day streak` : 'start a streak',
     '/email': emailPending > 0 ? `${emailPending} awaiting your OK` : 'inbox is read',
+    '/achievements': `${player.achievements.reduce((n, a) => n + a.tier, 0)} medals earned`,
   };
   const portalAlerts: Record<string, number> = {
     '/vault': vaultAttention,
@@ -85,6 +86,9 @@ export function HomePage() {
       activity={(auditPage?.content ?? []).map((e) => ({ id: e.eventId, text: e.description, at: e.occurredAt }))}
       attention={attention}
       aiCostUsd={aiUsage?.costThisMonthUsd}
+      challenge={{ challenge: player.challenge, done: player.challengeDone, progress: player.challengeProgress }}
+      achievements={player.achievements}
+      heatmap={player.heatmap}
     />
   );
 }

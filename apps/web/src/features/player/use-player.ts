@@ -3,7 +3,21 @@ import { useMemo } from 'react';
 
 import { analyticsApi } from '@/features/analytics/analytics-api';
 
-import { attributesFrom, dayKey, dayXp, levelFor, rankFor, streakOf, totalXp, type DayActivity } from './player-model';
+import {
+  activityGrid,
+  attributesFrom,
+  challengeDone,
+  challengeFor,
+  dayKey,
+  dayXp,
+  evaluateAchievements,
+  levelFor,
+  lifetimeStats,
+  rankFor,
+  streakOf,
+  totalXp,
+  type DayActivity,
+} from './player-model';
 
 /** A year of days: the window "lifetime" XP is measured over. */
 const WINDOW_DAYS = 365;
@@ -33,6 +47,9 @@ export function usePlayer() {
     const today = dayKey(new Date());
     const progress = levelFor(totalXp(days));
     const earnedToday = days.filter((d) => d.date === today).reduce((sum, d) => sum + dayXp(d), 0);
+    const todayActivity: DayActivity = days.find((d) => d.date === today) ?? { date: today, tasksCompleted: 0, habitPct: null, workouts: 0, mood: null };
+    const challenge = challengeFor(today);
+    const achievements = evaluateAchievements(lifetimeStats(days, today, progress.level));
     return {
       loading: trends.isLoading || dashboard.isLoading,
       /** True once at least one call has answered; false means the HUD has nothing real to show. */
@@ -44,6 +61,11 @@ export function usePlayer() {
       today: dashboard.data?.today,
       week: dashboard.data?.week,
       earnedToday,
+      challenge,
+      challengeDone: challengeDone(challenge, todayActivity),
+      challengeProgress: challenge.progress(todayActivity),
+      achievements,
+      heatmap: activityGrid(days, today, 14),
       insights: dashboard.data?.insights ?? [],
       anomalies: dashboard.data?.anomalies ?? [],
     };

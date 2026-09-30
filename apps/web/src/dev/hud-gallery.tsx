@@ -1,4 +1,5 @@
-import { attributesFrom, levelFor, rankFor, toQuests } from '@/features/player/player-model';
+import { activityGrid, attributesFrom, challengeDone, challengeFor, dayKey, evaluateAchievements, levelFor, lifetimeStats, rankFor, shiftDay, toQuests, type DayActivity } from '@/features/player/player-model';
+import { TrophyRoomView } from '@/features/player/trophy-room-view';
 import type { PeriodSummary } from '@/features/analytics/types';
 import type { TodayItem } from '@/features/core/core-api';
 import { HomeView } from '@/features/player/home-view';
@@ -31,6 +32,18 @@ const week = {
   ],
 } as unknown as PeriodSummary;
 
+// Ninety deterministic days of plausible activity, so the heatmap and medals have something to show.
+const today = dayKey(new Date());
+const days: DayActivity[] = Array.from({ length: 90 }, (_, i) => {
+  const date = shiftDay(today, -(89 - i));
+  const r = (i * 7919) % 11;
+  return { date, tasksCompleted: r < 2 ? 0 : (r % 6) + 1, habitPct: r % 4 === 0 ? 100 : r * 9, workouts: r % 5 === 0 ? 1 : 0, mood: r % 3 === 0 ? 4 : null };
+});
+const level = levelFor(9_640).level;
+const achievements = evaluateAchievements(lifetimeStats(days, today, level));
+const challenge = challengeFor(today);
+const todayActivity = days[days.length - 1];
+
 export function HudGallery() {
   const progress = levelFor(9_640);
   const quests = toQuests(items);
@@ -38,8 +51,10 @@ export function HudGallery() {
 
   return (
     <div className="dark hud-bg min-h-screen bg-background p-6 text-foreground">
-      {view === 'today' ? (
-        <TodayView quests={quests} loading={false} cleared={new Set(['tasks:task_due:t2'])} pendingKey={null} onComplete={() => {}} clearedToday={6} xpToday={145} />
+      {view === 'trophies' ? (
+        <TrophyRoomView achievements={achievements} />
+      ) : view === 'today' ? (
+        <TodayView quests={quests} loading={false} cleared={new Set(['tasks:task_due:t2'])} pendingKey={null} onComplete={() => {}} clearedToday={6} xpToday={145} challenge={{ challenge, done: false, progress: challenge.progress(todayActivity) }} combo={3} />
       ) : (
         <HomeView
           name="Maarcus"
@@ -64,6 +79,9 @@ export function HudGallery() {
             { title: '2 email actions waiting for your OK', meta: 'email', link: '/email' },
           ]}
           aiCostUsd={1.42}
+          challenge={{ challenge, done: challengeDone(challenge, todayActivity), progress: challenge.progress(todayActivity) }}
+          achievements={achievements}
+          heatmap={activityGrid(days, today, 14)}
         />
       )}
     </div>

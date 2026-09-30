@@ -17,3 +17,10 @@ export const TIER: Record<QuestTier, { label: string; hint: string; accent: stri
 };
 
 export const questKey = (q: Quest) => `${q.item.module}:${q.item.type}:${q.item.entityId ?? q.item.title}`;
+
+/** Bronze, Silver, Gold, Platinum. Index with `tier - 1`. */
+export const MEDAL_COLOR = ['oklch(0.68 0.11 55)', 'oklch(0.82 0.01 255)', 'oklch(0.83 0.16 88)', 'oklch(0.86 0.1 200)'] as const;
+
+export function medalLabel(tier: number): string {
+  return tier <= 0 ? 'Locked' : (['Bronze', 'Silver', 'Gold', 'Platinum'][tier - 1] ?? 'Platinum');
+}

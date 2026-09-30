@@ -6,7 +6,8 @@ import type { PeriodSummary } from '@/features/analytics/types';
 import { NAV_ITEMS } from '@/layout/nav-items';
 
 import { AttributeMeter, AttributeRadar, HudHeading, HudLabel, HudPanel, LevelBadge, RankChip, StreakFlame, XpBar } from './hud';
-import type { Attribute, LevelProgress, Quest, Rank, Streak } from './player-model';
+import { AlmostThere, CampaignLog, DailyChallengeCard } from './game-panels';
+import type { AchievementState, Attribute, Challenge, HeatCell, LevelProgress, Quest, Rank, Streak } from './player-model';
 import { RANK_COLOR } from './player-theme';
 import { QuestCard } from './quest-card';
 
@@ -28,6 +29,9 @@ export interface HomeViewProps {
   activity: { id: string; text: string; at: string }[];
   attention: { title: string; meta: string; link: string }[];
   aiCostUsd?: number;
+  challenge: { challenge: Challenge; done: boolean; progress: [number, number] };
+  achievements: AchievementState[];
+  heatmap: HeatCell[][];
 }
 
 const inr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
@@ -127,6 +131,12 @@ export function HomeView(p: HomeViewProps) {
         </HudPanel>
       </div>
 
+      {/* -- Daily challenge + nearest medals ------------------------------ */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <DailyChallengeCard {...p.challenge} />
+        <AlmostThere achievements={p.achievements} />
+      </div>
+
       {/* -- Attributes detail + boss fights ------------------------------- */}
       <div className="grid gap-5 lg:grid-cols-[1fr_1.5fr]">
         <HudPanel className="animate-hud-in p-5" style={{ animationDelay: '220ms' }}>
@@ -151,6 +161,8 @@ export function HomeView(p: HomeViewProps) {
           <BossFights goals={p.week?.goals ?? []} />
         </HudPanel>
       </div>
+
+      <CampaignLog grid={p.heatmap} />
 
       {/* -- Alerts + activity --------------------------------------------- */}
       <div className="grid gap-5 lg:grid-cols-2">

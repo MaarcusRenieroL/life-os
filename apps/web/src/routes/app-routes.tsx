@@ -44,6 +44,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/home" replace /> },
           { path: 'today', lazy: page(() => import('@/features/today/today-page'), 'TodayPage') },
+          { path: 'achievements', lazy: page(() => import('@/features/player/trophy-room'), 'TrophyRoomPage') },
           { path: 'email', lazy: page(() => import('@/features/email-hub/email-inbox-page'), 'EmailInboxPage') },
           { path: 'home', lazy: page(() => import('@/features/home/home-page'), 'HomePage') },
           { path: 'settings', lazy: page(() => import('@/features/settings/settings-page'), 'SettingsPage') },

@@ -10,8 +10,11 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { ShortcutsHelpDialog } from '@/components/shortcuts-help-dialog';
 import { useAuth } from '@/features/auth/auth-context';
 import { emailHubApi } from '@/features/email-hub/email-hub-api';
+import { AchievementWatcher } from '@/features/player/achievement-watcher';
 import { LevelUpBanner } from '@/features/player/level-up';
 import { PlayerChip } from '@/features/player/player-chip';
+import { SidebarPlayer } from '@/features/player/sidebar-player';
+import { SoundToggle } from '@/features/player/sound-toggle';
 import { NAV_ITEMS } from '@/layout/nav-items';
 import { NotificationBell } from '@/features/core/notification-bell';
 import { QuickCaptureDialog } from '@/features/core/quick-capture-dialog';
@@ -80,7 +83,8 @@ export function AppShell() {
             </span>
           </div>
         </SidebarHeader>
-        <SidebarSeparator className="mx-0" />
+        <SidebarPlayer />
+        <SidebarSeparator className="mx-0 mt-2" />
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupLabel className="font-mono text-[10px] tracking-widest uppercase">Modules</SidebarGroupLabel>
@@ -162,6 +166,7 @@ export function AppShell() {
           </span>
           <div className="ml-auto flex items-center gap-3">
             <PlayerChip />
+            <SoundToggle />
             <QuickCaptureDialog />
             <NotificationBell />
           </div>
@@ -198,6 +203,7 @@ export function AppShell() {
       </AlertDialog>
       <ShortcutsHelpDialog />
       <LevelUpBanner />
+      <AchievementWatcher />
     </SidebarProvider>
   );
 }

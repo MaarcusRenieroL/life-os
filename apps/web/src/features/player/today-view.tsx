@@ -1,7 +1,9 @@
 import { Trophy } from 'lucide-react';
 
+import { Confetti } from './confetti';
+import { DailyChallengeCard } from './game-panels';
 import { HudHeading, HudLabel, HudPanel } from './hud';
-import { groupQuests, type Quest, type QuestTier } from './player-model';
+import { groupQuests, type Challenge, type Quest, type QuestTier } from './player-model';
 import { questKey, TIER } from './player-theme';
 import { QuestCard } from './quest-card';
 
@@ -14,6 +16,9 @@ export interface TodayViewProps {
   onComplete: (quest: Quest) => void;
   clearedToday: number;
   xpToday: number;
+  challenge: { challenge: Challenge; done: boolean; progress: [number, number] };
+  /** Quests finished in quick succession. 2+ lights up the combo badge (cosmetic: it doesn't change XP). */
+  combo: number;
 }
 
 const TIERS: QuestTier[] = ['main', 'daily', 'side'];
@@ -52,7 +57,7 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
   );
 }
 
-export function TodayView({ quests, loading, cleared, pendingKey, onComplete, clearedToday, xpToday }: TodayViewProps) {
+export function TodayView({ quests, loading, cleared, pendingKey, onComplete, clearedToday, xpToday, challenge, combo }: TodayViewProps) {
   const groups = groupQuests(quests);
   const remaining = quests.filter((q) => !cleared.has(questKey(q))).length;
   const total = clearedToday + remaining;
@@ -70,7 +75,13 @@ export function TodayView({ quests, loading, cleared, pendingKey, onComplete, cl
               {remaining === 0 ? 'Every quest cleared.' : `${remaining} quest${remaining === 1 ? '' : 's'} left - the best move is at the top of each list.`}
             </p>
           </div>
-          <div className="flex gap-6 text-center">
+          <div className="flex items-center gap-6 text-center">
+            {combo >= 2 && (
+              <div key={combo} className="animate-hud-pop border border-orange-400/50 bg-orange-400/10 px-3 py-1.5">
+                <div className="font-display text-xl font-bold text-orange-400 tabular-nums">×{combo}</div>
+                <HudLabel className="text-orange-400/80">combo</HudLabel>
+              </div>
+            )}
             <div>
               <div className="font-display text-2xl font-bold text-hud-gold tabular-nums">+{xpToday}</div>
               <HudLabel>xp today</HudLabel>
@@ -83,10 +94,13 @@ export function TodayView({ quests, loading, cleared, pendingKey, onComplete, cl
         </div>
       </HudPanel>
 
+      <DailyChallengeCard {...challenge} />
+
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading the board…</p>
       ) : quests.length === 0 ? (
         <HudPanel accent="var(--hud-gold)" className="animate-hud-pop p-10 text-center">
+          {clearedToday > 0 && <Confetti pieces={40} />}
           <Trophy className="mx-auto size-10 text-hud-gold" />
           <h2 className="mt-3 font-display text-2xl font-bold text-hud-gold text-glow">All clear</h2>
           <p className="mt-1 text-sm text-muted-foreground">Nothing needs you right now. Go touch grass, or get ahead on a goal.</p>

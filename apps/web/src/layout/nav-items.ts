@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   StickyNote,
   Target,
+  Trophy,
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
@@ -35,5 +36,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Habits', to: '/habits', icon: ListChecks },
   { label: 'Goals', to: '/goals', icon: Target },
   { label: 'Workouts', to: '/workouts', icon: Dumbbell },
+  { label: 'Trophies', to: '/achievements', icon: Trophy },
   { label: 'Analytics', to: '/analytics', icon: ChartNoAxesCombined },
 ];

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
 
+import { Confetti } from './confetti';
 import { XpPop } from './hud';
 import type { Quest } from './player-model';
 import { TIER } from './player-theme';
@@ -100,7 +101,12 @@ export function QuestCard({
       <span className="shrink-0 border border-hud-gold/40 bg-hud-gold/10 px-1.5 py-0.5 font-display text-[11px] font-bold text-hud-gold tabular-nums">
         +{xp}
       </span>
-      {cleared && <XpPop amount={xp} className="top-0 right-3" />}
+      {cleared && (
+        <>
+          <XpPop amount={xp} className="top-0 right-3" />
+          <Confetti pieces={14} />
+        </>
+      )}
     </div>
   );
 }

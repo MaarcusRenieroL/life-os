@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { HudLabel, HudPanel, LevelBadge } from './hud';
 import { rankFor } from './player-model';
 import { RANK_COLOR } from './player-theme';
+import { playCue } from './sound';
 import { usePlayer } from './use-player';
 
 const STORAGE_KEY = 'lifeos.player.level';
@@ -32,8 +33,12 @@ export function LevelUpBanner() {
     } catch {
       /* ignore */
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reacts to server data arriving
-    if (seen != null && progress.level > seen) setShown(progress.level);
+    if (seen != null && progress.level > seen) {
+      // Reacts to server data arriving, which is what an effect is for.
+      // oxlint-disable-next-line react/set-state-in-effect
+      setShown(progress.level);
+      playCue('levelup');
+    }
   }, [ready, progress.level]);
 
   if (shown == null) return null;

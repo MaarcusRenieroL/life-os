@@ -4,8 +4,17 @@ import type { PeriodSummary } from '@/features/analytics/types';
 import type { TodayItem } from '@/features/core/core-api';
 
 import {
+  ACHIEVEMENTS,
+  CHALLENGE_BONUS,
+  activityGrid,
   attributesFrom,
+  challengeDone,
+  challengeFor,
   dayXp,
+  evaluateAchievements,
+  intensityOf,
+  lifetimeStats,
+  newlyUnlocked,
   groupQuests,
   levelFor,
   questXp,
@@ -28,8 +37,9 @@ const day = (date: string, over: Partial<DayActivity> = {}): DayActivity => ({
 });
 
 describe('xp', () => {
-  it('rewards tasks, workouts, habits and reflection', () => {
-    expect(dayXp(day('2026-01-01', { tasksCompleted: 3, workouts: 1, habitPct: 100, mood: 4 }))).toBe(3 * 15 + 50 + 40 + 10);
+  it('rewards tasks, workouts, habits and reflection, plus the daily-challenge bonus', () => {
+    // This day does everything, so whichever challenge is set for it is won.
+    expect(dayXp(day('2026-01-01', { tasksCompleted: 5, workouts: 1, habitPct: 100, mood: 4 }))).toBe(5 * 15 + 50 + 40 + 10 + CHALLENGE_BONUS);
   });
 
   it('gives partial habit days a share and ignores missing or out-of-range percentages', () => {
@@ -40,7 +50,11 @@ describe('xp', () => {
   });
 
   it('totals a range', () => {
-    expect(totalXp([day('a', { tasksCompleted: 1 }), day('b', { workouts: 1 })])).toBe(65);
+    // 2026-03-02 and 2026-03-03: neither day's challenge is met by one task / one workout.
+    const a = day('2026-03-02', { tasksCompleted: 1 });
+    const b = day('2026-03-03', { tasksCompleted: 0, workouts: 1 });
+    expect(totalXp([a, b])).toBe(dayXp(a) + dayXp(b));
+    expect(dayXp(a)).toBe(15 + (challengeDone(challengeFor(a.date), a) ? CHALLENGE_BONUS : 0));
   });
 });
 
@@ -178,5 +192,91 @@ describe('quests', () => {
   it('lists the most rewarding quest first in each tier', () => {
     const groups = groupQuests(toQuests([item({ dueAt: '2026-03-10T09:00:00', type: 'task_due' }), item({ dueAt: '2026-03-10T09:00:00', type: 'habit_due', module: 'habit-tracker' })], now));
     expect(groups.daily.map((q) => q.xp)).toEqual([20, 15]);
+  });
+});
+
+describe('daily challenge', () => {
+  it('is the same for a given date and rotates day to day', () => {
+    expect(challengeFor('2026-06-10').id).toBe(challengeFor('2026-06-10').id);
+    const week = new Set(Array.from({ length: 5 }, (_, i) => challengeFor(shiftDay('2026-06-10', i)).id));
+    expect(week.size).toBe(5);
+  });
+
+  it('is won by meeting its own target and only that', () => {
+    const date = Array.from({ length: 5 }, (_, i) => shiftDay('2026-06-10', i)).find((d) => challengeFor(d).id === 'tasks3')!;
+    expect(challengeDone(challengeFor(date), day(date, { tasksCompleted: 2 }))).toBe(false);
+    expect(challengeDone(challengeFor(date), day(date, { tasksCompleted: 3 }))).toBe(true);
+    expect(dayXp(day(date, { tasksCompleted: 3 }))).toBe(3 * 15 + CHALLENGE_BONUS);
+  });
+
+  it('needs every habit, not most of them', () => {
+    const date = Array.from({ length: 5 }, (_, i) => shiftDay('2026-06-10', i)).find((d) => challengeFor(d).id === 'habits')!;
+    expect(challengeDone(challengeFor(date), day(date, { habitPct: 99 }))).toBe(false);
+    expect(challengeDone(challengeFor(date), day(date, { habitPct: 100 }))).toBe(true);
+    expect(challengeDone(challengeFor(date), day(date, { habitPct: null }))).toBe(false);
+  });
+});
+
+describe('achievements', () => {
+  const stats = (over: Partial<ReturnType<typeof lifetimeStats>> = {}) => ({
+    tasks: 0, workouts: 0, perfectHabitDays: 0, reflectionDays: 0, activeDays: 0, challengesWon: 0, bestStreak: 0, level: 1, ...over,
+  });
+  const byId = (s: ReturnType<typeof lifetimeStats>) => Object.fromEntries(evaluateAchievements(s).map((a) => [a.def.id, a]));
+
+  it('starts locked with progress toward the first tier', () => {
+    const a = byId(stats({ tasks: 4 })).tasks;
+    expect(a).toMatchObject({ tier: 0, next: 10, pct: 40 });
+  });
+
+  it('awards tiers at their thresholds and reports progress to the next', () => {
+    expect(byId(stats({ tasks: 10 })).tasks).toMatchObject({ tier: 1, next: 50, pct: 0 });
+    expect(byId(stats({ tasks: 30 })).tasks).toMatchObject({ tier: 1, next: 50, pct: 50 });
+    expect(byId(stats({ tasks: 250 })).tasks.tier).toBe(3);
+  });
+
+  it('caps at the top tier', () => {
+    expect(byId(stats({ tasks: 5000 })).tasks).toMatchObject({ tier: 4, next: null, pct: 100 });
+    expect(byId(stats({ workouts: 500 })).workouts).toMatchObject({ tier: 3, next: null });
+  });
+
+  it('builds lifetime totals from the days', () => {
+    const days = [
+      day('2026-03-01', { tasksCompleted: 2, habitPct: 100, mood: 3 }),
+      day('2026-03-02', { workouts: 1 }),
+      day('2026-03-03'),
+    ];
+    const s = lifetimeStats(days, '2026-03-03', 4);
+    expect(s).toMatchObject({ tasks: 2, workouts: 1, perfectHabitDays: 1, reflectionDays: 1, activeDays: 2, level: 4 });
+  });
+
+  it('reports only medals earned since the last look', () => {
+    const now = evaluateAchievements(stats({ tasks: 55, workouts: 5 }));
+    expect(newlyUnlocked({}, now).map((m) => `${m.id}:${m.tier}`).sort()).toEqual(['tasks:2', 'workouts:1']);
+    expect(newlyUnlocked({ tasks: 2, workouts: 1 }, now)).toEqual([]);
+    expect(newlyUnlocked({ tasks: 1 }, now).map((m) => m.id)).toEqual(['tasks', 'workouts']);
+  });
+
+  it('every tier list is ascending and within the four medal names', () => {
+    for (const def of ACHIEVEMENTS) {
+      expect(def.tiers.length).toBeLessThanOrEqual(4);
+      expect([...def.tiers].sort((x, y) => x - y)).toEqual(def.tiers);
+    }
+  });
+});
+
+describe('activity heatmap', () => {
+  it('buckets XP into five intensities', () => {
+    expect([0, 1, 49, 50, 99, 100, 199, 200, 900].map(intensityOf)).toEqual([0, 1, 1, 2, 2, 3, 3, 4, 4]);
+  });
+
+  it('lays out whole Monday-first weeks ending with the current one', () => {
+    const grid = activityGrid([day('2026-03-11', { tasksCompleted: 4 })], '2026-03-11', 4); // a Wednesday
+    expect(grid).toHaveLength(4);
+    expect(grid.every((col) => col.length === 7)).toBe(true);
+    expect(grid[3][0].date).toBe('2026-03-09'); // Monday of this week
+    expect(grid[3][2]).toMatchObject({ date: '2026-03-11', future: false });
+    expect(grid[3][2].xp).toBeGreaterThan(0);
+    expect(grid[3][3].future).toBe(true); // Thursday hasn't happened
+    expect(grid[0][0].date).toBe('2026-02-16');
   });
 });
