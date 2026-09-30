@@ -39,3 +39,11 @@ encryption:
 
 avatar:
   storage-dir: ${AVATAR_STORAGE_DIR:/data/avatars}
+
+# Single-owner app: once the first account exists, further signups are refused. Flip this to add a
+# second person on purpose.
+auth:
+  registration:
+    allow-additional: ${AUTH_ALLOW_REGISTRATION:false}
+  # When set, only this user id can sign in (see AuthService.requireOwner). Blank = anyone with valid credentials.
+  owner-user-id: ${AUTH_OWNER_USER_ID:}
