@@ -149,6 +149,10 @@ public class JobListing {
   @Column(name = "scraped_date")
   Instant scrapedDate;
 
+  /** The discovery inbox row this job was promoted from, when it did not come from a paste. */
+  @Column(name = "discovered_job_id")
+  UUID discoveredJobId;
+
   /** Wording-only edit suggestions from {@code AiAssistant.generateAtsSuggestions} - things to
    * change by hand in the candidate's own resume, never a rewritten resume itself. */
   @JdbcTypeCode(SqlTypes.JSON)

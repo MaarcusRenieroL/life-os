@@ -1,7 +1,9 @@
 package com.lifeos.job_tracker.service;
 
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobDetailsRequest;
+import com.lifeos.job_tracker.domains.entity.CareerProfile;
 import com.lifeos.job_tracker.domains.entity.Company;
+import com.lifeos.job_tracker.domains.entity.DiscoveredJob;
 import com.lifeos.job_tracker.domains.entity.JobListing;
 import com.lifeos.job_tracker.domains.entity.JobStatusHistory;
 import com.lifeos.job_tracker.domains.entity.Skill;
@@ -14,6 +16,7 @@ import com.lifeos.job_tracker.domains.enums.VisaSponsorship;
 import com.lifeos.job_tracker.domains.enums.WorkModel;
 import com.lifeos.job_tracker.domains.record.AtsSuggestions;
 import com.lifeos.job_tracker.domains.record.ExtractedSkill;
+import com.lifeos.job_tracker.domains.record.KnownPerson;
 import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
 import com.lifeos.job_tracker.domains.record.ParsedResume;
 import com.lifeos.job_tracker.exception.InvalidRequestException;
@@ -190,6 +193,181 @@ public class JobListingService {
                 .parseStatus(ProcessingStatus.COMPLETED)
                 .build());
 
+    recordStatusChange(userId, job.getId(), null, job.getStatus());
+    return job;
+  }
+
+  /**
+   * Turns a discovery inbox hit into a tracked job. The listing text came straight from the
+   * company's own board, so it is parsed for required skills when an AI provider is available (so
+   * the precise fit score has something to compare against) but promoting never fails just because
+   * parsing did - the job is still created, INTERESTED, with the discovery score as its baseline.
+   */
+  /** People the candidate knows at this job's company. Empty when none are noted. */
+  @Transactional(readOnly = true)
+  public List<KnownPerson> knownPeople(UUID userId, UUID jobId) {
+    JobListing job = get(userId, jobId);
+    if (job.getCompanyId() == null) {
+      return List.of();
+    }
+    return companyRepository
+        .findByIdAndUserId(job.getCompanyId(), userId)
+        .map(Company::getKnownPeople)
+        .orElse(List.of());
+  }
+
+  /** Replaces the list. Held on the company so it carries over to every role there. */
+  @Transactional
+  public List<KnownPerson> saveKnownPeople(UUID userId, UUID jobId, List<KnownPerson> people) {
+    JobListing job = get(userId, jobId);
+    List<KnownPerson> cleaned =
+        (people == null ? List.<KnownPerson>of() : people).stream()
+            .filter(p -> p != null && !isBlank(p.name()))
+            .map(p -> new KnownPerson(p.name().trim(), isBlank(p.note()) ? null : p.note().trim()))
+            .limit(30)
+            .toList();
+
+    Company company =
+        job.getCompanyId() == null
+            ? null
+            : companyRepository.findByIdAndUserId(job.getCompanyId(), userId).orElse(null);
+    if (company == null) {
+      company = resolveCompany(userId, job.getCompany());
+      if (company == null) {
+        throw new InvalidRequestException("This job has no company to attach people to");
+      }
+      job.setCompanyId(company.getId());
+      jobListingRepository.save(job);
+    }
+    company.setKnownPeople(cleaned);
+    companyRepository.save(company);
+    return cleaned;
+  }
+
+  /**
+   * The candidate's standard referral ask, filled in for this job - the same fixed template they
+   * have always sent by hand. Deliberately not AI-written: it is short and personal, and a
+   * template in their own words never needs a "does this sound odd" check before sending.
+   *
+   * @param contactName optional; only the first word is used in the greeting
+   */
+  @Transactional(readOnly = true)
+  public String referralMessage(UUID userId, UUID jobId, String contactName) {
+    JobListing job = get(userId, jobId);
+    CareerProfile profile = careerProfileService.getProfileOrNull(userId);
+    String contactFirstName = firstWord(contactName);
+    String signOff = firstWord(profile == null ? null : profile.getFullName());
+
+    return "Hi" + (contactFirstName.isEmpty() ? "" : " " + contactFirstName) + ",\n\n"
+        + "Hope you are doing good.\n"
+        + "I found an opening at " + job.getCompany() + " for the role " + job.getTitle()
+        + " and am very interested in applying for the same.\n\n"
+        + "Could you please help me with a referral?\n"
+        + "Job Id: " + (job.getExternalId() == null ? "" : job.getExternalId()) + "\n"
+        + "Job Link: " + (job.getUrl() == null ? "" : job.getUrl()) + "\n\n"
+        + "Regards,\n"
+        + signOff;
+  }
+
+  /** Discovery keys jobs as {@code board:slug:id}; the job id a recruiter recognises is the last part. */
+  private static String boardNativeId(String discoveryKey) {
+    if (discoveryKey == null) {
+      return null;
+    }
+    String[] parts = discoveryKey.split(":", 3);
+    return parts.length == 3 ? parts[2] : discoveryKey;
+  }
+
+  private static String firstWord(String value) {
+    if (value == null || value.isBlank()) {
+      return "";
+    }
+    String trimmed = value.trim();
+    int spaceIndex = trimmed.indexOf(' ');
+    return spaceIndex < 0 ? trimmed : trimmed.substring(0, spaceIndex);
+  }
+
+  /**
+   * A job the candidate applied to outside the tracker, learned about from the application
+   * confirmation email. Created straight as APPLIED with the email's date, since the email is the
+   * evidence that the application happened.
+   */
+  @Transactional
+  public JobListing createFromEmail(UUID userId, String company, String title, java.time.LocalDate appliedOn) {
+    String companyName = isBlank(company) ? "Unknown company" : company.trim();
+    Company companyEntity = resolveCompany(userId, companyName);
+
+    JobListing job =
+        jobListingRepository.save(
+            JobListing.builder()
+                .userId(userId)
+                .companyId(companyEntity == null ? null : companyEntity.getId())
+                .title(isBlank(title) ? "Untitled role" : title.trim())
+                .company(companyName)
+                .source("email")
+                .ingestedBy(IngestSource.EMAIL)
+                .visaSponsorship(VisaSponsorship.UNKNOWN)
+                .status(JobStatus.APPLIED)
+                .appliedAt(appliedOn == null ? java.time.LocalDate.now() : appliedOn)
+                .parseStatus(ProcessingStatus.COMPLETED)
+                .build());
+
+    recordStatusChange(userId, job.getId(), null, job.getStatus());
+    return job;
+  }
+
+  @Transactional
+  public JobListing createFromDiscovery(UUID userId, DiscoveredJob discovered) {
+    Company companyEntity = resolveCompany(userId, discovered.getCompany());
+
+    ParsedJobPosting parsed = null;
+    if (ai.available() && !isBlank(discovered.getDescription())) {
+      try {
+        parsed = ai.parseJobPosting("--- PAGE TEXT ---\n" + discovered.getTitle() + "\n" + discovered.getDescription());
+      } catch (RuntimeException exception) {
+        log.warn("Could not parse discovered job {}: {}", discovered.getId(), exception.getMessage());
+      }
+    }
+
+    JobListing job =
+        JobListing.builder()
+            .userId(userId)
+            .companyId(companyEntity == null ? null : companyEntity.getId())
+            .externalId(boardNativeId(discovered.getExternalId()))
+            .discoveredJobId(discovered.getId())
+            .title(discovered.getTitle())
+            .company(discovered.getCompany())
+            .location(discovered.getLocation())
+            .url(discovered.getUrl())
+            .jobDescriptionText(discovered.getDescription())
+            .postedDate(
+                discovered.getPostedAt() == null
+                    ? null
+                    : discovered.getPostedAt().atZone(java.time.ZoneOffset.UTC).toLocalDate())
+            .scrapedDate(discovered.getFirstSeenAt())
+            .source("discovery")
+            .ingestedBy(IngestSource.SCRAPER)
+            .visaSponsorship(VisaSponsorship.UNKNOWN)
+            .status(JobStatus.INTERESTED)
+            .parseStatus(parsed == null ? ProcessingStatus.PENDING : ProcessingStatus.COMPLETED)
+            .fitScore(discovered.getFitScore())
+            .fitExplanation(discovered.getFitExplanation())
+            .fitScoreSource(FitScoreSource.LIBRARY)
+            .build();
+    if (parsed != null) {
+      job.setWorkModel(parseEnum(WorkModel.class, parsed.workModel()));
+      job.setSeniorityLevel(parseEnum(SeniorityLevel.class, parsed.seniorityLevel()));
+      job.setIndustry(parsed.industry());
+      job.setSalaryMin(parsed.salaryMin());
+      job.setSalaryMax(parsed.salaryMax());
+      job.setCurrency(parsed.currency());
+      job.setRequiredSkills(parsed.requiredSkills());
+      job.setNiceToHaveSkills(parsed.niceToHaveSkills());
+      // Only replace the discovery estimate with the full score once there are real requirements
+      // to score against.
+      scoreQuietly(userId, job);
+    }
+    job = jobListingRepository.save(job);
     recordStatusChange(userId, job.getId(), null, job.getStatus());
     return job;
   }

@@ -159,7 +159,8 @@ public class JobMatchingService {
     return flags;
   }
 
-  private static SeniorityLevel inferSeniority(List<Skill> skills) {
+  /** The candidate's level as implied by their longest-used skill; null when no years are recorded. */
+  public static SeniorityLevel inferSeniority(List<Skill> skills) {
     double maxYears =
         skills.stream()
             .map(Skill::getYearsOfExperience)

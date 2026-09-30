@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -29,7 +29,7 @@ import { tasksApi } from '@/features/tasks/tasks-api';
 
 import { InterviewTrackingSection } from './interview-tracking-section';
 import { jobApi } from './job-api';
-import { ReferralTrackingSection } from './referral-tracking-section';
+import { ReferralMessageCard } from './referral-message-card';
 import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
 
 function formatSalary(job: JobListing): string | null {
@@ -139,6 +139,17 @@ export function JobDetailPage() {
       setSuggestionsError(message);
     },
   });
+
+  // Suggestions are worked out as soon as the job opens - nobody should have to press a button to
+  // find out what to fix. The ref makes this fire once per job, so a failure (say, Ollama not
+  // running) shows its error and a retry button instead of looping.
+  const autoRequestedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!job || !jobId || job.atsSuggestions || !job.jobDescriptionText?.trim()) return;
+    if (autoRequestedFor.current === jobId) return;
+    autoRequestedFor.current = jobId;
+    suggestionsMutation.mutate();
+  }, [job, jobId, suggestionsMutation]);
 
   async function setStatus(status: JobStatus) {
     if (!jobId) return;
@@ -304,15 +315,23 @@ export function JobDetailPage() {
                   {suggestionsMutation.isPending
                     ? 'Analyzing…'
                     : job.atsSuggestions
-                      ? 'Refresh suggestions'
-                      : 'Get suggestions'}
+                      ? 'Refresh'
+                      : 'Try again'}
                 </Button>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 Wording edits to make by hand in your own resume - nothing here rewrites or generates a resume for you.
               </p>
 
+              {suggestionsMutation.isPending && !job.atsSuggestions && (
+                <p className="mt-3 text-sm text-muted-foreground">Comparing your resume to this job description…</p>
+              )}
               {suggestionsError && <p className="mt-2 text-sm text-destructive">{suggestionsError}</p>}
+              {!job.jobDescriptionText?.trim() && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Suggestions need the job description. Add one to this job and they will appear here.
+                </p>
+              )}
 
               {job.atsSuggestions && job.atsSuggestions.length > 0 && (
                 <div className="mt-4 flex flex-col gap-4">
@@ -346,8 +365,8 @@ export function JobDetailPage() {
 
           <Card>
             <CardContent>
-              <SectionHeading className="mb-2.5">referrals</SectionHeading>
-              <ReferralTrackingSection jobId={jobId!} />
+              <SectionHeading className="mb-2.5">referral</SectionHeading>
+              <ReferralMessageCard jobId={jobId!} company={job.company} />
             </CardContent>
           </Card>
 

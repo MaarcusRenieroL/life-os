@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Award, CalendarClock, MessageSquareReply, Send, UserCheck, XCircle } from 'lucide-react';
+import { Award, CalendarClock, MessageSquareReply, Send, XCircle } from 'lucide-react';
 import { useMemo, type ComponentType } from 'react';
 
 import { EmptyState } from '@/components/empty-state';
@@ -68,7 +68,6 @@ export function JobAnalyticsPage() {
         <StatTile icon={CalendarClock} label="Interview conversion" value={`${data.interviewConversionRatePct}%`} />
         <StatTile icon={Award} label="Offer rate" value={`${data.offerRatePct}%`} accent="text-primary" />
         <StatTile icon={XCircle} label="Rejection rate" value={`${data.rejectionRatePct}%`} />
-        <StatTile icon={UserCheck} label="Referral response rate" value={`${data.referralResponseRatePct}%`} />
       </div>
 
       <section className="mt-4 rounded-lg border bg-card p-5">

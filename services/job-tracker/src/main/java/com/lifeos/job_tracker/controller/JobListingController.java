@@ -5,6 +5,7 @@ import com.lifeos.job_tracker.domains.dto.request.FromLinkRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobDetailsRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobListingRequest;
 import com.lifeos.job_tracker.domains.dto.response.JobListingResponse;
+import com.lifeos.job_tracker.domains.record.KnownPerson;
 import com.lifeos.job_tracker.service.JobListingService;
 import com.lifeos.job_tracker.service.JobMatchingService.JobFitResult;
 import java.util.List;
@@ -19,8 +20,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -94,6 +97,32 @@ public class JobListingController extends AuthenticatedController {
         ApiResponse.success(
             JobListingResponse.from(jobListingService.generateCoverLetter(userId(authentication), jobId)),
             "Cover letter drafted"));
+  }
+
+  /** The standard referral ask for this job, ready to copy. {@code contactName} personalises the greeting. */
+  @GetMapping("/{jobId}/referral-message")
+  public ResponseEntity<ApiResponse<String>> referralMessage(
+      Authentication authentication,
+      @PathVariable UUID jobId,
+      @RequestParam(required = false) String contactName) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            jobListingService.referralMessage(userId(authentication), jobId, contactName), "Referral message built"));
+  }
+
+  @GetMapping("/{jobId}/known-people")
+  public ResponseEntity<ApiResponse<List<KnownPerson>>> knownPeople(
+      Authentication authentication, @PathVariable UUID jobId) {
+    return ResponseEntity.ok(
+        ApiResponse.success(jobListingService.knownPeople(userId(authentication), jobId), "People fetched"));
+  }
+
+  @PutMapping("/{jobId}/known-people")
+  public ResponseEntity<ApiResponse<List<KnownPerson>>> saveKnownPeople(
+      Authentication authentication, @PathVariable UUID jobId, @RequestBody List<KnownPerson> people) {
+    return ResponseEntity.ok(
+        ApiResponse.success(
+            jobListingService.saveKnownPeople(userId(authentication), jobId, people), "People saved"));
   }
 
   @PostMapping("/{jobId}/rescore")

@@ -21,6 +21,7 @@ public enum NotificationEventType {
   JOB_INTERVIEW_UPCOMING,
   JOB_STATUS_AUTO_CHANGED,
   JOB_REFERRAL_FOLLOWUP_DUE,
+  JOB_NEW_OPENINGS,
 
   // habit-tracker
   HABIT_REMINDER_DUE,
