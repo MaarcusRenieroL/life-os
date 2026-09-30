@@ -134,6 +134,12 @@ export function ImportPage() {
         {gmailStatus?.connected ? (
           <div className="mt-2 text-sm">
             <p className="text-primary">Connected {gmailStatus.connectedAt ? `since ${new Date(gmailStatus.connectedAt).toLocaleDateString()}` : ''}</p>
+            {gmailStatus.email && (
+              <p className="text-sm">
+                Reading <span className="font-medium">{gmailStatus.email}</span>
+                <span className="text-xs text-muted-foreground"> - bank alerts, job emails and your inbox are only picked up from this mailbox. Mail sent to another address never arrives; use Reconnect to switch.</span>
+              </p>
+            )}
             {gmailStatus.lastRefreshedAt && (
               <p className="text-xs text-muted-foreground">Token last refreshed {new Date(gmailStatus.lastRefreshedAt).toLocaleDateString()}</p>
             )}

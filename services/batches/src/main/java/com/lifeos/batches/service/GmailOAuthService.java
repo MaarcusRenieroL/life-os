@@ -6,6 +6,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.lifeos.batches.domains.entity.GmailOAuthToken;
 import com.lifeos.batches.domains.record.GmailConnectionStatus;
@@ -80,8 +81,33 @@ public class GmailOAuthService {
 
     return gmailOAuthRepository
         .findByUserId(userId)
-        .map(token -> new GmailConnectionStatus(true, token.getCreatedAt(), token.getUpdatedAt()))
-        .orElseGet(() -> new GmailConnectionStatus(false, null, null));
+        .map(
+            token ->
+                new GmailConnectionStatus(
+                    true, token.getCreatedAt(), token.getUpdatedAt(), mailboxAddress()))
+        .orElseGet(() -> new GmailConnectionStatus(false, null, null, null));
+  }
+
+  /**
+   * Which Google account the tokens belong to. Applications and bank alerts only show up if they
+   * were sent to this mailbox, so the UI names it; best effort, since status must never fail.
+   */
+  private String mailboxAddress() {
+    try {
+      String accessToken = getValidAccessToken();
+      return new Gmail.Builder(
+              new NetHttpTransport(),
+              GsonFactory.getDefaultInstance(),
+              request -> request.getHeaders().setAuthorization("Bearer " + accessToken))
+          .setApplicationName("life-os")
+          .build()
+          .users()
+          .getProfile("me")
+          .execute()
+          .getEmailAddress();
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   public String getValidAccessToken() {

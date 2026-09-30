@@ -275,6 +275,8 @@ export interface GmailConnectionStatus {
   connected: boolean;
   connectedAt: string | null;
   lastRefreshedAt: string | null;
+  /** The mailbox the tokens belong to; null when Google couldn't be reached. */
+  email?: string | null;
 }
 export interface StatementImportResult {
   rowsParsed: number;
