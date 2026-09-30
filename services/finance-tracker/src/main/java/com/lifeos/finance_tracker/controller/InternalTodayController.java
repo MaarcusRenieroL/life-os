@@ -5,6 +5,7 @@ import com.lifeos.common.domains.dto.response.TodayItemResponse;
 import com.lifeos.finance_tracker.domains.dto.request.CreateQuickCaptureTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.response.TransactionResponse;
 import com.lifeos.finance_tracker.service.FinanceTodayService;
+import com.lifeos.finance_tracker.service.SpendingStatsService;
 import com.lifeos.finance_tracker.service.TransactionService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -29,6 +30,7 @@ public class InternalTodayController {
 
   private final FinanceTodayService financeTodayService;
   private final TransactionService transactionService;
+  private final SpendingStatsService spendingStatsService;
 
   @GetMapping("/today")
   public ResponseEntity<ApiResponse<List<TodayItemResponse>>> today(@RequestParam UUID userId) {
@@ -46,5 +48,16 @@ public class InternalTodayController {
     TransactionResponse transaction = transactionService.createFromQuickCapture(request);
 
     return ResponseEntity.ok(ApiResponse.success(transaction, "Transaction captured successfully"));
+  }
+
+  /** Per-day and per-category spending for core's analytics. */
+  @GetMapping("/daily-stats")
+  public ResponseEntity<ApiResponse<SpendingStatsService.SpendingStats>> dailyStats(
+      @RequestParam UUID userId,
+      @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate from,
+      @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate to,
+      @RequestParam(required = false) String zone) {
+    java.time.ZoneId resolved = zone == null || zone.isBlank() ? java.time.ZoneId.of("Asia/Kolkata") : java.time.ZoneId.of(zone);
+    return ResponseEntity.ok(ApiResponse.success(spendingStatsService.stats(userId, from, to, resolved), "Spending stats fetched"));
   }
 }

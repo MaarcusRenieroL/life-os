@@ -3,6 +3,7 @@ import { Navigate, createBrowserRouter, type LazyRouteFunction, type RouteObject
 import { LoginPage } from '@/features/auth/login-page';
 import { ProtectedRoute } from '@/features/auth/protected-route';
 import { FinanceLayout } from '@/features/finance/finance-layout';
+import { AnalyticsLayout } from '@/features/analytics/analytics-layout';
 import { GoalsLayout } from '@/features/goals/goals-layout';
 import { HabitsLayout } from '@/features/habits/habits-layout';
 import { JobTrackerLayout } from '@/features/job-tracker/job-tracker-layout';
@@ -158,6 +159,20 @@ export const router = createBrowserRouter([
           },
           // Must stay after the static goals/* subpaths above so it doesn't shadow them.
           { path: 'goals/:id', lazy: page(() => import('@/features/goals/goal-detail-page'), 'GoalDetailPage') },
+          {
+            path: 'analytics',
+            element: <AnalyticsLayout />,
+            children: [
+              { index: true, lazy: page(() => import('@/features/analytics/overview-page'), 'AnalyticsOverviewPage') },
+              { path: 'weekly', lazy: page(() => import('@/features/analytics/summary-page'), 'AnalyticsWeeklyPage') },
+              { path: 'monthly', lazy: page(() => import('@/features/analytics/summary-page'), 'AnalyticsMonthlyPage') },
+              { path: 'trends', lazy: page(() => import('@/features/analytics/trends-page'), 'AnalyticsTrendsPage') },
+              { path: 'insights', lazy: page(() => import('@/features/analytics/insights-page'), 'AnalyticsInsightsPage') },
+              { path: 'automation', lazy: page(() => import('@/features/automation/rules-page'), 'AutomationRulesPage') },
+              { path: 'templates', lazy: page(() => import('@/features/automation/templates-page'), 'AutomationTemplatesPage') },
+              { path: 'history', lazy: page(() => import('@/features/automation/history-page'), 'AutomationHistoryPage') },
+            ],
+          },
           {
             path: 'workouts',
             element: <WorkoutsLayout />,

@@ -1,6 +1,8 @@
 package com.lifeos.tasks.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.common.events.AutomationEventPublisher;
+import com.lifeos.common.events.AutomationEventRecord;
 import com.lifeos.tasks.domains.dto.request.BulkUpdateTaskRequest;
 import com.lifeos.tasks.domains.dto.request.CreateTaskRequest;
 import com.lifeos.tasks.domains.dto.request.SetRecurrenceRequest;
@@ -39,6 +41,7 @@ public class TaskController {
 
   private final TaskService taskService;
   private final TaskRecurrenceService taskRecurrenceService;
+  private final AutomationEventPublisher automationEvents;
 
   @GetMapping
   public ResponseEntity<ApiResponse<List<TaskResponse>>> list(
@@ -78,15 +81,17 @@ public class TaskController {
   @PostMapping
   public ResponseEntity<ApiResponse<TaskResponse>> create(
       Authentication authentication, @Valid @RequestBody CreateTaskRequest request) {
-    return ResponseEntity.ok(
-        ApiResponse.success(taskService.create(userId(authentication), request), "Task created successfully"));
+    TaskResponse created = taskService.create(userId(authentication), request);
+    publish(authentication, created, AutomationEventRecord.Kind.CREATED);
+    return ResponseEntity.ok(ApiResponse.success(created, "Task created successfully"));
   }
 
   @PutMapping("/{id}")
   public ResponseEntity<ApiResponse<TaskResponse>> update(
       Authentication authentication, @PathVariable UUID id, @Valid @RequestBody UpdateTaskRequest request) {
-    return ResponseEntity.ok(
-        ApiResponse.success(taskService.update(userId(authentication), id, request), "Task updated successfully"));
+    TaskResponse updated = taskService.update(userId(authentication), id, request);
+    publish(authentication, updated, AutomationEventRecord.Kind.UPDATED);
+    return ResponseEntity.ok(ApiResponse.success(updated, "Task updated successfully"));
   }
 
   @PutMapping("/bulk")
@@ -104,8 +109,9 @@ public class TaskController {
 
   @PostMapping("/{id}/complete")
   public ResponseEntity<ApiResponse<TaskResponse>> complete(Authentication authentication, @PathVariable UUID id) {
-    return ResponseEntity.ok(
-        ApiResponse.success(taskService.complete(userId(authentication), id), "Task marked done"));
+    TaskResponse done = taskService.complete(userId(authentication), id);
+    publish(authentication, done, AutomationEventRecord.Kind.COMPLETED);
+    return ResponseEntity.ok(ApiResponse.success(done, "Task marked done"));
   }
 
   @PostMapping("/{id}/reopen")
@@ -166,6 +172,16 @@ public class TaskController {
       Authentication authentication, @PathVariable UUID id, @Valid @RequestBody SkipOccurrenceRequest request) {
     taskRecurrenceService.skipOccurrence(userId(authentication), id, request.getDueDate());
     return ResponseEntity.ok(ApiResponse.success(null, "Occurrence skipped"));
+  }
+
+  // Published from here rather than the service so automation's own task creation (an internal
+  // endpoint) never re-triggers rules - see AutomationEventPublisher.
+  private void publish(Authentication authentication, TaskResponse task, AutomationEventRecord.Kind kind) {
+    java.util.Map<String, String> attributes = new java.util.HashMap<>();
+    if (task.getStatus() != null) attributes.put("status", task.getStatus().name());
+    if (task.getPriority() != null) attributes.put("priority", task.getPriority().name());
+    if (task.getArea() != null) attributes.put("area", task.getArea().name());
+    automationEvents.publish(userId(authentication), "TASK", task.getId(), kind, task.getTitle(), attributes);
   }
 
   private UUID userId(Authentication authentication) {

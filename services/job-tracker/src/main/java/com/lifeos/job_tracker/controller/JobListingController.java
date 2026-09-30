@@ -1,6 +1,8 @@
 package com.lifeos.job_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.common.events.AutomationEventPublisher;
+import com.lifeos.common.events.AutomationEventRecord;
 import com.lifeos.job_tracker.domains.dto.request.FromLinkRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobDetailsRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobListingRequest;
@@ -31,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class JobListingController extends AuthenticatedController {
 
   private final JobListingService jobListingService;
+  private final AutomationEventPublisher automationEvents;
 
   @GetMapping
   public ResponseEntity<ApiResponse<List<JobListingResponse>>> list(Authentication authentication) {
@@ -60,6 +63,7 @@ public class JobListingController extends AuthenticatedController {
         JobListingResponse.from(
             jobListingService.createFromLink(
                 userId(authentication), request.url(), request.jobDescriptionText()));
+    publish(authentication, body, AutomationEventRecord.Kind.CREATED);
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(ApiResponse.success(body, "Job added from link"));
   }
@@ -69,11 +73,10 @@ public class JobListingController extends AuthenticatedController {
       Authentication authentication,
       @PathVariable UUID jobId,
       @RequestBody UpdateJobListingRequest request) {
-    return ResponseEntity.ok(
-        ApiResponse.success(
-            JobListingResponse.from(
-                jobListingService.updateStatus(userId(authentication), jobId, request.status())),
-            "Status updated"));
+    JobListingResponse updated =
+        JobListingResponse.from(jobListingService.updateStatus(userId(authentication), jobId, request.status()));
+    publish(authentication, updated, AutomationEventRecord.Kind.UPDATED);
+    return ResponseEntity.ok(ApiResponse.success(updated, "Status updated"));
   }
 
   @PatchMapping("/{jobId}/details")
@@ -145,5 +148,14 @@ public class JobListingController extends AuthenticatedController {
       Authentication authentication, @PathVariable UUID jobId) {
     jobListingService.delete(userId(authentication), jobId);
     return ResponseEntity.ok(ApiResponse.success(null, "Job deleted"));
+  }
+
+  // Published from the controller so only the user's own changes trigger automation rules.
+  private void publish(Authentication authentication, JobListingResponse job, AutomationEventRecord.Kind kind) {
+    java.util.Map<String, String> attributes = new java.util.HashMap<>();
+    if (job.status() != null) attributes.put("status", job.status());
+    if (job.company() != null) attributes.put("company", job.company());
+    String title = job.company() == null ? job.title() : job.title() + " at " + job.company();
+    automationEvents.publish(userId(authentication), "JOB_APPLICATION", job.id(), kind, title, attributes);
   }
 }

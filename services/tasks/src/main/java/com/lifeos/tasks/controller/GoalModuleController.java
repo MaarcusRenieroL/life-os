@@ -1,6 +1,8 @@
 package com.lifeos.tasks.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.common.events.AutomationEventPublisher;
+import com.lifeos.common.events.AutomationEventRecord;
 import com.lifeos.tasks.domains.dto.request.CreateGoalLinkRequest;
 import com.lifeos.tasks.domains.dto.request.LogMetricEntryRequest;
 import com.lifeos.tasks.domains.dto.request.SaveGoalRequest;
@@ -44,6 +46,7 @@ public class GoalModuleController {
 
   private final GoalManagementService goalService;
   private final GoalItemsService itemsService;
+  private final AutomationEventPublisher automationEvents;
 
   @GetMapping
   public ResponseEntity<ApiResponse<List<GoalSummaryResponse>>> list(
@@ -59,7 +62,9 @@ public class GoalModuleController {
   @PostMapping
   public ResponseEntity<ApiResponse<GoalSummaryResponse>> create(
       Authentication authentication, @Valid @RequestBody SaveGoalRequest request) {
-    return ok(goalService.create(userId(authentication), request), "Goal created successfully");
+    GoalSummaryResponse created = goalService.create(userId(authentication), request);
+    publish(authentication, created, AutomationEventRecord.Kind.CREATED);
+    return ok(created, "Goal created successfully");
   }
 
   @GetMapping("/{id}")
@@ -70,13 +75,17 @@ public class GoalModuleController {
   @PutMapping("/{id}")
   public ResponseEntity<ApiResponse<GoalSummaryResponse>> update(
       Authentication authentication, @PathVariable UUID id, @Valid @RequestBody SaveGoalRequest request) {
-    return ok(goalService.update(userId(authentication), id, request), "Goal updated successfully");
+    GoalSummaryResponse updated = goalService.update(userId(authentication), id, request);
+    publish(authentication, updated, AutomationEventRecord.Kind.UPDATED);
+    return ok(updated, "Goal updated successfully");
   }
 
   @PostMapping("/{id}/status")
   public ResponseEntity<ApiResponse<GoalSummaryResponse>> setStatus(
       Authentication authentication, @PathVariable UUID id, @Valid @RequestBody UpdateGoalStatusRequest request) {
-    return ok(goalService.setStatus(userId(authentication), id, request), "Goal status updated successfully");
+    GoalSummaryResponse changed = goalService.setStatus(userId(authentication), id, request);
+    publish(authentication, changed, request.status() == GoalStatus.COMPLETED ? AutomationEventRecord.Kind.COMPLETED : AutomationEventRecord.Kind.UPDATED);
+    return ok(changed, "Goal status updated successfully");
   }
 
   @DeleteMapping("/{id}")
@@ -190,6 +199,16 @@ public class GoalModuleController {
   public ResponseEntity<ApiResponse<GoalReviewResponse>> submitReview(
       Authentication authentication, @PathVariable UUID id, @Valid @RequestBody SubmitGoalReviewRequest request) {
     return ok(itemsService.submitReview(userId(authentication), id, request), "Review saved successfully");
+  }
+
+  // Published from the controller, not the service, so automation's own changes through the
+  // internal endpoints never re-trigger rules.
+  private void publish(Authentication authentication, GoalSummaryResponse goal, AutomationEventRecord.Kind kind) {
+    java.util.Map<String, String> attributes = new java.util.HashMap<>();
+    attributes.put("status", goal.status().name());
+    attributes.put("priority", String.valueOf(goal.priority()));
+    if (goal.area() != null) attributes.put("area", goal.area().name());
+    automationEvents.publish(userId(authentication), "GOAL", goal.id(), kind, goal.name(), attributes);
   }
 
   private static <T> ResponseEntity<ApiResponse<T>> ok(T data, String message) {
