@@ -316,6 +316,10 @@ public class AiAssistant {
             posting in the digest; omit or use an empty array for every other type
         }
 
+        For APPLICATION_CONFIRMATION always fill in "company" and "title" exactly as the email
+        names them (for example "Your application was sent to Acme" for the role "Backend
+        Engineer") - they are used to record the application when it is not tracked yet.
+
         Use LOW confidence whenever the email is ambiguous, generic, or you are guessing at the
         company/role - do not force a HIGH confidence to seem decisive.
 

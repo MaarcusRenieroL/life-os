@@ -22,6 +22,11 @@ public class JobEmailEventConsumer {
       containerFactory = "jobEmailEventListenerContainerFactory")
   public void listen(JobEmailEventRecord event) {
     emailEventService.ingest(
-        event.userId(), event.gmailMessageId(), event.fromAddress(), event.subject(), event.body());
+        event.userId(),
+        event.gmailMessageId(),
+        event.fromAddress(),
+        event.subject(),
+        event.body(),
+        event.receivedAt());
   }
 }
