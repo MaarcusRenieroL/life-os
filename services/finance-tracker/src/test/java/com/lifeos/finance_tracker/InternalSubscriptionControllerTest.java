@@ -69,6 +69,10 @@ class InternalSubscriptionControllerTest {
     assertThat(captor.getValue().nextBillingDate()).isAfterOrEqualTo(today);
     assertThat(captor.getValue().nextBillingDate()).isBefore(today.plusMonths(1).plusDays(1));
     assertThat(captor.getValue().name()).isEqualTo("Netflix");
+    // SubscriptionService rejects auto-booking with no account, and auto-booking would double-count
+    // charges that bank import already records - so an email-found subscription must be tracking-only.
+    assertThat(captor.getValue().autoCreateExpense()).isFalse();
+    assertThat(captor.getValue().accountId()).isNull();
   }
 
   @Test

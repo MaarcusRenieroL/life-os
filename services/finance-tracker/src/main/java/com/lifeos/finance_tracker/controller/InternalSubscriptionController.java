@@ -71,7 +71,11 @@ public class InternalSubscriptionController {
         subscriptionService.create(
             userId,
             new SaveSubscriptionRequest(
-                request.name().trim(), request.amount(), request.billingCycle(), next, null, null, null, null, null, null,
+                request.name().trim(), request.amount(), request.billingCycle(), next, null, null,
+                // Off, and there is no account to book to: this only records that the subscription
+                // exists. Left null it defaults to ON, which SubscriptionService rejects without an
+                // account - and turning it on would double-count charges bank import already books.
+                false, null, null, null,
                 request.notes() == null || request.notes().isBlank() ? "Found in your email" : request.notes()));
     return ResponseEntity.ok(ApiResponse.success(new EmailSubscriptionResult(saved.id(), true), "Subscription tracked"));
   }
