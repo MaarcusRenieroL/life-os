@@ -14,6 +14,7 @@ import com.lifeos.auth.domains.entity.DeviceSession;
 import com.lifeos.auth.domains.entity.RefreshToken;
 import com.lifeos.auth.domains.entity.User;
 import com.lifeos.auth.exception.InvalidCredentialsException;
+import com.lifeos.auth.exception.RegistrationClosedException;
 import com.lifeos.auth.repository.BiometricEnrollmentRepository;
 import com.lifeos.auth.repository.DeviceSessionRepository;
 import com.lifeos.auth.repository.RefreshTokenRepository;
@@ -71,6 +72,66 @@ class AuthServiceTest {
               }
               return session;
             });
+  }
+
+  // ---------- register ----------
+
+  @Test
+  void theFirstAccountCanRegisterAndBecomesTheOwner() {
+    when(userService.hasAnyUser()).thenReturn(false);
+    when(userService.existsByEmail("owner@example.com")).thenReturn(false);
+    when(passwordEncoder.encode("pw")).thenReturn("hashed");
+
+    authService.register("owner@example.com", "pw");
+
+    verify(userService).createUser("owner@example.com", "hashed");
+  }
+
+  @Test
+  void aLaterSignupIsRefusedSoAPublicLoginPageDoesNotExposeAccountCreation() {
+    when(userService.hasAnyUser()).thenReturn(true);
+
+    assertThatThrownBy(() -> authService.register("stranger@example.com", "pw"))
+        .isInstanceOf(RegistrationClosedException.class);
+
+    verify(userService, never()).createUser(any(), any());
+  }
+
+  @Test
+  void additionalSignupsWorkOnceExplicitlyEnabled() {
+    org.springframework.test.util.ReflectionTestUtils.setField(authService, "allowAdditionalRegistrations", true);
+    when(userService.existsByEmail("second@example.com")).thenReturn(false);
+    when(passwordEncoder.encode("pw")).thenReturn("hashed");
+
+    authService.register("second@example.com", "pw");
+
+    verify(userService).createUser("second@example.com", "hashed");
+  }
+
+  // ---------- owner-only ----------
+
+  @Test
+  void whenAnOwnerIsSetEveryoneElseIsRefusedEvenWithTheRightPassword() {
+    org.springframework.test.util.ReflectionTestUtils.setField(authService, "ownerUserId", UUID.randomUUID().toString());
+    when(userService.findByEmail("jane@example.com")).thenReturn(Optional.of(userWithHash("hashed-pw")));
+    when(passwordEncoder.matches("correct-password", "hashed-pw")).thenReturn(true);
+
+    assertThatThrownBy(() -> authService.login("jane@example.com", "correct-password", "Pixel 8", "ANDROID"))
+        .isInstanceOf(InvalidCredentialsException.class);
+
+    verify(deviceSessionRepository, never()).save(any());
+  }
+
+  @Test
+  void theOwnerStillSignsInWhenOneIsSet() {
+    org.springframework.test.util.ReflectionTestUtils.setField(authService, "ownerUserId", userId.toString().toUpperCase());
+    when(userService.findByEmail("jane@example.com")).thenReturn(Optional.of(userWithHash("hashed-pw")));
+    when(passwordEncoder.matches("correct-password", "hashed-pw")).thenReturn(true);
+    stubSessionSaveAssignsId();
+    when(accessTokenService.generateAccessToken(userId)).thenReturn("access-token-123");
+
+    assertThat(authService.login("jane@example.com", "correct-password", "Pixel 8", "ANDROID").getAccessToken())
+        .isEqualTo("access-token-123");
   }
 
   // ---------- login ----------

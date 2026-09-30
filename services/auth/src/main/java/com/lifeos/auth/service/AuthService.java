@@ -9,6 +9,7 @@ import com.lifeos.auth.domains.entity.User;
 import com.lifeos.auth.domains.record.ChallengeRecord;
 import com.lifeos.auth.exception.EmailAlreadyExistsException;
 import com.lifeos.auth.exception.InvalidCredentialsException;
+import com.lifeos.auth.exception.RegistrationClosedException;
 import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.auth.repository.BiometricEnrollmentRepository;
 import com.lifeos.auth.repository.DeviceSessionRepository;
@@ -54,7 +55,34 @@ public class AuthService {
   private final BiometricEnrollmentRepository biometricEnrollmentRepository;
   private final AuditEventPublisher auditEventPublisher;
 
+  /**
+   * Life OS is a single-owner app: the first account is the owner and every later signup is refused,
+   * so exposing the login page to the internet doesn't also expose account creation. Set
+   * AUTH_ALLOW_REGISTRATION=true to open it again (e.g. to add a second person deliberately).
+   */
+  @Value("${auth.registration.allow-additional:false}")
+  private boolean allowAdditionalRegistrations;
+
+  /**
+   * When set, only this account may sign in, refresh or use biometrics; everyone else gets the same
+   * "Invalid credentials" as a wrong password. Life OS is single-owner, so this keeps leftover test
+   * accounts (and anything created if signup is ever reopened) from being a way in once the site is
+   * on the internet, without deleting their data. Blank disables the check.
+   */
+  @Value("${auth.owner-user-id:}")
+  private String ownerUserId = "";
+
+  private void requireOwner(UUID userId) {
+    if (!ownerUserId.isBlank() && !userId.toString().equalsIgnoreCase(ownerUserId.trim())) {
+      throw new InvalidCredentialsException("Invalid credentials");
+    }
+  }
+
   public void register(String email, String rawPassword) {
+    if (!allowAdditionalRegistrations && userService.hasAnyUser()) {
+      throw new RegistrationClosedException();
+    }
+
     boolean isExistingUser = userService.existsByEmail(email);
 
     if (isExistingUser) {
@@ -75,6 +103,7 @@ public class AuthService {
     if (!passwordEncoder.matches(rawPassword, existingUser.getPasswordHash())) {
       throw new InvalidCredentialsException("Invalid credentials");
     }
+    requireOwner(existingUser.getId());
 
     DeviceSession deviceSession =
         DeviceSession.builder()
@@ -113,6 +142,7 @@ public class AuthService {
     if (deviceSession.getRevokedAt() != null) {
       throw new InvalidCredentialsException("Invalid credentials");
     }
+    requireOwner(deviceSession.getUserId());
 
     if (existingRefreshToken.getExpiresAt().isBefore(now)) {
       throw new InvalidCredentialsException("Invalid credentials");
@@ -216,6 +246,7 @@ public class AuthService {
     if (!verifySignature(enrollment.getPublicKey(), challengeRecord.challenge(), signature)) {
       throw new InvalidCredentialsException("Invalid credentials");
     }
+    requireOwner(enrollment.getUserId());
 
     DeviceSession deviceSession =
         DeviceSession.builder()

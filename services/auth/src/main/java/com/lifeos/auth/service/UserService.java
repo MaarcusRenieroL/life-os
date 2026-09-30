@@ -29,6 +29,10 @@ public class UserService {
     return userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
   }
 
+  public boolean hasAnyUser() {
+    return userRepository.count() > 0;
+  }
+
   public boolean existsByEmail(String email) {
     return userRepository.existsByEmail(email);
   }
