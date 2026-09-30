@@ -1,160 +1,204 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { format, parseISO } from 'date-fns';
+import { AlertTriangle, Pause, Play, Plus } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { calendarApi } from '@/features/calendar/calendar-api';
+import { useConfirmDialog } from '@/components/confirm-dialog';
 import { EmptyState } from '@/components/empty-state';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getErrorMessage } from '@/lib/error';
 
-import { CategorizeDialog } from './categorize-dialog';
-import { merchantApi } from './merchant-api';
-import { recurringPatternApi } from './recurring-pattern-api';
-import type { RecurringPatternResponse } from './types';
-import { formatINR, frequencyLabel, monthlyEquivalent } from './utils';
+import { DetectedSubscriptions } from './detected-subscriptions';
+import { subscriptionApi } from './subscription-api';
+import { SubscriptionDialog } from './subscription-dialog';
+import type { SubscriptionResponse } from './types';
+import { formatINR } from './utils';
 
-const UNUSED_IDLE_DAYS = 30;
-const RENEWING_SOON_DAYS = 7;
+type View = 'tracked' | 'detected';
+type Filter = 'active' | 'flagged' | 'inactive';
 
-type FilterChip = 'all' | 'unused' | 'renewing';
+const CYCLE_LABELS = { WEEKLY: 'week', MONTHLY: 'month', QUARTERLY: 'quarter', YEARLY: 'year' } as const;
 
-export function SubscriptionsPage() {
-  const queryClient = useQueryClient();
-  const { data: patterns = [] } = useQuery({ queryKey: ['finance', 'recurring'], queryFn: recurringPatternApi.getPatterns });
-  const { data: merchants = [] } = useQuery({ queryKey: ['finance', 'merchants'], queryFn: merchantApi.getMerchants });
-
-  const [filter, setFilter] = useState<FilterChip>('all');
-  const [managing, setManaging] = useState<RecurringPatternResponse | null>(null);
-
-  const rows = useMemo(() => {
-    const now = Date.now();
-    return patterns
-      .map((p) => {
-        const merchant = merchants.find((m) => m.id === p.merchantId);
-        const monthly = monthlyEquivalent(p.averageAmount, p.frequency);
-        const idleDays = p.lastTransactionDate ? Math.floor((now - new Date(p.lastTransactionDate).getTime()) / 86_400_000) : Infinity;
-        const nextRenewalDays = p.nextExpectedDate ? Math.ceil((new Date(p.nextExpectedDate).getTime() - now) / 86_400_000) : null;
-        return {
-          ...p,
-          initials: (merchant?.name ?? '??').slice(0, 2).toUpperCase(),
-          merchantName: merchant?.name ?? 'Unknown',
-          monthly,
-          cycleLabel: frequencyLabel(p.frequency),
-          unused: idleDays >= UNUSED_IDLE_DAYS,
-          renewingSoon: nextRenewalDays !== null && nextRenewalDays >= 0 && nextRenewalDays <= RENEWING_SOON_DAYS,
-          nextRenewalDays,
-          nextRenewalLabel: p.nextExpectedDate ? new Date(p.nextExpectedDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—',
-          lastUsedLabel: idleDays === Infinity ? 'no recent activity' : idleDays === 0 ? 'today' : `${idleDays} days ago`,
-        };
-      })
-      .sort((a, b) => (a.nextRenewalDays ?? Infinity) - (b.nextRenewalDays ?? Infinity));
-  }, [patterns, merchants]);
-
-  const filtered = rows.filter((r) => (filter === 'unused' ? r.unused : filter === 'renewing' ? r.renewingSoon : true));
-
-  const monthlyTotal = rows.reduce((s, r) => s + r.monthly, 0);
-  const wastedMonthly = rows.filter((r) => r.unused).reduce((s, r) => s + r.monthly, 0);
-  const renewingSoon = rows.filter((r) => r.renewingSoon);
-
-  function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ['finance', 'recurring'] });
-  }
-
-  async function dismiss(pattern: RecurringPatternResponse) {
-    await recurringPatternApi.dismiss(pattern.id);
-    invalidate();
-  }
-
-  async function saveCategory(categoryIds: string[]) {
-    if (!managing) return;
-    await recurringPatternApi.updateCategory(managing.id, categoryIds[0]);
-    invalidate();
-  }
-
-  // "Show subscription renewal dates in calendar" integration point - one-directional, same
-  // pattern as the other module bridges built this pass.
-  async function addRenewalToCalendar(row: { merchantName: string; nextExpectedDate: string | null; monthly: number }) {
-    if (!row.nextExpectedDate) {
-      toast.error('This subscription has no predicted renewal date yet.');
-      return;
-    }
-    try {
-      const date = row.nextExpectedDate.slice(0, 10);
-      await calendarApi.create({
-        title: `${row.merchantName} renewal`,
-        description: `Predicted subscription renewal (~${formatINR(row.monthly)}/mo)`,
-        category: 'PERSONAL',
-        allDay: true,
-        startDate: date,
-        endDate: date,
-      });
-      toast.success('Added to calendar');
-    } catch {
-      toast.error('Could not add the renewal to the calendar. Please try again.');
-    }
-  }
-
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight">Subscriptions</h1>
-
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Monthly total" value={formatINR(monthlyTotal)} />
-        <StatTile label="Yearly total" value={formatINR(monthlyTotal * 12)} />
-        <StatTile label="Active" value={String(rows.length)} />
-        <StatTile label="Wasted / month" value={formatINR(wastedMonthly)} destructive={wastedMonthly > 0} />
-      </div>
-
-      {renewingSoon.length > 0 && (
-        <div className="mt-4 rounded-lg border border-yellow-500/40 bg-yellow-500/5 px-3 py-2 text-sm">
-          {renewingSoon.length} renewal(s) in the next 7 days — {formatINR(renewingSoon.reduce((s, r) => s + r.averageAmount, 0))}
-        </div>
-      )}
-
-      <div className="mt-4 flex gap-2">
-        {(['all', 'unused', 'renewing'] as FilterChip[]).map((chip) => (
-          <Button key={chip} size="sm" variant={filter === chip ? 'secondary' : 'ghost'} onClick={() => setFilter(chip)}>
-            {chip === 'all' ? 'All active' : chip === 'unused' ? 'Unused' : 'Renewing soon'}
-          </Button>
-        ))}
-      </div>
-
-      <ul className="mt-4 flex flex-col gap-1.5">
-        {filtered.map((r) => (
-          <li key={r.id} className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5">
-            <div className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">{r.initials}</div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium">{r.merchantName}</div>
-              <div className="text-xs text-muted-foreground">
-                {r.cycleLabel} · next {r.nextRenewalLabel} · last used {r.lastUsedLabel}
-              </div>
-            </div>
-            <div className="text-sm font-medium">{formatINR(r.monthly)}/mo</div>
-            <div className="flex gap-2 text-xs">
-              <button className="text-primary hover:underline" onClick={() => setManaging(r)}>Manage</button>
-              <button className="text-primary hover:underline" onClick={() => void addRenewalToCalendar(r)}>Add to calendar</button>
-              {r.unused && <button className="text-destructive hover:underline" onClick={() => void dismiss(r)}>Cancel</button>}
-            </div>
-          </li>
-        ))}
-        {filtered.length === 0 && <EmptyState message="No subscriptions match." />}
-      </ul>
-
-      <CategorizeDialog
-        open={!!managing}
-        onOpenChange={(o) => !o && setManaging(null)}
-        transactionLabel={managing?.merchantId ? merchants.find((m) => m.id === managing.merchantId)?.name ?? '' : ''}
-        initialCategoryIds={managing?.categoryId ? [managing.categoryId] : []}
-        onSave={(ids) => void saveCategory(ids)}
-      />
-    </div>
-  );
-}
-
-function StatTile({ label, value, destructive }: { label: string; value: string; destructive?: boolean }) {
+function Tile({ label, value, destructive }: { label: string; value: string; destructive?: boolean }) {
   return (
     <div className="rounded-lg border bg-card p-3 text-center">
       <div className={`text-lg font-semibold ${destructive ? 'text-destructive' : ''}`}>{value}</div>
       <div className="text-[11px] text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function renewalText(s: SubscriptionResponse): string {
+  if (s.status !== 'ACTIVE') return s.status === 'PAUSED' ? 'Paused' : 'Cancelled';
+  const days = s.daysUntilRenewal ?? 0;
+  const when = days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
+  return `Renews ${when} · ${format(parseISO(s.nextBillingDate), 'MMM d')}`;
+}
+
+/** Subscriptions you declared (with billing, reminders and usage tracking) and, on the other tab,
+ * the recurring charges detected from your transactions - which you can promote to tracked. */
+export function SubscriptionsPage() {
+  const queryClient = useQueryClient();
+  const { confirm, dialog } = useConfirmDialog();
+  const [view, setView] = useState<View>('tracked');
+  const [filter, setFilter] = useState<Filter>('active');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<SubscriptionResponse | null>(null);
+
+  const { data: subs = [] } = useQuery({ queryKey: ['finance', 'subscriptions'], queryFn: () => subscriptionApi.list() });
+  const { data: summary } = useQuery({ queryKey: ['finance', 'subscriptions', 'summary'], queryFn: subscriptionApi.summary });
+
+  function refresh() {
+    void queryClient.invalidateQueries({ queryKey: ['finance', 'subscriptions'] });
+  }
+
+  async function run(action: () => Promise<unknown>, success?: string) {
+    try {
+      await action();
+      if (success) toast.success(success);
+      refresh();
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'That did not work. Please try again.'));
+    }
+  }
+
+  async function cancel(s: SubscriptionResponse) {
+    if (!(await confirm({ title: `Mark “${s.name}” as cancelled?`, description: 'It stops billing and reminders and stays in your list as history.', confirmLabel: 'Cancel subscription' }))) return;
+    await run(() => subscriptionApi.cancel(s.id), 'Marked as cancelled');
+  }
+
+  async function remove(s: SubscriptionResponse) {
+    if (!(await confirm({ title: `Delete “${s.name}”?`, description: 'Expenses it already booked are kept.', confirmLabel: 'Delete' }))) return;
+    await run(() => subscriptionApi.delete(s.id));
+  }
+
+  const shown = subs.filter((s) => (filter === 'active' ? s.status === 'ACTIVE' : filter === 'flagged' ? s.wasteful : s.status !== 'ACTIVE'));
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Subscriptions</h1>
+        <div className="flex items-center gap-2">
+          <Tabs value={view} onValueChange={(v) => setView(v as View)}>
+            <TabsList>
+              <TabsTrigger value="tracked">Tracked</TabsTrigger>
+              <TabsTrigger value="detected">Detected</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {view === 'tracked' && (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus /> Add
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {view === 'detected' ? (
+        <DetectedSubscriptions onTracked={() => { refresh(); setView('tracked'); }} />
+      ) : (
+        <>
+          {summary && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Tile label="Monthly total" value={formatINR(summary.monthlyTotal)} />
+              <Tile label="Yearly total" value={formatINR(summary.yearlyTotal)} />
+              <Tile label="Renewing in 7 days" value={`${summary.renewingSoonCount} · ${formatINR(summary.renewingSoonTotal)}`} />
+              <Tile label="Low-use / month" value={formatINR(summary.wastefulMonthly)} destructive={summary.wastefulCount > 0} />
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            {(['active', 'flagged', 'inactive'] as Filter[]).map((f) => (
+              <Button key={f} size="sm" variant={filter === f ? 'secondary' : 'ghost'} onClick={() => setFilter(f)}>
+                {f === 'active' ? 'Active' : f === 'flagged' ? 'Low use, high cost' : 'Paused & cancelled'}
+              </Button>
+            ))}
+          </div>
+
+          {shown.length === 0 ? (
+            <EmptyState message={subs.length === 0 ? 'No subscriptions yet - add one, or track one from the Detected tab.' : 'Nothing here.'} />
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {shown.map((s) => (
+                <li key={s.id}>
+                  <Card className={s.wasteful ? 'border-amber-500/50' : undefined}>
+                    <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{s.name}</span>
+                          {s.wasteful && (
+                            <Badge variant="outline" className="gap-1 border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                              <AlertTriangle className="size-3" /> Low use, high cost
+                            </Badge>
+                          )}
+                          {s.status !== 'ACTIVE' && <Badge variant="outline">{s.status === 'PAUSED' ? 'Paused' : 'Cancelled'}</Badge>}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {formatINR(s.amount)}/{CYCLE_LABELS[s.billingCycle]} · {formatINR(s.monthlyCost)}/mo · {renewalText(s)}
+                          {s.usageRating != null && ` · usage ${s.usageRating}/5`}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1 text-xs">
+                        {s.status === 'ACTIVE' && (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => void run(() => subscriptionApi.logUse(s.id), 'Marked as used today')}>
+                              Used it
+                            </Button>
+                            {s.accountId && (
+                              <Button size="sm" variant="ghost" onClick={() => void run(() => subscriptionApi.chargeNow(s.id), 'Charge recorded')}>
+                                Charge now
+                              </Button>
+                            )}
+                            <Button size="icon" variant="ghost" aria-label={`Pause ${s.name}`} onClick={() => void run(() => subscriptionApi.pause(s.id))}>
+                              <Pause className="size-4" />
+                            </Button>
+                          </>
+                        )}
+                        {s.status === 'PAUSED' && (
+                          <Button size="icon" variant="ghost" aria-label={`Resume ${s.name}`} onClick={() => void run(() => subscriptionApi.resume(s.id))}>
+                            <Play className="size-4" />
+                          </Button>
+                        )}
+                        {s.status !== 'CANCELLED' && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditing(s);
+                                setDialogOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => void cancel(s)}>
+                              Cancel
+                            </Button>
+                          </>
+                        )}
+                        <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void remove(s)}>
+                          Delete
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+
+      <SubscriptionDialog open={dialogOpen} onOpenChange={setDialogOpen} editing={editing} onSaved={refresh} />
+      {dialog}
     </div>
   );
 }

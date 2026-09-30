@@ -280,3 +280,61 @@ export interface StatementImportResult {
   rowsParsed: number;
   rowsImported: number;
 }
+
+export type BillingCycle = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+export type SubscriptionStatus = 'ACTIVE' | 'PAUSED' | 'CANCELLED';
+
+export interface SubscriptionResponse {
+  id: string;
+  name: string;
+  amount: number;
+  billingCycle: BillingCycle;
+  monthlyCost: number;
+  yearlyCost: number;
+  nextBillingDate: string;
+  daysUntilRenewal: number | null;
+  status: SubscriptionStatus;
+  accountId: string | null;
+  categoryId: string | null;
+  autoCreateExpense: boolean;
+  reminderDaysBefore: number;
+  lastBilledOn: string | null;
+  usageRating: number | null;
+  lastUsedOn: string | null;
+  lowUse: boolean;
+  highCost: boolean;
+  wasteful: boolean;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface SubscriptionSummaryResponse {
+  activeCount: number;
+  monthlyTotal: number;
+  yearlyTotal: number;
+  wastefulCount: number;
+  wastefulMonthly: number;
+  renewingSoonCount: number;
+  renewingSoonTotal: number;
+}
+
+export interface SubscriptionChargeResponse {
+  transactionId: string;
+  date: string;
+  amount: number;
+  description: string;
+}
+
+export interface SaveSubscriptionRequest {
+  name: string;
+  amount: number;
+  billingCycle: BillingCycle;
+  nextBillingDate: string;
+  accountId: string | null;
+  categoryId: string | null;
+  autoCreateExpense: boolean;
+  reminderDaysBefore: number;
+  usageRating: number | null;
+  lastUsedOn: string | null;
+  notes: string | null;
+}
