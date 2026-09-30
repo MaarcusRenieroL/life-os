@@ -7,6 +7,7 @@ import { HabitsLayout } from '@/features/habits/habits-layout';
 import { JobTrackerLayout } from '@/features/job-tracker/job-tracker-layout';
 import { JobTrackerOnboardingGuard } from '@/features/job-tracker/job-tracker-onboarding-guard';
 import { NotesLayout } from '@/features/notes/notes-layout';
+import { CalendarLayout } from '@/features/calendar/calendar-layout';
 import { TasksLayout } from '@/features/tasks/tasks-layout';
 import { VaultLayout } from '@/features/vault/vault-layout';
 import { VaultUnlockGuard } from '@/features/vault/vault-unlock-guard';
@@ -140,6 +141,16 @@ export const router = createBrowserRouter([
               { path: 'board', lazy: page(() => import('@/features/tasks/tasks-board-page'), 'TasksBoardPage') },
               { path: 'completed', lazy: page(() => import('@/features/tasks/tasks-completed-page'), 'TasksCompletedPage') },
               { path: 'analytics', lazy: page(() => import('@/features/tasks/tasks-analytics-page'), 'TasksAnalyticsPage') },
+            ],
+          },
+          {
+            path: 'calendar',
+            element: <CalendarLayout />,
+            children: [
+              { index: true, lazy: page(() => import('@/features/calendar/calendar-month-page'), 'CalendarMonthPage') },
+              { path: 'week', lazy: page(() => import('@/features/calendar/calendar-week-page'), 'CalendarWeekPage') },
+              { path: 'day', lazy: page(() => import('@/features/calendar/calendar-day-page'), 'CalendarDayPage') },
+              { path: 'agenda', lazy: page(() => import('@/features/calendar/calendar-agenda-page'), 'CalendarAgendaPage') },
             ],
           },
           // Catch-all: any unmatched path inside the shell (bad link, stale bookmark,

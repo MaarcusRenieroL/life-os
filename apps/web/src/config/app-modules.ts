@@ -91,7 +91,18 @@ export const APP_MODULES: AppModuleConfig[] = [
       { label: 'Weekly Grid', path: '/habits/weekly' },
     ],
   },
-  { code: 'CL', name: 'Calendar', enabled: false },
+  {
+    code: 'CL',
+    name: 'Calendar',
+    enabled: true,
+    path: '/calendar',
+    tabs: [
+      { label: 'Month', path: '/calendar' },
+      { label: 'Week', path: '/calendar/week' },
+      { label: 'Day', path: '/calendar/day' },
+      { label: 'Agenda', path: '/calendar/agenda' },
+    ],
+  },
   {
     code: 'NT',
     name: 'Notes',
