@@ -59,6 +59,17 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(SubscriptionNotFoundException.class)
+  public ResponseEntity<ApiResponse<Void>> handleSubscriptionNotFound(SubscriptionNotFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(InvalidRequestException.class)
+  public ResponseEntity<ApiResponse<Void>> handleInvalidRequest(InvalidRequestException exception) {
+    return ResponseEntity.badRequest().body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(NoDefaultAccountException.class)
   public ResponseEntity<ApiResponse<Void>> handleNoDefaultAccount(NoDefaultAccountException exception) {
     return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)

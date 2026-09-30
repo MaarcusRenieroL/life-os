@@ -34,6 +34,9 @@ public interface TransactionRepository
 
   boolean existsBySourceReference(String sourceReference);
 
+  List<Transaction> findAllByUserIdAndSourceReferenceStartingWithOrderByTransactionDateDesc(
+      UUID userId, String sourceReferencePrefix);
+
   /**
    * Count of transactions still awaiting a category - what the home and finance dashboards show as
    * "N need review". Both used to fetch a page of 50 full transactions and filter it client-side,
