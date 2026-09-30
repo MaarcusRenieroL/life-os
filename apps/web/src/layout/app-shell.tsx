@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
   Briefcase,
@@ -11,6 +12,7 @@ import {
   Target,
   ListTodo,
   LogOut,
+  Mail,
   Settings,
   ShieldCheck,
   StickyNote,
@@ -20,6 +22,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { ShortcutsHelpDialog } from '@/components/shortcuts-help-dialog';
 import { useAuth } from '@/features/auth/auth-context';
+import { emailHubApi } from '@/features/email-hub/email-hub-api';
 import { NotificationBell } from '@/features/core/notification-bell';
 import { QuickCaptureDialog } from '@/features/core/quick-capture-dialog';
 import {
@@ -50,6 +53,7 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
@@ -68,6 +72,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Today', to: '/today', icon: CalendarCheck, enabled: true },
   { label: 'Home', to: '/home', icon: HomeIcon, enabled: true },
+  { label: 'Email', to: '/email', icon: Mail, enabled: true },
   { label: 'Tasks', to: '/tasks', icon: ListTodo, enabled: true },
   { label: 'Calendar', to: '/calendar', icon: CalendarIcon, enabled: true },
   { label: 'Job Tracker', to: '/jobs', icon: Briefcase, enabled: true },
@@ -89,6 +94,13 @@ export function AppShell() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  // Emails the hub wants a yes on - shown as a badge so they aren't missed.
+  const { data: emailPending = 0 } = useQuery({
+    queryKey: ['email-hub', 'pending-count'],
+    queryFn: emailHubApi.pendingCount,
+    refetchInterval: 120_000,
+    retry: false,
+  });
 
   return (
     <SidebarProvider>
@@ -124,6 +136,7 @@ export function AppShell() {
                           <span>{item.label}</span>
                         </SidebarMenuButton>
                       )}
+                      {item.to === '/email' && emailPending > 0 && <SidebarMenuBadge>{emailPending}</SidebarMenuBadge>}
                     </SidebarMenuItem>
                   );
                 })}
