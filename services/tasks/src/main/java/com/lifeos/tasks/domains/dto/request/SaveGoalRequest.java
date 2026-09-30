@@ -17,4 +17,5 @@ public record SaveGoalRequest(
     @Min(1) @Max(4) Integer priority,
     LocalDate startDate,
     LocalDate targetDate,
-    GoalReviewFrequency reviewFrequency) {}
+    GoalReviewFrequency reviewFrequency,
+    @Min(1) @Max(14) Integer weeklyWorkoutTarget) {}

@@ -37,6 +37,9 @@ public enum NotificationEventType {
   GOAL_REVIEW_DUE,
   GOAL_AT_RISK,
 
+  // workouts
+  WORKOUT_PERSONAL_RECORD,
+
   // calendar
   EVENT_STARTING,
 

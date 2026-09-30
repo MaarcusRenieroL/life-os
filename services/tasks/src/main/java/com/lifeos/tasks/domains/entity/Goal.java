@@ -66,6 +66,9 @@ public class Goal {
   @Enumerated(EnumType.STRING)
   GoalReviewFrequency reviewFrequency;
 
+  // Sessions a week this goal expects from linked workouts; null = workouts don't feed progress.
+  Integer weeklyWorkoutTarget;
+
   LocalDate nextReviewDate;
 
   // The nextReviewDate a GOAL_REVIEW_DUE notification was already sent for, so the daily scan

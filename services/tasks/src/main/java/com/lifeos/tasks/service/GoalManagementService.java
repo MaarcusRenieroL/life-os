@@ -192,6 +192,7 @@ public class GoalManagementService {
     goal.setStartDate(request.startDate());
     goal.setTargetDate(request.targetDate());
     goal.setReviewFrequency(request.reviewFrequency());
+    goal.setWeeklyWorkoutTarget(request.weeklyWorkoutTarget());
   }
 
   private void validateDates(SaveGoalRequest request) {
@@ -241,12 +242,15 @@ public class GoalManagementService {
             r.taskPct(),
             r.habitPct(),
             r.metricPct(),
+            r.workoutPct(),
             r.expectedPct(),
             progress.milestonesDone(),
             progress.milestonesTotal(),
             progress.tasksDone(),
             progress.tasksTotal(),
             progress.activeHabits(),
-            progress.metricsCount()));
+            progress.metricsCount(),
+            progress.workoutSessions(),
+            goal.getWeeklyWorkoutTarget()));
   }
 }

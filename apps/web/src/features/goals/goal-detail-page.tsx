@@ -20,6 +20,7 @@ import { GoalMetricsPanel } from './goal-metrics-panel';
 import { GoalMilestonesPanel } from './goal-milestones-panel';
 import { GoalReviewDialog } from './goal-review-dialog';
 import { GoalReviewsPanel } from './goal-reviews-panel';
+import { GoalWorkoutsPanel } from './goal-workouts-panel';
 import { GoalTasksPanel } from './goal-tasks-panel';
 import { GoalTimeline } from './goal-timeline';
 import { goalsApi } from './goals-api';
@@ -182,6 +183,9 @@ export function GoalDetailPage() {
         </Section>
         <Section title="habits">
           <GoalHabitsPanel goalId={id} onChanged={refresh} />
+        </Section>
+        <Section title="workouts">
+          <GoalWorkoutsPanel goalId={id} progress={goal.progress} />
         </Section>
         <Section title="linked goals">
           <GoalLinksPanel goalId={id} links={data.links} onChanged={refresh} />

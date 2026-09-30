@@ -9,6 +9,8 @@ import com.lifeos.tasks.domains.enums.GoalStatus;
 import com.lifeos.tasks.domains.enums.TaskStatus;
 import com.lifeos.tasks.integration.HabitStatsClient;
 import com.lifeos.tasks.integration.HabitStatsClient.HabitStats;
+import com.lifeos.tasks.integration.WorkoutStatsClient;
+import com.lifeos.tasks.integration.WorkoutStatsClient.WorkoutStats;
 import com.lifeos.tasks.repository.GoalMetricEntryRepository;
 import com.lifeos.tasks.repository.GoalMetricRepository;
 import com.lifeos.tasks.repository.GoalMilestoneRepository;
@@ -43,13 +45,15 @@ public class GoalProgressAssembler {
       int tasksDone,
       int tasksTotal,
       int activeHabits,
-      int metricsCount) {}
+      int metricsCount,
+      int workoutSessions) {}
 
   private final TaskRepository taskRepository;
   private final GoalMilestoneRepository milestoneRepository;
   private final GoalMetricRepository metricRepository;
   private final GoalMetricEntryRepository entryRepository;
   private final HabitStatsClient habitStatsClient;
+  private final WorkoutStatsClient workoutStatsClient;
 
   public Map<UUID, GoalProgress> assemble(UUID userId, Collection<Goal> goals) {
     if (goals.isEmpty()) return Map.of();
@@ -71,6 +75,7 @@ public class GoalProgressAssembler {
     Map<UUID, BigDecimal> latestByMetric = latestValues(userId);
 
     Map<UUID, HabitStats> habits = habitStatsClient.statsByGoal(userId);
+    Map<UUID, WorkoutStats> workouts = workoutStatsClient.statsByGoal(userId);
 
     Map<UUID, GoalProgress> result = new HashMap<>();
     for (Goal goal : goals) {
@@ -78,6 +83,8 @@ public class GoalProgressAssembler {
       List<Task> goalTasks = tasks.getOrDefault(goal.getId(), List.of());
       List<GoalMetric> goalMetrics = metrics.getOrDefault(goal.getId(), List.of());
       HabitStats habit = habits.get(goal.getId());
+      WorkoutStats workout = workouts.get(goal.getId());
+      int workoutSessions = workout == null ? 0 : workout.sessionsLast28Days();
 
       int milestonesDone = (int) goalMilestones.stream().filter(m -> m.getCompletedAt() != null).count();
       int tasksDone = (int) goalTasks.stream().filter(t -> t.getStatus() == TaskStatus.DONE).count();
@@ -100,6 +107,8 @@ public class GoalProgressAssembler {
                   habit == null ? 0 : habit.completions(),
                   habit == null ? 0 : habit.scheduledOccurrences(),
                   fractions,
+                  workoutSessions,
+                  goal.getWeeklyWorkoutTarget(),
                   effectiveStart(goal),
                   goal.getTargetDate(),
                   today));
@@ -114,7 +123,8 @@ public class GoalProgressAssembler {
               tasksDone,
               goalTasks.size(),
               habit == null ? 0 : habit.activeHabits(),
-              goalMetrics.size()));
+              goalMetrics.size(),
+              workoutSessions));
     }
     return result;
   }

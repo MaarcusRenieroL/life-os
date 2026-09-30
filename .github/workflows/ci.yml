@@ -68,6 +68,9 @@ jobs:
       - name: Run Tasks Tests
         run: cd services/tasks && mvn clean test
 
+      - name: Run Workouts Tests
+        run: cd services/workouts && mvn clean test
+
   lint-and-build:
     runs-on: ubuntu-latest
 

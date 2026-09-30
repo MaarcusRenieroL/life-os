@@ -9,6 +9,7 @@ import { JobTrackerLayout } from '@/features/job-tracker/job-tracker-layout';
 import { JobTrackerOnboardingGuard } from '@/features/job-tracker/job-tracker-onboarding-guard';
 import { NotesLayout } from '@/features/notes/notes-layout';
 import { CalendarLayout } from '@/features/calendar/calendar-layout';
+import { WorkoutsLayout } from '@/features/workouts/workouts-layout';
 import { TasksLayout } from '@/features/tasks/tasks-layout';
 import { VaultLayout } from '@/features/vault/vault-layout';
 import { VaultUnlockGuard } from '@/features/vault/vault-unlock-guard';
@@ -155,6 +156,21 @@ export const router = createBrowserRouter([
           },
           // Must stay after the static goals/* subpaths above so it doesn't shadow them.
           { path: 'goals/:id', lazy: page(() => import('@/features/goals/goal-detail-page'), 'GoalDetailPage') },
+          {
+            path: 'workouts',
+            element: <WorkoutsLayout />,
+            children: [
+              { index: true, lazy: page(() => import('@/features/workouts/workouts-today-page'), 'WorkoutsTodayPage') },
+              { path: 'routines', lazy: page(() => import('@/features/workouts/routines-page'), 'RoutinesPage') },
+              { path: 'exercises', lazy: page(() => import('@/features/workouts/exercises-page'), 'ExercisesPage') },
+              { path: 'history', lazy: page(() => import('@/features/workouts/history-page'), 'WorkoutHistoryPage') },
+              { path: 'records', lazy: page(() => import('@/features/workouts/records-page'), 'RecordsPage') },
+              { path: 'body', lazy: page(() => import('@/features/workouts/body-page'), 'BodyPage') },
+              { path: 'analytics', lazy: page(() => import('@/features/workouts/analytics-page'), 'WorkoutAnalyticsPage') },
+            ],
+          },
+          // Must stay after the static workouts/* subpaths above so it doesn't shadow them.
+          { path: 'workouts/session/:id', lazy: page(() => import('@/features/workouts/session-page'), 'WorkoutSessionPage') },
           {
             path: 'calendar',
             element: <CalendarLayout />,

@@ -77,7 +77,21 @@ export const APP_MODULES: AppModuleConfig[] = [
     ],
   },
   { code: 'JR', name: 'Journal', enabled: false },
-  { code: 'WK', name: 'Workouts', enabled: false },
+  {
+    code: 'WK',
+    name: 'Workouts',
+    enabled: true,
+    path: '/workouts',
+    tabs: [
+      { label: 'Today', path: '/workouts' },
+      { label: 'Routines', path: '/workouts/routines' },
+      { label: 'Exercises', path: '/workouts/exercises' },
+      { label: 'History', path: '/workouts/history' },
+      { label: 'Records', path: '/workouts/records' },
+      { label: 'Body', path: '/workouts/body' },
+      { label: 'Analytics', path: '/workouts/analytics' },
+    ],
+  },
   { code: 'SB', name: 'Subscriptions', enabled: false },
   {
     code: 'GL',
