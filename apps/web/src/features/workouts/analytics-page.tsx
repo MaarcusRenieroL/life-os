@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { BarChart, LineChart } from './charts';
+import { BarChart, LineChart } from '@/components/charts';
 import { formatVolume } from './utils';
 import { workoutsApi } from './workouts-api';
 

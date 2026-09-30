@@ -62,6 +62,8 @@ public interface NoteRepository extends JpaRepository<Note, UUID>, JpaSpecificat
   // state, since "delete all notes data" means all of it.
   List<Note> findAllByUserId(UUID userId);
 
+  List<Note> findAllByUserIdAndNoteTypeAndDeletedAtIsNull(UUID userId, com.lifeos.notes.domains.enums.NoteType noteType);
+
   List<Note> findAllByUserIdAndDeletedAtIsNotNullOrderByDeletedAtDesc(UUID userId);
 
   Optional<Note> findByIdAndUserIdAndDeletedAtIsNotNull(UUID id, UUID userId);

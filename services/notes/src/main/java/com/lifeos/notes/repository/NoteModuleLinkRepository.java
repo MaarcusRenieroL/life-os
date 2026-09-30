@@ -11,6 +11,8 @@ public interface NoteModuleLinkRepository extends JpaRepository<NoteModuleLink, 
 
   List<NoteModuleLink> findAllByNoteId(UUID noteId);
 
+  List<NoteModuleLink> findAllByNoteIdIn(java.util.Collection<UUID> noteIds);
+
   List<NoteModuleLink> findAllByModuleTypeAndModuleId(NoteModuleType moduleType, UUID moduleId);
 
   Optional<NoteModuleLink> findByIdAndNoteId(UUID id, UUID noteId);

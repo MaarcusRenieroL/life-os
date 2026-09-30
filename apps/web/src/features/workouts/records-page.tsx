@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/empty-state';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import { LineChart } from './charts';
+import { LineChart } from '@/components/charts';
 import { EXERCISE_CATEGORY_LABELS } from './types';
 import { formatWeight } from './utils';
 import { workoutsApi } from './workouts-api';

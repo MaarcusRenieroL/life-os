@@ -10,7 +10,8 @@ export type NoteType =
   | 'RESEARCH'
   | 'CHECKLIST'
   | 'TRAVEL'
-  | 'DECISION';
+  | 'DECISION'
+  | 'JOURNAL';
 
 export const NOTE_TYPES: NoteType[] = [
   'GENERAL',
@@ -23,6 +24,7 @@ export const NOTE_TYPES: NoteType[] = [
   'CHECKLIST',
   'TRAVEL',
   'DECISION',
+  'JOURNAL',
 ];
 
 export type NoteModuleType = 'PROJECT' | 'GOAL' | 'TASK' | 'JOB_APPLICATION' | 'HABIT' | 'EVENT';
