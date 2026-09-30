@@ -19,6 +19,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
+import { tasksApi } from '@/features/tasks/tasks-api';
+
 import { DifficultyRating, StreakBadge } from './habit-badges';
 import { HabitFormDialog } from './habit-form-dialog';
 import { habitsApi } from './habits-api';
@@ -108,6 +110,17 @@ export function HabitsListPage() {
       invalidate();
     } catch {
       toast.error('Could not update the habit. Please try again.');
+    }
+  }
+
+  // "Auto-create task from habit" integration point - one-directional, same pattern as notes'
+  // "Create task from note": creates a standalone task seeded from the habit, no ongoing link.
+  async function createTaskFromHabit(habit: Habit) {
+    try {
+      const task = await tasksApi.create({ title: habit.name, description: habit.why ?? habit.description ?? undefined });
+      toast.success(`Created task "${task.title}"`);
+    } catch {
+      toast.error('Could not create a task from this habit. Please try again.');
     }
   }
 
@@ -275,6 +288,9 @@ export function HabitsListPage() {
                           <Button size="sm" variant="ghost" onClick={() => void togglePause(habit)}>
                             {habit.status === 'PAUSED' ? 'Resume' : 'Pause'}
                           </Button>
+                          <Button size="sm" variant="ghost" onClick={() => void createTaskFromHabit(habit)}>
+                            Create task
+                          </Button>
                           <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteHabit(habit)}>
                             Delete
                           </Button>
@@ -313,6 +329,9 @@ export function HabitsListPage() {
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => void togglePause(habit)}>
                             {habit.status === 'PAUSED' ? 'Resume' : 'Pause'}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => void createTaskFromHabit(habit)}>
+                            Create task
                           </Button>
                           <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteHabit(habit)}>
                             Delete

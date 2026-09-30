@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
+import { calendarApi } from '@/features/calendar/calendar-api';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
 
@@ -68,6 +70,29 @@ export function SubscriptionsPage() {
     invalidate();
   }
 
+  // "Show subscription renewal dates in calendar" integration point - one-directional, same
+  // pattern as the other module bridges built this pass.
+  async function addRenewalToCalendar(row: { merchantName: string; nextExpectedDate: string | null; monthly: number }) {
+    if (!row.nextExpectedDate) {
+      toast.error('This subscription has no predicted renewal date yet.');
+      return;
+    }
+    try {
+      const date = row.nextExpectedDate.slice(0, 10);
+      await calendarApi.create({
+        title: `${row.merchantName} renewal`,
+        description: `Predicted subscription renewal (~${formatINR(row.monthly)}/mo)`,
+        category: 'PERSONAL',
+        allDay: true,
+        startDate: date,
+        endDate: date,
+      });
+      toast.success('Added to calendar');
+    } catch {
+      toast.error('Could not add the renewal to the calendar. Please try again.');
+    }
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">Subscriptions</h1>
@@ -106,6 +131,7 @@ export function SubscriptionsPage() {
             <div className="text-sm font-medium">{formatINR(r.monthly)}/mo</div>
             <div className="flex gap-2 text-xs">
               <button className="text-primary hover:underline" onClick={() => setManaging(r)}>Manage</button>
+              <button className="text-primary hover:underline" onClick={() => void addRenewalToCalendar(r)}>Add to calendar</button>
               {r.unused && <button className="text-destructive hover:underline" onClick={() => void dismiss(r)}>Cancel</button>}
             </div>
           </li>

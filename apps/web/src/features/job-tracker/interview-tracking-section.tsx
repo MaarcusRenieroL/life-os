@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import { calendarApi } from '@/features/calendar/calendar-api';
 import { useConfirmDialog } from '@/components/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ function formatScheduled(iso: string | null): string | null {
   });
 }
 
-export function InterviewTrackingSection({ jobId }: { jobId: string }) {
+export function InterviewTrackingSection({ jobId, company }: { jobId: string; company?: string }) {
   const queryClient = useQueryClient();
   const queryKey = ['jobs', jobId, 'interviews'];
   const { data: interviews = [] } = useQuery({ queryKey, queryFn: () => interviewApi.list(jobId) });
@@ -65,6 +66,29 @@ export function InterviewTrackingSection({ jobId }: { jobId: string }) {
       toast.error('Could not generate prep topics');
     } finally {
       setGeneratingFor(null);
+    }
+  }
+
+  // "Show interview date on calendar" integration point - one-directional, mirroring the tasks
+  // module's own "Schedule" action (task-list.tsx).
+  async function addToCalendar(interview: Interview) {
+    if (!interview.scheduledAt) {
+      toast.error('This interview has no scheduled time yet.');
+      return;
+    }
+    try {
+      const start = new Date(interview.scheduledAt);
+      await calendarApi.create({
+        title: `Interview${company ? ` — ${company}` : ''}: ${INTERVIEW_ROUND_TYPE_LABELS[interview.roundType ?? 'TECHNICAL']}`,
+        location: interview.meetingLink ?? undefined,
+        category: 'JOB',
+        allDay: false,
+        startAt: start.toISOString(),
+        endAt: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
+      });
+      toast.success('Added to calendar');
+    } catch {
+      toast.error('Could not add the interview to the calendar. Please try again.');
     }
   }
 
@@ -123,6 +147,9 @@ export function InterviewTrackingSection({ jobId }: { jobId: string }) {
                   <div className="flex shrink-0 gap-1.5">
                     <Button size="sm" variant="ghost" onClick={() => openEdit(interview)}>
                       Edit
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => void addToCalendar(interview)}>
+                      Add to calendar
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => void remove(interview)}>
                       Delete
