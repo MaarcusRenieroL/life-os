@@ -27,6 +27,11 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(RegistrationClosedException.class)
+  public ResponseEntity<ApiResponse<Void>> handleRegistrationClosed(RegistrationClosedException exception) {
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(InvalidCredentialsException.class)
   public ResponseEntity<ApiResponse<Void>> handleInvalidCredentials(
       InvalidCredentialsException exception) {

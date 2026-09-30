@@ -1,11 +1,12 @@
 services:
   postgres:
+    restart: unless-stopped
     image: postgres:16-alpine
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: lifeos
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,9 +16,10 @@ services:
       retries: 5
 
   redis:
+    restart: unless-stopped
     image: redis:8-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -25,6 +27,7 @@ services:
       retries: 5
 
   kafka:
+    restart: unless-stopped
     image: confluentinc/cp-kafka:7.5.0
     environment:
       KAFKA_BROKER_ID: 1
@@ -34,19 +37,21 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     ports:
-      - "9092:9092"
+      - "127.0.0.1:9092:9092"
     depends_on:
       - zookeeper
 
   zookeeper:
+    restart: unless-stopped
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - "2181:2181"
+      - "127.0.0.1:2181:2181"
 
   nginx:
+    restart: unless-stopped
     image: nginx:alpine
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
@@ -68,10 +73,12 @@ services:
       - workouts
 
   auth:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/auth/Dockerfile
     environment:
+      AUTH_OWNER_USER_ID: ${OWNER_USER_ID:?set OWNER_USER_ID in .env to your account id}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -80,7 +87,7 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
       AVATAR_STORAGE_DIR: /data/avatars
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -88,6 +95,7 @@ services:
         condition: service_started
 
   vault:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/vault/Dockerfile
@@ -99,7 +107,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
     ports:
-      - "8002:8002"
+      - "127.0.0.1:8002:8002"
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,6 +115,7 @@ services:
         condition: service_started
 
   job-tracker:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/job-tracker/Dockerfile
@@ -135,7 +144,7 @@ services:
     volumes:
       - job_tracker_resumes:/data/resumes
     ports:
-      - "8003:8003"
+      - "127.0.0.1:8003:8003"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -145,6 +154,7 @@ services:
   # Module tile enable/disable settings only - the notes module itself now
   # lives in its own `notes` service below.
   core:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/core/Dockerfile
@@ -165,7 +175,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
     ports:
-      - "8004:8004"
+      - "127.0.0.1:8004:8004"
     depends_on:
       postgres:
         condition: service_healthy
@@ -175,6 +185,7 @@ services:
         condition: service_healthy
 
   notes:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/notes/Dockerfile
@@ -187,7 +198,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
     ports:
-      - "8007:8007"
+      - "127.0.0.1:8007:8007"
     depends_on:
       postgres:
         condition: service_healthy
@@ -195,6 +206,7 @@ services:
         condition: service_healthy
 
   batches:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/batches/Dockerfile
@@ -206,7 +218,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
       VAULT_INTERNAL_BASE_URL: http://vault:8002
-      OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
+      OWNER_USER_ID: ${OWNER_USER_ID:?set OWNER_USER_ID in .env to your account id}
       BACKUP_CRON: ${BACKUP_CRON:-0 0 3 * * *}
       GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
       GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
@@ -219,7 +231,7 @@ services:
       FINANCE_INTERNAL_BASE_URL: ${FINANCE_INTERNAL_BASE_URL:-http://finance-tracker:8006}
       JOB_TRACKER_INTERNAL_BASE_URL: ${JOB_TRACKER_INTERNAL_BASE_URL:-http://job-tracker:8003}
     ports:
-      - "8005:8005"
+      - "127.0.0.1:8005:8005"
     depends_on:
       kafka:
         condition: service_started
@@ -227,6 +239,7 @@ services:
         condition: service_healthy
 
   finance-tracker:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/finance-tracker/Dockerfile
@@ -240,11 +253,11 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
+      OWNER_USER_ID: ${OWNER_USER_ID:?set OWNER_USER_ID in .env to your account id}
       OLLAMA_URL: http://host.docker.internal:11434
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
-      - "8006:8006"
+      - "127.0.0.1:8006:8006"
     depends_on:
       postgres:
         condition: service_healthy
@@ -254,6 +267,7 @@ services:
         condition: service_healthy
 
   habit-tracker:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/habit-tracker/Dockerfile
@@ -267,7 +281,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
     ports:
-      - "8008:8008"
+      - "127.0.0.1:8008:8008"
     depends_on:
       postgres:
         condition: service_healthy
@@ -277,6 +291,7 @@ services:
         condition: service_healthy
 
   tasks:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/tasks/Dockerfile
@@ -290,7 +305,7 @@ services:
       HABIT_TRACKER_INTERNAL_BASE_URL: http://habit-tracker:8008
       WORKOUTS_INTERNAL_BASE_URL: http://workouts:8011
     ports:
-      - "8009:8009"
+      - "127.0.0.1:8009:8009"
     depends_on:
       postgres:
         condition: service_healthy
@@ -298,6 +313,7 @@ services:
         condition: service_started
 
   workouts:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/workouts/Dockerfile
@@ -310,7 +326,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       CALENDAR_INTERNAL_BASE_URL: http://calendar:8010
     ports:
-      - "8011:8011"
+      - "127.0.0.1:8011:8011"
     depends_on:
       postgres:
         condition: service_healthy
@@ -318,6 +334,7 @@ services:
         condition: service_started
 
   calendar:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/calendar/Dockerfile
@@ -329,7 +346,7 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     ports:
-      - "8010:8010"
+      - "127.0.0.1:8010:8010"
     depends_on:
       postgres:
         condition: service_healthy
