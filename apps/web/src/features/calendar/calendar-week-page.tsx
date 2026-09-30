@@ -7,7 +7,7 @@ import { TaskFormDialog } from '@/features/tasks/task-form-dialog';
 import type { Task } from '@/features/tasks/types';
 
 import { calendarApi } from './calendar-api';
-import { CalendarTimeGrid } from './calendar-time-grid';
+import { CalendarTimeGrid, MIN_COLUMN_PX } from './calendar-time-grid';
 import { DateNavHeader } from './date-nav-header';
 import { EventFormDialog } from './event-form-dialog';
 import { TaskChip } from './task-chip';
@@ -106,33 +106,44 @@ export function CalendarWeekPage() {
 
       {utilization && <UtilizationSummary utilization={utilization} />}
 
-      <div className="mt-4 grid grid-cols-7 gap-2">
-        {days.map((day) => {
-          const key = format(day, 'yyyy-MM-dd');
-          const dayTasks = tasksByDay.get(key) ?? [];
-          return (
-            <div key={key} className="flex flex-col gap-1">
-              <div className="flex items-center justify-between text-xs font-medium">
-                <span>{format(day, 'EEE d')}</span>
-                <button className="text-muted-foreground hover:text-foreground" onClick={() => openCreate(key)}>
-                  +
-                </button>
-              </div>
-              {dayTasks.map((task) => (
-                <TaskChip key={task.id} task={task} onClick={() => openTask(task)} />
-              ))}
-            </div>
-          );
-        })}
-      </div>
+      {/* Shared horizontal scroll for the day-header row and the time grid below it - they need
+       * to move together on a narrow viewport (see calendar-time-grid.tsx's MIN_COLUMN_PX
+       * comment), so this page owns the scroll container instead of each element scrolling
+       * independently and drifting out of alignment. */}
+      <div className="mt-4 overflow-x-auto">
+        <div style={{ minWidth: `calc(4rem + ${days.length} * ${MIN_COLUMN_PX}px)` }}>
+          <div className="grid gap-2" style={{ gridTemplateColumns: `4rem repeat(${days.length}, minmax(${MIN_COLUMN_PX}px, 1fr))` }}>
+            <div />
+            {days.map((day) => {
+              const key = format(day, 'yyyy-MM-dd');
+              const dayTasks = tasksByDay.get(key) ?? [];
+              return (
+                <div key={key} className="flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-xs font-medium">
+                    <span>{format(day, 'EEE d')}</span>
+                    <button className="text-muted-foreground hover:text-foreground" onClick={() => openCreate(key)}>
+                      +
+                    </button>
+                  </div>
+                  {dayTasks.map((task) => (
+                    <TaskChip key={task.id} task={task} onClick={() => openTask(task)} />
+                  ))}
+                </div>
+              );
+            })}
+          </div>
 
-      <CalendarTimeGrid
-        days={days}
-        events={events}
-        onEventClick={openEdit}
-        onSlotClick={(day) => openCreate(format(day, 'yyyy-MM-dd'))}
-        onEventReschedule={(event, startAt, endAt) => rescheduleMutation.mutate({ event, startAt, endAt })}
-      />
+          <div className="mt-4">
+            <CalendarTimeGrid
+              days={days}
+              events={events}
+              onEventClick={openEdit}
+              onSlotClick={(day) => openCreate(format(day, 'yyyy-MM-dd'))}
+              onEventReschedule={(event, startAt, endAt) => rescheduleMutation.mutate({ event, startAt, endAt })}
+            />
+          </div>
+        </div>
+      </div>
 
       <EventFormDialog
         open={formOpen}

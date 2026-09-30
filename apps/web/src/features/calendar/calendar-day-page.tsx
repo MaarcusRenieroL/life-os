@@ -114,13 +114,15 @@ export function CalendarDayPage() {
         </div>
       )}
 
-      <CalendarTimeGrid
-        days={days}
-        events={events}
-        onEventClick={openEdit}
-        onSlotClick={openCreate}
-        onEventReschedule={(event, startAt, endAt) => rescheduleMutation.mutate({ event, startAt, endAt })}
-      />
+      <div className="mt-4 overflow-x-auto">
+        <CalendarTimeGrid
+          days={days}
+          events={events}
+          onEventClick={openEdit}
+          onSlotClick={openCreate}
+          onEventReschedule={(event, startAt, endAt) => rescheduleMutation.mutate({ event, startAt, endAt })}
+        />
+      </div>
 
       <EventFormDialog
         open={formOpen}
