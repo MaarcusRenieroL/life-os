@@ -12,11 +12,14 @@ import { C } from '@/theme';
 
 const TABS = [
   { name: 'index', title: 'Command', glyph: '◈' },
-  { name: 'quests', title: 'Quests', glyph: '⚔' },
   { name: 'tasks', title: 'Tasks', glyph: '☑' },
   { name: 'habits', title: 'Habits', glyph: '↻' },
+  { name: 'calendar', title: 'Calendar', glyph: '▦' },
   { name: 'more', title: 'More', glyph: '≡' },
 ] as const;
+
+// Reachable from the More menu; kept in the router but out of the tab bar.
+const HIDDEN = ['quests', 'goals', 'notes', 'workouts', 'finance', 'jobs', 'analytics', 'trophies', 'settings'] as const;
 
 function Shell() {
   const insets = useSafeAreaInsets();
@@ -39,6 +42,9 @@ function Shell() {
         }}>
         {TABS.map((t) => (
           <Tabs.Screen key={t.name} name={t.name} options={{ title: t.title, tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>{t.glyph}</Text> }} />
+        ))}
+        {HIDDEN.map((name) => (
+          <Tabs.Screen key={name} name={name} options={{ href: null }} />
         ))}
       </Tabs>
       <Pressable accessibilityLabel="Quick capture" onPress={() => setCapturing(true)} style={{ position: 'absolute', right: 18, bottom: 72 + insets.bottom, width: 54, height: 54, borderRadius: 27, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center', elevation: 6 }}>
