@@ -51,7 +51,7 @@ public class VaultController {
 
   @PostMapping("/setup")
   public ResponseEntity<ApiResponse<Void>> setup(
-      Authentication authentication, @RequestBody MasterPasswordRequest masterPasswordRequest) {
+      Authentication authentication, @Valid @RequestBody MasterPasswordRequest masterPasswordRequest) {
     UUID userId = (UUID) authentication.getPrincipal();
     vaultMasterPasswordService.setup(userId, masterPasswordRequest.getMasterPassword());
 
@@ -60,7 +60,7 @@ public class VaultController {
 
   @PostMapping("/verify")
   public ResponseEntity<ApiResponse<Void>> verify(
-      Authentication authentication, @RequestBody MasterPasswordRequest masterPasswordRequest) {
+      Authentication authentication, @Valid @RequestBody MasterPasswordRequest masterPasswordRequest) {
     UUID userId = (UUID) authentication.getPrincipal();
     vaultMasterPasswordService.verify(userId, masterPasswordRequest.getMasterPassword());
 

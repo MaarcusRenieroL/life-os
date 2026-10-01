@@ -16,17 +16,24 @@ import org.springframework.stereotype.Service;
 @Service
 public class EncryptionService {
 
-  private static final int PBKDF2_ITERATIONS = 65536;
+  /** What every master password used before the iteration count was stored. Still read for existing vaults. */
+  public static final int LEGACY_ITERATIONS = 65536;
+  /** Used for every new or changed master password (OWASP guidance for PBKDF2-HMAC-SHA256). */
+  public static final int CURRENT_ITERATIONS = 600_000;
   private static final int KEY_LENGTH_BITS = 256;
   private static final int GCM_IV_LENGTH_BYTES = 12;
   private static final int GCM_TAG_LENGTH_BITS = 128;
 
   public SecretKey deriveKey(String masterPassword, String saltBase64) {
+    return deriveKey(masterPassword, saltBase64, LEGACY_ITERATIONS);
+  }
+
+  public SecretKey deriveKey(String masterPassword, String saltBase64, int iterations) {
     try {
       byte[] salt = Base64.getDecoder().decode(saltBase64);
 
       PBEKeySpec spec =
-          new PBEKeySpec(masterPassword.toCharArray(), salt, PBKDF2_ITERATIONS, KEY_LENGTH_BITS);
+          new PBEKeySpec(masterPassword.toCharArray(), salt, iterations, KEY_LENGTH_BITS);
       SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
 
       byte[] keyBytes = factory.generateSecret(spec).getEncoded();

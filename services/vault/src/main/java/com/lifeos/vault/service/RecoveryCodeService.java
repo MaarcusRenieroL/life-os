@@ -46,24 +46,28 @@ public class RecoveryCodeService {
   private final PasswordEncoder passwordEncoder;
   private final EncryptionService encryptionService;
   private final PasswordStrengthService passwordStrengthService;
+  private final UnlockAttemptLimiter attemptLimiter;
   private final AuditEventPublisher auditEventPublisher;
   private final NotificationEventPublisher notificationEventPublisher;
 
   @Transactional
   public List<String> generate(UUID userId, String currentPassword) {
+    attemptLimiter.checkAllowed(userId);
     VaultMasterPassword vaultMasterPassword =
         vaultMasterPasswordRepository
             .findByUserId(userId)
             .orElseThrow(InvalidMasterPasswordException::new);
 
     if (!passwordEncoder.matches(currentPassword, vaultMasterPassword.getPasswordHash())) {
+      attemptLimiter.recordFailure(userId);
       throw new InvalidMasterPasswordException();
     }
+    attemptLimiter.recordSuccess(userId);
 
     recoveryCodeRepository.deleteAllByUserId(userId);
 
     SecretKey vaultKey =
-        encryptionService.deriveKey(currentPassword, vaultMasterPassword.getSalt());
+        encryptionService.deriveKey(currentPassword, vaultMasterPassword.getSalt(), vaultMasterPassword.effectiveKdfIterations());
     String vaultKeyBase64 = Base64.getEncoder().encodeToString(vaultKey.getEncoded());
 
     List<String> plainTextCodes = new ArrayList<>();
@@ -108,6 +112,7 @@ public class RecoveryCodeService {
 
   @Transactional
   public void redeem(UUID userId, String code) {
+    attemptLimiter.checkAllowed(userId);
     List<RecoveryCode> recoveryCodes = recoveryCodeRepository.findAllByUserIdAndUsedFalse(userId);
 
     for (RecoveryCode recoveryCode : recoveryCodes) {
@@ -116,6 +121,7 @@ public class RecoveryCodeService {
         recoveryCode.setUsedAt(Instant.now());
 
         recoveryCodeRepository.save(recoveryCode);
+        attemptLimiter.recordSuccess(userId);
 
         auditEventPublisher.publish(
             userId, AuditEventType.RECOVERY_CODE_REDEEMED, "Recovery code redeemed", null);
@@ -130,11 +136,13 @@ public class RecoveryCodeService {
       }
     }
 
+    attemptLimiter.recordFailure(userId);
     throw new InvalidRecoveryCodeException();
   }
 
   @Transactional
   public void resetWithCode(UUID userId, String code, String newMasterPassword) {
+    attemptLimiter.checkAllowed(userId);
     List<RecoveryCode> unusedRecoveryCodes =
         recoveryCodeRepository.findAllByUserIdAndUsedFalse(userId);
 
@@ -156,7 +164,7 @@ public class RecoveryCodeService {
                 .orElseThrow(InvalidRecoveryCodeException::new);
 
         String newSalt = encryptionService.generateSalt();
-        SecretKey newKey = encryptionService.deriveKey(newMasterPassword, newSalt);
+        SecretKey newKey = encryptionService.deriveKey(newMasterPassword, newSalt, EncryptionService.CURRENT_ITERATIONS);
 
         List<VaultEntry> entries = vaultEntryRepository.findAllByUserId(userId);
 
@@ -237,11 +245,13 @@ public class RecoveryCodeService {
 
         vaultMasterPassword.setPasswordHash(passwordEncoder.encode(newMasterPassword));
         vaultMasterPassword.setSalt(newSalt);
+        vaultMasterPassword.setKdfIterations(EncryptionService.CURRENT_ITERATIONS);
         vaultMasterPassword.setStrength(passwordStrengthService.score(newMasterPassword).name());
 
         vaultMasterPasswordRepository.save(vaultMasterPassword);
 
         recoveryCodeRepository.deleteAllByUserId(userId);
+        attemptLimiter.recordSuccess(userId);
 
         auditEventPublisher.publish(
             userId,
@@ -265,6 +275,7 @@ public class RecoveryCodeService {
       }
     }
 
+    attemptLimiter.recordFailure(userId);
     throw new InvalidRecoveryCodeException();
   }
 

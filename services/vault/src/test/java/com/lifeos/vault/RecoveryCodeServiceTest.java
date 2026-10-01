@@ -29,6 +29,7 @@ import com.lifeos.vault.service.EncryptionService.EncryptedData;
 import com.lifeos.vault.service.PasswordStrengthService;
 import com.lifeos.vault.service.PasswordStrengthService.Strength;
 import com.lifeos.vault.service.RecoveryCodeService;
+import com.lifeos.vault.service.UnlockAttemptLimiter;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -53,6 +54,7 @@ class RecoveryCodeServiceTest {
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private EncryptionService encryptionService;
   @Mock private PasswordStrengthService passwordStrengthService;
+  @Mock private UnlockAttemptLimiter attemptLimiter;
   @Mock private AuditEventPublisher auditEventPublisher;
   @Mock private NotificationEventPublisher notificationEventPublisher;
 
@@ -96,7 +98,7 @@ class RecoveryCodeServiceTest {
 
     SecretKey vaultKey = mock(SecretKey.class);
     when(vaultKey.getEncoded()).thenReturn(new byte[] {1, 2, 3, 4});
-    when(encryptionService.deriveKey("correct-password", "salt")).thenReturn(vaultKey);
+    when(encryptionService.deriveKey("correct-password", "salt", 65536)).thenReturn(vaultKey);
 
     when(encryptionService.generateSalt()).thenReturn("keySalt");
     when(encryptionService.deriveKey(anyString(), eq("keySalt")))
@@ -232,7 +234,7 @@ class RecoveryCodeServiceTest {
 
     when(encryptionService.generateSalt()).thenReturn("newSalt");
     SecretKey newKey = mock(SecretKey.class);
-    when(encryptionService.deriveKey("newMasterPassword", "newSalt")).thenReturn(newKey);
+    when(encryptionService.deriveKey("newMasterPassword", "newSalt", EncryptionService.CURRENT_ITERATIONS)).thenReturn(newKey);
 
     VaultEntry entry =
         VaultEntry.builder()
