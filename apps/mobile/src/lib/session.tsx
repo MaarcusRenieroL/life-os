@@ -8,7 +8,8 @@ interface SessionValue {
   settings: Settings;
   signedIn: boolean;
   updateSettings: (next: Settings) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  /** Pass `next` to sign in against new server settings in the same step (the memoised runtime is still the old one). */
+  signIn: (email: string, password: string, next?: Settings) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -45,9 +46,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         await saveSettings(next);
         setSettings(next);
       },
-      async signIn(email, password) {
-        if (!runtime) throw new Error('Not ready yet');
-        await runtime.client.signIn(email, password, isMock ? 'Preview' : 'Life OS Mobile', 'MOBILE');
+      async signIn(email, password, next) {
+        const target = next ? buildRuntime(next, markSignedOut) : runtime;
+        if (!target) throw new Error('Not ready yet');
+        await target.client.signIn(email, password, isMock ? 'Preview' : 'Life OS Mobile', 'MOBILE');
+        if (next) {
+          await saveSettings(next);
+          setSettings(next);
+        }
         setSignedIn(true);
       },
       async signOut() {
@@ -55,7 +61,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setSignedIn(false);
       },
     }),
-    [runtime, settings, signedIn],
+    [runtime, settings, signedIn, markSignedOut],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

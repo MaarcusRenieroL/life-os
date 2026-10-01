@@ -12,6 +12,17 @@ export interface StoredSession {
   deviceSessionId: string;
 }
 
+/** Thrown when the "API" answers with HTML: almost always Cloudflare Access (or a captive portal) in front of the server. */
+export const NOT_THE_API = 'The server answered with a web page instead of the API. If it sits behind Cloudflare Access, enter the Access client id and secret on the sign-in screen.';
+
+async function readJson<T>(response: Response): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new ApiError(response.status, NOT_THE_API);
+  }
+}
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -71,7 +82,7 @@ export function createClient(options: ClientOptions) {
     if (!existing) throw new ApiError(401, 'Not signed in');
     const response = await raw('/v1/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken: existing.refreshToken }) }, null);
     if (!response.ok) throw new ApiError(response.status, 'Session expired');
-    const auth = ((await response.json()) as ApiResponse<AuthResponse>).data;
+    const auth = (await readJson<ApiResponse<AuthResponse>>(response)).data;
     const next = { accessToken: auth.accessToken, refreshToken: auth.refreshToken, deviceSessionId: auth.deviceSessionId };
     await save(next);
     return next;
@@ -106,7 +117,7 @@ export function createClient(options: ClientOptions) {
       throw new ApiError(response.status, message);
     }
     if (response.status === 204) return undefined as T;
-    return ((await response.json()) as ApiResponse<T>).data;
+    return (await readJson<ApiResponse<T>>(response)).data;
   }
 
   return {
@@ -121,7 +132,7 @@ export function createClient(options: ClientOptions) {
       if (!response.ok) {
         throw new ApiError(response.status, response.status === 401 || response.status === 403 ? 'Wrong email or password' : `Sign-in failed (${response.status})`);
       }
-      const auth = ((await response.json()) as ApiResponse<AuthResponse>).data;
+      const auth = (await readJson<ApiResponse<AuthResponse>>(response)).data;
       await save({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, deviceSessionId: auth.deviceSessionId });
     },
 
