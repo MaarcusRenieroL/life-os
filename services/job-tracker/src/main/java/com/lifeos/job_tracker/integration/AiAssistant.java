@@ -2,6 +2,7 @@ package com.lifeos.job_tracker.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.lifeos.job_tracker.domains.record.AppliedJobImport;
 import com.lifeos.job_tracker.domains.record.EmailClassification;
 import com.lifeos.job_tracker.domains.record.InterviewPrepTopics;
 import com.lifeos.job_tracker.domains.record.ParsedJobPosting;
@@ -330,6 +331,35 @@ public class AiAssistant {
         """
             .formatted(blank(fromAddress), blank(subject), blank(body)),
         EmailClassification.class);
+  }
+
+  /**
+   * Reads the applications out of text copied from a job board's "Applied jobs" page. The model
+   * only structures what is on the page - it must not add, merge or invent entries.
+   */
+  public AppliedJobImport.Parsed parseAppliedJobs(String pastedText) {
+    return routedCompleteJson(
+        jobParseProvider,
+        "You extract a list of job applications from text copied from a job board. Reply with ONLY"
+            + " a JSON object, no prose.",
+        """
+        The text below was copied from a job board page listing jobs the candidate APPLIED to. It
+        contains navigation, filters, buttons and other noise around the list. Extract one entry
+        per applied job, in the order they appear. Shape:
+        {"jobs": [{"title": string, "company": string, "location": string or null,
+                   "appliedOn": "yyyy-MM-dd" or null}]}
+
+        Rules:
+        - Only real job entries. Skip recommended/"similar" jobs, ads, menus and counters.
+        - Copy the title and the company exactly as written; never invent or merge entries.
+        - appliedOn is the date the candidate applied (convert "Applied on 30 Sep 2026" or
+          "Applied 3 days ago" is NOT convertible - use null when there is no absolute date).
+
+        TEXT:
+        %s
+        """
+            .formatted(blank(pastedText)),
+        AppliedJobImport.Parsed.class);
   }
 
   /**

@@ -353,3 +353,15 @@ export interface AiUsageSummary {
   totalOutputTokens: number;
   costLast30Days: AiUsageDailyCost[];
 }
+
+export interface ImportItem {
+  title: string;
+  company: string;
+  location: string | null;
+  appliedOn: string | null;
+}
+
+export interface ImportCandidate extends ImportItem {
+  /** Already in the tracker (same company and title). */
+  duplicate: boolean;
+}

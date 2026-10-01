@@ -244,7 +244,7 @@ services:
       GMAIL_POST_CONNECT_URL: ${GMAIL_POST_CONNECT_URL:-http://localhost/settings#integrations}
       GMAIL_ENCRYPTION_SECRET: ${GMAIL_ENCRYPTION_SECRET:?set GMAIL_ENCRYPTION_SECRET in .env, see .env.example}
       GMAIL_ALERT_SENDERS: ${GMAIL_ALERT_SENDERS:-canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
-      GMAIL_JOB_SEARCH_SENDERS: ${GMAIL_JOB_SEARCH_SENDERS:-jobalerts-noreply@linkedin.com,jobs-noreply@linkedin.com,jobs-noreply@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
+      GMAIL_JOB_SEARCH_SENDERS: ${GMAIL_JOB_SEARCH_SENDERS:-jobalerts-noreply@linkedin.com,jobs-noreply@linkedin.com,jobs-noreply@naukri.com,info@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
       GMAIL_JOB_SEARCH_KEYWORDS: ${GMAIL_JOB_SEARCH_KEYWORDS:-application,applied,interview,offer,not moving forward,not selected,moving forward,thank you for applying,thanks for applying,update on your application}
       GMAIL_POLL_CRON: ${GMAIL_POLL_CRON:-0 */15 * * * *}
       FINANCE_INTERNAL_BASE_URL: ${FINANCE_INTERNAL_BASE_URL:-http://finance-tracker:8006}
