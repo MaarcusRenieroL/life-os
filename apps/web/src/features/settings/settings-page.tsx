@@ -34,6 +34,8 @@ import { cn } from '@/lib/utils';
 
 import { coreApi } from '../core/core-api';
 import { DeleteAccountDialog } from './delete-account-dialog';
+import { MODULE_SETUP } from '@/features/setup/module-setup';
+import { useSetupState } from '@/features/setup/setup-state';
 import { GmailConnections } from './gmail-connections';
 import { SettingRow, SettingsSection, SoonBadge } from './settings-ui';
 
@@ -163,6 +165,7 @@ export function SettingsPage() {
   );
 
   const [modulesError, setModulesError] = useState<string | null>(null);
+  const setupState = useSetupState();
 
   async function setModuleEnabled(code: string, enabled: boolean) {
     setModulesError(null);
@@ -316,7 +319,12 @@ export function SettingsPage() {
             id="modules"
             icon={LayoutGrid}
             title="Modules"
-            description={`${modules.filter((m) => m.enabled).length} of ${modules.length} switched on. Turn off what you don't use to keep the sidebar tidy.`}
+            description={`${modules.filter((m) => m.enabled).length} of ${modules.length} switched on. Turn off what you don't use - it disappears from the sidebar and Home.`}
+            action={
+              <Button asChild variant="outline" size="sm">
+                <Link to="/setup">Run setup</Link>
+              </Button>
+            }
           >
             {modulesError && <p className="mb-3 text-xs text-destructive">{modulesError}</p>}
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
@@ -328,14 +336,15 @@ export function SettingsPage() {
                     module.enabled ? 'border-primary/25 bg-primary/[0.04]' : 'bg-muted/20 text-muted-foreground',
                   )}
                 >
-                  <span className="min-w-0 truncate text-sm font-medium">{module.name}</span>
-                  {module.enabled ? (
-                    <Switch checked onCheckedChange={(checked) => void setModuleEnabled(module.code, checked)} />
-                  ) : (
-                    <Button variant="outline" size="sm" onClick={() => void setModuleEnabled(module.code, true)}>
-                      Set up
-                    </Button>
-                  )}
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{module.name}</span>
+                    {module.enabled && MODULE_SETUP[module.code] && (
+                      <Link to={`/setup/${module.code}`} className="text-[11px] text-primary hover:underline">
+                        {setupState.statusOf(module.code) === 'done' ? 'Review setup' : 'Set up'}
+                      </Link>
+                    )}
+                  </span>
+                  <Switch checked={module.enabled} onCheckedChange={(checked) => void setModuleEnabled(module.code, checked)} aria-label={`${module.enabled ? 'Turn off' : 'Turn on'} ${module.name}`} />
                 </div>
               ))}
             </div>

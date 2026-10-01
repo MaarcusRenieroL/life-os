@@ -5,7 +5,7 @@ import {
   LogOut,
   Settings,
 } from 'lucide-react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom';
 
 import { ShortcutsHelpDialog } from '@/components/shortcuts-help-dialog';
 import { useAuth } from '@/features/auth/auth-context';
@@ -15,7 +15,12 @@ import { LevelUpBanner } from '@/features/player/level-up';
 import { PlayerChip } from '@/features/player/player-chip';
 import { SidebarPlayer } from '@/features/player/sidebar-player';
 import { SoundToggle } from '@/features/player/sound-toggle';
-import { NAV_ITEMS } from '@/layout/nav-items';
+import { MODULE_SETUP } from '@/features/setup/module-setup';
+import { ModuleSetupBanner } from '@/features/setup/module-setup-banner';
+import { CORE_KEY, useSetupState } from '@/features/setup/setup-state';
+import { moduleForPath } from '@/config/module-routes';
+import { ModuleOffPage } from '@/features/modules/module-off-page';
+import { useModules, useVisibleNavItems } from '@/features/modules/use-modules';
 import { NotificationBell } from '@/features/core/notification-bell';
 import { QuickCaptureDialog } from '@/features/core/quick-capture-dialog';
 import {
@@ -63,6 +68,10 @@ function currentPathSegment(pathname: string): string {
 export function AppShell() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navItems = useVisibleNavItems();
+  const { isEnabled } = useModules();
+  const pageModule = moduleForPath(location.pathname);
+  const setup = useSetupState();
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   // Emails the hub wants a yes on - shown as a badge so they aren't missed.
   const { data: emailPending = 0 } = useQuery({
@@ -90,7 +99,7 @@ export function AppShell() {
             <SidebarGroupLabel className="font-mono text-[10px] tracking-widest uppercase">Modules</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {NAV_ITEMS.map((item) => {
+                {navItems.map((item) => {
                   const isActive = location.pathname.startsWith(item.to);
                   return (
                     <SidebarMenuItem key={item.to}>
@@ -174,7 +183,10 @@ export function AppShell() {
         <main className="hud-bg flex-1 p-4 sm:p-6">
           {/* Keyed on the path so every navigation fades in instead of snapping. */}
           <div key={location.pathname} className="animate-hud-in">
-            <Outlet />
+            {/* First login: offer to choose modules once. Skipping or finishing remembers it. */}
+            {location.pathname === '/home' && !setup.loading && !setup.statusOf(CORE_KEY) && <Navigate to="/setup" replace />}
+            {pageModule && isEnabled(pageModule) && MODULE_SETUP[pageModule] && <ModuleSetupBanner code={pageModule} />}
+            {pageModule && !isEnabled(pageModule) ? <ModuleOffPage code={pageModule} /> : <Outlet />}
           </div>
         </main>
       </SidebarInset>
