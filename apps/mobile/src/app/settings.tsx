@@ -24,7 +24,7 @@ export default function Settings() {
     <Screen title="Settings">
       <Panel title="Server">
         {field('baseUrl', 'Gateway address')}
-        <Muted style={{ marginBottom: 12 }}>Use your Mac&apos;s address on the same Wi-Fi (for example http://192.168.1.2), or https://life-os.maarcus.dev with an Access service token.</Muted>
+        <Muted style={{ marginBottom: 12 }}>Use your Mac&apos;s address on the same Wi-Fi (for example http://192.168.1.2), or https://life-os-api.maarcus.dev from anywhere.</Muted>
         {field('cfClientId', 'Access client id (optional)')}
         {field('cfClientSecret', 'Access client secret (optional)', true)}
         <Btn label="SAVE" onPress={() => void updateSettings({ ...draft, baseUrl: draft.baseUrl.trim().replace(/\/+$/, '') }).then(() => setSaved(true))} />

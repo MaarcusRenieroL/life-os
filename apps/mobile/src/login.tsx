@@ -39,8 +39,8 @@ export function Login() {
       <Label>Password</Label>
       <TextInput style={[s.input, { marginBottom: 14 }]} value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" placeholderTextColor={C.muted} />
       <Label>Server</Label>
-      <TextInput style={[s.input, { marginBottom: 14 }]} value={server} onChangeText={setServer} autoCapitalize="none" autoCorrect={false} placeholder="http://192.168.1.2" placeholderTextColor={C.muted} />
-      <Label>Access client id (only for https://life-os.maarcus.dev)</Label>
+      <TextInput style={[s.input, { marginBottom: 14 }]} value={server} onChangeText={setServer} autoCapitalize="none" autoCorrect={false} placeholder="https://life-os-api.maarcus.dev" placeholderTextColor={C.muted} />
+      <Label>Access client id (only if you use life-os.maarcus.dev)</Label>
       <TextInput style={[s.input, { marginBottom: 14 }]} value={cfId} onChangeText={setCfId} autoCapitalize="none" autoCorrect={false} placeholder="optional" placeholderTextColor={C.muted} />
       <Label>Access client secret</Label>
       <TextInput style={[s.input, { marginBottom: 14 }]} value={cfSecret} onChangeText={setCfSecret} secureTextEntry autoCapitalize="none" autoCorrect={false} placeholder="optional" placeholderTextColor={C.muted} />

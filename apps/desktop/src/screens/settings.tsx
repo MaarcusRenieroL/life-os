@@ -29,7 +29,7 @@ export function SettingsScreen() {
       <Panel title="Server">
         <form className="form" onSubmit={save}>
           {field('baseUrl', 'Gateway address', 'http://localhost')}
-          <p className="muted">Use http://localhost on the Mac that runs Life OS, or https://life-os.maarcus.dev from anywhere. The public address sits behind Cloudflare Access, so it needs a service token below.</p>
+          <p className="muted">Use http://localhost on the Mac that runs Life OS, or https://life-os-api.maarcus.dev from anywhere. The website address (life-os.maarcus.dev) is behind Cloudflare Access and would need a service token below.</p>
           {field('cfClientId', 'Access client id (optional)')}
           {field('cfClientSecret', 'Access client secret (optional)', '', 'password')}
           <button className="primary">Save</button> {saved && <span className="muted">Saved.</span>}

@@ -57,10 +57,10 @@ export function LoginScreen() {
         </label>
         <label>
           <span className="label">Server</span>
-          <input value={server} onChange={(e) => setServer(e.target.value)} placeholder="http://localhost" />
+          <input value={server} onChange={(e) => setServer(e.target.value)} placeholder="http://localhost or https://life-os-api.maarcus.dev" />
         </label>
         <label>
-          <span className="label">Access client id (only for https://life-os.maarcus.dev)</span>
+          <span className="label">Access client id (only if you use life-os.maarcus.dev)</span>
           <input value={cfId} onChange={(e) => setCfId(e.target.value)} placeholder="optional" autoComplete="off" />
         </label>
         <label>

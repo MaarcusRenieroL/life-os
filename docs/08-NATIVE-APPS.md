@@ -8,12 +8,14 @@ gateway for developing UI without a backend.
 
 - Same Mac as the stack: `http://localhost`
 - Phone on the same Wi-Fi: `http://<your-mac-ip>` (System Settings > Network)
-- From anywhere: `https://life-os.maarcus.dev`. The domain sits behind Cloudflare Access, so the app
-  needs an Access **service token** (Zero Trust > Access > Service auth) with a "Service Auth" policy
-  on the application. Don't create it by hand: run `scripts/native-access-setup.sh` (needs `CF_API_TOKEN` and
-  `CF_ACCOUNT_ID` in the environment). It creates or rotates the token, adds the Service Auth policy, and prints a
-  `lifeos://setup?...` link plus a QR code. Scan the QR with the phone camera (the app fills in the server and token),
-  or paste the link into the desktop login screen. The secret is shown only once and is never written to disk.
+- From anywhere: `https://life-os-api.maarcus.dev`. This hostname is on the same Cloudflare Tunnel but outside
+  Cloudflare Access, because an app cannot do Access's browser login. nginx serves only `/v1/` there (every
+  other path is 404, `/v1/*/internal` is blocked, registration is closed) and rate-limits the login
+  endpoints to 10 a minute per client. The website stays on `https://life-os.maarcus.dev` behind Access.
+  Setup: `~/.cloudflared/life-os.yml` has an ingress entry for the hostname and a CNAME was added with
+  `cloudflared tunnel route dns life-os life-os-api.maarcus.dev`. No token is needed in the apps.
+- Optional, to keep using the Access-protected hostname instead: create an Access service token and a
+  Service Auth policy (`scripts/native-access-setup.sh`), then use `scripts/native-setup-qr.sh`.
 
 ## Desktop (Tauri 2)
 
