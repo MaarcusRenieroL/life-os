@@ -18,20 +18,19 @@ public class HdfcCreditCardAlertParser implements BankAlertParser {
   @Override
   public ParsedAlert parse(
       String messageId, String fromAddress, String subject, String body, Instant receivedAt) {
-    String regex = "transaction of Rs\\. ([\\d.]+) at (.+?) on (\\d{2}/\\d{2}/\\d{2}) at";
+    String regex =
+        "transaction of Rs\\.\\s?(" + AlertFormat.AMOUNT + ") at (.+?) on (\\d{2}/\\d{2}/\\d{2,4}) at";
 
     Pattern pattern = Pattern.compile(regex);
     Matcher matcher = pattern.matcher(body);
 
     if (!matcher.find()) {
-      throw new IllegalStateException();
+      throw AlertFormat.unparsed(fromAddress, subject);
     }
 
-    BigDecimal amount = new BigDecimal(matcher.group(1));
+    BigDecimal amount = AlertFormat.amount(matcher.group(1));
     Instant transactionDate =
-        LocalDate.parse(matcher.group(3), DateTimeFormatter.ofPattern("dd/MM/yy"))
-            .atStartOfDay(ZoneId.of("Asia/Kolkata"))
-            .toInstant();
+        AlertFormat.date(matcher.group(3));
 
     return new ParsedAlert(
         "HDFC Bank",

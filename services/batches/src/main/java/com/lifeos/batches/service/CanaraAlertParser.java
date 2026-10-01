@@ -19,23 +19,21 @@ public class CanaraAlertParser implements BankAlertParser {
   public ParsedAlert parse(
       String messageId, String fromAddress, String subject, String body, Instant receivedAt) {
     String regex =
-        "An amount of INR ([\\d.]+) has been (DEBITED|CREDITED) on (\\d{2}/\\d{2}/\\d{2}) from your"
+        "An amount of INR (" + AlertFormat.AMOUNT + ") has been ((?i:DEBITED|CREDITED)) on (\\d{2}/\\d{2}/\\d{2,4}) from your"
             + " account (\\S+) to (.+?) with UPI Ref No\\.:(\\d+)";
 
     Pattern pattern = Pattern.compile(regex);
     Matcher matcher = pattern.matcher(body);
 
     if (!matcher.find()) {
-      throw new IllegalStateException();
+      throw AlertFormat.unparsed(fromAddress, subject);
     }
 
-    BigDecimal amount = new BigDecimal(matcher.group(1));
+    BigDecimal amount = AlertFormat.amount(matcher.group(1));
     TransactionType transactionType =
-        matcher.group(2).equals("DEBITED") ? TransactionType.DEBIT : TransactionType.CREDIT;
+        matcher.group(2).equalsIgnoreCase("DEBITED") ? TransactionType.DEBIT : TransactionType.CREDIT;
     Instant transactionDate =
-        LocalDate.parse(matcher.group(3), DateTimeFormatter.ofPattern("dd/MM/yy"))
-            .atStartOfDay(ZoneId.of("Asia/Kolkata"))
-            .toInstant();
+        AlertFormat.date(matcher.group(3));
 
     return new ParsedAlert(
         "Canara Bank",
