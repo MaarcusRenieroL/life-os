@@ -5,6 +5,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+import { getErrorMessage } from '@/lib/error';
+
 import { accountApi } from './account-api';
 import type { AccountResponse } from './types';
 import { accountLabel, accountSubLabel, formatINR } from './utils';
@@ -21,17 +23,22 @@ export function ReconcileDialog({
   const [statementBalance, setStatementBalance] = useState('');
   const [statementDate, setStatementDate] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function submit() {
     if (!account || saving) return;
     setSaving(true);
+    setError(null);
     try {
       await accountApi.reconcileAccount(account.id, {
         statementBalance: Number(statementBalance),
-        statementDate,
+        // The server wants a full timestamp; a bare yyyy-MM-dd date is rejected as a bad request.
+        statementDate: new Date(`${statementDate}T00:00:00`).toISOString(),
       });
       onSaved();
       onClose();
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not reconcile this account.'));
     } finally {
       setSaving(false);
     }
@@ -55,6 +62,7 @@ export function ReconcileDialog({
             <Label>Statement date</Label>
             <Input type="date" value={statementDate} onChange={(e) => setStatementDate(e.target.value)} />
           </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
