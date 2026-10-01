@@ -1,18 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type SortingState,
-} from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { calendarApi } from '@/features/calendar/calendar-api';
 import { useConfirmDialog } from '@/components/confirm-dialog';
-import { DataTable } from '@/components/data-table/data-table';
-import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
+import { DataGrid } from '@/components/data-table/data-grid';
 import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
@@ -46,7 +39,6 @@ export function BudgetsPage() {
 
   const comparisons = useCategoryComparisons(categories);
 
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BudgetResponse | null>(null);
   const { confirm, dialog } = useConfirmDialog();
@@ -124,18 +116,27 @@ export function BudgetsPage() {
     () => [
       {
         accessorKey: 'categoryName',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+        meta: { title: 'Category', filter: { type: 'select' } },
+      },
+      {
+        accessorKey: 'period',
+        meta: { title: 'Period', filter: { type: 'select' } },
+      },
+      {
+        accessorKey: 'budgetAmount',
+        meta: { title: 'Budget', align: 'right', aggregate: 'sum', format: (v) => formatINR(Number(v)), filter: { type: 'number' } },
+        cell: ({ row }) => formatINR(row.original.budgetAmount),
       },
       {
         accessorKey: 'spend',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Spend / Budget" />,
+        meta: { title: 'Spent', align: 'right', aggregate: 'sum', format: (v) => formatINR(Number(v)), filter: { type: 'number' } },
         cell: ({ row }) => `${formatINR(row.original.spend)} / ${formatINR(row.original.budgetAmount)}`,
       },
       {
         accessorKey: 'pct',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Progress" />,
+        meta: { title: 'Progress', align: 'right', filter: { type: 'number' }, format: (v) => `${Math.round(Number(v))}%` },
         cell: ({ row }) => (
-          <div className="w-32">
+          <div className="ml-auto w-32">
             <div className="h-1.5 rounded-full bg-muted">
               <div
                 className={`h-1.5 rounded-full ${row.original.status === 'over' ? 'bg-destructive' : row.original.status === 'near-limit' ? 'bg-yellow-500' : 'bg-primary'}`}
@@ -147,15 +148,47 @@ export function BudgetsPage() {
       },
       {
         accessorKey: 'status',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        meta: {
+          title: 'Status',
+          filter: {
+            type: 'select',
+            options: [
+              { value: 'on-track', label: 'On track' },
+              { value: 'near-limit', label: 'Near limit' },
+              { value: 'over', label: 'Over budget' },
+            ],
+          },
+          exportValue: (b) => b.statusText,
+        },
         cell: ({ row }) => (
           <span className={row.original.status === 'over' ? 'text-destructive' : ''}>{row.original.statusText}</span>
         ),
       },
       {
+        accessorKey: 'startDate',
+        meta: { title: 'Starts', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.startDate.slice(0, 10),
+      },
+      {
+        accessorKey: 'endDate',
+        meta: { title: 'Resets on', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.endDate?.slice(0, 10) ?? '—',
+      },
+      {
+        accessorKey: 'alertThreshold',
+        meta: { title: 'Alert at (%)', align: 'right', filter: { type: 'number' } },
+      },
+      {
+        accessorKey: 'alertEnabled',
+        meta: { title: 'Alerts on', filter: { type: 'boolean' }, exportValue: (b) => (b.alertEnabled ? 'Yes' : 'No') },
+        cell: ({ row }) => (row.original.alertEnabled ? 'Yes' : 'No'),
+      },
+      {
         id: 'actions',
         header: '',
         enableHiding: false,
+        enableSorting: false,
+        enableResizing: false,
         cell: ({ row }) => (
           <div className="flex gap-2 text-xs">
             <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); openEdit(row.original); }}>Edit</button>
@@ -165,17 +198,9 @@ export function BudgetsPage() {
         ),
       },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-
-  const table = useReactTable({
-    data: rows,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
 
   return (
     <div>
@@ -197,7 +222,17 @@ export function BudgetsPage() {
         <EmptyState className="mt-6" message="No budgets yet — set a cap on a category to start tracking it." />
       ) : (
         <div className="mt-4">
-          <DataTable table={table} onRowClick={openEdit} />
+          <DataGrid
+            tableId="finance.budgets"
+            data={rows}
+            columns={columns}
+            getRowId={(b) => b.id}
+            onRowClick={openEdit}
+            initialVisibility={{ period: false, startDate: false, endDate: false, alertThreshold: false, alertEnabled: false }}
+            exportName="budgets"
+            searchPlaceholder="Search budgets…"
+            hidePagination={rows.length <= 10}
+          />
         </div>
       )}
 

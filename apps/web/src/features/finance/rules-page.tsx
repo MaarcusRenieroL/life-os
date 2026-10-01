@@ -1,17 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type SortingState,
-} from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
-import { DataTable } from '@/components/data-table/data-table';
-import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
+import { DataGrid } from '@/components/data-table/data-grid';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,34 +86,51 @@ export function RulesPage() {
     () => [
       {
         accessorKey: 'priority',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="#" />,
+        meta: { title: 'Priority', align: 'right', filter: { type: 'number' } },
       },
       {
         accessorKey: 'matchValue',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Pattern" />,
+        meta: { title: 'Pattern', filter: { type: 'text' } },
         cell: ({ row }) => <span className="font-mono text-xs">{row.original.matchValue}</span>,
       },
       {
         accessorKey: 'matchType',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+        meta: { title: 'Match type', filter: { type: 'select' } },
       },
       {
         accessorKey: 'matchField',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Field" />,
+        meta: { title: 'Matches on', filter: { type: 'select' } },
       },
       {
         id: 'category',
         accessorFn: (r) => categoryName(r.categoryId),
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+        meta: { title: 'Category', filter: { type: 'select' } },
       },
       {
         accessorKey: 'hitCount',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Hits" />,
+        meta: { title: 'Times used', align: 'right', aggregate: 'sum', filter: { type: 'number' } },
+      },
+      {
+        accessorKey: 'isActive',
+        meta: { title: 'Active', filter: { type: 'boolean', labels: ['Active', 'Paused'] }, exportValue: (r) => (r.isActive ? 'Yes' : 'No') },
+        cell: ({ row }) => (row.original.isActive ? 'Yes' : 'Paused'),
+      },
+      {
+        accessorKey: 'autoLearned',
+        meta: { title: 'Created by', filter: { type: 'boolean', labels: ['Auto-learned', 'You'] }, exportValue: (r) => (r.autoLearned ? 'Auto-learned' : 'You') },
+        cell: ({ row }) => (row.original.autoLearned ? 'Auto-learned' : 'You'),
+      },
+      {
+        accessorKey: 'createdAt',
+        meta: { title: 'Created', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.createdAt.slice(0, 10),
       },
       {
         id: 'actions',
         header: '',
         enableHiding: false,
+        enableSorting: false,
+        enableResizing: false,
         cell: ({ row }) => (
           <div className="flex items-center gap-2 text-xs" onClick={(e) => e.stopPropagation()}>
             <Switch checked={row.original.isActive} onCheckedChange={() => void toggle(row.original)} />
@@ -162,9 +172,10 @@ export function RulesPage() {
         )}
       </section>
 
-      <RuleTable title="My rules" rules={myRules} columns={columns} onEdit={openEdit} />
+      <RuleTable id="mine" title="My rules" rules={myRules} columns={columns} onEdit={openEdit} />
       <div className="mt-6">
         <RuleTable
+          id="auto"
           title="Auto-learned rules"
           subtitle="Created automatically when you correct a transaction's category. Edit or delete freely - if you create the same rule yourself, this one gets replaced by your version."
           rules={autoRules}
@@ -195,36 +206,39 @@ function StatTile({ label, value }: { label: string; value: string }) {
 }
 
 function RuleTable({
+  id,
   title,
   subtitle,
   rules,
   columns,
   onEdit,
 }: {
+  id: string;
   title: string;
   subtitle?: string;
   rules: CategorizationRuleResponse[];
   columns: ColumnDef<CategorizationRuleResponse>[];
   onEdit: (rule: CategorizationRuleResponse) => void;
 }) {
-  // Backend matches rules in priority DESCENDING order (highest wins first) - default sort matches.
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'priority', desc: true }]);
-
-  const table = useReactTable({
-    data: rules,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
   return (
     <section>
       <SectionHeading>{title}</SectionHeading>
       {subtitle && <p className="mt-1 text-[11px] text-muted-foreground">{subtitle}</p>}
       <div className="mt-2">
-        <DataTable table={table} onRowClick={onEdit} emptyMessage="No rules here." />
+        <DataGrid
+          tableId={`finance.rules.${id}`}
+          data={rules}
+          columns={columns}
+          getRowId={(r) => r.id}
+          onRowClick={onEdit}
+          // Backend matches rules in priority DESCENDING order (highest wins first) - default sort matches.
+          initialSorting={[{ id: 'priority', desc: true }]}
+          initialVisibility={{ isActive: false, autoLearned: false, createdAt: false }}
+          exportName={`rules-${id}`}
+          searchPlaceholder="Search rules…"
+          emptyMessage="No rules here."
+          hidePagination={rules.length <= 10}
+        />
       </div>
     </section>
   );

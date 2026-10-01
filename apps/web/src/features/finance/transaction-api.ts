@@ -17,6 +17,20 @@ export const transactionApi = {
   getTransactions(page = 0, size = 50, filters?: TransactionFilters): Promise<SpringPage<TransactionResponse>> {
     return unwrap(api.get(baseUrl, { params: { page, size, ...filters } }));
   },
+  /** Every transaction matching the (server-side) filters, fetched page by page, so the table can
+   * sort, filter and total across all of them instead of one page. Capped so a runaway account
+   * can't make the browser fetch forever. */
+  async getAllTransactions(filters?: TransactionFilters): Promise<TransactionResponse[]> {
+    const pageSize = 500;
+    const maxPages = 20;
+    const all: TransactionResponse[] = [];
+    for (let page = 0; page < maxPages; page++) {
+      const result = await transactionApi.getTransactions(page, pageSize, filters);
+      all.push(...result.content);
+      if (result.last || result.content.length === 0) break;
+    }
+    return all;
+  },
   // Just the count, for the "N need review" badges - callers used to fetch a 50-row page of full
   // transactions and filter it client-side, which also undercounted past 50 uncategorized rows.
   getNeedsReviewCount(): Promise<number> {

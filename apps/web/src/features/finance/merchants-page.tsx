@@ -1,22 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type SortingState,
-  type VisibilityState,
-} from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
-import { DataTable } from '@/components/data-table/data-table';
-import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
-import { DataTablePagination } from '@/components/data-table/data-table-pagination';
-import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
-import { Input } from '@/components/ui/input';
+import { DataGrid } from '@/components/data-table/data-grid';
 
 import { categoryApi } from './category-api';
 import { MerchantDialog } from './merchant-dialog';
@@ -29,9 +16,6 @@ export function MerchantsPage() {
   const { data: merchants = [] } = useQuery({ queryKey: ['finance', 'merchants'], queryFn: merchantApi.getMerchants });
   const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
 
-  const [query, setQuery] = useState('');
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MerchantResponse | null>(null);
   const { confirm, dialog } = useConfirmDialog();
@@ -56,7 +40,7 @@ export function MerchantsPage() {
     () => [
       {
         accessorKey: 'name',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Merchant" />,
+        meta: { title: 'Merchant', filter: { type: 'text' } },
         cell: ({ row }) => (
           <div>
             {row.original.name}
@@ -66,22 +50,50 @@ export function MerchantsPage() {
       },
       {
         id: 'category',
-        accessorFn: (m) => categories.find((c) => c.id === m.categoryId)?.name ?? '—',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Default category" />,
-      },
-      {
-        accessorKey: 'averageTransactionAmount',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Avg spend" />,
-        cell: ({ row }) => (row.original.averageTransactionAmount ? formatINR(row.original.averageTransactionAmount) : '—'),
+        accessorFn: (m) => categories.find((c) => c.id === m.categoryId)?.name ?? 'Uncategorized',
+        meta: { title: 'Default category', filter: { type: 'select' } },
       },
       {
         accessorKey: 'transactionCount',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Txns" />,
+        meta: { title: 'Transactions', align: 'right', aggregate: 'sum', filter: { type: 'number' } },
+      },
+      {
+        accessorKey: 'averageTransactionAmount',
+        meta: { title: 'Average spend', align: 'right', format: (v) => formatINR(Number(v)), filter: { type: 'number' } },
+        cell: ({ row }) => (row.original.averageTransactionAmount ? formatINR(row.original.averageTransactionAmount) : '—'),
+      },
+      {
+        accessorKey: 'lastTransactionDate',
+        meta: { title: 'Last transaction', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.lastTransactionDate?.slice(0, 10) ?? '—',
+      },
+      {
+        accessorKey: 'isRecognized',
+        meta: { title: 'Recognised', filter: { type: 'boolean', labels: ['Recognised', 'Manually added'] }, exportValue: (m) => (m.isRecognized ? 'Yes' : 'No') },
+        cell: ({ row }) => (row.original.isRecognized ? 'Yes' : 'No'),
+      },
+      {
+        accessorKey: 'website',
+        meta: { title: 'Website', filter: { type: 'text' } },
+        cell: ({ row }) => row.original.website ?? '—',
+      },
+      {
+        id: 'aliases',
+        accessorFn: (m) => (m.aliases ?? []).join(', '),
+        meta: { title: 'Also known as', filter: { type: 'text' } },
+        cell: ({ getValue }) => (getValue() as string) || '—',
+      },
+      {
+        accessorKey: 'createdAt',
+        meta: { title: 'Added', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.createdAt.slice(0, 10),
       },
       {
         id: 'actions',
         header: '',
         enableHiding: false,
+        enableSorting: false,
+        enableResizing: false,
         cell: ({ row }) => (
           <div className="flex gap-2 text-xs">
             <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); openEdit(row.original); }}>
@@ -98,33 +110,24 @@ export function MerchantsPage() {
     [categories],
   );
 
-  const table = useReactTable({
-    data: merchants,
-    columns,
-    state: { sorting, columnVisibility, globalFilter: query },
-    onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
-    onGlobalFilterChange: setQuery,
-    globalFilterFn: (row, _id, filter) => row.original.name.toLowerCase().includes(String(filter).toLowerCase()),
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  });
-
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">Merchants</h1>
 
-      <div className="mt-4 flex items-center gap-2">
-        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search merchants…" className="max-w-xs" />
-        <DataTableViewOptions table={table} />
+      <div className="mt-4">
+        <DataGrid
+          tableId="finance.merchants"
+          data={merchants}
+          columns={columns}
+          getRowId={(m) => m.id}
+          onRowClick={openEdit}
+          initialSorting={[{ id: 'name', desc: false }]}
+          initialVisibility={{ lastTransactionDate: false, isRecognized: false, website: false, aliases: false, createdAt: false }}
+          exportName="merchants"
+          searchPlaceholder="Search merchants…"
+          emptyMessage="No merchants yet - they appear as transactions come in."
+        />
       </div>
-
-      <div className="mt-3">
-        <DataTable table={table} onRowClick={openEdit} />
-      </div>
-      <DataTablePagination table={table} />
 
       <MerchantDialog open={dialogOpen} onOpenChange={setDialogOpen} editing={editing} onSaved={invalidate} />
       {dialog}

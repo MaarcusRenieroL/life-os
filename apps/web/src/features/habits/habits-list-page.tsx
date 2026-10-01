@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
 import { LayoutGrid, List as ListIcon, Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
+import { DataGrid } from '@/components/data-table/data-grid';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import { tasksApi } from '@/features/tasks/tasks-api';
 
@@ -154,6 +155,94 @@ export function HabitsListPage() {
     }
   }
 
+  const columns = useMemo<ColumnDef<Habit>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        meta: { title: 'Habit', filter: { type: 'text' } },
+        cell: ({ row }) => (
+          <div>
+            <Link to={`/habits/${row.original.id}`} className="font-medium hover:underline" onClick={(e) => e.stopPropagation()}>
+              {row.original.icon && <span className="mr-1">{row.original.icon}</span>}
+              {row.original.name}
+            </Link>
+            {row.original.why && <p className="max-w-72 truncate text-xs text-muted-foreground">{row.original.why}</p>}
+          </div>
+        ),
+      },
+      {
+        id: 'category',
+        accessorFn: (h) => h.category ?? UNCATEGORIZED,
+        meta: { title: 'Category', filter: { type: 'select' } },
+      },
+      {
+        id: 'type',
+        accessorFn: (h) => HABIT_TYPE_LABELS[h.type],
+        meta: { title: 'Type', filter: { type: 'select' } },
+      },
+      {
+        accessorKey: 'frequencyType',
+        meta: { title: 'Frequency', filter: { type: 'select' } },
+        cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.frequencyType}</span>,
+      },
+      {
+        accessorKey: 'difficulty',
+        meta: { title: 'Difficulty', align: 'right', filter: { type: 'number' } },
+        cell: ({ row }) => <DifficultyRating difficulty={row.original.difficulty} />,
+      },
+      {
+        id: 'streak',
+        accessorFn: (h) => streaksByHabitId.get(h.id) ?? 0,
+        meta: { title: 'Streak (days)', align: 'right', filter: { type: 'number' } },
+        cell: ({ row }) => <StreakBadge days={streaksByHabitId.get(row.original.id) ?? 0} />,
+      },
+      {
+        accessorKey: 'status',
+        meta: { title: 'Status', filter: { type: 'select' } },
+        cell: ({ row }) => <Badge variant={row.original.status === 'ACTIVE' ? 'default' : 'outline'}>{row.original.status}</Badge>,
+      },
+      {
+        accessorKey: 'priority',
+        meta: { title: 'Priority', align: 'right', filter: { type: 'number' } },
+        cell: ({ row }) => row.original.priority ?? '—',
+      },
+      {
+        accessorKey: 'startDate',
+        meta: { title: 'Starts', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.startDate.slice(0, 10),
+      },
+      {
+        accessorKey: 'endDate',
+        meta: { title: 'Ends', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.endDate?.slice(0, 10) ?? '—',
+      },
+      {
+        accessorKey: 'createdAt',
+        meta: { title: 'Created', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.createdAt.slice(0, 10),
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        enableSorting: false,
+        enableResizing: false,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <Button size="sm" variant="ghost" onClick={() => openEdit(row.original)}>Edit</Button>
+            <Button size="sm" variant="ghost" onClick={() => void togglePause(row.original)}>
+              {row.original.status === 'PAUSED' ? 'Resume' : 'Pause'}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => void createTaskFromHabit(row.original)}>Create task</Button>
+            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteHabit(row.original)}>Delete</Button>
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [streaksByHabitId],
+  );
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -240,66 +329,25 @@ export function HabitsListPage() {
         </p>
       ) : (
         <div className="mt-6 flex flex-col gap-6">
+          {view === 'table' && (
+            <DataGrid
+              tableId="habits.list"
+              data={filtered}
+              columns={columns}
+              getRowId={(h) => h.id}
+              initialSorting={[{ id: 'name', desc: false }]}
+              initialVisibility={{ difficulty: false, startDate: false, endDate: false, priority: false, createdAt: false }}
+              exportName="habits"
+              searchPlaceholder="Search habits…"
+              hidePagination={filtered.length <= 10}
+            />
+          )}
           {grouped.map(([category, categoryHabits]) => (
-            <div key={category}>
+            <div key={category} className={view === 'table' ? 'hidden' : undefined}>
               <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 {category}
               </h2>
-              {view === 'table' ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Frequency</TableHead>
-                      <TableHead>Difficulty</TableHead>
-                      <TableHead>Streak</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {categoryHabits.map((habit) => (
-                      <TableRow key={habit.id}>
-                        <TableCell>
-                          <Link to={`/habits/${habit.id}`} className="font-medium hover:underline">
-                            {habit.icon && <span className="mr-1">{habit.icon}</span>}
-                            {habit.name}
-                          </Link>
-                          {habit.why && (
-                            <p className="max-w-72 truncate text-xs text-muted-foreground">{habit.why}</p>
-                          )}
-                        </TableCell>
-                        <TableCell>{HABIT_TYPE_LABELS[habit.type]}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{habit.frequencyType}</TableCell>
-                        <TableCell>
-                          <DifficultyRating difficulty={habit.difficulty} />
-                        </TableCell>
-                        <TableCell>
-                          <StreakBadge days={streaksByHabitId.get(habit.id) ?? 0} />
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={habit.status === 'ACTIVE' ? 'default' : 'outline'}>{habit.status}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button size="sm" variant="ghost" onClick={() => openEdit(habit)}>
-                            Edit
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => void togglePause(habit)}>
-                            {habit.status === 'PAUSED' ? 'Resume' : 'Pause'}
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => void createTaskFromHabit(habit)}>
-                            Create task
-                          </Button>
-                          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteHabit(habit)}>
-                            Delete
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
+              {view === 'table' ? null : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {categoryHabits.map((habit) => (
                     <Card key={habit.id}>

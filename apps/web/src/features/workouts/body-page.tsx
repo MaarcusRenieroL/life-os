@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
 import { format, parseISO } from 'date-fns';
 import { Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
+import { DataGrid } from '@/components/data-table/data-grid';
 import { DatePicker } from '@/components/date-time-picker';
 import { EmptyState } from '@/components/empty-state';
 import { Button } from '@/components/ui/button';
@@ -13,7 +15,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getErrorMessage } from '@/lib/error';
 
@@ -146,6 +147,35 @@ export function BodyPage() {
 
   const meta = FIELDS.find((f) => f.key === field)!;
   // The list comes newest first; charts read oldest to newest.
+  const measurementColumns = useMemo<ColumnDef<Measurement>[]>(
+    () => [
+      {
+        accessorKey: 'measuredOn',
+        meta: { title: 'Date', filter: { type: 'date' } },
+        cell: ({ row }) => format(parseISO(row.original.measuredOn), 'MMM d, yyyy'),
+      },
+      ...FIELDS.map<ColumnDef<Measurement>>((f) => ({
+        accessorKey: f.key,
+        meta: { title: `${f.label} (${f.unit})`, align: 'right', filter: { type: 'number' } },
+        cell: ({ row }) => (row.original[f.key] == null ? '—' : formatNumber(row.original[f.key] as number, 2)),
+      })),
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        enableSorting: false,
+        enableResizing: false,
+        cell: ({ row }) => (
+          <Button size="icon" variant="ghost" aria-label={`Delete ${row.original.measuredOn} entry`} onClick={() => void remove(row.original)}>
+            <Trash2 className="size-4 text-destructive" />
+          </Button>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const series = [...measurements]
     .reverse()
     .filter((m) => m[field] != null)
@@ -202,36 +232,16 @@ export function BodyPage() {
             </CardContent>
           </Card>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                {FIELDS.map((f) => (
-                  <TableHead key={f.key} className="text-right">
-                    {f.label}
-                  </TableHead>
-                ))}
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {measurements.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell>{format(parseISO(m.measuredOn), 'MMM d, yyyy')}</TableCell>
-                  {FIELDS.map((f) => (
-                    <TableCell key={f.key} className="text-right tabular-nums">
-                      {m[f.key] == null ? '—' : formatNumber(m[f.key] as number, 2)}
-                    </TableCell>
-                  ))}
-                  <TableCell className="text-right">
-                    <Button size="icon" variant="ghost" aria-label={`Delete ${m.measuredOn} entry`} onClick={() => void remove(m)}>
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DataGrid
+            tableId="workouts.body"
+            data={measurements}
+            columns={measurementColumns}
+            getRowId={(m) => m.id}
+            initialSorting={[{ id: 'measuredOn', desc: true }]}
+            exportName="body-measurements"
+            searchPlaceholder="Search measurements…"
+            hidePagination={measurements.length <= 10}
+          />
         </>
       )}
 

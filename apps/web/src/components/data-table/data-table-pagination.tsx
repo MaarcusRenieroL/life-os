@@ -10,14 +10,27 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-export function DataTablePagination<TData>({ table }: { table: Table<TData> }) {
+export function DataTablePagination<TData>({
+  table,
+  pageSizes = [10, 20, 30, 50, 100],
+  totalUnfiltered,
+}: {
+  table: Table<TData>;
+  pageSizes?: number[];
+  /** When given and larger than the filtered count, the footer says how many rows are hidden by filters. */
+  totalUnfiltered?: number;
+}) {
   const selected = table.getFilteredSelectedRowModel().rows.length;
   const total = table.getFilteredRowModel().rows.length;
 
   return (
     <div className="flex items-center justify-between gap-4 px-1 pt-3">
       <div className="text-xs text-muted-foreground">
-        {selected > 0 ? `${selected} of ${total} row(s) selected.` : `${total} row(s) total.`}
+        {selected > 0
+          ? `${selected} of ${total} row(s) selected.`
+          : totalUnfiltered !== undefined && totalUnfiltered > total
+            ? `${total} of ${totalUnfiltered} rows match.`
+            : `${total} row(s) total.`}
       </div>
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
@@ -30,7 +43,7 @@ export function DataTablePagination<TData>({ table }: { table: Table<TData> }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[10, 20, 30, 50, 100].map((size) => (
+              {pageSizes.map((size) => (
                 <SelectItem key={size} value={String(size)}>{size}</SelectItem>
               ))}
             </SelectContent>
