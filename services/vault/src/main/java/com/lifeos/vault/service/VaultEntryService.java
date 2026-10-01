@@ -9,6 +9,7 @@ import com.lifeos.vault.domains.dto.response.VaultEntryResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntrySummaryResponse;
 import com.lifeos.vault.domains.entity.VaultEntry;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
+import com.lifeos.vault.exception.InvalidVaultRequestException;
 import com.lifeos.vault.exception.VaultEntryNotFoundException;
 import com.lifeos.vault.exception.VaultLockedException;
 import com.lifeos.common.events.AuditEventPublisher;
@@ -28,6 +29,9 @@ import org.springframework.util.StringUtils;
 @Service
 @RequiredArgsConstructor
 public class VaultEntryService {
+
+  /** One import call never writes more than this, so a huge request cannot tie the service up. */
+  static final int MAX_BULK_IMPORT = 2000;
 
   private final VaultEntryRepository vaultEntryRepository;
   private final EncryptionService encryptionService;
@@ -121,6 +125,12 @@ public class VaultEntryService {
   public BulkImportResultResponse saveEntries(
       Authentication authentication, List<CreateVaultEntryRequest> requests) {
     UUID userId = (UUID) authentication.getPrincipal();
+    if (requests == null || requests.isEmpty()) {
+      throw new InvalidVaultRequestException("Nothing to import");
+    }
+    if (requests.size() > MAX_BULK_IMPORT) {
+      throw new InvalidVaultRequestException("Import at most " + MAX_BULK_IMPORT + " entries at a time");
+    }
     SecretKey key = requireUnlockedKey(userId);
 
     int imported = 0;
@@ -130,7 +140,7 @@ public class VaultEntryService {
       try {
         CreateVaultEntryRequest request = requests.get(i);
 
-        if (!StringUtils.hasText(request.getTitle())) {
+        if (request == null || !StringUtils.hasText(request.getTitle())) {
           throw new IllegalArgumentException("Title is required");
         }
 

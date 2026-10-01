@@ -33,6 +33,12 @@ public class VaultAccountService {
   public void deleteAllData(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
+    // Wiping the vault must take the master password, not just a signed-in session: the vault has to be
+    // unlocked (that needs the password) unless no master password was ever set.
+    if (vaultMasterPasswordRepository.existsByUserId(userId) && vaultKeyStore.get(userId) == null) {
+      throw new com.lifeos.vault.exception.VaultLockedException();
+    }
+
     vaultEntryRepository.deleteAllByUserId(userId);
     paymentCardRepository.deleteAllByUserId(userId);
     vaultCategoryRepository.deleteAllByUserId(userId);
