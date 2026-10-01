@@ -11,6 +11,7 @@ import { AccountDialog } from '@/features/finance/account-dialog';
 import { AddTransactionDialog } from '@/features/finance/add-transaction-dialog';
 import { AccountsPage } from '@/features/finance/accounts-page';
 import { TransactionsPage } from '@/features/finance/transactions-page';
+import { AttachLinkDialog } from '@/features/job-tracker/attach-link-dialog';
 import { SettingsPage } from '@/features/settings/settings-page';
 import { api } from '@/lib/api-client';
 import { tokenStore } from '@/lib/token';
@@ -57,6 +58,14 @@ const answers: Record<string, unknown> = {
 
 api.defaults.adapter = async (config) => {
   const path = (config.url ?? '').split('?')[0];
+  if (path.endsWith('/link')) {
+    const body = JSON.parse(String(config.data ?? '{}')) as { url?: string; jobDescriptionText?: string };
+    if (!body.jobDescriptionText) {
+      // LinkedIn blocks server-side reads: the real API answers 422 and the UI asks for the description.
+      return Promise.reject({ response: { status: 422, data: { message: 'That site blocked the read - paste the job description below.' } } });
+    }
+    return { data: { success: true, message: 'ok', data: { id: 'j1', title: 'Back End Developer', company: 'Meetswap', jobDescriptionText: body.jobDescriptionText, fitScore: 82 }, timestamp: '' }, status: 200, statusText: 'OK', headers: {}, config };
+  }
   const data = path in answers ? { success: true, message: 'ok', data: answers[path], timestamp: '' } : { success: true, message: 'ok', data: [], timestamp: '' };
   return { data, status: 200, statusText: 'OK', headers: {}, config };
 };
@@ -77,6 +86,8 @@ createRoot(document.getElementById('root')!).render(
                   <AccountDialog open onOpenChange={() => {}} editing={null} onSaved={() => {}} />
                 ) : dialog === 'transaction' ? (
                   <AddTransactionDialog open onOpenChange={() => {}} editing={null} onSaved={() => {}} />
+                ) : dialog === 'attach' ? (
+                  <AttachLinkDialog job={{ id: 'j1', title: 'Back End Developer', company: 'Meetswap' }} open onOpenChange={() => {}} onAttached={() => document.title = 'attached'} />
                 ) : table === 'transactions' ? (
                   <TransactionsPage />
                 ) : table === 'accounts' ? (

@@ -23,6 +23,7 @@ import { ApplicationTrackingForm } from './application-tracking-form';
 import { CoverLetterCard } from './cover-letter-card';
 import { EmailEventReviewList } from './email-event-review-list';
 import { FitBreakdown } from './fit-breakdown';
+import { AttachLinkDialog } from './attach-link-dialog';
 import { FitScoreBadge } from './fit-score-badge';
 import { toFitView } from './fit-view';
 import { tasksApi } from '@/features/tasks/tasks-api';
@@ -73,6 +74,7 @@ export function JobDetailPage() {
   const pendingForJob = pendingEvents.filter((e) => e.matchedJobId === jobId);
 
   const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   const rescoreMutation = useMutation({
@@ -230,12 +232,33 @@ export function JobDetailPage() {
         </div>
       </div>
 
+      {!job.jobDescriptionText && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3.5">
+          <div className="min-w-0 text-sm">
+            <p className="font-medium">This job came from an email, so only the company and title are known.</p>
+            <p className="text-muted-foreground">Paste its LinkedIn link to fill in the description, skills and fit score.</p>
+          </div>
+          <Button onClick={() => setLinkOpen(true)}>Add LinkedIn link</Button>
+        </div>
+      )}
+
       {pendingForJob.length > 0 && (
         <div className="mt-4 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3.5">
           <SectionHeading className="mb-2.5">Detected from Gmail — needs your confirmation</SectionHeading>
           <EmailEventReviewList jobId={jobId} />
         </div>
       )}
+
+      <AttachLinkDialog
+        job={job}
+        open={linkOpen}
+        onOpenChange={setLinkOpen}
+        onAttached={(updated) => {
+          queryClient.setQueryData(['jobs', jobId], updated);
+          void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+          toast.success('Details filled in from the link');
+        }}
+      />
 
       <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_360px]">
         <div className="flex flex-col gap-5">

@@ -38,6 +38,11 @@ export const jobApi = {
     return unwrap(api.post(`${baseUrl}/from-link`, { url, jobDescriptionText }));
   },
 
+  /** Fills in a job created from an email (company + title only) from its posting link, then rescores it. */
+  attachLink(jobId: string, url?: string, jobDescriptionText?: string): Promise<JobListing> {
+    return unwrap(api.post(`${baseUrl}/${jobId}/link`, { url, jobDescriptionText }));
+  },
+
   setStatus(jobId: string, status: JobStatus): Promise<JobListing> {
     return unwrap(api.patch(`${baseUrl}/${jobId}`, { status }));
   },

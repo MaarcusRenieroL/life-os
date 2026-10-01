@@ -81,15 +81,60 @@ public class JobListingService {
    */
   @Transactional
   public JobListing createFromLink(UUID userId, String url, String pastedText) {
-    String sourceUrl = (url == null || url.isBlank()) ? null : url.trim();
-    boolean hasText = pastedText != null && !pastedText.isBlank();
-
+    String sourceUrl = canonicalUrl(url);
     if (sourceUrl != null) {
       var existing = jobListingRepository.findByUserIdAndUrl(userId, sourceUrl);
       if (existing.isPresent()) {
         return existing.get();
       }
     }
+
+    LinkedPosting posting = readPosting(sourceUrl, pastedText);
+    ParsedJobPosting parsed = posting.parsed();
+    String descriptionText = posting.descriptionText();
+
+    String company = isBlank(parsed.company()) ? "Unknown company" : parsed.company().trim();
+    Company companyEntity = resolveCompany(userId, company);
+    JobListing job =
+        jobListingRepository.save(
+            JobListing.builder()
+                .userId(userId)
+                .companyId(companyEntity == null ? null : companyEntity.getId())
+                .title(isBlank(parsed.title()) ? "Untitled role" : parsed.title().trim())
+                .company(company)
+                .location(parsed.location())
+                .workModel(parseEnum(WorkModel.class, parsed.workModel()))
+                .seniorityLevel(parseEnum(SeniorityLevel.class, parsed.seniorityLevel()))
+                .industry(parsed.industry())
+                .salaryMin(parsed.salaryMin())
+                .salaryMax(parsed.salaryMax())
+                .currency(parsed.currency())
+                .url(sourceUrl)
+                .jobDescriptionText(descriptionText)
+                .requiredSkills(parsed.requiredSkills())
+                .niceToHaveSkills(parsed.niceToHaveSkills())
+                .source("link")
+                .ingestedBy(IngestSource.LINK)
+                .visaSponsorship(VisaSponsorship.UNKNOWN)
+                .status(JobStatus.INTERESTED)
+                .parseStatus(ProcessingStatus.COMPLETED)
+                .build());
+
+    scoreQuietly(userId, job);
+    job = jobListingRepository.save(job);
+    recordStatusChange(userId, job.getId(), null, job.getStatus());
+    return job;
+  }
+
+  /** A job page read and structured, with the description text to store. */
+  private record LinkedPosting(ParsedJobPosting parsed, String descriptionText) {}
+
+  /**
+   * Reads a posting from a URL (or from pasted text, when the site blocks server reads) and has the
+   * AI structure it. Shared by "add from link" and "attach a link to a job I already track".
+   */
+  private LinkedPosting readPosting(String sourceUrl, String pastedText) {
+    boolean hasText = pastedText != null && !pastedText.isBlank();
 
     String rawContent;
     if (hasText) {
@@ -121,42 +166,87 @@ public class JobListingService {
           "That didn't look like a job posting. Paste the job description text instead.");
     }
 
-    String company = isBlank(parsed.company()) ? "Unknown company" : parsed.company().trim();
-    Company companyEntity = resolveCompany(userId, company);
     String descriptionText =
         !isBlank(parsed.jobDescriptionText())
             ? parsed.jobDescriptionText()
             : (hasText ? pastedText.trim() : null);
+    return new LinkedPosting(parsed, descriptionText);
+  }
 
-    JobListing job =
-        jobListingRepository.save(
-            JobListing.builder()
-                .userId(userId)
-                .companyId(companyEntity == null ? null : companyEntity.getId())
-                .title(isBlank(parsed.title()) ? "Untitled role" : parsed.title().trim())
-                .company(company)
-                .location(parsed.location())
-                .workModel(parseEnum(WorkModel.class, parsed.workModel()))
-                .seniorityLevel(parseEnum(SeniorityLevel.class, parsed.seniorityLevel()))
-                .industry(parsed.industry())
-                .salaryMin(parsed.salaryMin())
-                .salaryMax(parsed.salaryMax())
-                .currency(parsed.currency())
-                .url(sourceUrl)
-                .jobDescriptionText(descriptionText)
-                .requiredSkills(parsed.requiredSkills())
-                .niceToHaveSkills(parsed.niceToHaveSkills())
-                .source("link")
-                .ingestedBy(IngestSource.LINK)
-                .visaSponsorship(VisaSponsorship.UNKNOWN)
-                .status(JobStatus.INTERESTED)
-                .parseStatus(ProcessingStatus.COMPLETED)
-                .build());
+  /**
+   * Normalises a job link so the same posting always has the same URL: LinkedIn links come with
+   * tracking parameters (and sometimes only a {@code currentJobId}), which would otherwise defeat
+   * duplicate detection.
+   */
+  public static String canonicalUrl(String url) {
+    if (url == null || url.isBlank()) {
+      return null;
+    }
+    String trimmed = url.trim();
+    java.util.regex.Matcher view =
+        java.util.regex.Pattern.compile("linkedin\\.com/(?:comm/)?jobs/view/(?:[^/?#]*-)?(\\d+)").matcher(trimmed);
+    if (view.find()) {
+      return "https://www.linkedin.com/jobs/view/" + view.group(1) + "/";
+    }
+    java.util.regex.Matcher current =
+        java.util.regex.Pattern.compile("linkedin\\.com/jobs/[^?#]*\\?[^#]*currentJobId=(\\d+)").matcher(trimmed);
+    if (current.find()) {
+      return "https://www.linkedin.com/jobs/view/" + current.group(1) + "/";
+    }
+    return trimmed;
+  }
 
-    scoreQuietly(userId, job);
-    job = jobListingRepository.save(job);
-    recordStatusChange(userId, job.getId(), null, job.getStatus());
-    return job;
+  /**
+   * Fills in a job that was created from an email (company and title only) from its posting: the
+   * link is read, structured, and scored against the candidate. What the candidate already knows -
+   * status, applied date, an existing title - is never overwritten; only gaps are filled, and the
+   * description, skills and score always come from the posting.
+   */
+  @Transactional
+  public JobListing attachLink(UUID userId, UUID jobId, String url, String pastedText) {
+    JobListing job = get(userId, jobId);
+    String sourceUrl = canonicalUrl(url);
+
+    if (sourceUrl != null) {
+      var other = jobListingRepository.findByUserIdAndUrl(userId, sourceUrl);
+      if (other.isPresent() && !other.get().getId().equals(jobId)) {
+        throw new InvalidRequestException(
+            "That link is already on another job: \"" + other.get().getTitle() + "\" at " + other.get().getCompany());
+      }
+    }
+
+    LinkedPosting posting = readPosting(sourceUrl, pastedText);
+    ParsedJobPosting parsed = posting.parsed();
+
+    if (sourceUrl != null) {
+      job.setUrl(sourceUrl);
+    }
+    if (isBlank(job.getTitle()) || "Untitled role".equals(job.getTitle())) {
+      if (!isBlank(parsed.title())) {
+        job.setTitle(parsed.title().trim());
+      }
+    }
+    if (isBlank(job.getLocation())) job.setLocation(parsed.location());
+    if (job.getWorkModel() == null) job.setWorkModel(parseEnum(WorkModel.class, parsed.workModel()));
+    if (job.getSeniorityLevel() == null) job.setSeniorityLevel(parseEnum(SeniorityLevel.class, parsed.seniorityLevel()));
+    if (isBlank(job.getIndustry())) job.setIndustry(parsed.industry());
+    if (job.getSalaryMin() == null) job.setSalaryMin(parsed.salaryMin());
+    if (job.getSalaryMax() == null) job.setSalaryMax(parsed.salaryMax());
+    if (isBlank(job.getCurrency())) job.setCurrency(parsed.currency());
+    if (!isBlank(posting.descriptionText())) job.setJobDescriptionText(posting.descriptionText());
+    if (parsed.requiredSkills() != null) job.setRequiredSkills(parsed.requiredSkills());
+    if (parsed.niceToHaveSkills() != null) job.setNiceToHaveSkills(parsed.niceToHaveSkills());
+    // Stale suggestions were written against the old (empty) description; the page regenerates them.
+    job.setAtsSuggestions(null);
+    job.setAtsSuggestionGaps(null);
+
+    JobListing saved = jobListingRepository.save(job);
+    try {
+      recomputeFitScore(userId, saved);
+    } catch (RuntimeException exception) {
+      log.warn("scoring job {} after attaching a link failed: {}", jobId, exception.getMessage());
+    }
+    return jobListingRepository.save(saved);
   }
 
   /**
