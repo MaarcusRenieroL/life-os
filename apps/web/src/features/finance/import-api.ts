@@ -17,8 +17,10 @@ export const importApi = {
   },
 
   /** Bank alerts and job emails can live in different Google accounts, so each connects separately. */
-  gmailConnectUrl(purpose: GmailPurpose = 'FINANCE'): string {
-    return `/v1/batches/gmail/connect?purpose=${purpose}`;
+  /** The Google consent URL for a signed-in user to open. It carries a one-time state, so it is fetched (with
+   * the login) rather than linked to directly. */
+  getGmailConnectUrl(purpose: GmailPurpose = 'FINANCE'): Promise<string> {
+    return unwrap(api.get('/v1/batches/gmail/connect-url', { params: { purpose } }));
   },
 
   syncRecentJobEmails(): Promise<number> {
