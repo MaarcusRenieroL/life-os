@@ -14,6 +14,8 @@ import { QuestsScreen } from './screens/quests';
 import { SettingsScreen } from './screens/settings';
 import { TasksScreen } from './screens/tasks';
 import { TrophiesScreen } from './screens/trophies';
+import { LockScreen } from './lock-screen';
+import { LockProvider, useLock } from './lib/lock';
 import { QuickCapture } from './quick-capture';
 import { SessionProvider, useSession } from './lib/session';
 import { PlayerBar } from './player-bar';
@@ -105,10 +107,16 @@ function Shell() {
   );
 }
 
+function Locked() {
+  const { ready, locked } = useLock();
+  if (!ready) return <div className="splash">Connecting…</div>;
+  return locked ? <LockScreen /> : <Shell />;
+}
+
 function Gate() {
   const { signedIn, runtime } = useSession();
   if (!runtime) return <div className="splash">Connecting…</div>;
-  return signedIn ? <Shell /> : <LoginScreen />;
+  return signedIn ? <LockProvider signedIn><Locked /></LockProvider> : <LoginScreen />;
 }
 
 export function App() {

@@ -8,6 +8,8 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Text } from '@/text';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LockScreen } from '@/lock-screen';
+import { LockProvider, useLock } from '@/lib/lock';
 import { Login } from '@/login';
 import { PlayerBar } from '@/player-bar';
 import { QuickCapture } from '@/quick-capture';
@@ -67,10 +69,16 @@ function Shell() {
   );
 }
 
+function Locked({ children }: { children: React.ReactNode }) {
+  const { locked, ready } = useLock();
+  if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg }} />;
+  return locked ? <LockScreen /> : <>{children}</>;
+}
+
 function Gate() {
   const { ready, signedIn, settings } = useSession();
   if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: 'center' }}><ActivityIndicator color={C.accent} /></View>;
-  return signedIn ? <Shell /> : <Login key={`${settings.baseUrl}|${settings.cfClientId}|${settings.cfClientSecret}`} />;
+  return signedIn ? <LockProvider signedIn><Locked><Shell /></Locked></LockProvider> : <Login key={`${settings.baseUrl}|${settings.cfClientId}|${settings.cfClientSecret}`} />;
 }
 
 export default function RootLayout() {

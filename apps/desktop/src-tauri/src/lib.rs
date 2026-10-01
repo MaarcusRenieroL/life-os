@@ -5,6 +5,62 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+/// Touch ID (or the Mac password when there is no sensor) for the app lock.
+#[cfg(target_os = "macos")]
+mod biometric {
+    use block2::RcBlock;
+    use objc2::runtime::Bool;
+    use objc2_foundation::{NSError, NSString};
+    use objc2_local_authentication::{LAContext, LAPolicy};
+    use std::sync::mpsc;
+
+    pub fn available() -> bool {
+        unsafe { LAContext::new().canEvaluatePolicy_error(LAPolicy::DeviceOwnerAuthentication).is_ok() }
+    }
+
+    /// Blocks until the user approves or cancels the system prompt.
+    pub fn authenticate(reason: &str) -> bool {
+        let (tx, rx) = mpsc::channel::<bool>();
+        let reply = RcBlock::new(move |ok: Bool, _error: *mut NSError| {
+            let _ = tx.send(ok.as_bool());
+        });
+        unsafe {
+            LAContext::new().evaluatePolicy_localizedReason_reply(
+                LAPolicy::DeviceOwnerAuthentication,
+                &NSString::from_str(reason),
+                &reply,
+            );
+        }
+        rx.recv().unwrap_or(false)
+    }
+}
+
+#[tauri::command]
+fn biometric_available() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        biometric::available()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        false
+    }
+}
+
+/// Async so the blocking wait runs off the main thread and the prompt can appear.
+#[tauri::command]
+async fn biometric_authenticate(reason: String) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        tauri::async_runtime::spawn_blocking(move || biometric::authenticate(&reason)).await.unwrap_or(false)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = reason;
+        false
+    }
+}
+
 /// Brings the main window to the front, restoring it if it was hidden to the tray or minimised.
 fn show_main(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -25,6 +81,7 @@ pub fn run() {
     let capture_shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
 
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![biometric_available, biometric_authenticate])
         .plugin(tauri_plugin_opener::init())
         // Requests go through Rust, so the app never needs CORS headers from the gateway.
         .plugin(tauri_plugin_http::init())

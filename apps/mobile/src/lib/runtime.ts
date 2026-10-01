@@ -17,14 +17,14 @@ export const isMock = process.env.EXPO_PUBLIC_MOCK === '1';
 export const DEFAULT_SETTINGS: Settings = { baseUrl: 'http://192.168.1.2', cfClientId: '', cfClientSecret: '' };
 
 // Tokens live in the OS keychain/keystore on a phone; the browser preview has only localStorage.
-async function read(key: string): Promise<string | null> {
+export async function read(key: string): Promise<string | null> {
   try {
     return Platform.OS === 'web' ? localStorage.getItem(key) : await SecureStore.getItemAsync(key);
   } catch {
     return null;
   }
 }
-async function write(key: string, value: string | null): Promise<void> {
+export async function write(key: string, value: string | null): Promise<void> {
   try {
     if (Platform.OS === 'web') {
       if (value === null) localStorage.removeItem(key);
