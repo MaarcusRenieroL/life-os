@@ -73,7 +73,9 @@ public class GmailMessageService {
 
     String query = dateRestriction == null ? searchClause : dateRestriction + " " + searchClause;
 
-    log.info("Gmail search query: {}", query);
+    // Naming the mailbox makes "my emails never arrived" diagnosable: it is often a different
+    // Google account from the one the applications were sent to.
+    log.info("Gmail search query (mailbox {}): {}", accountAddress(gmail), query);
 
     // Gmail's messages().list() paginates (default ~100 per page) - a flat
     // single call silently truncated results for any account with more
@@ -115,6 +117,14 @@ public class GmailMessageService {
         .toList();
   }
 
+  private static String accountAddress(Gmail gmail) {
+    try {
+      return gmail.users().getProfile("me").execute().getEmailAddress();
+    } catch (Exception e) {
+      return "unknown (" + e.getMessage() + ")";
+    }
+  }
+
   private RawEmail toRawEmail(Message message) {
     MessagePart payload = message.getPayload();
 
@@ -137,7 +147,7 @@ public class GmailMessageService {
 
   private String headerOrNull(MessagePart payload, String name) {
     return payload.getHeaders().stream()
-        .filter(header -> header.getName().equals(name))
+        .filter(header -> header.getName().equalsIgnoreCase(name))
         .findFirst()
         .map(MessagePartHeader::getValue)
         .orElse(null);
