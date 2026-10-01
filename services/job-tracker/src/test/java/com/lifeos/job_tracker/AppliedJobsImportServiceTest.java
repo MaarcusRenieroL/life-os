@@ -128,4 +128,24 @@ class AppliedJobsImportServiceTest {
   void importingNothingIsAnError() {
     assertThatThrownBy(() -> service.importJobs(userId, "naukri", List.of())).isInstanceOf(InvalidRequestException.class);
   }
+
+  @Test
+  void importRefusesAnOversizedBatchAndTrimsLongFieldsToTheirColumns() {
+    var tooMany = new java.util.ArrayList<AppliedJobImport.Item>();
+    for (int i = 0; i < AppliedJobsImportService.MAX_IMPORT_ITEMS + 1; i++) tooMany.add(item("T" + i, "C" + i, null, null));
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.importJobs(userId, "naukri", tooMany)).isInstanceOf(com.lifeos.job_tracker.exception.InvalidRequestException.class);
+
+    when(jobListingRepository.findAllForUser(userId)).thenReturn(List.of());
+    service.importJobs(userId, "x".repeat(200), List.of(item("t".repeat(900), "c".repeat(900), "l".repeat(900), null)));
+
+    var company = org.mockito.ArgumentCaptor.forClass(String.class);
+    var title = org.mockito.ArgumentCaptor.forClass(String.class);
+    var location = org.mockito.ArgumentCaptor.forClass(String.class);
+    var source = org.mockito.ArgumentCaptor.forClass(String.class);
+    org.mockito.Mockito.verify(jobListingService).createApplied(org.mockito.ArgumentMatchers.eq(userId), company.capture(), title.capture(), location.capture(), org.mockito.ArgumentMatchers.any(), source.capture());
+    org.assertj.core.api.Assertions.assertThat(company.getValue()).hasSize(300);
+    org.assertj.core.api.Assertions.assertThat(title.getValue()).hasSize(500);
+    org.assertj.core.api.Assertions.assertThat(location.getValue()).hasSize(300);
+    org.assertj.core.api.Assertions.assertThat(source.getValue()).hasSize(50);
+  }
 }
