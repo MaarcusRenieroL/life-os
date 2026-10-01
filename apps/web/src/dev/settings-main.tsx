@@ -7,6 +7,8 @@ import '@/index.css';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/features/auth/auth-context';
+import { AccountDialog } from '@/features/finance/account-dialog';
+import { AddTransactionDialog } from '@/features/finance/add-transaction-dialog';
 import { SettingsPage } from '@/features/settings/settings-page';
 import { api } from '@/lib/api-client';
 import { tokenStore } from '@/lib/token';
@@ -32,6 +34,9 @@ api.defaults.adapter = async (config) => {
   return { data, status: 200, statusText: 'OK', headers: {}, config };
 };
 
+// ?dialog=account | transaction renders that form dialog open, for reviewing form spacing.
+const dialog = new URLSearchParams(location.search).get('dialog');
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={new QueryClient()}>
@@ -40,7 +45,13 @@ createRoot(document.getElementById('root')!).render(
           <AuthProvider>
             <div className="dark hud-bg min-h-screen bg-background p-6 text-foreground">
               <div className="mx-auto max-w-6xl">
-                <SettingsPage />
+                {dialog === 'account' ? (
+                  <AccountDialog open onOpenChange={() => {}} editing={null} onSaved={() => {}} />
+                ) : dialog === 'transaction' ? (
+                  <AddTransactionDialog open onOpenChange={() => {}} editing={null} onSaved={() => {}} />
+                ) : (
+                  <SettingsPage />
+                )}
               </div>
             </div>
           </AuthProvider>
