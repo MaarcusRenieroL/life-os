@@ -6,6 +6,8 @@ export interface Settings {
   baseUrl: string;
   cfClientId: string;
   cfClientSecret: string;
+  /** Who is signed in, for the greeting. */
+  email: string;
 }
 
 const SESSION_KEY = 'lifeos.session';
@@ -14,7 +16,7 @@ const SETTINGS_KEY = 'lifeos.settings';
 /** The preview build talks to a fake gateway, so the UI can be checked without a backend. */
 export const isMock = process.env.EXPO_PUBLIC_MOCK === '1';
 
-export const DEFAULT_SETTINGS: Settings = { baseUrl: 'http://192.168.1.2', cfClientId: '', cfClientSecret: '' };
+export const DEFAULT_SETTINGS: Settings = { baseUrl: 'http://192.168.1.2', cfClientId: '', cfClientSecret: '', email: '' };
 
 // Tokens live in the OS keychain/keystore on a phone; the browser preview has only localStorage.
 export async function read(key: string): Promise<string | null> {

@@ -1,5 +1,4 @@
 // Shared building blocks for the module screens: segmented tabs, bottom sheet, form fields, chips, charts.
-import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, View, type TextInputProps } from 'react-native';
 import { Text, TextInput } from '@/text';
@@ -11,16 +10,11 @@ import { Bar, Muted, s, tap } from './ui';
 export const pretty = (x: string | null | undefined) => (x ? x.charAt(0) + x.slice(1).toLowerCase().replace(/_/g, ' ') : '');
 export const money = (n: number | null | undefined, currency = 'INR') => (n == null ? '—' : new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 0 }).format(n));
 
-/** A module screen: back button, title, optional action, pull-to-refresh. */
-export function Screen({ title, action, onRefresh, refreshing, children, back = true }: { title: string; action?: ReactNode; onRefresh?: () => void; refreshing?: boolean; children: ReactNode; back?: boolean }) {
-  const router = useRouter();
+/** A module screen. The header already shows the path, so (like the website) the page starts with its tabs; `action` sits top-right. */
+export function Screen({ action, onRefresh, refreshing, children }: { title?: string; action?: ReactNode; onRefresh?: () => void; refreshing?: boolean; children: ReactNode; back?: boolean }) {
   return (
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 140 }} refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} tintColor={C.accent} onRefresh={onRefresh} /> : undefined}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 10 }}>
-        {back ? <Pressable hitSlop={12} onPress={() => router.canGoBack() ? router.back() : router.navigate('/more')}><Text style={{ color: C.accent, fontSize: 24 }}>‹</Text></Pressable> : null}
-        <Text style={[s.h2, { flex: 1 }]}>{title}</Text>
-        {action}
-      </View>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, paddingBottom: 60 }} refreshControl={onRefresh ? <RefreshControl refreshing={!!refreshing} tintColor={C.accent} onRefresh={onRefresh} /> : undefined}>
+      {action ? <View style={{ alignItems: 'flex-end', marginBottom: 12 }}>{action}</View> : null}
       {children}
     </ScrollView>
   );

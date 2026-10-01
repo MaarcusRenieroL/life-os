@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 import { Text } from '@/text';
@@ -19,11 +20,12 @@ export function Label({ children }: { children: ReactNode }) {
   );
 }
 
-/** Framed HUD panel with corner brackets. */
+/** Framed HUD panel: gradient body, corner brackets (the website's hud-panel). */
 export function Panel({ title, accent, children, style }: { title?: string; accent?: string; children: ReactNode; style?: ViewStyle }) {
   const bracket = accent ?? C.accent;
   return (
     <View style={[s.panel, accent ? { borderColor: accent } : null, style]}>
+      <LinearGradient colors={['#19191c', '#111114']} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
       <View pointerEvents="none" style={{ position: 'absolute', top: -1, left: -1, width: 10, height: 10, borderTopWidth: 2, borderLeftWidth: 2, borderColor: bracket }} />
       <View pointerEvents="none" style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderBottomWidth: 2, borderRightWidth: 2, borderColor: bracket }} />
       {title ? <Label>{title}</Label> : null}
@@ -84,7 +86,7 @@ export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () 
 
 export const s = StyleSheet.create({
   label: { color: C.muted, fontSize: 11, letterSpacing: 2.2, fontFamily: F.display },
-  panel: { backgroundColor: C.panel, borderColor: C.line, borderWidth: 1, borderRadius: 2, padding: 14, marginBottom: 14 },
+  panel: { backgroundColor: C.panelBottom, borderColor: C.line, borderWidth: 1, borderRadius: 2, padding: 14, marginBottom: 14 },
   track: { height: 8, backgroundColor: '#ffffff17', borderRadius: 1, overflow: 'visible' },
   check: { width: 24, height: 24, borderWidth: 1, borderColor: C.input, backgroundColor: '#ffffff0d', borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   xp: { borderColor: '#f0bb3b59', borderWidth: 1, borderRadius: 2, paddingHorizontal: 6, paddingVertical: 1 },

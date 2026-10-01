@@ -22,7 +22,7 @@ export function Login() {
     setError(null);
     try {
       const url = server.trim().replace(/\/+$/, '');
-      await signIn(email.trim(), password, { ...settings, baseUrl: url, cfClientId: cfId.trim(), cfClientSecret: cfSecret.trim() });
+      await signIn(email.trim(), password, { ...settings, baseUrl: url, cfClientId: cfId.trim(), cfClientSecret: cfSecret.trim(), email: email.trim() });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not sign in');
     } finally {
