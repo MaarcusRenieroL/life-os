@@ -4,6 +4,10 @@ import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.common.events.AutomationEventPublisher;
 import com.lifeos.common.events.AutomationEventRecord;
 import com.lifeos.job_tracker.domains.dto.request.FromLinkRequest;
+import com.lifeos.job_tracker.domains.dto.request.ImportAppliedJobsRequest;
+import com.lifeos.job_tracker.domains.dto.request.PreviewAppliedJobsRequest;
+import com.lifeos.job_tracker.domains.record.AppliedJobImport;
+import com.lifeos.job_tracker.service.AppliedJobsImportService;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobDetailsRequest;
 import com.lifeos.job_tracker.domains.dto.request.UpdateJobListingRequest;
 import com.lifeos.job_tracker.domains.dto.response.JobListingResponse;
@@ -36,6 +40,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class JobListingController extends AuthenticatedController {
 
   private final JobListingService jobListingService;
+  private final AppliedJobsImportService appliedJobsImportService;
   private final AutomationEventPublisher automationEvents;
 
   @GetMapping
@@ -69,6 +74,26 @@ public class JobListingController extends AuthenticatedController {
     publish(authentication, body, AutomationEventRecord.Kind.CREATED);
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(ApiResponse.success(body, "Job added from link"));
+  }
+
+  /**
+   * Reads applications out of text pasted from a job board's "Applied jobs" page and returns them
+   * for the candidate to confirm; nothing is saved here.
+   */
+  @PostMapping("/import/preview")
+  public ResponseEntity<ApiResponse<java.util.List<AppliedJobImport.Candidate>>> previewImport(
+      Authentication authentication, @RequestBody PreviewAppliedJobsRequest request) {
+    return ResponseEntity.ok(
+        ApiResponse.success(appliedJobsImportService.preview(userId(authentication), request.text()), "Applications read"));
+  }
+
+  /** Saves the confirmed rows as APPLIED jobs, skipping any already tracked. */
+  @PostMapping("/import")
+  public ResponseEntity<ApiResponse<AppliedJobImport.Result>> importApplied(
+      Authentication authentication, @RequestBody ImportAppliedJobsRequest request) {
+    AppliedJobImport.Result result =
+        appliedJobsImportService.importJobs(userId(authentication), request.source(), request.items());
+    return ResponseEntity.ok(ApiResponse.success(result, result.created() + " applications imported"));
   }
 
   /**

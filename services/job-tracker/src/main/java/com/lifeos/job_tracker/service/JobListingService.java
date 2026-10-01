@@ -197,6 +197,33 @@ public class JobListingService {
   }
 
   /**
+   * An application made outside the app (a job board's "Applied jobs" list): only what the list
+   * shows - company, title, place and date - and already APPLIED.
+   */
+  @Transactional
+  public JobListing createApplied(
+      UUID userId, String company, String title, String location, java.time.LocalDate appliedOn, String source) {
+    Company companyEntity = resolveCompany(userId, company);
+    JobListing job =
+        jobListingRepository.save(
+            JobListing.builder()
+                .userId(userId)
+                .companyId(companyEntity == null ? null : companyEntity.getId())
+                .title(title)
+                .company(company)
+                .location(location)
+                .source(source)
+                .ingestedBy(IngestSource.MANUAL)
+                .visaSponsorship(VisaSponsorship.UNKNOWN)
+                .status(JobStatus.APPLIED)
+                .appliedAt(appliedOn == null ? java.time.LocalDate.now() : appliedOn)
+                .parseStatus(ProcessingStatus.COMPLETED)
+                .build());
+    recordStatusChange(userId, job.getId(), null, job.getStatus());
+    return job;
+  }
+
+  /**
    * Fills in a job that was created from an email (company and title only) from its posting: the
    * link is read, structured, and scored against the candidate. What the candidate already knows -
    * status, applied date, an existing title - is never overwritten; only gaps are filled, and the

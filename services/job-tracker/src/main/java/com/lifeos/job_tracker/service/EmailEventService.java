@@ -61,7 +61,8 @@ public class EmailEventService {
     if (emailEventRepository.existsByUserIdAndGmailMessageId(userId, gmailMessageId)) {
       return;
     }
-    Optional<EmailClassification> known = LinkedInEmailRules.classify(fromAddress, subject, body);
+    Optional<EmailClassification> known =
+        LinkedInEmailRules.classify(fromAddress, subject, body).or(() -> NaukriEmailRules.classify(fromAddress, subject, body));
     if (known.isEmpty() && !ai.available()) {
       log.warn("Skipping email event {}: no AI provider configured", gmailMessageId);
       return;
