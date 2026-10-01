@@ -2,6 +2,7 @@ package com.lifeos.finance_tracker.service;
 
 import com.lifeos.finance_tracker.domains.entity.Category;
 import com.lifeos.finance_tracker.domains.entity.Transaction;
+import com.lifeos.finance_tracker.util.Ledger;
 import com.lifeos.finance_tracker.domains.entity.UserFinanceSettings;
 import com.lifeos.finance_tracker.domains.enums.TransactionType;
 import com.lifeos.finance_tracker.repository.CategoryRepository;
@@ -46,8 +47,11 @@ public class ReportService {
     Instant end = LocalDate.of(year + 1, 4, 1).atStartOfDay(ZONE_ID).toInstant();
 
     List<Transaction> transactions =
-        transactionRepository.findAllByUserIdAndTransactionDateBetweenOrderByTransactionDateAsc(
-            userId, start, end);
+        transactionRepository
+            .findAllByUserIdAndTransactionDateBetweenOrderByTransactionDateAsc(userId, start, end.minusMillis(1))
+            .stream()
+            .filter(Ledger::counts)
+            .toList();
 
     Map<UUID, String> categoryNames = categoryNamesFor(userId);
 
@@ -96,8 +100,11 @@ public class ReportService {
     Instant end = endDate.plusDays(1).atStartOfDay(ZONE_ID).toInstant();
 
     List<Transaction> transactions =
-        transactionRepository.findAllByUserIdAndTransactionDateBetweenOrderByTransactionDateAsc(
-            userId, start, end);
+        transactionRepository
+            .findAllByUserIdAndTransactionDateBetweenOrderByTransactionDateAsc(userId, start, end.minusMillis(1))
+            .stream()
+            .filter(Ledger::counts)
+            .toList();
 
     Map<UUID, String> categoryNames = categoryNamesFor(userId);
 
@@ -139,13 +146,13 @@ public class ReportService {
 
     html.append("<div class='summary'>")
         .append("<div><strong>Income:</strong> ")
-        .append(totalIncome)
+        .append(money(totalIncome))
         .append("</div><div><strong>Expenses:</strong> ")
-        .append(totalExpenses)
+        .append(money(totalExpenses))
         .append("</div><div><strong>Net:</strong> ")
-        .append(totalIncome.subtract(totalExpenses))
+        .append(money(totalIncome.subtract(totalExpenses)))
         .append("</div><div><strong>Credits (transfers/refunds, not income):</strong> ")
-        .append(totalCredits)
+        .append(money(totalCredits))
         .append("</div></div>");
 
     html.append("<h2>Summary by category</h2>");
@@ -158,11 +165,11 @@ public class ReportService {
                     .reversed())
             .toList()) {
       html.append("<tr><td>")
-          .append(entry.getKey())
+          .append(html(entry.getKey()))
           .append("</td><td>")
           .append(entry.getValue().size())
           .append("</td><td class='amount'>")
-          .append(categoryTotal(entry.getValue()))
+          .append(money(categoryTotal(entry.getValue())))
           .append("</td></tr>");
     }
     html.append("</table>");
@@ -176,9 +183,9 @@ public class ReportService {
                     .reversed())
             .toList()) {
       html.append("<h3>")
-          .append(entry.getKey())
+          .append(html(entry.getKey()))
           .append(" &mdash; ")
-          .append(categoryTotal(entry.getValue()))
+          .append(money(categoryTotal(entry.getValue())))
           .append("</h3>");
       html.append(
           "<table><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Reason / notes</th></tr>");
@@ -186,13 +193,13 @@ public class ReportService {
         html.append("<tr><td>")
             .append(DATE_FORMAT.format(t.getTransactionDate().atZone(ZONE_ID)))
             .append("</td><td>")
-            .append(t.getDescription())
+            .append(html(t.getDescription()))
             .append("</td><td>")
             .append(t.getType())
             .append("</td><td class='amount'>")
-            .append(t.getAmount())
+            .append(money(t.getAmount()))
             .append("</td><td>")
-            .append(reasonFor(t))
+            .append(html(reasonFor(t)))
             .append("</td></tr>");
       }
       html.append("</table>");
@@ -263,15 +270,52 @@ public class ReportService {
         .collect(Collectors.toMap(Category::getId, Category::getName));
   }
 
-  private String escapeCsv(String field) {
+  /** Text from bank narrations and merchant names goes into the HTML that becomes the PDF. */
+  static String html(String value) {
+    return value == null ? "" : org.springframework.web.util.HtmlUtils.htmlEscape(value);
+  }
+
+  /** Rupees with Indian digit grouping (12,34,567.50). "Rs" rather than the rupee sign, which the
+   * PDF's default font has no glyph for. */
+  static String money(BigDecimal amount) {
+    // java.text can only group by one size, so the Indian 3-then-2 grouping is done by hand.
+    String[] parts = amount.abs().setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().split("\\.");
+    String digits = parts[0];
+    StringBuilder grouped = new StringBuilder();
+    int tail = Math.min(3, digits.length());
+    String head = digits.substring(0, digits.length() - tail);
+    for (int i = 0; i < head.length(); i++) {
+      if (i > 0 && (head.length() - i) % 2 == 0) {
+        grouped.append(',');
+      }
+      grouped.append(head.charAt(i));
+    }
+    if (grouped.length() > 0) {
+      grouped.append(',');
+    }
+    grouped.append(digits.substring(digits.length() - tail));
+    return (amount.signum() < 0 ? "-Rs " : "Rs ") + grouped + "." + parts[1];
+  }
+
+  /**
+   * CSV-safe: quotes fields with commas, quotes or line breaks, and neutralises spreadsheet formulas.
+   * A description comes from a bank narration or a merchant name, so one starting with = + - or @
+   * would run as a formula (or exfiltrate data) when the export is opened in Excel or Sheets.
+   */
+  static String escapeCsv(String field) {
     if (field == null) {
       return "";
     }
 
-    if (field.contains(",") || field.contains("\"")) {
-      return "\"" + field.replace("\"", "\"\"") + "\"";
+    String value = field;
+    if (!value.isEmpty() && "=+-@\t\r".indexOf(value.charAt(0)) >= 0) {
+      value = "'" + value;
     }
 
-    return field;
+    if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+      return "\"" + value.replace("\"", "\"\"") + "\"";
+    }
+
+    return value;
   }
 }

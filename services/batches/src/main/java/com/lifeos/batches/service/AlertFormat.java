@@ -46,4 +46,44 @@ final class AlertFormat {
     return new IllegalStateException(
         "Alert from " + fromAddress + " (\"" + subject + "\") did not match any known format");
   }
+
+  /** "XXXX7829" or "ending 2277" -> "7829" / "2277"; null when there are no digits to use. */
+  static String suffix(String raw) {
+    if (raw == null) {
+      return null;
+    }
+    java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{3,6})\\D*$").matcher(raw.trim());
+    if (!m.find()) {
+      return null;
+    }
+    String digits = m.group(1);
+    return digits.length() > 4 ? digits.substring(digits.length() - 4) : digits;
+  }
+
+  /** The IST calendar day of an instant, as midnight IST - for alerts that carry no date of their own. */
+  static Instant dayOf(Instant instant) {
+    return instant.atZone(ZONE_ID_PUBLIC).toLocalDate().atStartOfDay(ZONE_ID_PUBLIC).toInstant();
+  }
+
+  private static final ZoneId ZONE_ID_PUBLIC = ZoneId.of("Asia/Kolkata");
+
+  /**
+   * The readable text of an alert email: HTML tags and entities removed, every run of whitespace
+   * (including non-breaking spaces and line breaks) collapsed to one space. Banks space their
+   * wording inconsistently ("to your account  XXXX7829" with two spaces broke a parser), so the
+   * patterns are written against this normalised text, never the raw body.
+   */
+  static String plainText(String body) {
+    if (body == null) {
+      return "";
+    }
+    return body.replaceAll("(?is)<(script|style)[^>]*>.*?</\\1>", " ")
+        .replaceAll("<[^>]+>", " ")
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replaceAll("[\\s\\u00a0]+", " ")
+        .trim();
+  }
 }

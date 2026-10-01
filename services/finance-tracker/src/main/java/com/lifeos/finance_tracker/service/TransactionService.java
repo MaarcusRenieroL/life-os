@@ -5,6 +5,7 @@ import com.lifeos.finance_tracker.domains.dto.request.CreateCsvImportTransaction
 import com.lifeos.finance_tracker.domains.dto.request.CreateEmailAlertTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateQuickCaptureTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
+import com.lifeos.finance_tracker.domains.dto.request.CreateTransferRequest;
 import com.lifeos.finance_tracker.domains.dto.request.DisputeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
 import com.lifeos.finance_tracker.domains.dto.request.RenameTransactionRequest;
@@ -18,11 +19,13 @@ import com.lifeos.finance_tracker.domains.entity.CategorizationRule;
 import com.lifeos.finance_tracker.domains.entity.Merchant;
 import com.lifeos.finance_tracker.domains.entity.Transaction;
 import com.lifeos.finance_tracker.domains.entity.TransactionCategory;
+import com.lifeos.finance_tracker.domains.enums.AccountType;
 import com.lifeos.finance_tracker.domains.enums.SourceType;
 import com.lifeos.finance_tracker.domains.enums.TransactionStatus;
 import com.lifeos.finance_tracker.domains.enums.TransactionType;
 import com.lifeos.common.domains.dto.response.PageResponse;
 import com.lifeos.finance_tracker.exception.AccountNotFoundException;
+import com.lifeos.finance_tracker.exception.InvalidRequestException;
 import com.lifeos.finance_tracker.exception.CategoryNotFoundException;
 import com.lifeos.finance_tracker.exception.NoDefaultAccountException;
 import com.lifeos.finance_tracker.exception.TransactionNotFoundException;
@@ -80,6 +83,8 @@ public class TransactionService {
   private final CategorizationService categorizationService;
   private final MerchantService merchantService;
   private final BudgetSpendService budgetSpendService;
+  private final AccountBalanceService accountBalanceService;
+  private final AccountResolver accountResolver;
 
   @Transactional(readOnly = true)
   public PageResponse<TransactionResponse> getAllPaginated(
@@ -127,7 +132,7 @@ public class TransactionService {
     UUID userId = (UUID) authentication.getPrincipal();
 
     // Credits are income, not spending to categorize - matching the filter both dashboards applied.
-    return transactionRepository.countByUserIdAndCategoryIdIsNullAndTypeNot(
+    return transactionRepository.countByUserIdAndCategoryIdIsNullAndTypeNotAndIsTransferFalseAndIsDuplicateFalse(
         userId, TransactionType.CREDIT);
   }
 
@@ -173,6 +178,61 @@ public class TransactionService {
             false);
 
     return toResponse(transaction, List.of());
+  }
+
+  /**
+   * Moves money between two of the user's own accounts as a linked pair: a debit on the source and
+   * a credit on the destination. Both balances move, but neither leg is spending or income, so
+   * reports, budgets and "needs review" ignore them - without this, paying a credit card from a
+   * savings account showed up as an expense twice.
+   */
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
+  public List<TransactionResponse> createTransfer(Authentication authentication, CreateTransferRequest request) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    if (request.getFromAccountId().equals(request.getToAccountId())) {
+      throw new InvalidRequestException("Pick two different accounts to transfer between.");
+    }
+    Account from =
+        accountRepository
+            .findByIdAndUserId(request.getFromAccountId(), userId)
+            .orElseThrow(() -> new AccountNotFoundException(request.getFromAccountId()));
+    Account to =
+        accountRepository
+            .findByIdAndUserId(request.getToAccountId(), userId)
+            .orElseThrow(() -> new AccountNotFoundException(request.getToAccountId()));
+
+    UUID pair = UUID.randomUUID();
+    Transaction out = transferLeg(from, userId, pair, request, TransactionType.DEBIT, "Transfer to " + to.getAccountName());
+    Transaction in = transferLeg(to, userId, pair, request, TransactionType.CREDIT, "Transfer from " + from.getAccountName());
+    List<Transaction> saved = transactionRepository.saveAll(List.of(out, in));
+
+    accountBalanceService.refreshAll(List.of(from.getId(), to.getId()));
+    return saved.stream().map(t -> toResponse(t, List.of())).toList();
+  }
+
+  private Transaction transferLeg(
+      Account account, UUID userId, UUID pair, CreateTransferRequest request, TransactionType type, String description) {
+    return Transaction.builder()
+        .accountId(account.getId())
+        .userId(userId)
+        .transactionDate(request.getTransactionDate())
+        .description(description)
+        .amount(request.getAmount())
+        .type(type)
+        .notes(request.getNotes())
+        .sourceType(SourceType.MANUAL_ENTRY)
+        .status(TransactionStatus.ACTIVE)
+        .isTransfer(true)
+        .transferPairId(pair)
+        .importedAt(Instant.now())
+        .build();
   }
 
   /**
@@ -308,11 +368,81 @@ public class TransactionService {
       categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
     }
 
-    applyToBalance(account, transaction.getAmount(), transaction.getType());
     merchantService.recordTransaction(userId, transaction.getDescription(), transaction.getAmount());
-    recordBudgetSpendIfExpense(transaction);
 
-    return transactionRepository.save(transaction);
+    return afterChange(transactionRepository.save(transaction));
+  }
+
+  /**
+   * Runs after any transaction is created or changed: the account balance is recomputed from the
+   * ledger (never nudged), and the budget it counts toward is re-checked for its alert.
+   */
+  private Transaction afterChange(Transaction transaction) {
+    if (transaction.getSourceType() == SourceType.EMAIL_ALERT) {
+      linkCardPayment(transaction);
+    }
+    accountBalanceService.refresh(transaction.getAccountId());
+    budgetSpendService.evaluate(transaction);
+    return transaction;
+  }
+
+  /**
+   * Paying a credit card from a bank account shows up twice in email alerts: a debit on the bank
+   * account and a "payment received" credit on the card. It is one movement of the user's own money,
+   * not spending, so when both halves are present they are linked as a transfer (and stop counting
+   * toward budgets and reports). Works whichever alert arrives first.
+   */
+  private void linkCardPayment(Transaction transaction) {
+    if (transaction.isTransfer() || transaction.getId() == null) {
+      return;
+    }
+    Account own = accountRepository.findById(transaction.getAccountId()).orElse(null);
+    if (own == null) {
+      return;
+    }
+    boolean cardSide = own.getAccountType() == AccountType.CREDIT_CARD && transaction.getType() == TransactionType.CREDIT;
+    boolean bankSide = own.getAccountType() != AccountType.CREDIT_CARD && transaction.getType() == TransactionType.DEBIT;
+    if (!cardSide && !bankSide) {
+      return;
+    }
+
+    TransactionType wanted = cardSide ? TransactionType.DEBIT : TransactionType.CREDIT;
+    List<Transaction> candidates =
+        transactionRepository.findAllByUserIdAndAmountAndTypeAndAccountIdNotAndIsTransferFalseAndIsDuplicateFalseAndTransactionDateBetween(
+            transaction.getUserId(),
+            transaction.getAmount(),
+            wanted,
+            own.getId(),
+            transaction.getTransactionDate().minus(1, ChronoUnit.DAYS),
+            transaction.getTransactionDate().plus(1, ChronoUnit.DAYS));
+
+    Transaction other = null;
+    for (Transaction candidate : candidates) {
+      Account account = accountRepository.findById(candidate.getAccountId()).orElse(null);
+      if (account == null) {
+        continue;
+      }
+      // The other half must be on the opposite kind of account: a card for a bank debit, a bank for a card credit.
+      boolean opposite = cardSide ? account.getAccountType() != AccountType.CREDIT_CARD : account.getAccountType() == AccountType.CREDIT_CARD;
+      if (opposite) {
+        if (other != null) {
+          return; // more than one possible partner: do not guess
+        }
+        other = candidate;
+      }
+    }
+    if (other == null) {
+      return;
+    }
+
+    UUID pair = UUID.randomUUID();
+    for (Transaction leg : List.of(transaction, other)) {
+      leg.setTransfer(true);
+      leg.setTransferPairId(pair);
+      leg.setCategoryId(null);
+    }
+    transactionRepository.saveAll(List.of(transaction, other));
+    accountBalanceService.refresh(other.getAccountId());
   }
 
   /**
@@ -379,12 +509,6 @@ public class TransactionService {
             .findByIdAndUserId(id, userId)
             .orElseThrow(() -> new TransactionNotFoundException(id));
 
-    BigDecimal previousAmount = transaction.getAmount();
-    TransactionType previousType = transaction.getType();
-    boolean amountOrTypeChanged =
-        (request.getAmount() != null && request.getAmount().compareTo(previousAmount) != 0)
-            || (request.getType() != null && request.getType() != previousType);
-
     if (request.getDescription() != null) {
       transaction.setDescription(request.getDescription());
     }
@@ -405,17 +529,7 @@ public class TransactionService {
       transaction.setReceiptUrl(request.getReceiptUrl());
     }
 
-    if (amountOrTypeChanged) {
-      accountRepository
-          .findByIdAndUserId(transaction.getAccountId(), userId)
-          .ifPresent(
-              account -> {
-                applyToBalance(account, previousAmount, reverse(previousType));
-                applyToBalance(account, transaction.getAmount(), transaction.getType());
-              });
-    }
-
-    return toResponse(transactionRepository.save(transaction), categoryIdsFor(id));
+    return toResponse(afterChange(transactionRepository.save(transaction)), categoryIdsFor(id));
   }
 
   @Caching(
@@ -433,36 +547,26 @@ public class TransactionService {
             .findByIdAndUserId(id, userId)
             .orElseThrow(() -> new TransactionNotFoundException(id));
 
-    accountRepository
-        .findByIdAndUserId(transaction.getAccountId(), userId)
-        .ifPresent(account -> applyToBalance(account, transaction.getAmount(), reverse(transaction.getType())));
+    // A transfer is two legs; removing one and leaving the other would move money from nowhere.
+    List<Transaction> removed =
+        transaction.isTransfer() && transaction.getTransferPairId() != null
+            ? transactionRepository.findAllByTransferPairId(transaction.getTransferPairId())
+            : List.of(transaction);
 
-    transactionRepository.deleteByIdAndUserId(id, userId);
+    transactionRepository.deleteAll(removed);
+    transactionRepository.flush();
+
+    accountBalanceService.refreshAll(removed.stream().map(Transaction::getAccountId).toList());
+    removed.forEach(budgetSpendService::evaluate);
   }
 
-  // Adjusts an account's running balance by a transaction's amount - CREDIT
-  // adds, DEBIT subtracts. Called on every transaction creation path (manual,
-  // CSV import, email alert) so currentBalance stays accurate without
-  // requiring a manual reconcile() after every import, and reversed on
-  // delete so removing a transaction doesn't leave the balance permanently
-  // wrong.
-  private void applyToBalance(Account account, BigDecimal amount, TransactionType type) {
-    BigDecimal currentBalance =
-        account.getCurrentBalance() != null ? account.getCurrentBalance() : BigDecimal.ZERO;
-    if (type == TransactionType.CREDIT) {
-      account.setCurrentBalance(currentBalance.add(amount));
-    } else if (type == TransactionType.DEBIT) {
-      account.setCurrentBalance(currentBalance.subtract(amount));
-    }
-    accountRepository.save(account);
-  }
-
-  private TransactionType reverse(TransactionType type) {
-    if (type == TransactionType.CREDIT) return TransactionType.DEBIT;
-    if (type == TransactionType.DEBIT) return TransactionType.CREDIT;
-    return type;
-  }
-
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
   public TransactionResponse categorize(
       Authentication authentication, UUID id, CategorizeTransactionRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -478,7 +582,9 @@ public class TransactionService {
     categorizationService.learnFromCorrection(
         userId, transaction.getDescription(), request.getCategoryId());
 
-    return toResponse(transactionRepository.save(transaction), categoryIdsFor(id));
+    Transaction saved = transactionRepository.save(transaction);
+    budgetSpendService.evaluate(saved);
+    return toResponse(saved, categoryIdsFor(id));
   }
 
   // Called when a user corrects a transaction's display name (e.g. a
@@ -489,6 +595,13 @@ public class TransactionService {
   // createFromEmailAlert), and retroactively renames every other past
   // transaction for this user with the same raw description so the fix
   // applies everywhere at once, not just going forward.
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
   public TransactionResponse renameTransaction(
       Authentication authentication, UUID id, RenameTransactionRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -514,6 +627,13 @@ public class TransactionService {
     return toResponse(saved, categoryIdsFor(id));
   }
 
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
   public TransactionResponse merge(
       Authentication authentication, UUID id, MergeTransactionsRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -534,6 +654,10 @@ public class TransactionService {
 
     transactionRepository.saveAll(duplicates);
 
+    // A duplicate no longer counts: its effect on the balance and on budget spend has to go too.
+    accountBalanceService.refreshAll(duplicates.stream().map(Transaction::getAccountId).toList());
+    duplicates.forEach(budgetSpendService::evaluate);
+
     return toResponse(canonical, categoryIdsFor(canonical.getId()));
   }
 
@@ -553,9 +677,8 @@ public class TransactionService {
     }
 
     Account account =
-        accountRepository
-            .findByUserIdAndBankNameAndAccountType(
-                request.getUserId(), request.getBankName(), request.getAccountType())
+        accountResolver
+            .resolve(request.getUserId(), request.getBankName(), request.getAccountType(), request.getAccountSuffix())
             .orElseThrow(
                 () ->
                     new AccountNotFoundException(request.getBankName(), request.getAccountType()));
@@ -582,11 +705,9 @@ public class TransactionService {
 
     categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
 
-    applyToBalance(account, transaction.getAmount(), transaction.getType());
     merchantService.recordTransaction(account.getUserId(), description, transaction.getAmount());
-    recordBudgetSpendIfExpense(transaction);
 
-    transactionRepository.save(transaction);
+    afterChange(transactionRepository.save(transaction));
   }
 
   @Caching(
@@ -666,6 +787,14 @@ public class TransactionService {
     merchantService.saveAllTouched(userId, touchedMerchants);
     categorizationService.saveAllTouched(categorizationRules);
 
+    // One recompute for the whole statement, and one alert check per budget it touched.
+    accountBalanceService.refresh(accountId);
+    toSave.stream()
+        .filter(t -> t.getCategoryId() != null)
+        .collect(Collectors.toMap(Transaction::getCategoryId, t -> t, (first, second) -> second))
+        .values()
+        .forEach(budgetSpendService::evaluate);
+
     return new CsvImportBatchResponse(requests.size(), toSave.size());
   }
 
@@ -693,7 +822,7 @@ public class TransactionService {
         transactionRepository.existsByAccountIdAndAmountAndTransactionDateBetweenAndDescription(
             request.getAccountId(), request.getAmount(), windowStart, windowEnd, description);
 
-    if (isDuplicate) {
+    if (isDuplicate || alertAlreadyBooked(request)) {
       return null;
     }
 
@@ -713,15 +842,11 @@ public class TransactionService {
 
     categorizationService.categorize(transaction, categorizationRules).ifPresent(transaction::setCategoryId);
 
-    applyToBalance(account, transaction.getAmount(), transaction.getType());
-
     Merchant touched =
         merchantService.recordTransaction(merchants, account.getUserId(), description, transaction.getAmount());
     if (touched != null) {
       touchedMerchants.add(touched);
     }
-
-    recordBudgetSpendIfExpense(transaction);
 
     return transaction;
   }
@@ -746,7 +871,7 @@ public class TransactionService {
         transactionRepository.existsByAccountIdAndAmountAndTransactionDateBetweenAndDescription(
             request.getAccountId(), request.getAmount(), windowStart, windowEnd, description);
 
-    if (isDuplicate) {
+    if (isDuplicate || alertAlreadyBooked(request)) {
       return false;
     }
 
@@ -766,29 +891,21 @@ public class TransactionService {
 
     categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
 
-    applyToBalance(account, transaction.getAmount(), transaction.getType());
     merchantService.recordTransaction(account.getUserId(), description, transaction.getAmount());
-    recordBudgetSpendIfExpense(transaction);
 
-    transactionRepository.save(transaction);
+    afterChange(transactionRepository.save(transaction));
     return true;
   }
 
-  // Records spend against the transaction's category budget (if any) so
-  // Budget.alertThreshold notifications actually fire. Only hooked into the
-  // initial-categorization paths (manual entry, email alert, CSV import) -
-  // not into categorize()/updateCategories() recategorization, since
-  // BudgetSpendService only supports incrementing the running total and
-  // re-recording on every recategorization would double-count spend that
-  // was already attributed to a transaction's original category.
-  private void recordBudgetSpendIfExpense(Transaction transaction) {
-    if (transaction.getType() == TransactionType.DEBIT && transaction.getCategoryId() != null) {
-      budgetSpendService.recordSpend(
-          transaction.getUserId(),
-          transaction.getCategoryId(),
-          transaction.getAmount(),
-          transaction.getTransactionDate());
-    }
+  /** The same payment already arrived as an email alert (its narration differs, so the description
+   * check above misses it) - importing the statement row too would count it twice. */
+  private boolean alertAlreadyBooked(CreateCsvImportTransactionRequest request) {
+    return transactionRepository.existsEmailAlertTwin(
+        request.getAccountId(),
+        request.getAmount(),
+        request.getType(),
+        request.getTransactionDate().minus(1, ChronoUnit.DAYS),
+        request.getTransactionDate().plus(1, ChronoUnit.DAYS));
   }
 
   public TransactionResponse dispute(
@@ -807,6 +924,13 @@ public class TransactionService {
     return toResponse(transactionRepository.save(transaction), categoryIdsFor(id));
   }
 
+  @Caching(
+      evict = {
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_DASHBOARD, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_CATEGORY, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_TRENDS, allEntries = true),
+        @CacheEvict(cacheNames = CACHE_ANALYTICS_MERCHANTS, allEntries = true)
+      })
   public TransactionResponse updateCategories(
       Authentication authentication, UUID id, UpdateTransactionCategoriesRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -849,6 +973,7 @@ public class TransactionService {
       transaction.setCategoryId(primaryCategoryId);
       transaction.setCategoryManuallySet(true);
       transactionRepository.save(transaction);
+      budgetSpendService.evaluate(transaction);
       categorizationService.learnFromCorrection(userId, transaction.getDescription(), primaryCategoryId);
     }
 
@@ -881,6 +1006,7 @@ public class TransactionService {
         .sourceReference(transaction.getSourceReference())
         .isReconciled(transaction.isReconciled())
         .isDuplicate(transaction.isDuplicate())
+        .isTransfer(transaction.isTransfer())
         .duplicateOf(transaction.getDuplicateOf())
         .status(transaction.getStatus())
         .importedAt(transaction.getImportedAt())

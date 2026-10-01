@@ -31,5 +31,8 @@ public class UserFinanceSettings {
   // or a month not yet fully imported.
   BigDecimal monthlyIncome;
 
+  /** Day of the month salary lands (1-28). Budgets and the dashboard measure a month from this day. */
+  @Builder.Default int payCycleStartDay = 1;
+
   @UpdateTimestamp Instant updatedAt;
 }

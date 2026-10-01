@@ -16,6 +16,8 @@ import { useCategoryComparisons } from './category-comparison-query';
 import { merchantApi } from './merchant-api';
 import { recurringPatternApi } from './recurring-pattern-api';
 import { transactionApi } from './transaction-api';
+import { ImportFailuresCard } from './import-failures-card';
+import { PayCycleCard } from './pay-cycle-card';
 import { formatINR, monthlyEquivalent } from './utils';
 
 const UNUSED_IDLE_DAYS = 30;
@@ -166,6 +168,11 @@ export function FinanceDashboardPage() {
           <Button asChild variant="outline" size="sm"><Link to="/finance/import">Upload statement</Link></Button>
           <Button asChild size="sm"><Link to="/finance/transactions">+ Add transaction</Link></Button>
         </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-4">
+        <ImportFailuresCard />
+        <PayCycleCard />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

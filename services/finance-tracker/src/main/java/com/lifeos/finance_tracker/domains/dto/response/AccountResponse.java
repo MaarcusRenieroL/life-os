@@ -39,6 +39,12 @@ public class AccountResponse {
 
   BigDecimal currentBalance;
 
+  /** What the account held before its first transaction; the balance is this plus the transactions' net. */
+  BigDecimal openingBalance;
+
+  /** How many transactions the account holds - deleting it needs to say what happens to them. */
+  long transactionCount;
+
   @JsonProperty("isActive")
   boolean isActive;
 

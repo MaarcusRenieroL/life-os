@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
+import { getErrorMessage } from '@/lib/error';
+
 import { accountApi } from './account-api';
 import { transactionApi } from './transaction-api';
 import type { TransactionResponse, TransactionType } from './types';
@@ -35,6 +37,7 @@ export function AddTransactionDialog({ open, onOpenChange, editing, onSaved }: P
   const [type, setType] = useState<TransactionType>('DEBIT');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -49,8 +52,9 @@ export function AddTransactionDialog({ open, onOpenChange, editing, onSaved }: P
   }, [open, editing]);
 
   async function submit() {
-    if (!description.trim() || !amount || saving) return;
+    if (!description.trim() || !(Number(amount) > 0) || saving) return;
     setSaving(true);
+    setError(null);
     try {
       if (editing) {
         await transactionApi.updateTransaction(editing.id, { description, amount: Number(amount), type, notes: notes || undefined });
@@ -66,6 +70,8 @@ export function AddTransactionDialog({ open, onOpenChange, editing, onSaved }: P
       }
       onSaved();
       onOpenChange(false);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Could not save this transaction.'));
     } finally {
       setSaving(false);
     }
@@ -113,12 +119,13 @@ export function AddTransactionDialog({ open, onOpenChange, editing, onSaved }: P
             <Label>Notes</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => void submit()} disabled={saving || !description.trim() || !amount}>
+          <Button onClick={() => void submit()} disabled={saving || !description.trim() || !(Number(amount) > 0)}>
             {saving ? 'Saving…' : 'Save'}
           </Button>
         </DialogFooter>

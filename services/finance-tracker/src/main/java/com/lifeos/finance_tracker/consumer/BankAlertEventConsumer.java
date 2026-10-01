@@ -4,6 +4,8 @@ import com.lifeos.common.events.BankAlertEventRecord;
 import com.lifeos.finance_tracker.domains.dto.request.CreateEmailAlertTransactionRequest;
 import com.lifeos.finance_tracker.domains.enums.AccountType;
 import com.lifeos.finance_tracker.domains.enums.TransactionType;
+import com.lifeos.finance_tracker.exception.AccountNotFoundException;
+import com.lifeos.finance_tracker.service.ImportFailureService;
 import com.lifeos.finance_tracker.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -26,6 +28,7 @@ public class BankAlertEventConsumer {
   private static final Logger log = LoggerFactory.getLogger(BankAlertEventConsumer.class);
 
   private final TransactionService transactionService;
+  private final ImportFailureService importFailureService;
 
   @KafkaListener(
       topics = "bank-alert-events",
@@ -43,18 +46,26 @@ public class BankAlertEventConsumer {
               .amount(event.amount())
               .type(TransactionType.valueOf(event.type()))
               .sourceReference(event.sourceReference())
+              .accountSuffix(event.accountSuffix())
               .build();
 
       transactionService.createFromEmailAlert(request);
+      importFailureService.resolveByReference(event.userId(), event.sourceReference());
     } catch (DataIntegrityViolationException e) {
       // createFromEmailAlert's existsBySourceReference check and its insert are two separate
       // statements, so two concurrent deliveries of the same alert can both pass the check. The
       // unique index on source_reference (V12) makes the second insert fail instead of
       // double-importing - which is the outcome we wanted, not an error worth alerting on.
       log.debug("Bank alert {} was already imported concurrently, skipping", event.sourceReference());
+    } catch (AccountNotFoundException e) {
+      // The alert is fine, there is just nowhere to put it yet. Keep it: creating the account
+      // retries it. (Logging and dropping it is how a salary credit went missing.)
+      log.warn("Bank alert {} has no account to land in: {}", event.sourceReference(), e.getMessage());
+      importFailureService.recordNoAccount(event, e.getMessage());
     } catch (Exception e) {
       log.error(
           "Failed to process bank alert {}: {}", event.sourceReference(), e.getMessage(), e);
+      importFailureService.recordError(event, e.getMessage());
     }
   }
 }

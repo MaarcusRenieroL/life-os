@@ -50,6 +50,9 @@ public class Account {
 
   Instant openedDate;
 
+  /** What the account held before its first transaction. currentBalance = this + the net of counted transactions. */
+  @Builder.Default BigDecimal openingBalance = BigDecimal.ZERO;
+
   BigDecimal currentBalance;
 
   boolean isActive;

@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InternalTransactionController {
 
   private final TransactionService transactionService;
+  private final com.lifeos.finance_tracker.service.ImportFailureService importFailureService;
 
   @PostMapping("/transactions/csv-import")
   public ResponseEntity<ApiResponse<Void>> createCsvImportTransaction(
@@ -40,5 +41,14 @@ public class InternalTransactionController {
     CsvImportBatchResponse result = transactionService.createFromCsvImportBatch(request.getTransactions());
 
     return ResponseEntity.ok(ApiResponse.success(result, "Statement import processed"));
+  }
+
+  /** An alert email batches could not parse - kept for the user instead of being dropped. */
+  @PostMapping("/import-failures")
+  public ResponseEntity<ApiResponse<Void>> reportImportFailure(
+      @Valid @RequestBody com.lifeos.finance_tracker.domains.dto.request.ReportImportFailureRequest request) {
+    importFailureService.recordUnparsed(request);
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Recorded"));
   }
 }

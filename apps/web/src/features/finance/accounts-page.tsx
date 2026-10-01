@@ -7,6 +7,7 @@ import { DataGrid } from '@/components/data-table/data-grid';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getErrorMessage } from '@/lib/error';
 
 import { AccountDialog } from './account-dialog';
 import { accountApi } from './account-api';
@@ -29,14 +30,32 @@ export function AccountsPage() {
   }
 
   async function deleteAccount(account: AccountResponse) {
-    const ok = await confirm({ title: `Delete "${account.accountName}"?`, confirmLabel: 'Delete' });
+    const count = account.transactionCount ?? 0;
+    const ok = await confirm({
+      title: `Delete "${account.accountName}"?`,
+      description:
+        count > 0
+          ? `This account holds ${count} transaction${count === 1 ? '' : 's'}. Deleting it deletes them too, and they disappear from your reports. This cannot be undone.`
+          : undefined,
+      confirmLabel: count > 0 ? `Delete account and ${count} transaction${count === 1 ? '' : 's'}` : 'Delete',
+    });
     if (!ok) return;
+    setError(null);
     try {
-      await accountApi.deleteAccount(account.id);
+      await accountApi.deleteAccount(account.id, count > 0);
       invalidate();
+      void queryClient.invalidateQueries({ queryKey: ['finance'] });
     } catch (err) {
-      const status = (err as { response?: { status?: number } }).response?.status;
-      setError(`Could not delete this account (HTTP ${status ?? '?'})`);
+      setError(getErrorMessage(err, 'Could not delete this account.'));
+    }
+  }
+
+  async function recalculate(account: AccountResponse) {
+    try {
+      await accountApi.recalculateAccount(account.id);
+      invalidate();
+    } catch {
+      setError('Could not recalculate this balance.');
     }
   }
 
@@ -78,6 +97,11 @@ export function AccountsPage() {
         cell: ({ row }) => formatINR(row.original.currentBalance),
       },
       {
+        accessorKey: 'openingBalance',
+        meta: { title: 'Opening balance', align: 'right', aggregate: 'sum', format: (v) => formatINR(Number(v)), filter: { type: 'number' } },
+        cell: ({ row }) => formatINR(row.original.openingBalance),
+      },
+      {
         accessorKey: 'currencyCode',
         meta: { title: 'Currency', filter: { type: 'select' } },
       },
@@ -105,6 +129,7 @@ export function AccountsPage() {
         cell: ({ row }) => (
           <div className="flex gap-2 text-xs">
             <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); setReconciling(row.original); }}>Reconcile</button>
+            <button className="text-primary hover:underline" title="Recompute the balance from this account's transactions" onClick={(e) => { e.stopPropagation(); void recalculate(row.original); }}>Recalculate</button>
             <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); openEdit(row.original); }}>Edit</button>
             <button className="text-destructive hover:underline" onClick={(e) => { e.stopPropagation(); void deleteAccount(row.original); }}>Delete</button>
           </div>
@@ -137,7 +162,7 @@ export function AccountsPage() {
             getRowId={(a) => a.id}
             onRowClick={openEdit}
             initialSorting={[{ id: 'accountName', desc: false }]}
-            initialVisibility={{ bankName: false, isPrimary: false, isActive: false, openedDate: false }}
+            initialVisibility={{ bankName: false, openingBalance: false, isPrimary: false, isActive: false, openedDate: false }}
             exportName="accounts"
             searchPlaceholder="Search accounts…"
             hidePagination={accounts.length <= 10}

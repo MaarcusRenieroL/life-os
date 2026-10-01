@@ -16,6 +16,7 @@ import { getErrorMessage } from '@/lib/error';
 
 import { accountApi } from './account-api';
 import { importApi } from './import-api';
+import { ImportFailuresCard } from './import-failures-card';
 
 export function ImportPage() {
   const queryClient = useQueryClient();
@@ -73,6 +74,10 @@ export function ImportPage() {
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">Import</h1>
+
+      <div className="mt-4">
+        <ImportFailuresCard />
+      </div>
 
       <section className="mt-4 hud-panel p-5">
         <SectionHeading>Upload a statement</SectionHeading>
