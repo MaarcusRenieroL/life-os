@@ -1,18 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type SortingState,
-  type VisibilityState,
-} from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
-import { DataTable } from '@/components/data-table/data-table';
-import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
-import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
+import { DataGrid } from '@/components/data-table/data-grid';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,15 +11,13 @@ import { Button } from '@/components/ui/button';
 import { AccountDialog } from './account-dialog';
 import { accountApi } from './account-api';
 import { ReconcileDialog } from './reconcile-dialog';
-import type { AccountResponse } from './types';
+import { ACCOUNT_TYPE_LABELS, type AccountResponse } from './types';
 import { accountSubLabel, formatINR } from './utils';
 
 export function AccountsPage() {
   const queryClient = useQueryClient();
   const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts, staleTime: 5 * 60_000 });
 
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'accountName', desc: false }]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AccountResponse | null>(null);
   const [reconciling, setReconciling] = useState<AccountResponse | null>(null);
@@ -60,7 +49,7 @@ export function AccountsPage() {
     () => [
       {
         accessorKey: 'accountName',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Account" />,
+        meta: { title: 'Account', filter: { type: 'text' } },
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             {row.original.accountName}
@@ -69,23 +58,50 @@ export function AccountsPage() {
         ),
       },
       {
+        id: 'accountType',
+        accessorFn: (a) => ACCOUNT_TYPE_LABELS[a.accountType],
+        meta: { title: 'Type', filter: { type: 'select' } },
+      },
+      {
+        accessorKey: 'bankName',
+        meta: { title: 'Bank', filter: { type: 'select' } },
+        cell: ({ row }) => row.original.bankName ?? '—',
+      },
+      {
         id: 'detail',
         accessorFn: (a) => accountSubLabel(a),
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Detail" />,
+        meta: { title: 'Detail', filter: { type: 'text' } },
       },
       {
         accessorKey: 'currentBalance',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Balance" />,
+        meta: { title: 'Balance', align: 'right', aggregate: 'sum', format: (v) => formatINR(Number(v)), filter: { type: 'number' } },
         cell: ({ row }) => formatINR(row.original.currentBalance),
       },
       {
         accessorKey: 'currencyCode',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Currency" />,
+        meta: { title: 'Currency', filter: { type: 'select' } },
+      },
+      {
+        accessorKey: 'isPrimary',
+        meta: { title: 'Primary account', filter: { type: 'boolean' }, exportValue: (a) => (a.isPrimary ? 'Yes' : 'No') },
+        cell: ({ row }) => (row.original.isPrimary ? 'Yes' : '—'),
+      },
+      {
+        accessorKey: 'isActive',
+        meta: { title: 'Active', filter: { type: 'boolean', labels: ['Active', 'Inactive'] }, exportValue: (a) => (a.isActive ? 'Yes' : 'No') },
+        cell: ({ row }) => (row.original.isActive ? 'Yes' : 'No'),
+      },
+      {
+        accessorKey: 'openedDate',
+        meta: { title: 'Opened', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.openedDate?.slice(0, 10) ?? '—',
       },
       {
         id: 'actions',
         header: '',
         enableHiding: false,
+        enableSorting: false,
+        enableResizing: false,
         cell: ({ row }) => (
           <div className="flex gap-2 text-xs">
             <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); setReconciling(row.original); }}>Reconcile</button>
@@ -95,27 +111,15 @@ export function AccountsPage() {
         ),
       },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-
-  const table = useReactTable({
-    data: accounts,
-    columns,
-    state: { sorting, columnVisibility },
-    onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Accounts</h1>
-        <div className="flex items-center gap-2">
-          <DataTableViewOptions table={table} />
-          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>+ Add account</Button>
-        </div>
+        <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>+ Add account</Button>
       </div>
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
@@ -126,7 +130,18 @@ export function AccountsPage() {
         />
       ) : (
         <div className="mt-4">
-          <DataTable table={table} onRowClick={openEdit} />
+          <DataGrid
+            tableId="finance.accounts"
+            data={accounts}
+            columns={columns}
+            getRowId={(a) => a.id}
+            onRowClick={openEdit}
+            initialSorting={[{ id: 'accountName', desc: false }]}
+            initialVisibility={{ bankName: false, isPrimary: false, isActive: false, openedDate: false }}
+            exportName="accounts"
+            searchPlaceholder="Search accounts…"
+            hidePagination={accounts.length <= 10}
+          />
         </div>
       )}
 
