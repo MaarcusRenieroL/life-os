@@ -7,6 +7,7 @@ import { DataGrid } from '@/components/data-table/data-grid';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getErrorMessage } from '@/lib/error';
 
 import { AccountDialog } from './account-dialog';
 import { accountApi } from './account-api';
@@ -29,14 +30,23 @@ export function AccountsPage() {
   }
 
   async function deleteAccount(account: AccountResponse) {
-    const ok = await confirm({ title: `Delete "${account.accountName}"?`, confirmLabel: 'Delete' });
+    const count = account.transactionCount ?? 0;
+    const ok = await confirm({
+      title: `Delete "${account.accountName}"?`,
+      description:
+        count > 0
+          ? `This account holds ${count} transaction${count === 1 ? '' : 's'}. Deleting it deletes them too, and they disappear from your reports. This cannot be undone.`
+          : undefined,
+      confirmLabel: count > 0 ? `Delete account and ${count} transaction${count === 1 ? '' : 's'}` : 'Delete',
+    });
     if (!ok) return;
+    setError(null);
     try {
-      await accountApi.deleteAccount(account.id);
+      await accountApi.deleteAccount(account.id, count > 0);
       invalidate();
+      void queryClient.invalidateQueries({ queryKey: ['finance'] });
     } catch (err) {
-      const status = (err as { response?: { status?: number } }).response?.status;
-      setError(`Could not delete this account (HTTP ${status ?? '?'})`);
+      setError(getErrorMessage(err, 'Could not delete this account.'));
     }
   }
 

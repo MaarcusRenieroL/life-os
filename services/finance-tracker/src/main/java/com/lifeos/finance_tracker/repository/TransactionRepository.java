@@ -166,6 +166,19 @@ public interface TransactionRepository
 
   List<Transaction> findAllByTransferPairId(UUID transferPairId);
 
+  long countByAccountId(UUID accountId);
+
+  /** Clears duplicate_of links that point into an account about to be emptied, from other accounts' rows. */
+  @org.springframework.data.jpa.repository.Modifying
+  @Query(
+      "UPDATE Transaction t SET t.duplicateOf = NULL WHERE t.duplicateOf IN "
+          + "(SELECT x.id FROM Transaction x WHERE x.accountId = :accountId) AND t.accountId <> :accountId")
+  void clearDuplicateLinksInto(@Param("accountId") UUID accountId);
+
+  @org.springframework.data.jpa.repository.Modifying
+  @Query("DELETE FROM Transaction t WHERE t.accountId = :accountId")
+  int deleteAllByAccountId(@Param("accountId") UUID accountId);
+
   /** The biggest counted credits since a date, biggest first - how a salary-sized credit is spotted. */
   List<Transaction> findAllByUserIdAndTypeAndTransactionDateAfterAndIsDuplicateFalseAndIsTransferFalseOrderByAmountDesc(
       UUID userId, TransactionType type, Instant after, Pageable pageable);

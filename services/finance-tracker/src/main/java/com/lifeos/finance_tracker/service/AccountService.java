@@ -26,6 +26,7 @@ public class AccountService {
   private final EncryptionService encryptionService;
   private final AccountBalanceService accountBalanceService;
   private final ImportFailureService importFailureService;
+  private final com.lifeos.finance_tracker.repository.TransactionRepository transactionRepository;
 
   @Transactional(readOnly = true)
   public List<AccountResponse> getAll(Authentication authentication) {
@@ -133,12 +134,28 @@ public class AccountService {
     return toResponse(saved);
   }
 
-  public void delete(Authentication authentication, UUID id) {
+  /**
+   * Deletes an account. One that has transactions is refused unless {@code withTransactions} is set:
+   * the database keeps them tied to the account, so a bare delete used to fail with a raw foreign-key
+   * error, and silently dropping the history would be worse. With the flag, its transactions go too.
+   */
+  public void delete(Authentication authentication, UUID id, boolean withTransactions) {
     UUID userId = (UUID) authentication.getPrincipal();
 
     accountRepository
         .findByIdAndUserId(id, userId)
         .orElseThrow(() -> new AccountNotFoundException(id));
+
+    long count = transactionRepository.countByAccountId(id);
+    if (count > 0) {
+      if (!withTransactions) {
+        throw new com.lifeos.finance_tracker.exception.InvalidRequestException(
+            "This account has " + count + " transaction" + (count == 1 ? "" : "s")
+                + ". Delete the account together with its transactions, or keep it.");
+      }
+      transactionRepository.clearDuplicateLinksInto(id);
+      transactionRepository.deleteAllByAccountId(id);
+    }
 
     accountRepository.deleteByIdAndUserId(id, userId);
   }
@@ -191,6 +208,7 @@ public class AccountService {
         .openedDate(account.getOpenedDate())
         .currentBalance(account.getCurrentBalance())
         .openingBalance(account.getOpeningBalance())
+        .transactionCount(transactionRepository.countByAccountId(account.getId()))
         .isActive(account.isActive())
         .isPrimary(account.isPrimary())
         .emailForAlerts(account.getEmailForAlerts())

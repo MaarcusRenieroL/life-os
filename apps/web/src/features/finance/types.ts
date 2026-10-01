@@ -44,6 +44,8 @@ export interface AccountResponse {
   currentBalance: number;
   /** What the account held before its first transaction: the balance is this plus the net of its transactions. */
   openingBalance: number;
+  /** Transactions held by the account: deleting it has to say what happens to them. */
+  transactionCount: number;
   isActive: boolean;
   isPrimary: boolean;
   emailForAlerts: string | null;
