@@ -38,3 +38,24 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]): AsyncState
 
   return { data, error, loading, reload, mutate: (next) => setData((prev) => (typeof next === 'function' ? (next as (p: T | undefined) => T | undefined)(prev) : next)) };
 }
+
+/** Runs a mutation, reports failure in `error`, and reloads whatever the caller names afterwards. */
+export function useRunner() {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function run<T>(action: () => Promise<T>, after?: () => unknown): Promise<T | undefined> {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await action();
+      await after?.();
+      return result;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong');
+      return undefined;
+    } finally {
+      setBusy(false);
+    }
+  }
+  return { error, busy, run, clear: () => setError(null) };
+}

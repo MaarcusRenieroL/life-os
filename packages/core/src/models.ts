@@ -142,8 +142,8 @@ export interface HabitPerformance {
 export interface HabitAnalytics {
   healthScore?: { score: number };
   trend?: { weekStart: string; score: number }[];
-  habits?: HabitPerformance[];
-  [key: string]: unknown;
+  habitPerformance?: HabitPerformance[];
+  dayOfWeekPattern?: { dayOfWeek: number; score: number }[];
 }
 
 // ---------------------------------------------------------------- goals
@@ -633,4 +633,45 @@ export interface JobAnalytics {
   rejectionRatePct: number;
   interviewConversionRatePct: number;
   offerRatePct: number;
+}
+
+export type MatchType = 'EXACT' | 'CONTAINS' | 'REGEX';
+export type MatchField = 'MERCHANT_NAME' | 'DESCRIPTION';
+
+export interface CategoryInput {
+  name: string;
+  type: CategoryType;
+  color?: string;
+  icon?: string;
+  displayOrder: number;
+}
+
+export interface CategorizationRule {
+  id: string;
+  categoryId: string;
+  matchType: MatchType;
+  matchField: MatchField;
+  matchValue: string;
+  priority: number;
+  isActive: boolean;
+  hitCount: number;
+  autoLearned: boolean;
+}
+
+export interface RuleInput {
+  categoryId: string;
+  matchType: MatchType;
+  matchField: MatchField;
+  matchValue: string;
+  priority: number;
+}
+
+export interface Merchant {
+  id: string;
+  name: string;
+  categoryId: string | null;
+  transactionCount: number;
+  lastTransactionDate: string | null;
+  averageTransactionAmount: number | null;
+  isRecognized: boolean;
 }

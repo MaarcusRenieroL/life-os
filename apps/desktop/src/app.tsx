@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
+import { AnalyticsScreen } from './screens/analytics';
+import { CalendarScreen } from './screens/calendar';
+import { GoalsScreen } from './screens/goals';
 import { HabitsScreen } from './screens/habits';
+import { NotesScreen } from './screens/notes';
+import { WorkoutsScreen } from './screens/workouts';
 import { HomeScreen } from './screens/home';
 import { JobsScreen } from './screens/jobs';
 import { FinanceScreen } from './screens/finance';
@@ -17,8 +22,13 @@ const SCREENS = [
   { id: 'quests', label: 'Quests', glyph: '⚔', View: QuestsScreen },
   { id: 'tasks', label: 'Tasks', glyph: '☑', View: TasksScreen },
   { id: 'habits', label: 'Habits', glyph: '↻', View: HabitsScreen },
+  { id: 'goals', label: 'Goals', glyph: '◎', View: GoalsScreen },
+  { id: 'calendar', label: 'Calendar', glyph: '▦', View: CalendarScreen },
+  { id: 'notes', label: 'Notes', glyph: '✎', View: NotesScreen },
+  { id: 'workouts', label: 'Workouts', glyph: '♥', View: WorkoutsScreen },
   { id: 'jobs', label: 'Jobs', glyph: '✦', View: JobsScreen },
   { id: 'finance', label: 'Finance', glyph: '₹', View: FinanceScreen },
+  { id: 'analytics', label: 'Analytics', glyph: '∿', View: AnalyticsScreen },
   { id: 'trophies', label: 'Trophies', glyph: '★', View: TrophiesScreen },
   { id: 'settings', label: 'Settings', glyph: '⚙', View: SettingsScreen },
 ] as const;
@@ -37,7 +47,7 @@ function Shell() {
         event.preventDefault();
         setCapturing(true);
       }
-      if ((event.metaKey || event.ctrlKey) && /^[1-8]$/.test(event.key)) {
+      if ((event.metaKey || event.ctrlKey) && /^[1-9]$/.test(event.key)) {
         event.preventDefault();
         setScreen(SCREENS[Number(event.key) - 1].id);
       }

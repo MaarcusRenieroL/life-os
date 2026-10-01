@@ -6,7 +6,7 @@ import type {
   Habit, HabitAnalytics, HabitInput, HabitLog, HabitLogStatus, HabitStreak, JobAnalytics, JobInterview, JobListing, JobStatus, Measurement,
   MeasurementInput, MerchantSpend, MonthlyTrend, NamedRef, Note, NoteFilters, NoteFolder, NoteSummary, NoteType, Page, Routine, RoutineInput,
   SessionDetail, SessionSummary, SetUpdate, Subscription, SubscriptionInput, SubscriptionSummary, Tag, Task, TaskFilters, TaskInput, TaskPatch,
-  TodayHabitEntry, TransactionFilters, TransactionInput, TrashedNote, WorkoutAnalytics, ExerciseCategory, Equipment, SubscriptionStatus,
+  TodayHabitEntry, CategoryInput, CategorizationRule, RuleInput, Merchant, TransactionFilters, TransactionInput, TrashedNote, WorkoutAnalytics, ExerciseCategory, Equipment, SubscriptionStatus,
 } from './models';
 import type { Dashboard, TodayItem, TrendPoint } from './types';
 
@@ -79,7 +79,8 @@ export function createApis(client: Client) {
     },
 
     calendar: {
-      list: (from: string, to: string) => get<CalendarEvent[]>('/v1/calendar/events', { from, to }),
+      /** `from` and `to` are local YYYY-MM-DD days (inclusive); the backend wants instants. */
+      list: (from: string, to: string) => get<CalendarEvent[]>('/v1/calendar/events', { from: new Date(`${from}T00:00:00`).toISOString(), to: new Date(`${to}T23:59:59.999`).toISOString() }),
       freeSlots: (date: string, minDurationMinutes = 30) => get<FreeSlot[]>('/v1/calendar/events/free-slots', { date, minDurationMinutes }),
       create: (input: EventInput) => post<CalendarEvent>('/v1/calendar/events', input),
       update: (id: string, input: Partial<EventInput>) => put<CalendarEvent>(`/v1/calendar/events/${id}`, input),
@@ -97,8 +98,8 @@ export function createApis(client: Client) {
       trash: () => get<TrashedNote[]>('/v1/notes/trash'),
       restore: (id: string) => post<Note>(`/v1/notes/${id}/restore`),
       purge: (id: string) => del<void>(`/v1/notes/${id}/permanent`),
-      folders: () => get<NoteFolder[]>('/v1/notes/folders'),
-      tags: () => get<Tag[]>('/v1/notes/tags'),
+      folders: () => get<NoteFolder[]>('/v1/folders'),
+      tags: () => get<Tag[]>('/v1/tags'),
       addTag: (id: string, tagId: string) => post<Note>(`/v1/notes/${id}/tags`, { tagId }),
       removeTag: (id: string, tagId: string) => del<Note>(`/v1/notes/${id}/tags/${tagId}`),
     },
@@ -144,12 +145,21 @@ export function createApis(client: Client) {
       summary: () => get<FinanceSummary>('/v1/finance/analytics/dashboard'),
       overview: () => get<FinanceOverview>('/v1/finance/analytics/overview'),
       trends: () => get<MonthlyTrend[]>('/v1/finance/analytics/trends'),
-      merchants: (limit = 10) => get<MerchantSpend[]>('/v1/finance/analytics/merchants', { limit }),
+      topMerchants: (limit = 10) => get<MerchantSpend[]>('/v1/finance/analytics/merchants', { limit }),
       comparisons: (categoryIds: string[]) => get<CategoryComparison[]>('/v1/finance/analytics/categories', { categoryIds: categoryIds.join(',') }),
       accounts: () => get<FinanceAccount[]>('/v1/finance/accounts'),
       createAccount: (body: AccountInput) => post<FinanceAccount>('/v1/finance/accounts', body),
       deleteAccount: (id: string) => del<void>(`/v1/finance/accounts/${id}`),
       categories: () => get<FinanceCategory[]>('/v1/finance/categories'),
+      createCategory: (body: CategoryInput) => post<FinanceCategory>('/v1/finance/categories', body),
+      updateCategory: (id: string, body: Partial<CategoryInput> & { isActive?: boolean }) => put<FinanceCategory>(`/v1/finance/categories/${id}`, body),
+      deleteCategory: (id: string) => del<void>(`/v1/finance/categories/${id}`),
+      rules: () => get<CategorizationRule[]>('/v1/finance/categorization-rules'),
+      createRule: (body: RuleInput) => post<CategorizationRule>('/v1/finance/categorization-rules', body),
+      updateRule: (id: string, body: Partial<RuleInput> & { isActive?: boolean }) => put<CategorizationRule>(`/v1/finance/categorization-rules/${id}`, body),
+      deleteRule: (id: string) => del<void>(`/v1/finance/categorization-rules/${id}`),
+      merchants: () => get<Merchant[]>('/v1/finance/merchants'),
+      deleteMerchant: (id: string) => del<void>(`/v1/finance/merchants/${id}`),
       transactions: (page = 0, size = 50, filters: TransactionFilters = {}) => get<Page<FinanceTransaction>>('/v1/finance/transactions', { page, size, ...filters }),
       needsReviewCount: () => get<number>('/v1/finance/transactions/needs-review-count'),
       createTransaction: (body: TransactionInput) => post<FinanceTransaction>('/v1/finance/transactions', body),

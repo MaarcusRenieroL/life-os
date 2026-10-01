@@ -60,3 +60,9 @@ export async function buildRuntime(settings: Settings, onSignedOut: () => void) 
 }
 
 export type Runtime = Awaited<ReturnType<typeof buildRuntime>>;
+
+/** Opens a URL in the system browser: the Tauri opener when packaged, a new tab in a plain browser. */
+export async function openExternal(url: string) {
+  if (inTauri) await (await import('@tauri-apps/plugin-opener')).openUrl(url);
+  else window.open(url, '_blank', 'noopener');
+}

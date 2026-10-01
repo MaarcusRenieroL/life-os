@@ -33,7 +33,7 @@ export function SettingsScreen() {
         </form>
       </Panel>
       <Panel title="Shortcuts">
-        <p className="muted"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd> quick capture from anywhere · <kbd>⌘K</kbd> in the app · <kbd>⌘1</kbd>–<kbd>⌘8</kbd> switch screens. Closing the window keeps Life OS in the menu bar.</p>
+        <p className="muted"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd> quick capture from anywhere · <kbd>⌘K</kbd> in the app · <kbd>⌘1</kbd>–<kbd>⌘9</kbd> switch the first nine screens. Closing the window keeps Life OS in the menu bar.</p>
       </Panel>
       <Panel title="Account"><button className="danger" onClick={() => void signOut()}>Sign out</button></Panel>
     </div>
