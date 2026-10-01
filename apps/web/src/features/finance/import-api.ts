@@ -21,6 +21,10 @@ export const importApi = {
     return `/v1/batches/gmail/connect?purpose=${purpose}`;
   },
 
+  syncRecentJobEmails(): Promise<number> {
+    return unwrap(api.post('/v1/batches/gmail/jobs/sync-recent', {}));
+  },
+
   syncAllGmailHistory(): Promise<number> {
     return unwrap(api.post('/v1/batches/gmail/sync-all', {}));
   },

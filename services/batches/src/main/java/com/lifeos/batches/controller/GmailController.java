@@ -9,6 +9,7 @@ import com.lifeos.batches.service.JobEmailSyncService;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v1/batches/gmail")
 @RequiredArgsConstructor
 public class GmailController {
+
+  @Value("${gmail.post-connect-url}")
+  private String postConnectUrl;
 
   private final GmailOAuthService gmailOAuthService;
   private final GmailSyncService gmailSyncService;
@@ -45,12 +49,13 @@ public class GmailController {
   }
 
   @GetMapping("/callback")
-  public ResponseEntity<ApiResponse<Void>> callback(
+  public ResponseEntity<Void> callback(
       @RequestParam("code") String code, @RequestParam(value = "state", required = false) String state)
       throws IOException {
     gmailOAuthService.handleCallback(code, state);
 
-    return ResponseEntity.ok(ApiResponse.success(null, "Gmail account connected successfully"));
+    // The browser is mid-navigation from Google, so send it back to the app rather than showing JSON.
+    return ResponseEntity.status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, postConnectUrl).build();
   }
 
   // Full historical sync, triggered manually - the scheduled poll only ever

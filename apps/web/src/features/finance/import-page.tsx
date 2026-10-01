@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
@@ -132,32 +133,10 @@ export function ImportPage() {
       <section className="mt-4 hud-panel p-5">
         <SectionHeading>Gmail sync</SectionHeading>
         <p className="mt-1 text-xs text-muted-foreground">
-          Bank alerts and job emails can arrive at different addresses, so each is connected on its own. Only mail
-          sent to a connected address is ever seen.
+          {gmailStatus?.connected ? 'Bank alerts are read from the Gmail account you connected. ' : 'Gmail is not connected yet. '}
+          Connect or change the bank and job mailboxes in{' '}
+          <Link to="/settings#integrations" className="text-primary hover:underline">Settings</Link>.
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {([['FINANCE', 'Bank alerts'], ['JOBS', 'Job emails']] as const).map(([purpose, label]) => {
-            const mailbox = gmailStatus?.mailboxes?.find((m) => m.purpose === purpose);
-            return (
-              <div key={purpose} className="rounded-md border p-3 text-sm">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
-                {mailbox ? (
-                  <>
-                    <p className="mt-1 font-medium">{mailbox.email ?? 'Connected'}</p>
-                    {mailbox.connectedAt && <p className="text-xs text-muted-foreground">since {new Date(mailbox.connectedAt).toLocaleDateString()}</p>}
-                  </>
-                ) : (
-                  <p className="mt-1 text-muted-foreground">
-                    {gmailStatus?.connected ? 'Not connected - using the other mailbox' : 'Not connected'}
-                  </p>
-                )}
-                <a href={importApi.gmailConnectUrl(purpose)} className="mt-2 inline-block text-xs text-primary hover:underline">
-                  {mailbox ? 'Reconnect with another account' : 'Connect'}
-                </a>
-              </div>
-            );
-          })}
-        </div>
         {gmailStatus?.connected && (
           <div className="mt-3 flex items-center gap-3">
             <Button size="sm" variant="outline" onClick={() => void syncGmail()} disabled={syncing}>

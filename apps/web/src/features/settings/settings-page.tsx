@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 
 import { coreApi } from '../core/core-api';
 import { DeleteAccountDialog } from './delete-account-dialog';
+import { GmailConnections } from './gmail-connections';
 
 interface NavItem {
   id: string;
@@ -328,10 +329,7 @@ export function SettingsPage() {
 
             <section id="integrations" className="hud-panel p-5">
               <SectionHeading className="mb-1.5">Integrations</SectionHeading>
-              <div className="text-[11px] text-muted-foreground">
-                Connect third-party services (calendars, job boards, banks) once those integrations
-                exist.
-              </div>
+              <GmailConnections />
             </section>
 
             <section id="data-privacy" className="hud-panel p-5">
