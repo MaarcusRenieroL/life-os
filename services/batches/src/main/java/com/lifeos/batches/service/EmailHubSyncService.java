@@ -42,6 +42,9 @@ public class EmailHubSyncService {
   @Value("${gmail.alert-senders}")
   private String bankAlertSenders;
 
+  @Value("${gmail.job-search.senders}")
+  private String jobSenders;
+
   private final GmailMessageService gmailMessageService;
   private final GmailOAuthService gmailOAuthService;
   private final KafkaTemplate<String, EmailHubEventRecord> emailHubEventKafkaTemplate;
@@ -61,8 +64,10 @@ public class EmailHubSyncService {
   }
 
   String searchClause() {
+    // Bank alerts and job-board mail each have their own pipeline; the hub guessing at them as well
+    // produced duplicate tasks and "ignored" verdicts on real applications.
     String skipBankAlerts =
-        Arrays.stream(bankAlertSenders.split(","))
+        Arrays.stream((bankAlertSenders + "," + jobSenders).split(","))
             .map(String::trim)
             .filter(s -> !s.isEmpty())
             .map(s -> "-from:" + s)
