@@ -52,6 +52,9 @@ jobs:
             echo "GMAIL_CLIENT_SECRET=unused"
           } > .env
 
+      - name: Raise the login rate limit for the suite only
+        run: sed 's/rate=10r\/m/rate=1000r\/m/' nginx.conf > apps/web/e2e/nginx.e2e.conf
+
       - name: Start the stack
         run: $COMPOSE up -d --build
 
