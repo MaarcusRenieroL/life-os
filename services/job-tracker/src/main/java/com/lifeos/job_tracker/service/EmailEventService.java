@@ -18,6 +18,7 @@ import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -60,14 +61,15 @@ public class EmailEventService {
     if (emailEventRepository.existsByUserIdAndGmailMessageId(userId, gmailMessageId)) {
       return;
     }
-    if (!ai.available()) {
+    Optional<EmailClassification> known = LinkedInEmailRules.classify(fromAddress, subject, body);
+    if (known.isEmpty() && !ai.available()) {
       log.warn("Skipping email event {}: no AI provider configured", gmailMessageId);
       return;
     }
 
     EmailClassification classification;
     try {
-      classification = ai.classifyEmail(fromAddress, subject, body);
+      classification = known.isPresent() ? known.get() : ai.classifyEmail(fromAddress, subject, body);
     } catch (RuntimeException exception) {
       log.warn("Could not classify email {}: {}", gmailMessageId, exception.getMessage());
       return;
