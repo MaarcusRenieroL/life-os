@@ -2,6 +2,7 @@ package com.lifeos.finance_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateMonthlyIncomeRequest;
+import com.lifeos.finance_tracker.domains.dto.request.UpdatePayCycleRequest;
 import com.lifeos.finance_tracker.domains.record.*;
 import com.lifeos.finance_tracker.service.AnalyticsService;
 import jakarta.validation.Valid;
@@ -23,6 +24,19 @@ public class AnalyticsController {
   public ResponseEntity<ApiResponse<DashboardSummary>> getDashboard(Authentication authentication) {
     DashboardSummary data = analyticsService.getDashboardSummary(authentication);
     return ResponseEntity.ok(ApiResponse.success(data, "Dashboard data retrieved successfully"));
+  }
+
+  /** The current pay cycle at a glance: what is left to spend, net worth, payday suggestion. */
+  @GetMapping("/overview")
+  public ResponseEntity<ApiResponse<FinanceOverview>> getOverview(Authentication authentication) {
+    return ResponseEntity.ok(ApiResponse.success(analyticsService.getOverview(authentication), "Overview fetched"));
+  }
+
+  /** Sets the day salary lands, which is when each pay cycle (and each budget period) starts. */
+  @PutMapping("/pay-cycle")
+  public ResponseEntity<ApiResponse<FinanceOverview>> updatePayCycle(
+      Authentication authentication, @Valid @RequestBody UpdatePayCycleRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(analyticsService.updatePayCycle(authentication, request), "Pay cycle updated"));
   }
 
   @PutMapping("/monthly-income")

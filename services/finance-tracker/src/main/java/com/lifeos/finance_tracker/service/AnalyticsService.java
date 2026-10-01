@@ -9,6 +9,18 @@ import com.lifeos.finance_tracker.domains.record.MerchantSpend;
 import com.lifeos.finance_tracker.domains.record.MonthlyTrend;
 import com.lifeos.finance_tracker.repository.TransactionRepository;
 import com.lifeos.finance_tracker.repository.UserFinanceSettingsRepository;
+import com.lifeos.finance_tracker.domains.dto.request.UpdatePayCycleRequest;
+import com.lifeos.finance_tracker.domains.entity.Account;
+import com.lifeos.finance_tracker.domains.entity.Transaction;
+import com.lifeos.finance_tracker.domains.enums.SubscriptionStatus;
+import com.lifeos.finance_tracker.domains.enums.TransactionType;
+import com.lifeos.finance_tracker.domains.record.FinanceOverview;
+import com.lifeos.finance_tracker.repository.AccountRepository;
+import com.lifeos.finance_tracker.repository.SubscriptionRepository;
+import com.lifeos.finance_tracker.util.PayCycle;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import org.springframework.data.domain.PageRequest;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -33,6 +45,8 @@ public class AnalyticsService {
 
   private final TransactionRepository transactionRepository;
   private final UserFinanceSettingsRepository userFinanceSettingsRepository;
+  private final AccountRepository accountRepository;
+  private final SubscriptionRepository subscriptionRepository;
 
   // Self-injected via ObjectProvider (lazy, so it doesn't create a circular-construction
   // problem) so that the call below to computeDashboardSummary goes back through the Spring
@@ -60,18 +74,87 @@ public class AnalyticsService {
     return new DashboardSummary(result.totalIncome(), result.totalExpenses(), fixedMonthlyIncome);
   }
 
-  // Cache key mirrors the original hand-rolled Redis key shape (userId + current YearMonth) so a
-  // cached entry still naturally separates across a month boundary rather than serving last
-  // month's totals into the new month for up to a full TTL.
-  @Cacheable(
-      value = "finance-analytics-dashboard",
-      key = "#userId + ':' + T(java.time.YearMonth).now(T(java.time.ZoneId).of('Asia/Kolkata'))")
+  /**
+   * Income and spending for the current pay cycle. Not cached: it is one aggregate query, and the
+   * old per-month cache key went stale the moment the pay cycle (or a recategorisation) changed.
+   */
   public DashboardSummary computeDashboardSummary(UUID userId) {
-    ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
-    Instant start = now.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant();
-    Instant end = now.toLocalDate().plusDays(1).atStartOfDay(ZONE_ID).toInstant();
+    PayCycle.Window cycle = PayCycle.containing(Instant.now(), payCycleStartDay(userId));
+    return transactionRepository.getDashboardSummary(userId, cycle.start(), cycle.end());
+  }
 
-    return transactionRepository.getDashboardSummary(userId, start, end);
+  public int payCycleStartDay(UUID userId) {
+    return userFinanceSettingsRepository.findById(userId).map(UserFinanceSettings::getPayCycleStartDay).orElse(1);
+  }
+
+  /** Moves the start of the pay cycle (the day salary lands). */
+  public FinanceOverview updatePayCycle(Authentication authentication, UpdatePayCycleRequest request) {
+    UUID userId = (UUID) authentication.getPrincipal();
+    UserFinanceSettings settings =
+        userFinanceSettingsRepository.findById(userId).orElseGet(() -> UserFinanceSettings.builder().userId(userId).build());
+    settings.setPayCycleStartDay(PayCycle.clamp(request.getStartDay()));
+    userFinanceSettingsRepository.save(settings);
+    return getOverview(authentication);
+  }
+
+  /** The current pay cycle at a glance: what is left to spend, net worth, and a payday suggestion. */
+  public FinanceOverview getOverview(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+    UserFinanceSettings settings = userFinanceSettingsRepository.findById(userId).orElse(null);
+    int startDay = settings == null ? 1 : settings.getPayCycleStartDay();
+    BigDecimal fixedIncome = settings == null ? null : settings.getMonthlyIncome();
+
+    Instant now = Instant.now();
+    PayCycle.Window cycle = PayCycle.containing(now, startDay);
+    DashboardSummary summary = transactionRepository.getDashboardSummary(userId, cycle.start(), cycle.end());
+    LocalDate today = now.atZone(PayCycle.ZONE).toLocalDate();
+
+    BigDecimal upcomingBills =
+        subscriptionRepository.findAllByUserIdOrderByNextBillingDateAsc(userId).stream()
+            .filter(sub -> sub.getStatus() == SubscriptionStatus.ACTIVE && sub.getNextBillingDate() != null)
+            .filter(sub -> !sub.getNextBillingDate().isBefore(today) && !sub.getNextBillingDate().isAfter(cycle.lastDay()))
+            .map(sub -> sub.getAmount() == null ? BigDecimal.ZERO : sub.getAmount())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    BigDecimal netWorth =
+        accountRepository.findAllByUserId(userId).stream()
+            .filter(Account::isActive)
+            .map(a -> a.getCurrentBalance() == null ? BigDecimal.ZERO : a.getCurrentBalance())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    return FinanceOverview.compute(
+        today,
+        cycle.firstDay(),
+        cycle.lastDay(),
+        startDay,
+        summary.totalIncome() == null ? BigDecimal.ZERO : summary.totalIncome(),
+        fixedIncome,
+        summary.totalExpenses() == null ? BigDecimal.ZERO : summary.totalExpenses(),
+        upcomingBills,
+        netWorth,
+        startDay == 1 ? suggestedPayDay(userId, fixedIncome, now) : null);
+  }
+
+  /**
+   * If salary lands on, say, the 30th, a month measured from the 1st splits every pay cycle in two.
+   * Looks at the biggest credit of the last two months; when it is salary-sized (at least 80% of the
+   * stated salary, or the largest credit if none is stated) and not on the 1st, returns its day.
+   */
+  private Integer suggestedPayDay(UUID userId, BigDecimal fixedIncome, Instant now) {
+    List<Transaction> biggest =
+        transactionRepository
+            .findAllByUserIdAndTypeAndTransactionDateAfterAndIsDuplicateFalseAndIsTransferFalseOrderByAmountDesc(
+                userId, TransactionType.CREDIT, now.minus(62, ChronoUnit.DAYS), PageRequest.of(0, 1));
+    if (biggest.isEmpty()) {
+      return null;
+    }
+    Transaction credit = biggest.get(0);
+    boolean salarySized =
+        fixedIncome != null && fixedIncome.signum() > 0
+            ? credit.getAmount().compareTo(fixedIncome.multiply(new BigDecimal("0.8"))) >= 0
+            : credit.getAmount().compareTo(new BigDecimal("1000")) >= 0;
+    int day = credit.getTransactionDate().atZone(PayCycle.ZONE).getDayOfMonth();
+    return salarySized && day != 1 ? PayCycle.clamp(day) : null;
   }
 
   public DashboardSummary updateMonthlyIncome(
@@ -89,10 +172,9 @@ public class AnalyticsService {
     return getDashboardSummary(authentication);
   }
 
-  @Cacheable(value = "finance-analytics-category", key = "#authentication.principal + ':' + #categoryId")
   public CategoryComparison getCategoryAnalytics(Authentication authentication, UUID categoryId) {
     UUID userId = (UUID) authentication.getPrincipal();
-    ComparisonWindow window = ComparisonWindow.thisMonthVsLast();
+    ComparisonWindow window = ComparisonWindow.cycleVsPrevious(payCycleStartDay(userId));
 
     BigDecimal currentMonthSpend =
         transactionRepository.sumCategorySpendByPeriod(
@@ -127,7 +209,7 @@ public class AnalyticsService {
     // Deduplicated so a repeated id doesn't widen the IN list, but the response is built from the
     // distinct ids below so every requested category still gets exactly one entry.
     List<UUID> distinctIds = categoryIds.stream().distinct().toList();
-    ComparisonWindow window = ComparisonWindow.thisMonthVsLast();
+    ComparisonWindow window = ComparisonWindow.cycleVsPrevious(payCycleStartDay(userId));
 
     Map<UUID, CategoryPeriodSpend> spendByCategory =
         transactionRepository
@@ -168,24 +250,14 @@ public class AnalyticsService {
         categoryId, currentSpend, previousSpend, difference, percentageChange);
   }
 
-  /** The "this month so far vs. all of last month" window both category endpoints compare over. */
+  /** This pay cycle vs the whole previous one - what both category endpoints compare over. */
   private record ComparisonWindow(
       Instant currentStart, Instant currentEnd, Instant previousStart, Instant previousEnd) {
-
-    static ComparisonWindow thisMonthVsLast() {
-      ZonedDateTime now = ZonedDateTime.now(ZONE_ID);
-      ZonedDateTime lastMonth = now.minusMonths(1);
-
-      return new ComparisonWindow(
-          now.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant(),
-          now.toLocalDate().plusDays(1).atStartOfDay(ZONE_ID).toInstant(),
-          lastMonth.withDayOfMonth(1).toLocalDate().atStartOfDay(ZONE_ID).toInstant(),
-          lastMonth
-              .withDayOfMonth(lastMonth.toLocalDate().lengthOfMonth())
-              .toLocalDate()
-              .plusDays(1)
-              .atStartOfDay(ZONE_ID)
-              .toInstant());
+    static ComparisonWindow cycleVsPrevious(int startDay) {
+      Instant now = Instant.now();
+      PayCycle.Window current = PayCycle.containing(now, startDay);
+      PayCycle.Window previous = PayCycle.before(now, startDay);
+      return new ComparisonWindow(current.start(), current.end(), previous.start(), previous.end());
     }
   }
 

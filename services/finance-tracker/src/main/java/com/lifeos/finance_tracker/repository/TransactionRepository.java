@@ -166,4 +166,8 @@ public interface TransactionRepository
 
   List<Transaction> findAllByTransferPairId(UUID transferPairId);
 
+  /** The biggest counted credits since a date, biggest first - how a salary-sized credit is spotted. */
+  List<Transaction> findAllByUserIdAndTypeAndTransactionDateAfterAndIsDuplicateFalseAndIsTransferFalseOrderByAmountDesc(
+      UUID userId, TransactionType type, Instant after, Pageable pageable);
+
 }

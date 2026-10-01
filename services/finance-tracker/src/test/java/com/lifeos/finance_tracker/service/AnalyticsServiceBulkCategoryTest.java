@@ -36,6 +36,8 @@ class AnalyticsServiceBulkCategoryTest {
 
   @Mock private TransactionRepository transactionRepository;
   @Mock private UserFinanceSettingsRepository userFinanceSettingsRepository;
+  @Mock private com.lifeos.finance_tracker.repository.AccountRepository accountRepository;
+  @Mock private com.lifeos.finance_tracker.repository.SubscriptionRepository subscriptionRepository;
   @Mock private ObjectProvider<AnalyticsService> self;
   @Mock private Authentication authentication;
 
@@ -46,7 +48,8 @@ class AnalyticsServiceBulkCategoryTest {
   @BeforeEach
   void setUp() {
     analyticsService =
-        new AnalyticsService(transactionRepository, userFinanceSettingsRepository, self);
+        new AnalyticsService(
+            transactionRepository, userFinanceSettingsRepository, accountRepository, subscriptionRepository, self);
   }
 
   private void authenticated() {
@@ -199,7 +202,8 @@ class AnalyticsServiceBulkCategoryTest {
 
     assertThat(previousStart.getValue()).isBefore(previousEnd.getValue());
     assertThat(currentStart.getValue()).isBefore(currentEnd.getValue());
-    // Last month's exclusive end is this month's start - no gap, no overlap.
-    assertThat(previousEnd.getValue()).isEqualTo(currentStart.getValue());
+    // The queries use BETWEEN (inclusive both ends), so the previous period ends one millisecond
+    // before this one starts: no gap, and a transaction at the exact boundary is never counted twice.
+    assertThat(previousEnd.getValue().plusMillis(1)).isEqualTo(currentStart.getValue());
   }
 }
