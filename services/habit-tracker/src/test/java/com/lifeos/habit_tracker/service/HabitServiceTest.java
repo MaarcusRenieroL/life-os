@@ -69,6 +69,33 @@ class HabitServiceTest {
   }
 
   @Test
+  void aNullInTheRequestClearsAFieldButAMissingKeyKeepsIt() throws Exception {
+    Habit habit =
+        Habit.builder()
+            .id(habitId)
+            .userId(userId)
+            .name("Read")
+            .status(HabitStatus.ACTIVE)
+            .targetUnit("pages")
+            .why("Be curious")
+            .endDate(java.time.LocalDate.of(2027, 1, 1))
+            .build();
+    when(habitRepository.findByIdAndUserId(habitId, userId)).thenReturn(Optional.of(habit));
+    when(habitRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    var json = tools.jackson.databind.json.JsonMapper.builder().build();
+
+    habitService.update(userId, habitId, json.readValue("{\"name\": \"Read daily\"}", com.lifeos.habit_tracker.domains.dto.request.UpdateHabitRequest.class));
+    assertThat(habit.getTargetUnit()).isEqualTo("pages");
+    assertThat(habit.getEndDate()).isNotNull();
+
+    habitService.update(userId, habitId, json.readValue("{\"targetUnit\": null, \"endDate\": null}", com.lifeos.habit_tracker.domains.dto.request.UpdateHabitRequest.class));
+    assertThat(habit.getTargetUnit()).isNull();
+    assertThat(habit.getEndDate()).isNull();
+    assertThat(habit.getWhy()).isEqualTo("Be curious");
+    assertThat(habit.getName()).isEqualTo("Read daily");
+  }
+
+  @Test
   void deleteRemovesTheHabit() {
     Habit habit =
         Habit.builder().id(habitId).userId(userId).status(HabitStatus.ACTIVE).build();

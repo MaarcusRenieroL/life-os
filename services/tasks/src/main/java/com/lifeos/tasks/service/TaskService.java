@@ -11,6 +11,8 @@ import com.lifeos.tasks.domains.enums.TaskPriority;
 import com.lifeos.tasks.domains.enums.TaskStatus;
 import com.lifeos.tasks.domains.enums.TaskView;
 import com.lifeos.tasks.exception.ResourceNotFoundException;
+import com.lifeos.tasks.repository.GoalRepository;
+import com.lifeos.tasks.repository.ProjectRepository;
 import com.lifeos.tasks.repository.TaskRepository;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -32,6 +34,8 @@ public class TaskService {
       List.of(TaskPriority.URGENT, TaskPriority.HIGH, TaskPriority.MEDIUM, TaskPriority.LOW);
 
   private final TaskRepository taskRepository;
+  private final ProjectRepository projectRepository;
+  private final GoalRepository goalRepository;
 
   @Transactional(readOnly = true)
   public List<TaskResponse> list(
@@ -126,7 +130,33 @@ public class TaskService {
         .orElseThrow(() -> ResourceNotFoundException.of("Task", id));
   }
 
+  /**
+   * A task may only point at a project, goal or parent task that exists and belongs to the same user, and a
+   * task cannot become its own ancestor (that would loop every subtask walk and the cascade delete).
+   */
+  private void requireValidReferences(UUID userId, UUID taskId, UUID projectId, UUID goalId, UUID parentTaskId) {
+    if (projectId != null) {
+      projectRepository.findByIdAndUserId(projectId, userId).orElseThrow(() -> ResourceNotFoundException.of("Project", projectId));
+    }
+    if (goalId != null) {
+      goalRepository.findByIdAndUserId(goalId, userId).orElseThrow(() -> ResourceNotFoundException.of("Goal", goalId));
+    }
+    if (parentTaskId != null) {
+      if (parentTaskId.equals(taskId)) {
+        throw new IllegalArgumentException("A task cannot be its own parent");
+      }
+      Task ancestor = findOwned(userId, parentTaskId);
+      for (int hops = 0; ancestor != null && ancestor.getParentTaskId() != null && hops < 50; hops++) {
+        if (ancestor.getParentTaskId().equals(taskId)) {
+          throw new IllegalArgumentException("That would make the task a subtask of its own subtask");
+        }
+        ancestor = taskRepository.findByIdAndUserId(ancestor.getParentTaskId(), userId).orElse(null);
+      }
+    }
+  }
+
   public TaskResponse create(UUID userId, CreateTaskRequest request) {
+    requireValidReferences(userId, null, request.getProjectId(), request.getGoalId(), request.getParentTaskId());
     Task task =
         Task.builder()
             .userId(userId)
@@ -151,33 +181,42 @@ public class TaskService {
 
   public TaskResponse update(UUID userId, UUID id, UpdateTaskRequest request) {
     Task task = findOwned(userId, id);
-    applyUpdate(task, request);
+    applyUpdate(userId, task, request);
     return toResponse(taskRepository.save(task));
   }
 
-  private void applyUpdate(Task task, UpdateTaskRequest request) {
-    if (request.getTitle() != null) task.setTitle(request.getTitle());
-    if (request.getDescription() != null) task.setDescription(request.getDescription());
+  private void applyUpdate(UUID userId, Task task, UpdateTaskRequest request) {
+    requireValidReferences(
+        userId,
+        task.getId(),
+        request.provided("projectId") ? request.getProjectId() : null,
+        request.provided("goalId") ? request.getGoalId() : null,
+        request.provided("parentTaskId") ? request.getParentTaskId() : null);
+    if (request.getTitle() != null) {
+      if (request.getTitle().isBlank()) throw new IllegalArgumentException("A task needs a title");
+      task.setTitle(request.getTitle());
+    }
+    if (request.provided("description")) task.setDescription(request.getDescription());
     if (request.getPriority() != null) task.setPriority(request.getPriority());
     // A reschedule should let reminders fire again against the new time - see Task.java's
     // remindersSent javadoc - so clear it whenever either half of the due moment actually moves.
     boolean dueMoved =
-        (request.getDueDate() != null && !request.getDueDate().equals(task.getDueDate()))
-            || (request.getDueTime() != null && !request.getDueTime().equals(task.getDueTime()));
-    if (request.getDueDate() != null) task.setDueDate(request.getDueDate());
-    if (request.getDueTime() != null) task.setDueTime(request.getDueTime());
+        (request.provided("dueDate") && !java.util.Objects.equals(request.getDueDate(), task.getDueDate()))
+            || (request.provided("dueTime") && !java.util.Objects.equals(request.getDueTime(), task.getDueTime()));
+    if (request.provided("dueDate")) task.setDueDate(request.getDueDate());
+    if (request.provided("dueTime")) task.setDueTime(request.getDueTime());
     if (dueMoved) {
       task.setRemindersSent(null);
       task.setOverdueNotifiedAt(null);
     }
     if (request.getAllDay() != null) task.setAllDay(request.getAllDay());
-    if (request.getArea() != null) task.setArea(request.getArea());
-    if (request.getProjectId() != null) task.setProjectId(request.getProjectId());
-    if (request.getGoalId() != null) task.setGoalId(request.getGoalId());
-    if (request.getParentTaskId() != null) task.setParentTaskId(request.getParentTaskId());
-    if (request.getTags() != null) task.setTags(request.getTags());
-    if (request.getEstimateMinutes() != null) task.setEstimateMinutes(request.getEstimateMinutes());
-    if (request.getReminderMinutesBefore() != null) {
+    if (request.provided("area")) task.setArea(request.getArea());
+    if (request.provided("projectId")) task.setProjectId(request.getProjectId());
+    if (request.provided("goalId")) task.setGoalId(request.getGoalId());
+    if (request.provided("parentTaskId")) task.setParentTaskId(request.getParentTaskId());
+    if (request.provided("tags")) task.setTags(request.getTags());
+    if (request.provided("estimateMinutes")) task.setEstimateMinutes(request.getEstimateMinutes());
+    if (request.provided("reminderMinutesBefore")) {
       task.setReminderMinutesBefore(request.getReminderMinutesBefore());
       task.setRemindersSent(null);
     }
@@ -245,7 +284,7 @@ public class TaskService {
         .flatMap(id -> taskRepository.findByIdAndUserId(id, userId).stream())
         .map(
             task -> {
-              applyUpdate(task, request.getPatch());
+              applyUpdate(userId, task, request.getPatch());
               return toResponse(taskRepository.save(task));
             })
         .toList();

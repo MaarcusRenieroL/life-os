@@ -232,15 +232,18 @@ public class EventService {
   public EventResponse update(UUID userId, UUID id, UpdateEventRequest request) {
     Event event = findOwned(userId, id);
 
-    if (request.getTitle() != null) event.setTitle(request.getTitle());
-    if (request.getDescription() != null) event.setDescription(request.getDescription());
-    if (request.getLocation() != null) event.setLocation(request.getLocation());
+    if (request.getTitle() != null) {
+      if (request.getTitle().isBlank()) throw new InvalidRequestException("An event needs a title.");
+      event.setTitle(request.getTitle());
+    }
+    if (request.provided("description")) event.setDescription(request.getDescription());
+    if (request.provided("location")) event.setLocation(request.getLocation());
     if (request.getCategory() != null) event.setCategory(request.getCategory());
-    if (request.getColor() != null) event.setColor(request.getColor());
+    if (request.provided("color")) event.setColor(request.getColor());
     if (request.getFreeBusy() != null) event.setFreeBusy(request.getFreeBusy());
-    if (request.getArea() != null) event.setArea(request.getArea());
-    if (request.getProjectId() != null) event.setProjectId(request.getProjectId());
-    if (request.getGoalId() != null) event.setGoalId(request.getGoalId());
+    if (request.provided("area")) event.setArea(request.getArea());
+    if (request.provided("projectId")) event.setProjectId(request.getProjectId());
+    if (request.provided("goalId")) event.setGoalId(request.getGoalId());
     if (request.getAllDay() != null) event.setAllDay(request.getAllDay());
     // A reschedule should let reminders fire again against the new time - mirrors tasks'
     // TaskService.applyUpdate - so clear remindersSent whenever startAt actually moves.
@@ -250,7 +253,7 @@ public class EventService {
     if (request.getStartDate() != null) event.setStartDate(request.getStartDate());
     if (request.getEndDate() != null) event.setEndDate(request.getEndDate());
     if (startMoved) event.setRemindersSent(null);
-    if (request.getReminderMinutesBefore() != null) {
+    if (request.provided("reminderMinutesBefore")) {
       event.setReminderMinutesBefore(request.getReminderMinutesBefore());
       event.setRemindersSent(null);
     }
@@ -270,8 +273,22 @@ public class EventService {
       if (event.getStartDate() == null) {
         throw new InvalidRequestException("An all-day event needs a startDate.");
       }
-    } else if (event.getStartAt() == null || event.getEndAt() == null) {
-      throw new InvalidRequestException("A timed event needs both startAt and endAt.");
+      if (event.getEndDate() != null && event.getEndDate().isBefore(event.getStartDate())) {
+        throw new InvalidRequestException("An event cannot end before it starts.");
+      }
+      // Switching a timed event to all-day must not leave its old clock times behind.
+      event.setStartAt(null);
+      event.setEndAt(null);
+    } else {
+      if (event.getStartAt() == null || event.getEndAt() == null) {
+        throw new InvalidRequestException("A timed event needs both startAt and endAt.");
+      }
+      if (event.getEndAt().isBefore(event.getStartAt())) {
+        throw new InvalidRequestException("An event cannot end before it starts.");
+      }
+      // ...and the other way round: a timed event carries no all-day dates.
+      event.setStartDate(null);
+      event.setEndDate(null);
     }
   }
 
