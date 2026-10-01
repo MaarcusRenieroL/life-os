@@ -13,6 +13,7 @@ import { categoryApi } from './category-api';
 import { CategorizeDialog } from './categorize-dialog';
 import { DisputeDialog } from './dispute-dialog';
 import { transactionApi } from './transaction-api';
+import { TransferDialog } from './transfer-dialog';
 import type { TransactionResponse } from './types';
 import { accountLabel, formatINR } from './utils';
 
@@ -34,7 +35,8 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function needsReview(t: TransactionResponse): boolean {
-  return t.categoryId === null && t.type !== 'CREDIT';
+  // A transfer between your own accounts never needs a category.
+  return t.categoryId === null && t.type !== 'CREDIT' && !t.isTransfer;
 }
 
 /** Money in is positive, money out negative - so sorting, filtering and the footer total all agree. */
@@ -47,6 +49,7 @@ export function TransactionsPage() {
   const navigate = useNavigate();
 
   const [addOpen, setAddOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<TransactionResponse | null>(null);
   const [categorizeOpen, setCategorizeOpen] = useState(false);
   const [categorizeTargets, setCategorizeTargets] = useState<string[]>([]);
@@ -140,7 +143,7 @@ export function TransactionsPage() {
       },
       {
         id: 'type',
-        accessorFn: (t) => (t.type === 'CREDIT' ? 'Money in' : t.type === 'DEBIT' ? 'Money out' : 'Transfer'),
+        accessorFn: (t) => (t.isTransfer || t.type === 'TRANSFER' ? 'Transfer' : t.type === 'CREDIT' ? 'Money in' : 'Money out'),
         meta: { title: 'Direction', filter: { type: 'select' } },
       },
       {
@@ -150,7 +153,7 @@ export function TransactionsPage() {
       },
       {
         id: 'review',
-        accessorFn: (t) => (t.isDuplicate ? REVIEW.duplicate : needsReview(t) ? REVIEW.needs : REVIEW.categorized),
+        accessorFn: (t) => (t.isDuplicate ? REVIEW.duplicate : t.isTransfer ? 'Transfer' : needsReview(t) ? REVIEW.needs : REVIEW.categorized),
         meta: { title: 'Review state', filter: { type: 'select' } },
       },
       {
@@ -197,7 +200,10 @@ export function TransactionsPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
-        <Button size="sm" onClick={() => { setEditingTx(null); setAddOpen(true); }}>+ Add transaction</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => setTransferOpen(true)}>Transfer between accounts</Button>
+          <Button size="sm" onClick={() => { setEditingTx(null); setAddOpen(true); }}>+ Add transaction</Button>
+        </div>
       </div>
 
       <div className="mt-4">
@@ -254,6 +260,7 @@ export function TransactionsPage() {
         />
       </div>
 
+      <TransferDialog open={transferOpen} onOpenChange={setTransferOpen} onSaved={() => { invalidate(); queryClient.invalidateQueries({ queryKey: ['finance'] }); }} />
       <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} editing={editingTx} onSaved={invalidate} />
       <CategorizeDialog
         open={categorizeOpen}

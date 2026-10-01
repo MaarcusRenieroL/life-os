@@ -1,6 +1,6 @@
 import { api, unwrap } from '@/lib/api-client';
 
-import type { CategoryComparison, DashboardSummary, MerchantSpend, MonthlyTrend } from './types';
+import type { CategoryComparison, DashboardSummary, FinanceOverview, MerchantSpend, MonthlyTrend } from './types';
 
 const baseUrl = '/v1/finance/analytics';
 
@@ -22,6 +22,13 @@ export const analyticsApi = {
   },
   getTopMerchants(limit = 10): Promise<MerchantSpend[]> {
     return unwrap(api.get(`${baseUrl}/merchants`, { params: { limit } }));
+  },
+  getOverview(): Promise<FinanceOverview> {
+    return unwrap(api.get(`${baseUrl}/overview`));
+  },
+  /** The day salary lands: each pay cycle (and each monthly budget) starts then. */
+  setPayCycle(startDay: number): Promise<FinanceOverview> {
+    return unwrap(api.put(`${baseUrl}/pay-cycle`, { startDay }));
   },
   updateMonthlyIncome(monthlyIncome: number): Promise<DashboardSummary> {
     return unwrap(api.put(`${baseUrl}/monthly-income`, { monthlyIncome }));

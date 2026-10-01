@@ -42,6 +42,8 @@ export interface AccountResponse {
   currencyCode: CurrencyCode;
   openedDate: string | null;
   currentBalance: number;
+  /** What the account held before its first transaction: the balance is this plus the net of its transactions. */
+  openingBalance: number;
   isActive: boolean;
   isPrimary: boolean;
   emailForAlerts: string | null;
@@ -117,6 +119,8 @@ export interface TransactionResponse {
   sourceReference: string | null;
   isReconciled: boolean;
   isDuplicate: boolean;
+  /** One leg of a transfer between your own accounts: moves a balance, is neither spending nor income. */
+  isTransfer: boolean;
   duplicateOf: string | null;
   status: TransactionStatus;
   importedAt: string | null;
@@ -347,4 +351,47 @@ export interface SaveSubscriptionRequest {
   usageRating: number | null;
   lastUsedOn: string | null;
   notes: string | null;
+}
+
+export interface FinanceOverview {
+  cycleStart: string;
+  cycleEnd: string;
+  payCycleStartDay: number;
+  daysLeft: number;
+  incomeSoFar: number;
+  expectedIncome: number;
+  spentSoFar: number;
+  upcomingBills: number;
+  safeToSpend: number;
+  safeToSpendPerDay: number;
+  netWorth: number;
+  /** Set while the cycle still starts on the 1st but a salary-sized credit landed on another day. */
+  suggestedPayCycleStartDay: number | null;
+}
+
+export interface CreateTransferRequest {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  transactionDate: string;
+  notes?: string;
+}
+
+/** A bank alert or statement row that could not be booked. */
+export interface ImportFailure {
+  id: string;
+  source: 'EMAIL_ALERT' | 'STATEMENT';
+  reason: 'NO_ACCOUNT' | 'UNPARSED' | 'ERROR';
+  reference: string;
+  sender: string | null;
+  subject: string | null;
+  snippet: string | null;
+  detail: string | null;
+  bankName: string | null;
+  accountType: string | null;
+  amount: number | null;
+  type: string | null;
+  transactionDate: string | null;
+  description: string | null;
+  createdAt: string;
 }

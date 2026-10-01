@@ -17,6 +17,10 @@ export const accountApi = {
   async deleteAccount(id: string): Promise<void> {
     await api.delete(`${baseUrl}/${id}`);
   },
+  /** Recomputes the balance from the account's transactions. */
+  recalculateAccount(id: string): Promise<AccountResponse> {
+    return unwrap(api.post(`${baseUrl}/${id}/recalculate`, {}));
+  },
   reconcileAccount(id: string, request: ReconcileAccountRequest): Promise<AccountResponse> {
     return unwrap(api.post(`${baseUrl}/${id}/reconcile`, request));
   },

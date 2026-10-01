@@ -2,6 +2,7 @@ import { api, unwrap } from '@/lib/api-client';
 
 import type {
   CreateTransactionRequest,
+  CreateTransferRequest,
   DisputeTransactionRequest,
   MergeTransactionsRequest,
   SpringPage,
@@ -30,6 +31,10 @@ export const transactionApi = {
       if (result.last || result.content.length === 0) break;
     }
     return all;
+  },
+  /** Moves money between two of your own accounts as a linked pair; neither leg counts as spending or income. */
+  createTransfer(request: CreateTransferRequest): Promise<TransactionResponse[]> {
+    return unwrap(api.post(`${baseUrl}/transfer`, request));
   },
   // Just the count, for the "N need review" badges - callers used to fetch a 50-row page of full
   // transactions and filter it client-side, which also undercounted past 50 uncategorized rows.

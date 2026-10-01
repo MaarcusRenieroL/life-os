@@ -40,6 +40,15 @@ export function AccountsPage() {
     }
   }
 
+  async function recalculate(account: AccountResponse) {
+    try {
+      await accountApi.recalculateAccount(account.id);
+      invalidate();
+    } catch {
+      setError('Could not recalculate this balance.');
+    }
+  }
+
   function openEdit(account: AccountResponse) {
     setEditing(account);
     setDialogOpen(true);
@@ -78,6 +87,11 @@ export function AccountsPage() {
         cell: ({ row }) => formatINR(row.original.currentBalance),
       },
       {
+        accessorKey: 'openingBalance',
+        meta: { title: 'Opening balance', align: 'right', aggregate: 'sum', format: (v) => formatINR(Number(v)), filter: { type: 'number' } },
+        cell: ({ row }) => formatINR(row.original.openingBalance),
+      },
+      {
         accessorKey: 'currencyCode',
         meta: { title: 'Currency', filter: { type: 'select' } },
       },
@@ -105,6 +119,7 @@ export function AccountsPage() {
         cell: ({ row }) => (
           <div className="flex gap-2 text-xs">
             <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); setReconciling(row.original); }}>Reconcile</button>
+            <button className="text-primary hover:underline" title="Recompute the balance from this account's transactions" onClick={(e) => { e.stopPropagation(); void recalculate(row.original); }}>Recalculate</button>
             <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); openEdit(row.original); }}>Edit</button>
             <button className="text-destructive hover:underline" onClick={(e) => { e.stopPropagation(); void deleteAccount(row.original); }}>Delete</button>
           </div>
@@ -137,7 +152,7 @@ export function AccountsPage() {
             getRowId={(a) => a.id}
             onRowClick={openEdit}
             initialSorting={[{ id: 'accountName', desc: false }]}
-            initialVisibility={{ bankName: false, isPrimary: false, isActive: false, openedDate: false }}
+            initialVisibility={{ bankName: false, openingBalance: false, isPrimary: false, isActive: false, openedDate: false }}
             exportName="accounts"
             searchPlaceholder="Search accounts…"
             hidePagination={accounts.length <= 10}
