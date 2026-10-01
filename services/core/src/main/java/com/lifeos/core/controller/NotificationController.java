@@ -1,5 +1,6 @@
 package com.lifeos.core.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.common.domains.dto.response.PageResponse;
 import com.lifeos.core.domains.dto.request.SetAiFallbackApprovalRequest;
@@ -35,7 +36,7 @@ public class NotificationController {
 
     return ResponseEntity.ok(
         ApiResponse.success(
-            notificationService.list(userId, PageRequest.of(page, size)),
+            notificationService.list(userId, PageRequest.of(Bounds.page(page), Bounds.size(size, 100))),
             "Notifications fetched successfully"));
   }
 

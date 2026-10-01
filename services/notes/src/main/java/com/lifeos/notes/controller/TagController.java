@@ -1,5 +1,6 @@
 package com.lifeos.notes.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.notes.domains.dto.request.CreateTagRequest;
 import com.lifeos.notes.domains.dto.request.UpdateTagRequest;
@@ -35,7 +36,7 @@ public class TagController {
       @RequestParam(defaultValue = "100") int limit) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            tagService.search(userId(authentication), search, limit), "Tags fetched successfully"));
+            tagService.search(userId(authentication), search, Bounds.clamp(limit, 1, 200)), "Tags fetched successfully"));
   }
 
   @PostMapping

@@ -99,6 +99,8 @@ public class AutomationRuleService {
 
   private void apply(AutomationRule rule, SaveRule request) {
     if (request.name() == null || request.name().isBlank()) throw new IllegalArgumentException("Give the rule a name");
+    if (request.name().trim().length() > 200) throw new IllegalArgumentException("The rule name can be at most 200 characters");
+    if (request.description() != null && request.description().trim().length() > 1000) throw new IllegalArgumentException("The description can be at most 1000 characters");
     RuleValidator.validate(request.triggerType(), request.triggerConfig(), request.actionType(), request.actionConfig());
     rule.setName(request.name().trim());
     rule.setDescription(request.description() == null || request.description().isBlank() ? null : request.description().trim());

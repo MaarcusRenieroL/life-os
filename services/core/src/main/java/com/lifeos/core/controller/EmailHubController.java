@@ -1,5 +1,6 @@
 package com.lifeos.core.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.core.domains.entity.EmailHubItem;
 import com.lifeos.core.domains.enums.EmailHubStatus;
@@ -35,7 +36,7 @@ public class EmailHubController {
       @RequestParam(defaultValue = "100") int limit) {
     Set<EmailHubStatus> statuses = status == null || status.isEmpty() ? EnumSet.noneOf(EmailHubStatus.class) : EnumSet.copyOf(status);
     List<EmailHubItemResponse> body =
-        emailHubService.list(userId(authentication), statuses, limit).stream().map(EmailHubItemResponse::from).toList();
+        emailHubService.list(userId(authentication), statuses, Bounds.clamp(limit, 1, 500)).stream().map(EmailHubItemResponse::from).toList();
     return ResponseEntity.ok(ApiResponse.success(body, "Email items fetched"));
   }
 

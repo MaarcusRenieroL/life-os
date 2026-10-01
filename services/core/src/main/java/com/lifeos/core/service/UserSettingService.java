@@ -19,7 +19,17 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UserSettingService {
 
+  static final int MAX_VALUE_CHARS = 10_000;
+  static final int MAX_SETTINGS_PER_USER = 500;
+
   private final UserSettingRepository userSettingRepository;
+
+  /** Module and key are path variables that end up in indexed columns: short, plain identifiers only. */
+  private static void requireName(String name, int max, String what) {
+    if (name == null || name.isBlank() || name.length() > max || !name.matches("[A-Za-z0-9._-]+")) {
+      throw new IllegalArgumentException("The setting " + what + " must be 1 to " + max + " letters, digits, dots, dashes or underscores");
+    }
+  }
 
   @Cacheable(value = "user-settings", key = "#userId")
   @Transactional(readOnly = true)
@@ -37,12 +47,20 @@ public class UserSettingService {
   @CacheEvict(value = "user-settings", key = "#userId")
   @Transactional
   public UserSettingResponse set(UUID userId, String module, String key, String value) {
+    requireName(module, 50, "module");
+    requireName(key, 100, "key");
+    if (value != null && value.length() > MAX_VALUE_CHARS) {
+      throw new IllegalArgumentException("A setting value can be at most " + MAX_VALUE_CHARS + " characters");
+    }
     UserSetting setting =
         userSettingRepository
             .findByUserIdAndModuleAndKey(userId, module, key)
             .orElseGet(
                 () -> UserSetting.builder().userId(userId).module(module).key(key).build());
 
+    if (setting.getId() == null && userSettingRepository.countByUserId(userId) >= MAX_SETTINGS_PER_USER) {
+      throw new IllegalArgumentException("You've reached the limit of " + MAX_SETTINGS_PER_USER + " saved settings");
+    }
     setting.setValue(value);
 
     return toResponse(userSettingRepository.save(setting));
