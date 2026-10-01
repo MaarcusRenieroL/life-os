@@ -57,7 +57,7 @@ class EmailEventServiceTest {
   }
 
   private void ingest() {
-    service.ingest(userId, "msg-1", "jobs-noreply@linkedin.com", "Your application was sent to Acme", "body", received);
+    service.ingest(userId, "msg-1", "careers@acme.com", "Update on your application", "body", received);
   }
 
   private EmailEvent savedEvent() {
