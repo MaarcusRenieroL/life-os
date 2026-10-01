@@ -8,6 +8,7 @@ import com.lifeos.common.events.NotificationEventType;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,7 @@ public class GmailSyncService {
   private final GmailAlertParsingService gmailAlertParsingService;
   private final KafkaTemplate<String, BankAlertEventRecord> bankAlertEventKafkaTemplate;
   private final NotificationEventPublisher notificationEventPublisher;
+  private final com.lifeos.batches.config.FinanceTrackerClient financeTrackerClient;
 
   public int syncRecent() throws IOException {
     return processEmails(gmailMessageService.fetchRecentAlerts());
@@ -73,10 +75,18 @@ public class GmailSyncService {
                 alert.description(),
                 alert.sourceReference());
 
-        bankAlertEventKafkaTemplate.send("bank-alert-events", userId.toString(), event);
+        // Wait for the broker's acknowledgement: fire-and-forget counted an alert as processed even
+        // when Kafka was unreachable, and it was then lost.
+        bankAlertEventKafkaTemplate.send("bank-alert-events", userId.toString(), event).get(10, TimeUnit.SECONDS);
         processed++;
       } catch (Exception e) {
         log.error("Failed to process Gmail alert {}: {}", email.messageId(), e.getMessage(), e);
+        // A real bank alert that no parser understood is money missing from the books - hand it to
+        // finance so the user sees it. Statements, offers and OTPs are not, so they are skipped.
+        if (looksLikeTransaction(email.body())) {
+          financeTrackerClient.reportImportFailure(
+              userId, email.messageId(), email.fromAddress(), email.subject(), snippet(email.body()), e.getMessage());
+        }
       }
     }
 
@@ -93,5 +103,23 @@ public class GmailSyncService {
     }
 
     return processed;
+  }
+
+  private static final java.util.regex.Pattern AMOUNT =
+      java.util.regex.Pattern.compile("(?:Rs\\.?|INR|\\u20b9)\\s?[\\d,]+(?:\\.\\d+)?", java.util.regex.Pattern.CASE_INSENSITIVE);
+  private static final java.util.regex.Pattern MOVEMENT =
+      java.util.regex.Pattern.compile("\\b(debited|credited|spent|withdrawn|received|paid|transaction)\\b", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+  /** An amount and a money-movement word: what separates a transaction alert from a statement or an offer. */
+  static boolean looksLikeTransaction(String body) {
+    return body != null && AMOUNT.matcher(body).find() && MOVEMENT.matcher(body).find();
+  }
+
+  private static String snippet(String body) {
+    if (body == null) {
+      return null;
+    }
+    String text = body.replaceAll("(?is)<(script|style)[^>]*>.*?</\\1>", " ").replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+    return text.length() > 600 ? text.substring(0, 600) : text;
   }
 }

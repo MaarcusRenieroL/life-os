@@ -25,6 +25,7 @@ public class AccountService {
   private final AccountRepository accountRepository;
   private final EncryptionService encryptionService;
   private final AccountBalanceService accountBalanceService;
+  private final ImportFailureService importFailureService;
 
   @Transactional(readOnly = true)
   public List<AccountResponse> getAll(Authentication authentication) {
@@ -66,7 +67,10 @@ public class AccountService {
             .notes(request.getNotes())
             .build();
 
-    return toResponse(accountRepository.save(account));
+    Account created = accountRepository.save(account);
+    // Bank alerts that arrived before this account existed were kept; they can be booked now.
+    importFailureService.retryWaiting(userId);
+    return toResponse(created);
   }
 
   public AccountResponse update(Authentication authentication, UUID id, UpdateAccountRequest request) {
