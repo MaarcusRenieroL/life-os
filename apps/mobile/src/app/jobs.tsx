@@ -1,6 +1,7 @@
 import { JOB_STATUSES, type JobListing, type JobStatus } from '@life-os/core';
 import { useState } from 'react';
-import { Linking, Text, View } from 'react-native';
+import { Linking, View } from 'react-native';
+import { Text } from '@/text';
 
 import { Bars, Btn, Chips, DateInput, Empty, Field, Input, opts, Pill, pretty, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
 import { useApi } from '@/lib/session';

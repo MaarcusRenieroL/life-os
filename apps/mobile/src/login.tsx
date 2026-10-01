@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
+import { Text, TextInput } from '@/text';
 
 import { isMock } from '@/lib/runtime';
 import { useSession } from '@/lib/session';
-import { C } from '@/theme';
+import { C, F } from '@/theme';
 import { Label, Muted, s } from '@/ui';
 
 export function Login() {
@@ -30,7 +31,7 @@ export function Login() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: C.bg, justifyContent: 'center', padding: 24 }}>
-      <Text style={{ color: C.text, fontSize: 34, fontWeight: '800', letterSpacing: 8, textAlign: 'center' }}>LIFE<Text style={{ color: C.accent }}>OS</Text></Text>
+      <Text style={{ color: C.text, fontSize: 30, fontFamily: F.displayBold, letterSpacing: 9, textAlign: 'center' }}><Text style={{ color: C.accent }}>◆ </Text>LIFE_OS</Text>
       <Muted style={{ textAlign: 'center', marginBottom: 24 }}>Press start to continue your run.</Muted>
       <Label>Email</Label>
       <TextInput style={[s.input, { marginBottom: 14 }]} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" placeholderTextColor={C.muted} />

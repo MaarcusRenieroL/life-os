@@ -1,6 +1,7 @@
 import { LIFE_AREAS, TASK_PRIORITIES, TASK_STATUSES, type LifeArea, type Task, type TaskPriority, type TaskStatus } from '@life-os/core';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@/text';
 
 import { Btn, Chips, DateInput, Empty, Field, Input, opts, pretty, Row, Screen, Seg, Sheet } from '@/kit';
 import { useApi } from '@/lib/session';
@@ -42,7 +43,7 @@ export default function Tasks() {
   const row = (t: Task) => (
     <Row key={t.id} onPress={() => setEditing(t)}>
       {t.status === 'DONE' ? (
-        <Pressable onPress={() => void toggle(t)} hitSlop={10} style={[s.check, { backgroundColor: C.accent, borderColor: C.accent }]}><Text style={{ fontWeight: '800', color: '#06120d' }}>✓</Text></Pressable>
+        <Pressable onPress={() => void toggle(t)} hitSlop={10} style={[s.check, { backgroundColor: C.accent, borderColor: C.accent }]}><Text style={{ fontWeight: '800', color: C.accentFg }}>✓</Text></Pressable>
       ) : <Check on={false} onPress={() => void toggle(t)} />}
       <View style={{ flex: 1 }}>
         <Text style={[s.body, t.status === 'DONE' && { textDecorationLine: 'line-through', color: C.muted }]}>{t.title}{t.recurrencePattern ? ' ↻' : ''}</Text>

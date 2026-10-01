@@ -1,6 +1,6 @@
 import { dayKey, shiftDay, type TrendPoint } from '@life-os/core';
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Text } from '@/text';
 
 import { Bars, Empty, money, Progress, Row, Screen, Seg, Stat, StatGrid, Pill } from '@/kit';
 import { useApi } from '@/lib/session';

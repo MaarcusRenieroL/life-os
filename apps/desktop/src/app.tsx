@@ -1,3 +1,4 @@
+import { Briefcase, Calendar as CalendarIcon, ChartNoAxesCombined, Dumbbell, Home as HomeIcon, ListChecks, ListTodo, Settings, StickyNote, Swords, Target, Trophy, Wallet, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AnalyticsScreen } from './screens/analytics';
 import { CalendarScreen } from './screens/calendar';
@@ -18,20 +19,20 @@ import { SessionProvider, useSession } from './lib/session';
 import { PlayerBar } from './player-bar';
 
 const SCREENS = [
-  { id: 'home', label: 'Command', glyph: '◈', View: HomeScreen },
-  { id: 'quests', label: 'Quests', glyph: '⚔', View: QuestsScreen },
-  { id: 'tasks', label: 'Tasks', glyph: '☑', View: TasksScreen },
-  { id: 'habits', label: 'Habits', glyph: '↻', View: HabitsScreen },
-  { id: 'goals', label: 'Goals', glyph: '◎', View: GoalsScreen },
-  { id: 'calendar', label: 'Calendar', glyph: '▦', View: CalendarScreen },
-  { id: 'notes', label: 'Notes', glyph: '✎', View: NotesScreen },
-  { id: 'workouts', label: 'Workouts', glyph: '♥', View: WorkoutsScreen },
-  { id: 'jobs', label: 'Jobs', glyph: '✦', View: JobsScreen },
-  { id: 'finance', label: 'Finance', glyph: '₹', View: FinanceScreen },
-  { id: 'analytics', label: 'Analytics', glyph: '∿', View: AnalyticsScreen },
-  { id: 'trophies', label: 'Trophies', glyph: '★', View: TrophiesScreen },
-  { id: 'settings', label: 'Settings', glyph: '⚙', View: SettingsScreen },
-] as const;
+  { id: 'home', label: 'Command', Icon: HomeIcon, View: HomeScreen },
+  { id: 'quests', label: 'Quests', Icon: Swords, View: QuestsScreen },
+  { id: 'tasks', label: 'Tasks', Icon: ListTodo, View: TasksScreen },
+  { id: 'habits', label: 'Habits', Icon: ListChecks, View: HabitsScreen },
+  { id: 'goals', label: 'Goals', Icon: Target, View: GoalsScreen },
+  { id: 'calendar', label: 'Calendar', Icon: CalendarIcon, View: CalendarScreen },
+  { id: 'notes', label: 'Notes', Icon: StickyNote, View: NotesScreen },
+  { id: 'workouts', label: 'Workouts', Icon: Dumbbell, View: WorkoutsScreen },
+  { id: 'jobs', label: 'Jobs', Icon: Briefcase, View: JobsScreen },
+  { id: 'finance', label: 'Finance', Icon: Wallet, View: FinanceScreen },
+  { id: 'analytics', label: 'Analytics', Icon: ChartNoAxesCombined, View: AnalyticsScreen },
+  { id: 'trophies', label: 'Trophies', Icon: Trophy, View: TrophiesScreen },
+  { id: 'settings', label: 'Settings', Icon: Settings, View: SettingsScreen },
+] as const satisfies readonly { id: string; label: string; Icon: LucideIcon; View: () => React.ReactNode }[];
 
 type ScreenId = (typeof SCREENS)[number]['id'];
 
@@ -70,10 +71,11 @@ function Shell() {
   return (
     <div className="shell">
       <nav className="rail">
-        <div className="brand">LIFE<span>OS</span></div>
+        <div className="brand">Life_OS</div>
+        <div className="rail-group">Modules</div>
         {SCREENS.map((s, i) => (
           <button key={s.id} className={`rail-item${s.id === screen ? ' active' : ''}`} onClick={() => setScreen(s.id)} title={`⌘${i + 1}`}>
-            <span className="glyph">{s.glyph}</span>
+            <span className="glyph"><s.Icon /></span>
             {s.label}
           </button>
         ))}
@@ -82,7 +84,10 @@ function Shell() {
         </button>
       </nav>
       <main className="main">
-        <PlayerBar key={`bar-${epoch}`} />
+        <header className="topbar">
+          <span className="crumb"><b>~/</b>{screen === 'home' ? 'home' : screen}</span>
+          <PlayerBar key={`bar-${epoch}`} />
+        </header>
         <div className="content" key={`${screen}-${epoch}`}>
           <Active />
         </div>

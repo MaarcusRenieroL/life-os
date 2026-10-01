@@ -1,6 +1,7 @@
 import { EQUIPMENT, EXERCISE_CATEGORIES, dayKey, type Equipment, type ExerciseCategory, type Routine, type SessionDetail, type SessionSet } from '@life-os/core';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@/text';
 
 import { Bars, Btn, Chips, Empty, Field, Input, opts, Pill, pretty, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
 import { useApi } from '@/lib/session';
@@ -68,7 +69,7 @@ function Active({ detail, onChange, onFinished }: { detail: SessionDetail; onCha
                 <Muted style={{ width: 24 }}>#{set.setNumber}</Muted>
                 <Input style={{ flex: 1, padding: 9 }} keyboardType="decimal-pad" placeholder={set.targetWeight != null ? `${set.targetWeight} kg` : 'kg'} defaultValue={set.actualWeight?.toString() ?? ''} onEndEditing={(e) => { const v = num(e.nativeEvent.text); if (v !== set.actualWeight) void patch(set, { actualWeight: v }); }} />
                 <Input style={{ flex: 1, padding: 9 }} keyboardType="number-pad" placeholder={set.targetReps != null ? `${set.targetReps} reps` : 'reps'} defaultValue={set.actualReps?.toString() ?? ''} onEndEditing={(e) => { const v = num(e.nativeEvent.text); if (v !== set.actualReps) void patch(set, { actualReps: v }); }} />
-                {set.completed ? <Pressable onPress={() => void patch(set, { completed: false })} style={[s.check, { backgroundColor: C.accent, borderColor: C.accent }]}><Text style={{ fontWeight: '800', color: '#06120d' }}>✓</Text></Pressable> : <Check on={false} onPress={() => { void patch(set, { completed: true }); success(); }} />}
+                {set.completed ? <Pressable onPress={() => void patch(set, { completed: false })} style={[s.check, { backgroundColor: C.accent, borderColor: C.accent }]}><Text style={{ fontWeight: '800', color: C.accentFg }}>✓</Text></Pressable> : <Check on={false} onPress={() => { void patch(set, { completed: true }); success(); }} />}
                 <Pressable hitSlop={8} onPress={() => void runner.run(async () => onChange(await api.workouts.deleteSet(sid, set.id)))}><Text style={{ color: C.muted }}>✕</Text></Pressable>
               </View>
             ))}

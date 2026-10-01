@@ -1,10 +1,11 @@
 // Shared building blocks for the module screens: segmented tabs, bottom sheet, form fields, chips, charts.
 import { useRouter } from 'expo-router';
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, View, type TextInputProps } from 'react-native';
+import { Text, TextInput } from '@/text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { C } from './theme';
+import { C, F } from './theme';
 import { Bar, Muted, s, tap } from './ui';
 
 export const pretty = (x: string | null | undefined) => (x ? x.charAt(0) + x.slice(1).toLowerCase().replace(/_/g, ' ') : '');
@@ -26,24 +27,28 @@ export function Screen({ title, action, onRefresh, refreshing, children, back = 
 }
 
 export function Btn({ label, onPress, kind = 'primary', disabled, style }: { label: string; onPress: () => void; kind?: 'primary' | 'ghost' | 'danger'; disabled?: boolean; style?: object }) {
-  const bg = kind === 'primary' ? C.accent : 'transparent';
-  const border = kind === 'danger' ? C.magenta : kind === 'ghost' ? C.line : C.accent;
-  const color = kind === 'primary' ? '#06120d' : kind === 'danger' ? C.magenta : C.text;
+  const bg = kind === 'primary' ? C.accent : kind === 'danger' ? '#f75d5933' : '#ffffff0d';
+  const border = kind === 'primary' ? C.accent : kind === 'danger' ? 'transparent' : C.input;
+  const color = kind === 'primary' ? C.accentFg : kind === 'danger' ? C.destructive : C.text;
   return (
-    <Pressable disabled={disabled} onPress={() => { tap(); onPress(); }} style={[{ backgroundColor: bg, borderColor: border, borderWidth: 1, paddingVertical: 11, paddingHorizontal: 16, borderRadius: 4, alignItems: 'center' }, disabled && { opacity: 0.45 }, style]}>
-      <Text style={{ color, fontWeight: kind === 'primary' ? '800' : '600', letterSpacing: kind === 'primary' ? 0.8 : 0 }}>{label}</Text>
+    <Pressable disabled={disabled} onPress={() => { tap(); onPress(); }} style={[{ backgroundColor: bg, borderColor: border, borderWidth: 1, paddingVertical: 11, paddingHorizontal: 16, borderRadius: 6, alignItems: 'center', ...(kind === 'primary' ? { shadowColor: C.accent, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } } : null) }, disabled && { opacity: 0.45 }, style]}>
+      <Text style={{ color, fontWeight: '600' }}>{label}</Text>
     </Pressable>
   );
 }
 
+/** The web's module tab bar: uppercase display type, a lit bottom edge on the active tab. */
 export function Seg<T extends string>({ tabs, value, onChange }: { tabs: readonly { id: T; label: string }[]; value: T; onChange: (id: T) => void }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14, flexGrow: 0 }} contentContainerStyle={{ gap: 6 }}>
-      {tabs.map((t) => (
-        <Pressable key={t.id} onPress={() => { tap(); onChange(t.id); }} style={{ paddingVertical: 8, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1, borderColor: t.id === value ? C.accent : C.line, backgroundColor: t.id === value ? '#101a17' : 'transparent' }}>
-          <Text style={{ color: t.id === value ? C.accent : C.muted, fontSize: 13 }}>{t.label}</Text>
-        </Pressable>
-      ))}
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16, flexGrow: 0, borderBottomWidth: 1, borderBottomColor: C.line }} contentContainerStyle={{ gap: 4 }}>
+      {tabs.map((t) => {
+        const on = t.id === value;
+        return (
+          <Pressable key={t.id} onPress={() => { tap(); onChange(t.id); }} style={{ paddingVertical: 9, paddingHorizontal: 12, borderBottomWidth: 2, borderBottomColor: on ? C.accent : 'transparent', marginBottom: -1 }}>
+            <Text style={{ color: on ? C.accent : C.muted, fontSize: 12, letterSpacing: 1.6, fontFamily: F.display, textTransform: 'uppercase', ...(on ? { textShadowColor: C.accent, textShadowRadius: 8 } : null) }}>{t.label}</Text>
+          </Pressable>
+        );
+      })}
     </ScrollView>
   );
 }
@@ -55,7 +60,7 @@ export function Chips<T extends string>({ value, onChange, options, clearable }:
       {options.map((o) => {
         const on = o.value === value;
         return (
-          <Pressable key={o.value} onPress={() => { tap(); onChange(on && clearable ? '' : o.value); }} style={{ paddingVertical: 6, paddingHorizontal: 11, borderRadius: 14, borderWidth: 1, borderColor: on ? C.accent : C.line, backgroundColor: on ? '#101a17' : 'transparent' }}>
+          <Pressable key={o.value} onPress={() => { tap(); onChange(on && clearable ? '' : o.value); }} style={{ paddingVertical: 6, paddingHorizontal: 11, borderRadius: 6, borderWidth: 1, borderColor: on ? C.accent : C.input, backgroundColor: on ? '#4fcb6f24' : '#ffffff0d' }}>
             <Text style={{ color: on ? C.accent : C.muted, fontSize: 13 }}>{o.label}</Text>
           </Pressable>
         );
@@ -69,7 +74,7 @@ export const opts = <T extends string>(values: readonly T[]) => values.map((v) =
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <View style={{ marginBottom: 12 }}>
-      <Text style={s.label}>{label.toUpperCase()}</Text>
+      <Text style={[s.label, { marginBottom: 8, fontSize: 10, letterSpacing: 1.8 }]}>{label.toUpperCase()}</Text>
       {children}
     </View>
   );
@@ -101,7 +106,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
     <Modal visible animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: '#000a' }}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <View style={{ backgroundColor: C.panel, borderTopLeftRadius: 14, borderTopRightRadius: 14, maxHeight: '88%', borderColor: C.line, borderWidth: 1 }}>
+        <View style={{ backgroundColor: C.popover, borderTopLeftRadius: 8, borderTopRightRadius: 8, maxHeight: '88%', borderColor: C.line, borderWidth: 1 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, paddingBottom: 8 }}>
             <Text style={s.h2}>{title}</Text>
             <Pressable hitSlop={12} onPress={onClose}><Text style={{ color: C.accent }}>Close</Text></Pressable>

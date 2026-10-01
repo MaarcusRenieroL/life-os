@@ -1,6 +1,7 @@
 import { GOAL_STATUSES, LIFE_AREAS, type GoalDetail, type GoalStatus, type GoalSummary, type LifeArea } from '@life-os/core';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@/text';
 
 import { Btn, Chips, DateInput, Empty, Field, Input, opts, Pill, pretty, Progress, Row, Screen, Seg, Sheet } from '@/kit';
 import { useApi } from '@/lib/session';
@@ -99,7 +100,7 @@ function GoalDetailSheet({ id, onClose, onChanged }: { id: string; onClose: () =
           <Panel title={`Milestones · ${d.goal.progress.milestonesDone}/${d.goal.progress.milestonesTotal}`}>
             {d.milestones.map((m) => (
               <Row key={m.id}>
-                {m.completed ? <Pressable onPress={() => void runner.run(() => api.goals.setMilestone(id, m, false), after)} style={[s.check, { backgroundColor: C.accent, borderColor: C.accent }]}><Text style={{ fontWeight: '800', color: '#06120d' }}>✓</Text></Pressable> : <Check on={false} onPress={() => void runner.run(() => api.goals.setMilestone(id, m, true), after)} />}
+                {m.completed ? <Pressable onPress={() => void runner.run(() => api.goals.setMilestone(id, m, false), after)} style={[s.check, { backgroundColor: C.accent, borderColor: C.accent }]}><Text style={{ fontWeight: '800', color: C.accentFg }}>✓</Text></Pressable> : <Check on={false} onPress={() => void runner.run(() => api.goals.setMilestone(id, m, true), after)} />}
                 <Text style={[s.body, m.completed && { color: C.muted, textDecorationLine: 'line-through' }]}>{m.title}</Text>
                 <Pressable onPress={() => void runner.run(() => api.goals.deleteMilestone(id, m.id), after)} hitSlop={8}><Text style={{ color: C.muted }}>✕</Text></Pressable>
               </Row>

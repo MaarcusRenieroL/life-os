@@ -1,5 +1,6 @@
 import { RANK_HEX, groupQuests, toQuests, type HeatCell } from '@life-os/core';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
+import { Text } from '@/text';
 
 import { usePlayer } from '@/lib/player';
 import { useApi } from '@/lib/session';

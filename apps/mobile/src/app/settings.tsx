@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { View } from 'react-native';
+import { Text, TextInput } from '@/text';
 
 import { Btn, Screen } from '@/kit';
 import { useSession } from '@/lib/session';

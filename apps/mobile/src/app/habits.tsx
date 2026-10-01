@@ -1,6 +1,7 @@
 import { dayKey, type Habit, type HabitFrequencyType, type HabitType } from '@life-os/core';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@/text';
 
 import { Bars, Btn, Chips, Empty, Field, Input, opts, Pill, pretty, Progress, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
 import { useApi } from '@/lib/session';
@@ -133,7 +134,7 @@ function HabitSheet({ habit, onClose, onSaved }: { habit: Habit | null; onClose:
       <Field label="Description"><Input value={description} onChangeText={setDescription} /></Field>
       <Field label="Type"><Chips value={type} onChange={(v) => v && setType(v)} options={opts(TYPES)} /></Field>
       <Field label="Frequency"><Chips value={frequency} onChange={(v) => v && setFrequency(v)} options={opts(FREQS)} /></Field>
-      {frequency === 'WEEKLY_DAYS' ? <Field label="Days"><View style={{ flexDirection: 'row', gap: 6 }}>{DAYS.map((d, i) => { const on = days.includes(i + 1); return <Pressable key={i} onPress={() => setDays(on ? days.filter((x) => x !== i + 1) : [...days, i + 1])} style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: on ? C.accent : C.line, backgroundColor: on ? '#101a17' : 'transparent', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: on ? C.accent : C.muted }}>{d}</Text></Pressable>; })}</View></Field> : null}
+      {frequency === 'WEEKLY_DAYS' ? <Field label="Days"><View style={{ flexDirection: 'row', gap: 6 }}>{DAYS.map((d, i) => { const on = days.includes(i + 1); return <Pressable key={i} onPress={() => setDays(on ? days.filter((x) => x !== i + 1) : [...days, i + 1])} style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: on ? C.accent : C.line, backgroundColor: on ? '#4fcb6f24' : 'transparent', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: on ? C.accent : C.muted }}>{d}</Text></Pressable>; })}</View></Field> : null}
       {frequency === 'X_PER_WEEK' || frequency === 'X_PER_MONTH' ? <Field label="Times"><Input value={count} onChangeText={setCount} keyboardType="numeric" /></Field> : null}
       {frequency === 'CUSTOM_INTERVAL' ? <Field label="Every N days"><Input value={interval} onChangeText={setIntervalDays} keyboardType="numeric" /></Field> : null}
       {type === 'COUNT' || type === 'DURATION' ? <><Field label="Target"><Input value={target} onChangeText={setTarget} keyboardType="numeric" /></Field><Field label="Unit"><Input value={unit} onChangeText={setUnit} autoCapitalize="none" /></Field></> : null}

@@ -1,6 +1,7 @@
 import { dayKey, EVENT_CATEGORIES, shiftDay, type CalendarEvent, type EventCategory } from '@life-os/core';
 import { useState } from 'react';
-import { Pressable, Switch, Text, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
+import { Text } from '@/text';
 
 import { Btn, Chips, DateInput, Empty, Field, Input, opts, Pill, Row, Screen, Seg, Sheet } from '@/kit';
 import { useApi } from '@/lib/session';
@@ -60,7 +61,7 @@ export default function Calendar() {
                 const inMonth = day.slice(0, 7) === dayKey(cursor).slice(0, 7);
                 const sel = day === selected;
                 return (
-                  <Pressable key={day} onPress={() => setSelected(day)} style={{ flex: 1, alignItems: 'center', paddingVertical: 8, margin: 1, borderRadius: 6, borderWidth: 1, borderColor: sel ? C.accent : day === today ? C.line : 'transparent', backgroundColor: sel ? '#101a17' : 'transparent' }}>
+                  <Pressable key={day} onPress={() => setSelected(day)} style={{ flex: 1, alignItems: 'center', paddingVertical: 8, margin: 1, borderRadius: 6, borderWidth: 1, borderColor: sel ? C.accent : day === today ? C.line : 'transparent', backgroundColor: sel ? '#4fcb6f24' : 'transparent' }}>
                     <Text style={{ color: inMonth ? C.text : C.line, fontWeight: day === today ? '800' : '400' }}>{Number(day.slice(8))}</Text>
                     <View style={{ height: 6, flexDirection: 'row', gap: 2, marginTop: 3 }}>{Array.from({ length: Math.min(count, 3) }, (_, i) => <View key={i} style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: C.cyan }} />)}</View>
                   </Pressable>

@@ -1,6 +1,7 @@
 import { NOTE_TYPES, type Note, type NoteSummary, type NoteType } from '@life-os/core';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@/text';
 
 import { Btn, Chips, Empty, Input, opts, pretty, Row, Screen, Seg, Sheet } from '@/kit';
 import { useApi } from '@/lib/session';

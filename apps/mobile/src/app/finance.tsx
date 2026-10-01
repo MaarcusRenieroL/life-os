@@ -1,6 +1,7 @@
 import { ACCOUNT_TYPES, dayKey, type AccountType, type BillingCycle, type CategoryType, type FinanceAccount, type FinanceCategory, type TransactionType } from '@life-os/core';
 import { useState } from 'react';
-import { Pressable, Switch, Text, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
+import { Text } from '@/text';
 
 import { Bars, Btn, Chips, DateInput, Empty, Field, Input, money, opts, Pill, pretty, Progress, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
 import { useApi } from '@/lib/session';

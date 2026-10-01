@@ -1,5 +1,6 @@
 import { MEDAL_HEX, TIER_NAMES } from '@life-os/core';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@/text';
 
 import { Screen } from '@/kit';
 import { usePlayer } from '@/lib/player';
