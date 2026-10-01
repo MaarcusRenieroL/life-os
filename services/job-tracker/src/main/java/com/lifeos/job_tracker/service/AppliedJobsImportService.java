@@ -32,6 +32,8 @@ public class AppliedJobsImportService {
   /** Small enough for a local model to keep every entry straight, large enough to be few calls. */
   public static final int CHUNK_CHARS = 5_000;
   public static final int MAX_CHARS = 120_000;
+  /** One confirm saves at most this many rows, so an oversized request cannot flood the table. */
+  public static final int MAX_IMPORT_ITEMS = 500;
 
   private final AiAssistant ai;
   private final JobListingRepository jobListingRepository;
@@ -88,12 +90,15 @@ public class AppliedJobsImportService {
     if (items == null || items.isEmpty()) {
       throw new InvalidRequestException("Nothing to import.");
     }
-    String label = isBlank(source) ? "import" : source.trim().toLowerCase(Locale.ROOT);
+    if (items.size() > MAX_IMPORT_ITEMS) {
+      throw new InvalidRequestException("Import at most " + MAX_IMPORT_ITEMS + " applications at a time.");
+    }
+    String label = isBlank(source) ? "import" : cut(source.trim().toLowerCase(Locale.ROOT), 50);
     Set<String> known = trackedKeys(userId);
     int created = 0;
     int skipped = 0;
     for (AppliedJobImport.Item item : items) {
-      if (isBlank(item.title()) || isBlank(item.company()) || !known.add(key(item.company(), item.title()))) {
+      if (item == null || isBlank(item.title()) || isBlank(item.company()) || !known.add(key(item.company(), item.title()))) {
         skipped++;
         continue;
       }
@@ -102,7 +107,7 @@ public class AppliedJobsImportService {
       if (iso != null) {
         appliedOn = LocalDate.parse(iso);
       }
-      jobListingService.createApplied(userId, item.company().trim(), item.title().trim(), clean(item.location()), appliedOn, label);
+      jobListingService.createApplied(userId, cut(item.company().trim(), 300), cut(item.title().trim(), 500), cut(clean(item.location()), 300), appliedOn, label);
       created++;
     }
     return new AppliedJobImport.Result(created, skipped);
@@ -155,6 +160,11 @@ public class AppliedJobsImportService {
     } catch (DateTimeParseException exception) {
       return null;
     }
+  }
+
+  /** Fits a value to its column; null stays null. */
+  private static String cut(String value, int max) {
+    return value == null || value.length() <= max ? value : value.substring(0, max);
   }
 
   private static String clean(String value) {
