@@ -30,11 +30,12 @@ public class JobLinkFetcher {
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
           + " (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
   private static final int MAX_TEXT_CHARS = 24_000;
+  private static final int MAX_REDIRECTS = 4;
 
   private final RestClient restClient;
 
   public JobLinkFetcher(
-      @Qualifier("externalFetchRestClientBuilder") RestClient.Builder restClientBuilder) {
+      @Qualifier("linkFetchRestClientBuilder") RestClient.Builder restClientBuilder) {
     this.restClient = restClientBuilder.clone().build();
   }
 
@@ -43,15 +44,7 @@ public class JobLinkFetcher {
   public FetchedPage fetch(String url) {
     String html;
     try {
-      html =
-          restClient
-              .get()
-              .uri(url)
-              .header("User-Agent", USER_AGENT)
-              .header("Accept", "text/html,application/xhtml+xml")
-              .header("Accept-Language", "en-US,en;q=0.9")
-              .retrieve()
-              .body(String.class);
+      html = fetchFollowingSafeRedirects(url);
     } catch (RestClientResponseException exception) {
       log.warn("job link fetch for {} returned {}", url, exception.getStatusCode());
       throw new JobLinkUnreadableException(
@@ -100,6 +93,31 @@ public class JobLinkFetcher {
     }
 
     return new FetchedPage(url, out.toString());
+  }
+
+  /** Follows up to {@link #MAX_REDIRECTS} redirects by hand, re-checking each target with the guard. */
+  private String fetchFollowingSafeRedirects(String startUrl) {
+    java.net.URI current = ExternalUrlGuard.requirePublic(startUrl);
+    for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      org.springframework.http.ResponseEntity<String> response =
+          restClient
+              .get()
+              .uri(current)
+              .header("User-Agent", USER_AGENT)
+              .header("Accept", "text/html,application/xhtml+xml")
+              .header("Accept-Language", "en-US,en;q=0.9")
+              .retrieve()
+              .toEntity(String.class);
+      if (!response.getStatusCode().is3xxRedirection()) {
+        return response.getBody();
+      }
+      String location = response.getHeaders().getFirst("Location");
+      if (location == null) {
+        throw new JobLinkUnreadableException("That link redirected without saying where. Paste the job description text instead.");
+      }
+      current = ExternalUrlGuard.requirePublic(current.resolve(location).toString());
+    }
+    throw new JobLinkUnreadableException("That link redirected too many times. Paste the job description text instead.");
   }
 
   private static String truncate(String s, int max) {

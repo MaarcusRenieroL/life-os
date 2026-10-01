@@ -22,6 +22,26 @@ import org.springframework.web.client.RestClient;
 @Configuration("jobTrackerHttpClientConfig")
 public class HttpClientConfig {
 
+  /**
+   * For {@link com.lifeos.job_tracker.integration.JobLinkFetcher}: never follows redirects on its own,
+   * because the fetcher checks every hop against {@code ExternalUrlGuard} (a public page can redirect to
+   * an internal one).
+   */
+  @Bean
+  public RestClient.Builder linkFetchRestClientBuilder() {
+    SimpleClientHttpRequestFactory factory =
+        new SimpleClientHttpRequestFactory() {
+          @Override
+          protected void prepareConnection(java.net.HttpURLConnection connection, String httpMethod) throws java.io.IOException {
+            super.prepareConnection(connection, httpMethod);
+            connection.setInstanceFollowRedirects(false);
+          }
+        };
+    factory.setConnectTimeout(Duration.ofSeconds(10));
+    factory.setReadTimeout(Duration.ofSeconds(20));
+    return RestClient.builder().requestFactory(factory);
+  }
+
   @Bean
   public RestClient.Builder externalFetchRestClientBuilder() {
     SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();

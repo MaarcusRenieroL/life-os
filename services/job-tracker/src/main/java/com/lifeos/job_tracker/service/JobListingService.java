@@ -140,9 +140,6 @@ public class JobListingService {
     if (hasText) {
       rawContent = "--- PAGE TEXT ---\n" + pastedText.trim();
     } else if (sourceUrl != null) {
-      if (!sourceUrl.startsWith("http://") && !sourceUrl.startsWith("https://")) {
-        throw new InvalidRequestException("Enter a full job URL starting with http:// or https://");
-      }
       rawContent = jobLinkFetcher.fetch(sourceUrl).content();
     } else {
       throw new InvalidRequestException("Provide a job link or paste the job description text");
