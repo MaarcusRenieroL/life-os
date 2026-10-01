@@ -7,6 +7,7 @@ import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartHeader;
+import com.lifeos.batches.domains.enums.GmailPurpose;
 import com.lifeos.batches.domains.record.RawAlertEmail;
 import com.lifeos.batches.domains.record.RawEmail;
 import java.io.IOException;
@@ -54,7 +55,7 @@ public class GmailMessageService {
     List<String> senderAddresses = List.of(alertSendersConfig.split(","));
     String senderClause = "(from:" + String.join(" OR from:", senderAddresses) + ")";
 
-    return fetchByQuery(senderClause, dateRestriction).stream()
+    return fetchByQuery(senderClause, dateRestriction, GmailPurpose.FINANCE).stream()
         .map(
             email ->
                 new RawAlertEmail(
@@ -66,8 +67,9 @@ public class GmailMessageService {
    * Generic search, for consumers other than the bank-alert pipeline (e.g. job-search email sync)
    * that need their own query clause rather than the fixed sender allowlist above.
    */
-  public List<RawEmail> fetchByQuery(String searchClause, String dateRestriction) throws IOException {
-    Gmail gmail = buildGmailClient();
+  public List<RawEmail> fetchByQuery(
+      String searchClause, String dateRestriction, GmailPurpose purpose) throws IOException {
+    Gmail gmail = buildGmailClient(purpose);
 
     String query = dateRestriction == null ? searchClause : dateRestriction + " " + searchClause;
 
@@ -217,14 +219,14 @@ public class GmailMessageService {
     return Optional.empty();
   }
 
-  private Gmail buildGmailClient() {
+  private Gmail buildGmailClient(GmailPurpose purpose) {
     return new Gmail.Builder(
             TRANSPORT,
             JSON_FACTORY,
             request -> {
               request
                   .getHeaders()
-                  .setAuthorization("Bearer " + gmailOAuthService.getValidAccessToken());
+                  .setAuthorization("Bearer " + gmailOAuthService.getValidAccessToken(purpose));
               // Google's client defaults to a 20s connect / 20s read timeout, but it's set per
               // request and easy to lose track of - pin it explicitly. This runs on the scheduled
               // poller, and a hung Gmail call with no timeout would hold its thread (and the

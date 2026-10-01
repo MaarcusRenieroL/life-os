@@ -79,7 +79,7 @@ export function AddTransactionDialog({ open, onOpenChange, editing, onSaved }: P
           <div>
             <Label>Account</Label>
             <Select value={accountId} onValueChange={(v) => setAccountId(v ?? '')} disabled={!!editing}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select an account" /></SelectTrigger>
               <SelectContent>
                 {accounts.map((a) => (
                   <SelectItem key={a.id} value={a.id}>{a.accountName}</SelectItem>

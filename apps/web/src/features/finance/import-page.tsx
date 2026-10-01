@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
@@ -131,28 +132,19 @@ export function ImportPage() {
 
       <section className="mt-4 hud-panel p-5">
         <SectionHeading>Gmail sync</SectionHeading>
-        {gmailStatus?.connected ? (
-          <div className="mt-2 text-sm">
-            <p className="text-primary">Connected {gmailStatus.connectedAt ? `since ${new Date(gmailStatus.connectedAt).toLocaleDateString()}` : ''}</p>
-            {gmailStatus.lastRefreshedAt && (
-              <p className="text-xs text-muted-foreground">Token last refreshed {new Date(gmailStatus.lastRefreshedAt).toLocaleDateString()}</p>
-            )}
-            <div className="mt-3 flex items-center gap-3">
-              <Button size="sm" variant="outline" onClick={() => void syncGmail()} disabled={syncing}>
-                {syncing ? 'Syncing…' : 'Sync all history'}
-              </Button>
-              <a href={importApi.gmailConnectUrl()} className="text-xs text-primary hover:underline">Reconnect</a>
-            </div>
-            {syncMessage && <p className="mt-2 text-xs text-muted-foreground">{syncMessage}</p>}
-          </div>
-        ) : (
-          <div className="mt-2">
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px]">not connected</span>
-            <div className="mt-2">
-              <a href={importApi.gmailConnectUrl()} className="text-sm text-primary hover:underline">Connect Gmail</a>
-            </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {gmailStatus?.connected ? 'Bank alerts are read from the Gmail account you connected. ' : 'Gmail is not connected yet. '}
+          Connect or change the bank and job mailboxes in{' '}
+          <Link to="/settings#integrations" className="text-primary hover:underline">Settings</Link>.
+        </p>
+        {gmailStatus?.connected && (
+          <div className="mt-3 flex items-center gap-3">
+            <Button size="sm" variant="outline" onClick={() => void syncGmail()} disabled={syncing}>
+              {syncing ? 'Syncing…' : 'Sync all bank history'}
+            </Button>
           </div>
         )}
+        {syncMessage && <p className="mt-2 text-xs text-muted-foreground">{syncMessage}</p>}
         <p className="mt-3 text-[11px] text-muted-foreground">
           For a specific period (e.g. the last 1–2 months), download that range as a statement from your bank and
           upload it here — Gmail sync (right) only looks at new emails going forward, not history.

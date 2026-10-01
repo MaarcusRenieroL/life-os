@@ -1,9 +1,20 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Bell,
+  ChevronDown,
+  LayoutGrid,
+  Palette,
+  Plug,
+  ShieldCheck,
+  SlidersHorizontal,
+  Trash2,
+  User,
+  type LucideIcon,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,22 +34,25 @@ import { cn } from '@/lib/utils';
 
 import { coreApi } from '../core/core-api';
 import { DeleteAccountDialog } from './delete-account-dialog';
+import { GmailConnections } from './gmail-connections';
+import { SettingRow, SettingsSection, SoonBadge } from './settings-ui';
 
 interface NavItem {
   id: string;
   label: string;
+  icon: LucideIcon;
   danger?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'profile', label: 'Profile' },
-  { id: 'modules', label: 'Modules' },
-  { id: 'appearance', label: 'Appearance' },
-  { id: 'notifications', label: 'Notifications' },
-  { id: 'integrations', label: 'Integrations' },
-  { id: 'data-privacy', label: 'Data & privacy' },
-  { id: 'advanced', label: 'Advanced' },
-  { id: 'danger-zone', label: 'Danger zone', danger: true },
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'modules', label: 'Modules', icon: LayoutGrid },
+  { id: 'appearance', label: 'Appearance', icon: Palette },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'integrations', label: 'Integrations', icon: Plug },
+  { id: 'data-privacy', label: 'Data & privacy', icon: ShieldCheck },
+  { id: 'advanced', label: 'Advanced', icon: SlidersHorizontal },
+  { id: 'danger-zone', label: 'Danger zone', icon: AlertTriangle, danger: true },
 ];
 
 type ThemePreference = 'terminal-dark' | 'light' | 'system';
@@ -75,6 +89,10 @@ export function SettingsPage() {
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // The profile may arrive after first render (deep link / reload), so follow it until edited.
+  const [nameTouched, setNameTouched] = useState(false);
+  const shownName = nameTouched ? name : (user?.name ?? '');
 
   useEffect(() => {
     if (!user?.hasAvatar) {
@@ -195,168 +213,199 @@ export function SettingsPage() {
         <span className="text-foreground/85">Settings</span>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-[220px_1fr]">
-        <nav className="flex flex-row gap-0.5 overflow-x-auto md:sticky md:top-0 md:flex-col md:self-start md:overflow-visible">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => scrollTo(item.id)}
-              className={cn(
-                'cursor-pointer whitespace-nowrap rounded-md bg-transparent px-3 py-2 text-left text-sm transition-colors',
-                activeSection === item.id && !item.danger && 'bg-foreground/6 font-semibold',
-                item.danger && 'text-destructive',
-                !item.danger && activeSection !== item.id && 'text-muted-foreground',
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
+      <div className="mb-7">
+        <h1 className="font-display text-2xl font-semibold tracking-wide">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Your profile, which modules are on, and the accounts Life OS reads.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-[210px_minmax(0,1fr)]">
+        <nav className="flex flex-row gap-1 overflow-x-auto pb-1 md:sticky md:top-4 md:flex-col md:self-start md:overflow-visible md:pb-0">
+          {NAV_ITEMS.map((item) => {
+            const active = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => scrollTo(item.id)}
+                className={cn(
+                  'relative flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm whitespace-nowrap transition-colors',
+                  active ? 'bg-primary/10 font-medium text-foreground' : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+                  item.danger && (active ? 'bg-destructive/10 text-destructive' : 'text-destructive/80 hover:text-destructive'),
+                )}
+              >
+                {active && <span className={cn('absolute inset-y-1.5 left-0 w-0.5 rounded-full', item.danger ? 'bg-destructive' : 'bg-primary')} />}
+                <item.icon className="size-4 shrink-0" />
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
 
-        <div className="flex flex-col gap-4">
-          <section id="profile" className="hud-panel p-5">
-            <SectionHeading className="mb-3.5">Profile</SectionHeading>
-
-            <div className="mb-4 flex items-center gap-3.5">
+        <div className="flex min-w-0 flex-col gap-5">
+          <SettingsSection id="profile" icon={User} title="Profile" description="How you appear across Life OS.">
+            <div className="flex flex-wrap items-center gap-4">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="h-12 w-12 rounded-full border object-cover" />
+                <img src={avatarUrl} alt="" className="size-16 rounded-full border-2 border-primary/40 object-cover" />
               ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border bg-background text-sm text-primary">
+                <div className="grid size-16 place-items-center rounded-full border-2 border-primary/40 bg-background font-display text-lg text-primary">
                   {initials}
                 </div>
               )}
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => void handleAvatarSelected(e.target.files?.[0])}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={uploadingAvatar}
-                onClick={() => avatarInputRef.current?.click()}
-              >
-                {uploadingAvatar ? 'Uploading…' : 'Change avatar'}
-              </Button>
-              {user?.hasAvatar && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive"
-                  disabled={uploadingAvatar}
-                  onClick={() => void authApi.deleteAvatar().then(() => refreshUser())}
-                >
-                  Remove
-                </Button>
-              )}
-              {avatarError && <span className="text-[11px] text-destructive">{avatarError}</span>}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{user?.name || 'Unnamed player'}</p>
+                <p className="truncate text-sm text-muted-foreground">{user?.email}</p>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => void handleAvatarSelected(e.target.files?.[0])}
+                />
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={uploadingAvatar} onClick={() => avatarInputRef.current?.click()}>
+                    {uploadingAvatar ? 'Uploading…' : 'Change avatar'}
+                  </Button>
+                  {user?.hasAvatar && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      disabled={uploadingAvatar}
+                      onClick={() => void authApi.deleteAvatar().then(() => refreshUser())}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                  {avatarError && <span className="text-xs text-destructive">{avatarError}</span>}
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <Label htmlFor="settingsName" className="mb-1.5 block text-[11px] text-muted-foreground">
-                  NAME
+                <Label htmlFor="settingsName" className="mb-1.5 block text-xs text-muted-foreground">
+                  Name
                 </Label>
-                <Input id="settingsName" value={name} onChange={(e) => setName(e.target.value)} />
+                <Input
+                  id="settingsName"
+                  value={shownName}
+                  onChange={(e) => {
+                    setNameTouched(true);
+                    setName(e.target.value);
+                  }}
+                />
               </div>
               <div>
-                <Label htmlFor="settingsEmail" className="mb-1.5 block text-[11px] text-muted-foreground">
-                  EMAIL
+                <Label htmlFor="settingsEmail" className="mb-1.5 block text-xs text-muted-foreground">
+                  Email
                 </Label>
                 <Input id="settingsEmail" type="email" value={user?.email ?? ''} disabled />
               </div>
             </div>
 
-            <div className="mt-3.5 flex items-center gap-2.5">
-              <Button onClick={() => void saveProfile()} disabled={savingProfile || !name}>
-                {savingProfile ? 'Saving…' : 'Save'}
+            <div className="mt-4 flex items-center justify-end gap-3">
+              {profileSaved && <span className="text-xs text-primary">Saved</span>}
+              {profileError && <span className="text-xs text-destructive">{profileError}</span>}
+              <Button onClick={() => void saveProfile()} disabled={savingProfile || !shownName || shownName === (user?.name ?? '')}>
+                {savingProfile ? 'Saving…' : 'Save changes'}
               </Button>
-              {profileSaved && <span className="text-[11px] text-primary">Saved</span>}
-              {profileError && <span className="text-[11px] text-destructive">{profileError}</span>}
             </div>
-          </section>
+          </SettingsSection>
 
-          <section id="modules" className="hud-panel p-5">
-            <SectionHeading className="mb-3.5">Modules</SectionHeading>
-            {modulesError && <p className="mb-3 text-[11px] text-destructive">{modulesError}</p>}
-            <div className="flex flex-col">
+          <SettingsSection
+            id="modules"
+            icon={LayoutGrid}
+            title="Modules"
+            description={`${modules.filter((m) => m.enabled).length} of ${modules.length} switched on. Turn off what you don't use to keep the sidebar tidy.`}
+          >
+            {modulesError && <p className="mb-3 text-xs text-destructive">{modulesError}</p>}
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
               {modules.map((module) => (
-                <div key={module.code} className="flex items-center justify-between border-b py-2.5 last:border-b-0">
-                  <span className="text-sm">{module.name}</span>
+                <div
+                  key={module.code}
+                  className={cn(
+                    'flex items-center justify-between gap-3 rounded-md border px-3.5 py-3 transition-colors',
+                    module.enabled ? 'border-primary/25 bg-primary/[0.04]' : 'bg-muted/20 text-muted-foreground',
+                  )}
+                >
+                  <span className="min-w-0 truncate text-sm font-medium">{module.name}</span>
                   {module.enabled ? (
                     <Switch checked onCheckedChange={(checked) => void setModuleEnabled(module.code, checked)} />
                   ) : (
-                    <Button variant="ghost" size="sm" onClick={() => void setModuleEnabled(module.code, true)}>
+                    <Button variant="outline" size="sm" onClick={() => void setModuleEnabled(module.code, true)}>
                       Set up
                     </Button>
                   )}
                 </div>
               ))}
             </div>
-          </section>
+          </SettingsSection>
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <section id="appearance" className="hud-panel p-5">
-              <SectionHeading className="mb-3.5">Appearance</SectionHeading>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-foreground/75">Theme</span>
-                <Select value={theme} onValueChange={(v) => setTheme(v as ThemePreference)}>
-                  <SelectTrigger className="min-w-56">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {THEME_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </section>
+          <SettingsSection id="appearance" icon={Palette} title="Appearance" description="Colours and theme.">
+            <SettingRow label="Theme" hint="Terminal dark is the only theme for now.">
+              <Select value={theme} onValueChange={(v) => setTheme(v as ThemePreference)}>
+                <SelectTrigger className="min-w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {THEME_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </SettingRow>
+          </SettingsSection>
 
-            <section id="notifications" className="hud-panel p-5">
-              <SectionHeading className="mb-1.5">Notifications</SectionHeading>
-              <div className="text-[11px] text-muted-foreground">
-                In-app notifications (the bell, top right) are live across every module. Email
-                and push delivery, and per-type preferences, are still on the roadmap.
-              </div>
-            </section>
+          <SettingsSection id="notifications" icon={Bell} title="Notifications" description="How Life OS gets your attention.">
+            <div className="flex flex-col gap-4">
+              <SettingRow label="In-app notifications" hint="The bell, top right - live across every module.">
+                <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium tracking-wider text-primary uppercase">
+                  On
+                </span>
+              </SettingRow>
+              <SettingRow label="Email and push" hint="Delivery outside the app, and per-type preferences.">
+                <SoonBadge />
+              </SettingRow>
+            </div>
+          </SettingsSection>
 
-            <section id="integrations" className="hud-panel p-5">
-              <SectionHeading className="mb-1.5">Integrations</SectionHeading>
-              <div className="text-[11px] text-muted-foreground">
-                Connect third-party services (calendars, job boards, banks) once those integrations
-                exist.
-              </div>
-            </section>
+          <SettingsSection
+            id="integrations"
+            icon={Plug}
+            title="Integrations"
+            description="Connect the Gmail accounts Life OS reads - bank alerts and job emails can be different addresses."
+          >
+            <GmailConnections />
+          </SettingsSection>
 
-            <section id="data-privacy" className="hud-panel p-5">
-              <SectionHeading className="mb-1.5">Data &amp; privacy</SectionHeading>
-              <div className="text-[11px] text-muted-foreground">
-                Export, import and backup live on the{' '}
-                <Link to="/vault/data" className="text-primary hover:underline">
-                  Password Manager's Data Management page
-                </Link>{' '}
-                for now — an account-wide version is planned.
-              </div>
-            </section>
-          </div>
+          <SettingsSection id="data-privacy" icon={ShieldCheck} title="Data & privacy" description="Your data stays on your own server.">
+            <SettingRow label="Export, import and backup" hint="An account-wide version is planned; for now it lives in the Password Manager.">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/vault/data">Open data management</Link>
+              </Button>
+            </SettingRow>
+          </SettingsSection>
 
           <AdvancedSettingsSection />
 
-          <section id="danger-zone" className="rounded-lg border border-destructive/35 bg-card p-5">
-            <SectionHeading className="mb-1.5" tone="destructive">Danger zone</SectionHeading>
-            <div className="mb-3.5 text-[11px] text-muted-foreground">
-              Permanently deletes your vault and account. This cannot be undone.
-            </div>
-            <Button variant="outline" className="border-destructive/50 text-destructive hover:bg-destructive/10" onClick={() => setDeleteDialogOpen(true)}>
-              Delete account
-            </Button>
-          </section>
+          <SettingsSection
+            id="danger-zone"
+            icon={AlertTriangle}
+            tone="danger"
+            title="Danger zone"
+            description="Permanently deletes your vault and account. This cannot be undone."
+            action={
+              <Button
+                variant="outline"
+                className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                Delete account
+              </Button>
+            }
+          />
         </div>
       </div>
 
@@ -408,18 +457,20 @@ function AdvancedSettingsSection() {
   }
 
   return (
-    <section id="advanced" className="hud-panel p-5">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between text-left"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <SectionHeading>Advanced</SectionHeading>
-        <ChevronDown className={cn('size-4 text-muted-foreground transition-transform', expanded && 'rotate-180')} />
-      </button>
-
+    <SettingsSection
+      id="advanced"
+      icon={SlidersHorizontal}
+      title="Advanced"
+      description="Raw module settings, for tuning things the screens above don't expose."
+      action={
+        <Button variant="ghost" size="sm" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
+          {expanded ? 'Hide' : 'Show'}
+          <ChevronDown className={cn('size-4 transition-transform', expanded && 'rotate-180')} />
+        </Button>
+      }
+    >
       {expanded && (
-        <div className="mt-3.5">
+        <div>
           <p className="mb-3 text-[11px] text-muted-foreground">
             Raw settings storage, keyed by module and name. Most people won't need this - it's
             here for tuning things the regular settings above don't expose yet.
@@ -466,6 +517,6 @@ function AdvancedSettingsSection() {
           {error && <p className="mt-2 text-[11px] text-destructive">{error}</p>}
         </div>
       )}
-    </section>
+    </SettingsSection>
   );
 }

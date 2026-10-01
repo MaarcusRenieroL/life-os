@@ -56,6 +56,8 @@ gmail:
   client-id: ${GMAIL_CLIENT_ID}
   client-secret: ${GMAIL_CLIENT_SECRET}
   redirect-uri: ${GMAIL_REDIRECT_URI:http://localhost:8005/v1/batches/gmail/callback}
+  # Where the browser lands after Google's consent screen (the web app's Settings page).
+  post-connect-url: ${GMAIL_POST_CONNECT_URL:http://localhost/settings#integrations}
   alert-senders: ${GMAIL_ALERT_SENDERS:canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
   job-search:
     # Known job-board/ATS senders, checked with OR against a subject-keyword fallback for

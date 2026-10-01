@@ -1,5 +1,6 @@
 package com.lifeos.batches.service;
 
+import com.lifeos.batches.domains.enums.GmailPurpose;
 import com.lifeos.batches.domains.record.RawEmail;
 import com.lifeos.common.events.JobEmailEventRecord;
 import com.lifeos.common.events.NotificationEventPublisher;
@@ -57,11 +58,11 @@ public class JobEmailSyncService {
    * being unreachable) no longer loses the emails that arrived during it.
    */
   public int syncRecent() throws IOException {
-    return processEmails(gmailMessageService.fetchByQuery(searchClause(), "newer_than:7d"));
+    return processEmails(gmailMessageService.fetchByQuery(searchClause(), "newer_than:7d", GmailPurpose.JOBS));
   }
 
   public int syncAll() throws IOException {
-    return processEmails(gmailMessageService.fetchByQuery(searchClause(), null));
+    return processEmails(gmailMessageService.fetchByQuery(searchClause(), null, GmailPurpose.JOBS));
   }
 
   private String searchClause() {

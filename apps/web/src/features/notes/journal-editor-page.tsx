@@ -181,7 +181,7 @@ function JournalForm({ existing }: { existing: JournalEntry | null }) {
               <Card key={row.prompt}>
                 <CardContent className="py-3">
                   <div className="mb-2 flex items-start justify-between gap-2">
-                    <Label htmlFor={`prompt-${index}`} className="leading-snug">
+                    <Label htmlFor={`prompt-${index}`} className="mb-0 leading-snug">
                       {row.prompt}
                     </Label>
                     <Button size="icon" variant="ghost" aria-label={`Remove prompt: ${row.prompt}`} onClick={() => setPrompts(prompts.filter((_, i) => i !== index))}>

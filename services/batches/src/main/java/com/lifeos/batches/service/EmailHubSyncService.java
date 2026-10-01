@@ -1,5 +1,6 @@
 package com.lifeos.batches.service;
 
+import com.lifeos.batches.domains.enums.GmailPurpose;
 import com.lifeos.batches.domains.record.RawEmail;
 import com.lifeos.common.events.EmailHubEventRecord;
 import com.lifeos.common.events.NotificationEventPublisher;
@@ -41,17 +42,32 @@ public class EmailHubSyncService {
   @Value("${gmail.alert-senders}")
   private String bankAlertSenders;
 
+  @Value("${gmail.job-search.senders}")
+  private String jobSenders;
+
   private final GmailMessageService gmailMessageService;
+  private final GmailOAuthService gmailOAuthService;
   private final KafkaTemplate<String, EmailHubEventRecord> emailHubEventKafkaTemplate;
   private final NotificationEventPublisher notificationEventPublisher;
 
   public int syncRecent() throws IOException {
-    return process(gmailMessageService.fetchByQuery(searchClause(), "newer_than:3d"));
+    // Every connected mailbox is part of the inbox; one being down must not hide the other's mail.
+    int sent = 0;
+    for (GmailPurpose purpose : gmailOAuthService.connectedPurposes()) {
+      try {
+        sent += process(gmailMessageService.fetchByQuery(searchClause(), "newer_than:3d", purpose));
+      } catch (IOException | RuntimeException e) {
+        log.error("Inbox sync failed for the {} mailbox: {}", purpose, e.getMessage(), e);
+      }
+    }
+    return sent;
   }
 
   String searchClause() {
+    // Bank alerts and job-board mail each have their own pipeline; the hub guessing at them as well
+    // produced duplicate tasks and "ignored" verdicts on real applications.
     String skipBankAlerts =
-        Arrays.stream(bankAlertSenders.split(","))
+        Arrays.stream((bankAlertSenders + "," + jobSenders).split(","))
             .map(String::trim)
             .filter(s -> !s.isEmpty())
             .map(s -> "-from:" + s)

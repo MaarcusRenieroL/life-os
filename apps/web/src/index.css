@@ -114,6 +114,12 @@
   html {
     @apply font-mono;
     }
+  /* Form rhythm. Most forms are <div><Label/><Field/></div> with nothing between the two, which
+     jammed every label against its field. In the base layer so any explicit mb-* on a label still
+     wins; labels that wrap their own control (switch/checkbox rows) are left alone. */
+  [data-slot="label"]:not(:has(input, button, [role="checkbox"], [role="switch"], [role="radio"])):has(+ *) {
+    margin-bottom: 0.5rem;
+    }
   /* Headings, labels, and data stay monospace for the terminal identity, but
      running prose (descriptions, empty states, helper text) reads noticeably
      better in a proportional face at sentence length - Geist Variable is
