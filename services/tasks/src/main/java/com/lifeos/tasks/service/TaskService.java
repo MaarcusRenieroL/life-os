@@ -36,6 +36,7 @@ public class TaskService {
   private final TaskRepository taskRepository;
   private final ProjectRepository projectRepository;
   private final GoalRepository goalRepository;
+  private final com.lifeos.tasks.integration.CrossModuleCleanup crossModuleCleanup;
 
   @Transactional(readOnly = true)
   public List<TaskResponse> list(
@@ -230,6 +231,7 @@ public class TaskService {
   public void delete(UUID userId, UUID id) {
     Task task = findOwned(userId, id);
     taskRepository.delete(task);
+    crossModuleCleanup.taskDeleted(userId, id);
   }
 
   public TaskResponse complete(UUID userId, UUID id) {

@@ -29,6 +29,11 @@ public class HabitService {
   private final HabitLogRepository habitLogRepository;
   private final HabitScheduleService habitScheduleService;
 
+  /** Called when a goal is deleted elsewhere: the habits it owned keep running, just without a goal. */
+  public int detachGoal(UUID userId, UUID goalId) {
+    return habitRepository.clearGoal(userId, goalId);
+  }
+
   @Transactional(readOnly = true)
   public List<HabitResponse> list(
       UUID userId, HabitStatus status, String category, UUID areaId, UUID goalId) {

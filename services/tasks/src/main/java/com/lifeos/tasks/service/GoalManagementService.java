@@ -37,6 +37,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class GoalManagementService {
 
+  private final com.lifeos.tasks.integration.CrossModuleCleanup crossModuleCleanup;
+
   private final GoalRepository goalRepository;
   private final GoalLinkRepository goalLinkRepository;
   private final TaskRepository taskRepository;
@@ -147,6 +149,7 @@ public class GoalManagementService {
 
   public void delete(UUID userId, UUID id) {
     goalRepository.delete(findOwned(userId, id));
+    crossModuleCleanup.goalDeleted(userId, id);
   }
 
   /** Points an existing task at this goal (a task's goal is otherwise only settable from the task
