@@ -1,6 +1,9 @@
 package com.lifeos.batches.domains.entity;
 
+import com.lifeos.batches.domains.enums.GmailPurpose;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -30,6 +33,12 @@ public class GmailOAuthToken {
   UUID id;
 
   UUID userId;
+
+  @Enumerated(EnumType.STRING)
+  GmailPurpose purpose;
+
+  // The mailbox these tokens belong to (null on connections made before purposes existed).
+  String email;
 
   // Combined "iv:ciphertext" (both base64) - see common.security.EncryptionService.
   String accessTokenEncrypted;

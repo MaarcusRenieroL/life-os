@@ -71,6 +71,11 @@ public class Transaction {
 
   boolean isDuplicate;
 
+  /** One leg of a transfer between the user's own accounts: moves a balance, is not spending or income. */
+  boolean isTransfer;
+
+  UUID transferPairId;
+
   UUID duplicateOf;
 
   @Enumerated(EnumType.STRING)

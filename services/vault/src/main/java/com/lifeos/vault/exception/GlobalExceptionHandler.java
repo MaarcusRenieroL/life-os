@@ -25,6 +25,18 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(TooManyAttemptsException.class)
+  public ResponseEntity<ApiResponse<Void>> handleTooManyAttempts(TooManyAttemptsException exception) {
+    return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+        .header("Retry-After", String.valueOf(exception.getRetryAfterSeconds()))
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
+  @ExceptionHandler(InvalidVaultRequestException.class)
+  public ResponseEntity<ApiResponse<Void>> handleInvalidVaultRequest(InvalidVaultRequestException exception) {
+    return ResponseEntity.badRequest().body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(VaultLockedException.class)
   public ResponseEntity<ApiResponse<Void>> handleVaultLocked(VaultLockedException exception) {
     return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

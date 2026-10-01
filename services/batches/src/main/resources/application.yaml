@@ -4,9 +4,15 @@ server:
 spring:
   application:
     name: batches
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: validate
+    open-in-view: false
   flyway:
     schemas: batches_schema
     default-schema: batches_schema
@@ -22,10 +28,10 @@ spring:
       table-prefix: batches_schema.BATCH_
 
 jwt:
-  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+  secret: ${JWT_SECRET}
 
 internal:
-  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+  api-key: ${INTERNAL_API_KEY}
 
 vault:
   internal-base-url: ${VAULT_INTERNAL_BASE_URL:http://vault:8002}
@@ -36,6 +42,13 @@ owner:
 backup:
   cron: ${BACKUP_CRON:0 0 3 * * *}
 
+audit:
+  # audit_events grows without bound (every module publishes to it over Kafka), so old rows are
+  # purged on a schedule - see AuditEventRetentionScheduler.
+  retention-days: ${AUDIT_RETENTION_DAYS:180}
+  retention:
+    cron: ${AUDIT_RETENTION_CRON:0 30 3 * * *}
+
 encryption:
   secret: ${GMAIL_ENCRYPTION_SECRET}
 
@@ -43,14 +56,21 @@ gmail:
   client-id: ${GMAIL_CLIENT_ID}
   client-secret: ${GMAIL_CLIENT_SECRET}
   redirect-uri: ${GMAIL_REDIRECT_URI:http://localhost:8005/v1/batches/gmail/callback}
+  # Where the browser lands after Google's consent screen (the web app's Settings page).
+  post-connect-url: ${GMAIL_POST_CONNECT_URL:http://localhost/settings#integrations}
   alert-senders: ${GMAIL_ALERT_SENDERS:canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
   job-search:
     # Known job-board/ATS senders, checked with OR against a subject-keyword fallback for
     # arbitrary company domains - see JobEmailSyncService for why this can't be sender-only.
-    senders: ${GMAIL_JOB_SEARCH_SENDERS:jobalerts-noreply@linkedin.com,jobs-noreply@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
-    subject-keywords: ${GMAIL_JOB_SEARCH_KEYWORDS:application,interview,offer,not moving forward,not selected,moving forward,thank you for applying,thanks for applying,update on your application}
+    senders: ${GMAIL_JOB_SEARCH_SENDERS:jobalerts-noreply@linkedin.com,jobs-noreply@linkedin.com,jobs-noreply@naukri.com,info@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
+    subject-keywords: ${GMAIL_JOB_SEARCH_KEYWORDS:application,applied,interview,offer,not moving forward,not selected,moving forward,thank you for applying,thanks for applying,update on your application}
+  # The inbox hub reads only bills, banks and bookings: subject keywords plus any named senders.
+  email-hub:
+    senders: ${GMAIL_HUB_SENDERS:}
+    subject-keywords: ${GMAIL_HUB_KEYWORDS:invoice,bill,receipt,statement,payment,booking,reservation,confirmation,order,due,renewal,subscription,ticket,appointment}
+    blocked-domains: ${GMAIL_HUB_BLOCKED_DOMAINS:successfactors.com,join.com,jobgether.com,sysvine.com,ambitionbox.com}
   poll:
-    cron: ${GMAIL_POLL_CRON:0 0 9,15,21 * * *}
+    cron: ${GMAIL_POLL_CRON:0 */30 * * * *}
 
 job-tracker:
   internal-base-url: ${JOB_TRACKER_INTERNAL_BASE_URL:http://job-tracker:8003}

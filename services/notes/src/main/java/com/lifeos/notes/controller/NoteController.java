@@ -1,6 +1,8 @@
 package com.lifeos.notes.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.PageResponse;
 import com.lifeos.notes.domains.dto.request.AddNoteLinkRequest;
 import com.lifeos.notes.domains.dto.request.AddTagRequest;
 import com.lifeos.notes.domains.dto.request.AssignFolderRequest;
@@ -15,12 +17,10 @@ import com.lifeos.notes.domains.dto.response.NoteModuleLinkResponse;
 import com.lifeos.notes.domains.dto.response.NoteResponse;
 import com.lifeos.notes.domains.dto.response.NoteSummaryResponse;
 import com.lifeos.notes.domains.dto.response.NoteVersionResponse;
-import com.lifeos.notes.domains.dto.response.TagResponse;
 import com.lifeos.notes.domains.dto.response.TrashedNoteResponse;
 import com.lifeos.notes.domains.entity.NoteAttachment;
 import com.lifeos.notes.domains.enums.NoteModuleType;
 import com.lifeos.notes.domains.enums.NoteType;
-import com.lifeos.notes.domains.record.PageResponse;
 import com.lifeos.notes.service.NoteAttachmentService;
 import com.lifeos.notes.service.NoteExportService;
 import com.lifeos.notes.service.NoteFolderService;
@@ -74,6 +74,7 @@ public class NoteController {
       @RequestParam(required = false) NoteType noteType,
       @RequestParam(defaultValue = "false") boolean archived,
       @RequestParam(required = false) Boolean favorite,
+      @RequestParam(required = false) Boolean pinned,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     UUID userId = userId(authentication);
@@ -82,7 +83,7 @@ public class NoteController {
         ApiResponse.success(
             PageResponse.from(
                 noteService.list(
-                    userId, sort, order, folder, tag, noteType, archived, favorite, page, size)),
+                    userId, sort, order, folder, tag, noteType, archived, favorite, pinned, Bounds.page(page), Bounds.size(size, 200))),
             "Notes fetched successfully"));
   }
 
@@ -91,7 +92,7 @@ public class NoteController {
       Authentication authentication, @RequestParam(defaultValue = "10") int limit) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            noteService.recent(userId(authentication), limit), "Recent notes fetched successfully"));
+            noteService.recent(userId(authentication), Bounds.clamp(limit, 1, 50)), "Recent notes fetched successfully"));
   }
 
   @GetMapping("/favorites")

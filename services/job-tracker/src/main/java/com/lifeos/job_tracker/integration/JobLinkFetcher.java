@@ -1,12 +1,12 @@
 package com.lifeos.job_tracker.integration;
 
 import com.lifeos.job_tracker.exception.JobLinkUnreadableException;
-import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -22,7 +22,6 @@ import org.springframework.web.client.RestClientResponseException;
  * the description.
  */
 @Component
-@RequiredArgsConstructor
 public class JobLinkFetcher {
 
   private static final Logger log = LoggerFactory.getLogger(JobLinkFetcher.class);
@@ -31,24 +30,21 @@ public class JobLinkFetcher {
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
           + " (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
   private static final int MAX_TEXT_CHARS = 24_000;
+  private static final int MAX_REDIRECTS = 4;
 
-  private final RestClient.Builder restClientBuilder;
+  private final RestClient restClient;
+
+  public JobLinkFetcher(
+      @Qualifier("linkFetchRestClientBuilder") RestClient.Builder restClientBuilder) {
+    this.restClient = restClientBuilder.clone().build();
+  }
 
   public record FetchedPage(String url, String content) {}
 
   public FetchedPage fetch(String url) {
     String html;
     try {
-      html =
-          restClientBuilder
-              .build()
-              .get()
-              .uri(url)
-              .header("User-Agent", USER_AGENT)
-              .header("Accept", "text/html,application/xhtml+xml")
-              .header("Accept-Language", "en-US,en;q=0.9")
-              .retrieve()
-              .body(String.class);
+      html = fetchFollowingSafeRedirects(url);
     } catch (RestClientResponseException exception) {
       log.warn("job link fetch for {} returned {}", url, exception.getStatusCode());
       throw new JobLinkUnreadableException(
@@ -97,6 +93,31 @@ public class JobLinkFetcher {
     }
 
     return new FetchedPage(url, out.toString());
+  }
+
+  /** Follows up to {@link #MAX_REDIRECTS} redirects by hand, re-checking each target with the guard. */
+  private String fetchFollowingSafeRedirects(String startUrl) {
+    java.net.URI current = ExternalUrlGuard.requirePublic(startUrl);
+    for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      org.springframework.http.ResponseEntity<String> response =
+          restClient
+              .get()
+              .uri(current)
+              .header("User-Agent", USER_AGENT)
+              .header("Accept", "text/html,application/xhtml+xml")
+              .header("Accept-Language", "en-US,en;q=0.9")
+              .retrieve()
+              .toEntity(String.class);
+      if (!response.getStatusCode().is3xxRedirection()) {
+        return response.getBody();
+      }
+      String location = response.getHeaders().getFirst("Location");
+      if (location == null) {
+        throw new JobLinkUnreadableException("That link redirected without saying where. Paste the job description text instead.");
+      }
+      current = ExternalUrlGuard.requirePublic(current.resolve(location).toString());
+    }
+    throw new JobLinkUnreadableException("That link redirected too many times. Paste the job description text instead.");
   }
 
   private static String truncate(String s, int max) {

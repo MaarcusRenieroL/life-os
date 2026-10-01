@@ -2,9 +2,7 @@ package com.lifeos.job_tracker.service;
 
 import com.lifeos.job_tracker.domains.entity.JobListing;
 import com.lifeos.job_tracker.domains.entity.JobStatusHistory;
-import com.lifeos.job_tracker.domains.entity.Referral;
 import com.lifeos.job_tracker.domains.enums.JobStatus;
-import com.lifeos.job_tracker.domains.enums.ReferralStatus;
 import com.lifeos.job_tracker.domains.record.JobAnalyticsResponse;
 import com.lifeos.job_tracker.domains.record.JobAnalyticsResponse.DailyCount;
 import com.lifeos.job_tracker.domains.record.JobAnalyticsResponse.SkillFrequency;
@@ -13,7 +11,6 @@ import com.lifeos.job_tracker.domains.record.JobAnalyticsResponse.StageDwellTime
 import com.lifeos.job_tracker.domains.record.JobAnalyticsResponse.WeeklyCount;
 import com.lifeos.job_tracker.repository.JobListingRepository;
 import com.lifeos.job_tracker.repository.JobStatusHistoryRepository;
-import com.lifeos.job_tracker.repository.ReferralRepository;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -31,7 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Aggregates the candidate's own pipeline into stats - everything computed in-memory over one
- * user's jobs/referrals/history, since at personal-tracker scale (dozens to low hundreds of rows)
+ * user's jobs/history, since at personal-tracker scale (dozens to low hundreds of rows)
  * that's simpler and just as fast as pushing the aggregation into SQL. */
 @Service
 @RequiredArgsConstructor
@@ -48,18 +45,8 @@ public class AnalyticsService {
       Set.of(JobStatus.INTERVIEWING, JobStatus.WAITING_FOR_HR, JobStatus.OFFER_ACCEPTED, JobStatus.OFFER_REJECTED);
   private static final Set<JobStatus> OFFERED_STATUSES =
       Set.of(JobStatus.OFFER_ACCEPTED, JobStatus.OFFER_REJECTED);
-  private static final Set<ReferralStatus> REFERRAL_CONTACTED_STATUSES =
-      Set.of(
-          ReferralStatus.MESSAGE_DRAFTED,
-          ReferralStatus.CONTACTED,
-          ReferralStatus.RESPONDED,
-          ReferralStatus.REFERRED,
-          ReferralStatus.DECLINED);
-  private static final Set<ReferralStatus> REFERRAL_RESPONDED_STATUSES =
-      Set.of(ReferralStatus.RESPONDED, ReferralStatus.REFERRED, ReferralStatus.DECLINED);
 
   private final JobListingRepository jobListingRepository;
-  private final ReferralRepository referralRepository;
   private final JobStatusHistoryRepository jobStatusHistoryRepository;
 
   @Transactional(readOnly = true)
@@ -75,7 +62,6 @@ public class AnalyticsService {
         ratePct(applied, Set.of(JobStatus.REJECTED)),
         ratePct(applied, INTERVIEWED_STATUSES),
         ratePct(applied, OFFERED_STATUSES),
-        referralResponseRatePct(referralRepository.findByUserId(userId)),
         bestPerformingSources(applied),
         mostCommonMissingSkills(jobs),
         averageTimeInStage(jobStatusHistoryRepository.findByUserIdOrderByJobIdAscChangedAtAsc(userId)));
@@ -119,13 +105,6 @@ public class AnalyticsService {
     if (applied.isEmpty()) return 0;
     long count = applied.stream().filter(j -> matching.contains(j.getStatus())).count();
     return round1(count * 100.0 / applied.size());
-  }
-
-  private static double referralResponseRatePct(List<Referral> referrals) {
-    long contacted = referrals.stream().filter(r -> REFERRAL_CONTACTED_STATUSES.contains(r.getStatus())).count();
-    if (contacted == 0) return 0;
-    long responded = referrals.stream().filter(r -> REFERRAL_RESPONDED_STATUSES.contains(r.getStatus())).count();
-    return round1(responded * 100.0 / contacted);
   }
 
   private static List<SourcePerformance> bestPerformingSources(List<JobListing> applied) {

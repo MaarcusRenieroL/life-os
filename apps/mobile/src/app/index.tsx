@@ -1,98 +1,98 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { RANK_HEX, groupQuests, toQuests, type HeatCell } from '@life-os/core';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { usePlayer } from '@/lib/player';
+import { useApi } from '@/lib/session';
+import { useAsync } from '@/lib/use-async';
+import { C, inr } from '@/theme';
+import { Bar, Muted, Panel, Xp, s } from '@/ui';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+const HEAT = ['#161a1f', '#14382b', '#1d6b4d', '#2fae79', '#7dffc3'];
+
+function Heatmap({ grid }: { grid: HeatCell[][] }) {
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+      {grid.map((week, i) => (
+        <View key={i} style={{ gap: 3 }}>
+          {week.map((cell) => (
+            <View key={cell.date} style={{ width: 17, height: 17, borderRadius: 3, backgroundColor: cell.future ? 'transparent' : HEAT[cell.intensity] }} />
+          ))}
+        </View>
+      ))}
+    </View>
   );
 }
 
-export default function HomeScreen() {
+export default function Home() {
+  const api = useApi();
+  const { player, reload } = usePlayer();
+  const today = useAsync(() => api.today(), api);
+  const groups = groupQuests(toQuests(today.data ?? []));
+  const [value, target] = player.challengeProgress;
+  const almost = player.achievements.filter((a) => a.next != null).sort((a, b) => b.pct - a.pct).slice(0, 3);
+  const week = player.week;
+  const stat = (label: string, v: string | number, sub?: string) => (
+    <View style={{ flex: 1 }}>
+      <Muted>{label}</Muted>
+      <Text style={{ color: C.text, fontSize: 22, fontWeight: '700' }}>{v}</Text>
+      {sub ? <Muted>{sub}</Muted> : null}
+    </View>
+  );
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }} refreshControl={<RefreshControl refreshing={today.loading} tintColor={C.accent} onRefresh={() => void Promise.all([today.reload(), reload()])} />}>
+      <Panel title="Daily challenge" accent={player.challengeDone ? C.gold : undefined}>
+        <Text style={s.h2}>{player.challenge.title}</Text>
+        <Muted style={{ marginVertical: 6 }}>{player.challengeDone ? 'Challenge won. +50 XP banked.' : player.challenge.hint}</Muted>
+        <Bar pct={target ? (value / target) * 100 : 0} color={C.gold} />
+        <Muted style={{ marginTop: 4 }}>{value} / {target}</Muted>
+      </Panel>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      <Panel title="This week">
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {stat('Tasks', week?.tasksCompleted ?? '—', week ? `${week.tasksDue} due` : undefined)}
+          {stat('Focus', week ? `${week.focusHours}h` : '—')}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+          {stat('Workouts', week?.workouts ?? '—')}
+          {stat('Spent', inr(week?.spending))}
+        </View>
+      </Panel>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+      <Panel title="Attributes">
+        {player.attributes.map((a) => (
+          <View key={a.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 7 }}>
+            <Text style={{ color: C.muted, width: 34, fontSize: 11, letterSpacing: 1 }}>{a.key}</Text>
+            <View style={{ flex: 1 }}><Bar pct={a.value ?? 0} color={a.value == null ? C.line : RANK_HEX[player.rank.letter]} /></View>
+            <Text style={{ color: C.text, width: 28, textAlign: 'right', fontSize: 12 }}>{a.value ?? '—'}</Text>
+          </View>
+        ))}
+      </Panel>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+      <Panel title="Today's quests">
+        {[...groups.main, ...groups.daily].slice(0, 5).map((q) => (
+          <View key={`${q.item.type}:${q.item.entityId}:${q.item.title}`} style={s.row}>
+            <View style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, backgroundColor: q.tier === 'main' ? C.magenta : C.cyan }} />
+            <Text style={s.body} numberOfLines={1}>{q.item.title}</Text>
+            <Xp value={q.xp} />
+          </View>
+        ))}
+        {today.data && today.data.length === 0 ? <Muted>Nothing on the board. Enjoy it.</Muted> : null}
+      </Panel>
+
+      <Panel title="Almost there">
+        {almost.map((a) => (
+          <View key={a.def.id} style={{ marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ color: C.text, fontWeight: '700' }}>{a.def.name}</Text>
+              <Muted>{a.value} / {a.next} {a.def.unit}</Muted>
+            </View>
+            <Bar pct={a.pct} color={C.gold} />
+          </View>
+        ))}
+      </Panel>
+
+      <Panel title="Campaign log"><Heatmap grid={player.heatmap} /></Panel>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});

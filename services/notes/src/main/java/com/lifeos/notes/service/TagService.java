@@ -28,10 +28,12 @@ public class TagService {
   private final NoteTagRepository noteTagRepository;
 
   @Cacheable(value = "user-tags", key = "#userId")
+  @Transactional(readOnly = true)
   public List<TagResponse> getAll(UUID userId) {
     return withUsageCounts(tagRepository.findAllByUserId(userId));
   }
 
+  @Transactional(readOnly = true)
   public List<TagResponse> search(UUID userId, String search, int limit) {
     List<Tag> tags =
         StringUtils.hasText(search)

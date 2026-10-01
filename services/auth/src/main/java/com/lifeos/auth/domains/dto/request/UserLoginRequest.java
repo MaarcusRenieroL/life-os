@@ -1,5 +1,7 @@
 package com.lifeos.auth.domains.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.experimental.FieldDefaults;
@@ -8,11 +10,11 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UserLoginRequest {
 
-  String email;
+  @NotBlank @Size(max = 255) String email;
 
-  String rawPassword;
+  @NotBlank @Size(max = 128) String rawPassword;
 
-  String deviceName;
+  @Size(max = 255) String deviceName;
 
-  String deviceType;
+  @Size(max = 50) String deviceType;
 }

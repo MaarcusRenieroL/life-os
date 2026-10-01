@@ -665,3 +665,29 @@ server:
 
 Start with Phase 1: Auth Service (see BUILD_PLAN.md)
 
+
+## Secrets
+
+Four secrets are required and have no defaults; `docker compose up` stops with a clear message if one is
+missing from `.env`:
+
+| Variable | Protects |
+|---|---|
+| `JWT_SECRET` | Signs access tokens |
+| `INTERNAL_API_KEY` | Service-to-service calls |
+| `GMAIL_ENCRYPTION_SECRET` | Gmail OAuth tokens at rest |
+| `FINANCE_ENCRYPTION_SECRET` | Bank account numbers at rest |
+
+Generate each with `openssl rand -base64 32`. Back up `.env`: losing the two encryption secrets makes the data
+they protect unreadable (Gmail would have to be reconnected; account numbers cannot be recovered).
+
+**Rotating the encryption secrets** (for example if one leaked) re-encrypts the stored values, then swaps the key:
+
+```bash
+OLD_GMAIL_ENCRYPTION_SECRET=<current> OLD_FINANCE_ENCRYPTION_SECRET=<current> ./scripts/rotate-encryption-secrets.sh
+```
+
+It test-decrypts every value with the old key first and changes nothing if any fails, stops the two services
+while it writes, saves the new keys to `.env`, and restarts them. Take a `pg_dump` first.
+`JWT_SECRET` can simply be replaced (everyone signs in again). Replacing `INTERNAL_API_KEY` needs every service
+restarted together.

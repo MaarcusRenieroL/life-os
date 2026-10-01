@@ -1,7 +1,7 @@
 package com.lifeos.job_tracker.repository;
 
 import com.lifeos.job_tracker.domains.entity.AiUsageLog;
-import java.math.BigDecimal;
+import com.lifeos.job_tracker.domains.record.AiUsageTotals;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -14,15 +14,23 @@ public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, UUID> {
   @Query("select log from AiUsageLog log where log.createdAt >= :since order by log.createdAt asc")
   List<AiUsageLog> findSince(@Param("since") Instant since);
 
-  @Query("select coalesce(sum(log.estimatedCostUsd), 0) from AiUsageLog log")
-  BigDecimal sumCost();
-
-  @Query("select coalesce(sum(log.estimatedCostUsd), 0) from AiUsageLog log where log.createdAt >= :since")
-  BigDecimal sumCostSince(@Param("since") Instant since);
-
-  @Query("select coalesce(sum(log.inputTokens), 0) from AiUsageLog log")
-  long sumInputTokens();
-
-  @Query("select coalesce(sum(log.outputTokens), 0) from AiUsageLog log")
-  long sumOutputTokens();
+  /**
+   * All five scalars the usage widget shows, in one pass. Was five queries (sumCost, sumCostSince,
+   * count, sumInputTokens, sumOutputTokens), each scanning the whole table for one number.
+   *
+   * <p>The month-to-date figure is a conditional aggregate rather than a second query: sum() skips
+   * nulls, so the case expression contributes only rows on or after monthStart. No coalesce here -
+   * an empty table yields nulls, which {@link AiUsageTotals}'s accessors turn into zeros.
+   */
+  @Query(
+      """
+      select new com.lifeos.job_tracker.domains.record.AiUsageTotals(
+        sum(log.estimatedCostUsd),
+        sum(case when log.createdAt >= :monthStart then log.estimatedCostUsd else null end),
+        count(log),
+        sum(log.inputTokens),
+        sum(log.outputTokens))
+      from AiUsageLog log
+      """)
+  AiUsageTotals totals(@Param("monthStart") Instant monthStart);
 }

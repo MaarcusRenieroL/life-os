@@ -1,11 +1,12 @@
 services:
   postgres:
+    restart: unless-stopped
     image: postgres:16-alpine
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: lifeos
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,16 +16,32 @@ services:
       retries: 5
 
   redis:
+    restart: unless-stopped
     image: redis:8-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # Local model server. Models live in a volume so they're pulled once (see OLLAMA_MODEL).
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
   kafka:
+    restart: unless-stopped
     image: confluentinc/cp-kafka:7.5.0
     environment:
       KAFKA_BROKER_ID: 1
@@ -34,23 +51,26 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     ports:
-      - "9092:9092"
+      - "127.0.0.1:9092:9092"
     depends_on:
       - zookeeper
 
   zookeeper:
+    restart: unless-stopped
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     ports:
-      - "2181:2181"
+      - "127.0.0.1:2181:2181"
 
   nginx:
+    restart: unless-stopped
     image: nginx:alpine
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./apps/web-react/dist:/usr/share/nginx/html:ro
+      - ./apps/web/dist:/usr/share/nginx/html:ro
+      - ./files:/usr/share/nginx/files:ro
     ports:
       - "80:80"
       - "443:443"
@@ -62,20 +82,29 @@ services:
       - notes
       - finance-tracker
       - batches
+      - habit-tracker
+      - tasks
+      - calendar
+      - workouts
 
   auth:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/auth/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
+      AUTH_OWNER_USER_ID: ${OWNER_USER_ID:?set OWNER_USER_ID in .env to your account id}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
+      AVATAR_STORAGE_DIR: /data/avatars
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -83,18 +112,21 @@ services:
         condition: service_started
 
   vault:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/vault/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
     ports:
-      - "8002:8002"
+      - "127.0.0.1:8002:8002"
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,73 +134,99 @@ services:
         condition: service_started
 
   job-tracker:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/job-tracker/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
+      # Without this it defaults to localhost:9092 (itself, inside the container) and the job-email
+      # consumer never connects, so application confirmations were silently never processed.
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
       RESUME_STORAGE_DIR: /data/resumes
-      # host.docker.internal reaches the Mac's own Ollama server (brew install ollama; ollama
-      # serve) from inside the container - there's no Ollama service in this compose file, it
-      # runs on the host so the same model cache is shared with any other local tool using it.
+      # Ollama runs as the "ollama" service below; pull the model once: docker compose exec ollama ollama pull qwen2.5:3b
       OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
-      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-mistral}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
       AI_ROUTE_RESUME_PARSE: ${AI_ROUTE_RESUME_PARSE:-ollama}
       AI_ROUTE_JOB_PARSE: ${AI_ROUTE_JOB_PARSE:-ollama}
       AI_ROUTE_EMAIL_CLASSIFY: ${AI_ROUTE_EMAIL_CLASSIFY:-ollama}
-      AI_ROUTE_TAILOR_RESUME: ${AI_ROUTE_TAILOR_RESUME:-claude}
+      AI_ROUTE_ATS_SUGGESTIONS: ${AI_ROUTE_ATS_SUGGESTIONS:-ollama}
       AI_ROUTE_COVER_LETTER: ${AI_ROUTE_COVER_LETTER:-claude}
       AI_ROUTE_INTERVIEW_PREP: ${AI_ROUTE_INTERVIEW_PREP:-ollama}
       AI_ROUTE_REFERRAL_MESSAGE: ${AI_ROUTE_REFERRAL_MESSAGE:-claude}
     volumes:
       - job_tracker_resumes:/data/resumes
     ports:
-      - "8003:8003"
+      - "127.0.0.1:8003:8003"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
 
   # Module tile enable/disable settings only - the notes module itself now
   # lives in its own `notes` service below.
   core:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/core/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Same host-Ollama reasoning as job-tracker's entry below - the model runs on the Mac,
+      # not in a container, so quick-capture's classifier reaches it the same way.
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-5}
     ports:
-      - "8004:8004"
+      - "127.0.0.1:8004:8004"
     depends_on:
       postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_healthy
 
   notes:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/notes/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
     ports:
-      - "8007:8007"
+      - "127.0.0.1:8007:8007"
     depends_on:
       postgres:
         condition: service_healthy
@@ -176,31 +234,35 @@ services:
         condition: service_healthy
 
   batches:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/batches/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
       VAULT_INTERNAL_BASE_URL: http://vault:8002
-      OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
+      OWNER_USER_ID: ${OWNER_USER_ID:?set OWNER_USER_ID in .env to your account id}
       BACKUP_CRON: ${BACKUP_CRON:-0 0 3 * * *}
       GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
       GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
       GMAIL_REDIRECT_URI: ${GMAIL_REDIRECT_URI:-http://localhost:8005/v1/batches/gmail/callback}
-      GMAIL_ENCRYPTION_SECRET: ${GMAIL_ENCRYPTION_SECRET:-zjQIMjy7Pp+dEPaXnwwFqETV64YQSQBYJYelXbSi5qc=}
+      GMAIL_POST_CONNECT_URL: ${GMAIL_POST_CONNECT_URL:-http://localhost/settings#integrations}
+      GMAIL_ENCRYPTION_SECRET: ${GMAIL_ENCRYPTION_SECRET:?set GMAIL_ENCRYPTION_SECRET in .env, see .env.example}
       GMAIL_ALERT_SENDERS: ${GMAIL_ALERT_SENDERS:-canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
-      GMAIL_JOB_SEARCH_SENDERS: ${GMAIL_JOB_SEARCH_SENDERS:-jobalerts-noreply@linkedin.com,jobs-noreply@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
-      GMAIL_JOB_SEARCH_KEYWORDS: ${GMAIL_JOB_SEARCH_KEYWORDS:-application,interview,offer,not moving forward,not selected,moving forward,thank you for applying,thanks for applying,update on your application}
-      GMAIL_POLL_CRON: ${GMAIL_POLL_CRON:-0 0 9,15,21 * * *}
+      GMAIL_JOB_SEARCH_SENDERS: ${GMAIL_JOB_SEARCH_SENDERS:-jobalerts-noreply@linkedin.com,jobs-noreply@linkedin.com,jobs-noreply@naukri.com,info@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
+      GMAIL_JOB_SEARCH_KEYWORDS: ${GMAIL_JOB_SEARCH_KEYWORDS:-application,applied,interview,offer,not moving forward,not selected,moving forward,thank you for applying,thanks for applying,update on your application}
+      GMAIL_POLL_CRON: ${GMAIL_POLL_CRON:-0 */15 * * * *}
       FINANCE_INTERNAL_BASE_URL: ${FINANCE_INTERNAL_BASE_URL:-http://finance-tracker:8006}
       JOB_TRACKER_INTERNAL_BASE_URL: ${JOB_TRACKER_INTERNAL_BASE_URL:-http://job-tracker:8003}
     ports:
-      - "8005:8005"
+      - "127.0.0.1:8005:8005"
     depends_on:
       kafka:
         condition: service_started
@@ -208,24 +270,27 @@ services:
         condition: service_healthy
 
   finance-tracker:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: services/finance-tracker/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      JWT_SECRET: ${JWT_SECRET:-TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
-      FINANCE_ENCRYPTION_SECRET: ${FINANCE_ENCRYPTION_SECRET:-wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
+      FINANCE_ENCRYPTION_SECRET: ${FINANCE_ENCRYPTION_SECRET:?set FINANCE_ENCRYPTION_SECRET in .env, see .env.example}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      OWNER_USER_ID: a05cf156-4fc1-4ddd-b84c-d9bdce24a47e
-      OLLAMA_URL: http://host.docker.internal:11434
+      OWNER_USER_ID: ${OWNER_USER_ID:?set OWNER_USER_ID in .env to your account id}
+      OLLAMA_URL: http://ollama:11434
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
-      - "8006:8006"
+      - "127.0.0.1:8006:8006"
     depends_on:
       postgres:
         condition: service_healthy
@@ -234,6 +299,102 @@ services:
       redis:
         condition: service_healthy
 
+  habit-tracker:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: services/habit-tracker/Dockerfile
+    environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "127.0.0.1:8008:8008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  tasks:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: services/tasks/Dockerfile
+    environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      HABIT_TRACKER_INTERNAL_BASE_URL: http://habit-tracker:8008
+      WORKOUTS_INTERNAL_BASE_URL: http://workouts:8011
+    ports:
+      - "127.0.0.1:8009:8009"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  workouts:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: services/workouts/Dockerfile
+    environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CALENDAR_INTERNAL_BASE_URL: http://calendar:8010
+    ports:
+      - "127.0.0.1:8011:8011"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  calendar:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: services/calendar/Dockerfile
+    environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env, see .env.example}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "127.0.0.1:8010:8010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
 volumes:
+  ollama_data:
   postgres_data:
   job_tracker_resumes:

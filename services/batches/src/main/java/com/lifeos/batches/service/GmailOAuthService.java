@@ -6,8 +6,12 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.lifeos.batches.domains.entity.GmailOAuthToken;
+import com.lifeos.batches.domains.enums.GmailPurpose;
+import com.lifeos.batches.exception.InvalidOAuthStateException;
 import com.lifeos.batches.domains.record.GmailConnectionStatus;
 import com.lifeos.batches.repository.GmailOAuthRepository;
 import com.lifeos.common.security.EncryptionService;
@@ -39,18 +43,25 @@ public class GmailOAuthService {
 
   private final EncryptionService encryptionService;
 
+  private final OAuthStateStore stateStore;
+
   private static final NetHttpTransport NET_HTTP_TRANSPORT = new NetHttpTransport();
   private static final GsonFactory GSON_FACTORY = new GsonFactory().getDefaultInstance();
 
-  public String buildAuthorizationUrl() {
+  public String buildAuthorizationUrl(GmailPurpose purpose) {
     return new GoogleAuthorizationCodeRequestUrl(
             gmailClientId, gmailRedirectUri, List.of(GmailScopes.GMAIL_READONLY))
         .setAccessType("offline")
-        .set("prompt", "consent")
+        .set("prompt", "select_account consent")
+        // A random single-use value: the callback only accepts flows this app started, and learns which
+        // mailbox this is from it.
+        .setState(stateStore.issue(purpose))
         .build();
   }
 
-  public void handleCallback(String authorizationCode) throws IOException {
+  public void handleCallback(String authorizationCode, String state) throws IOException {
+    GmailPurpose purpose = stateStore.consume(state).orElseThrow(InvalidOAuthStateException::new);
+
     GoogleTokenResponse response =
         new GoogleAuthorizationCodeTokenRequest(
                 NET_HTTP_TRANSPORT,
@@ -65,12 +76,13 @@ public class GmailOAuthService {
 
     GmailOAuthToken gmailOAuthToken =
         gmailOAuthRepository
-            .findByUserId(userId)
-            .orElseGet(() -> GmailOAuthToken.builder().userId(userId).build());
+            .findByUserIdAndPurpose(userId, purpose)
+            .orElseGet(() -> GmailOAuthToken.builder().userId(userId).purpose(purpose).build());
 
     gmailOAuthToken.setAccessTokenEncrypted(encryptionService.encrypt(response.getAccessToken()));
     gmailOAuthToken.setRefreshTokenEncrypted(encryptionService.encrypt(response.getRefreshToken()));
     gmailOAuthToken.setExpiresAt(Instant.now().plusSeconds(expiresInSeconds(response)));
+    gmailOAuthToken.setEmail(mailboxAddress(response.getAccessToken()));
 
     gmailOAuthRepository.save(gmailOAuthToken);
   }
@@ -78,18 +90,75 @@ public class GmailOAuthService {
   public GmailConnectionStatus getStatus() {
     UUID userId = UUID.fromString(ownerUserId);
 
-    return gmailOAuthRepository
-        .findByUserId(userId)
-        .map(token -> new GmailConnectionStatus(true, token.getCreatedAt(), token.getUpdatedAt()))
-        .orElseGet(() -> new GmailConnectionStatus(false, null, null));
+    List<GmailConnectionStatus.Mailbox> mailboxes =
+        gmailOAuthRepository.findAllByUserId(userId).stream()
+            .map(
+                token ->
+                    new GmailConnectionStatus.Mailbox(
+                        token.getPurpose().name(),
+                        addressOf(token),
+                        token.getCreatedAt(),
+                        token.getUpdatedAt()))
+            .toList();
+
+    GmailConnectionStatus.Mailbox finance =
+        mailboxes.stream().filter(m -> m.purpose().equals("FINANCE")).findFirst().orElse(null);
+    GmailConnectionStatus.Mailbox primary = finance != null ? finance : mailboxes.stream().findFirst().orElse(null);
+
+    return primary == null
+        ? new GmailConnectionStatus(false, null, null, null, mailboxes)
+        : new GmailConnectionStatus(
+            true, primary.connectedAt(), primary.lastRefreshedAt(), primary.email(), mailboxes);
   }
 
-  public String getValidAccessToken() {
+  /** The purposes that have a mailbox connected, so inbox-wide jobs can visit each one. */
+  public List<GmailPurpose> connectedPurposes() {
+    return gmailOAuthRepository.findAllByUserId(UUID.fromString(ownerUserId)).stream()
+        .map(GmailOAuthToken::getPurpose)
+        .toList();
+  }
+
+  /** Stored address, learned lazily for connections that predate purposes. */
+  private String addressOf(GmailOAuthToken token) {
+    if (token.getEmail() == null) {
+      try {
+        token.setEmail(mailboxAddress(getValidAccessToken(token.getPurpose())));
+        gmailOAuthRepository.save(token);
+      } catch (Exception ignored) {
+        // status must never fail because Google is unreachable
+      }
+    }
+    return token.getEmail();
+  }
+
+  private static String mailboxAddress(String accessToken) {
+    try {
+      return new Gmail.Builder(
+              NET_HTTP_TRANSPORT,
+              GSON_FACTORY,
+              request -> request.getHeaders().setAuthorization("Bearer " + accessToken))
+          .setApplicationName("life-os")
+          .build()
+          .users()
+          .getProfile("me")
+          .execute()
+          .getEmailAddress();
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  /**
+   * A valid access token for the mailbox serving {@code purpose}. When only one mailbox is
+   * connected it serves every purpose, so single-address setups keep working unchanged.
+   */
+  public String getValidAccessToken(GmailPurpose purpose) {
     UUID userId = UUID.fromString(ownerUserId);
 
     GmailOAuthToken gmailOAuthToken =
         gmailOAuthRepository
-            .findByUserId(userId)
+            .findByUserIdAndPurpose(userId, purpose)
+            .or(() -> gmailOAuthRepository.findAllByUserId(userId).stream().findFirst())
             .orElseThrow(
                 () ->
                     new IllegalStateException(

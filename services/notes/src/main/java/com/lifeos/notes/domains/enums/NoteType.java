@@ -10,5 +10,6 @@ public enum NoteType {
   RESEARCH,
   CHECKLIST,
   TRAVEL,
-  DECISION
+  DECISION,
+  JOURNAL
 }

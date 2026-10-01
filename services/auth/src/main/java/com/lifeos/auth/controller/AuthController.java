@@ -4,6 +4,7 @@ import com.lifeos.auth.domains.dto.request.BiometricLoginRequest;
 import com.lifeos.auth.domains.dto.request.CreateChallengeRequest;
 import com.lifeos.auth.domains.dto.request.EnrollBiometricRequest;
 import com.lifeos.auth.domains.dto.request.LogoutRequest;
+import com.lifeos.auth.domains.dto.request.PasswordRequest;
 import com.lifeos.auth.domains.dto.request.RefreshRequest;
 import com.lifeos.auth.domains.dto.request.UpdateProfileRequest;
 import com.lifeos.auth.domains.dto.request.UserLoginRequest;
@@ -16,10 +17,12 @@ import com.lifeos.auth.domains.entity.DeviceSession;
 import com.lifeos.auth.service.AccountService;
 import com.lifeos.auth.service.AuthService;
 import com.lifeos.auth.service.UserService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,7 +32,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/v1/auth")
@@ -50,7 +55,7 @@ public class AuthController {
 
   @PutMapping("/me")
   public ResponseEntity<ApiResponse<UserProfileResponse>> updateMe(
-      Authentication authentication, @RequestBody UpdateProfileRequest request) {
+      Authentication authentication, @Valid @RequestBody UpdateProfileRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
 
     return ResponseEntity.ok(
@@ -58,17 +63,54 @@ public class AuthController {
             userService.updateProfile(userId, request.getName()), "Profile updated successfully"));
   }
 
+  /** Lets the client check the password before it starts deleting data in other services. */
+  @PostMapping("/me/verify-password")
+  public ResponseEntity<ApiResponse<Void>> verifyPassword(
+      Authentication authentication, @Valid @RequestBody PasswordRequest request) {
+    authService.verifyPassword((UUID) authentication.getPrincipal(), request.getPassword());
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Password confirmed"));
+  }
+
   @DeleteMapping("/me")
-  public ResponseEntity<ApiResponse<Void>> deleteAccount(Authentication authentication) {
+  public ResponseEntity<ApiResponse<Void>> deleteAccount(
+      Authentication authentication, @Valid @RequestBody PasswordRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
+    authService.verifyPassword(userId, request.getPassword());
     accountService.deleteAccount(userId);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Account deleted successfully"));
   }
 
+  @PostMapping(path = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<ApiResponse<UserProfileResponse>> updateAvatar(
+      Authentication authentication, @RequestParam("file") MultipartFile file) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return ResponseEntity.ok(
+        ApiResponse.success(userService.updateAvatar(userId, file), "Avatar updated successfully"));
+  }
+
+  @GetMapping("/me/avatar")
+  public ResponseEntity<byte[]> getAvatar(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+    byte[] bytes = userService.getAvatarBytes(userId);
+
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType(userService.getAvatarContentType(userId)))
+        .body(bytes);
+  }
+
+  @DeleteMapping("/me/avatar")
+  public ResponseEntity<ApiResponse<UserProfileResponse>> deleteAvatar(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return ResponseEntity.ok(ApiResponse.success(userService.deleteAvatar(userId), "Avatar removed"));
+  }
+
   @PostMapping("/register")
   public ResponseEntity<ApiResponse<Void>> register(
-      @RequestBody UserRegisterRequest userRegisterRequest) {
+      @Valid @RequestBody UserRegisterRequest userRegisterRequest) {
     authService.register(userRegisterRequest.getEmail(), userRegisterRequest.getRawPassword());
     return ResponseEntity.status(HttpStatus.CREATED)
         .body(ApiResponse.success(null, "User registered successfully"));
@@ -76,7 +118,7 @@ public class AuthController {
 
   @PostMapping("/login")
   public ResponseEntity<ApiResponse<AuthResponse>> login(
-      @RequestBody UserLoginRequest userLoginRequest) {
+      @Valid @RequestBody UserLoginRequest userLoginRequest) {
     AuthResponse authResponse =
         authService.login(
             userLoginRequest.getEmail(),
@@ -122,7 +164,7 @@ public class AuthController {
 
   @PostMapping("/biometric/enroll")
   public ResponseEntity<ApiResponse<Void>> enrollBiometric(
-      Authentication authentication, @RequestBody EnrollBiometricRequest enrollBiometricRequest) {
+      Authentication authentication, @Valid @RequestBody EnrollBiometricRequest enrollBiometricRequest) {
 
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -137,7 +179,7 @@ public class AuthController {
 
   @PostMapping("/biometric/challenge")
   public ResponseEntity<ApiResponse<ChallengeResponse>> createChallenge(
-      @RequestBody CreateChallengeRequest createChallengeRequest) {
+      @Valid @RequestBody CreateChallengeRequest createChallengeRequest) {
     return ResponseEntity.ok(
         ApiResponse.success(
             authService.createChallenge(createChallengeRequest.getDeviceId()),
@@ -146,7 +188,7 @@ public class AuthController {
 
   @PostMapping("/biometric/login")
   public ResponseEntity<ApiResponse<AuthResponse>> biometricLogin(
-      @RequestBody BiometricLoginRequest biometricLoginRequest) {
+      @Valid @RequestBody BiometricLoginRequest biometricLoginRequest) {
     AuthResponse authResponse =
         authService.biometricLogin(
             biometricLoginRequest.getDeviceId(),

@@ -1,7 +1,11 @@
 package com.lifeos.finance_tracker.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateMonthlyIncomeRequest;
+import com.lifeos.finance_tracker.domains.dto.request.UpdateOwnerNamesRequest;
+import com.lifeos.finance_tracker.domains.dto.request.UpdatePayCycleRequest;
+import com.lifeos.finance_tracker.service.OwnNameService;
 import com.lifeos.finance_tracker.domains.record.*;
 import com.lifeos.finance_tracker.service.AnalyticsService;
 import jakarta.validation.Valid;
@@ -18,11 +22,38 @@ import org.springframework.web.bind.annotation.*;
 public class AnalyticsController {
 
   private final AnalyticsService analyticsService;
+  private final OwnNameService ownNameService;
 
   @GetMapping("/dashboard")
   public ResponseEntity<ApiResponse<DashboardSummary>> getDashboard(Authentication authentication) {
     DashboardSummary data = analyticsService.getDashboardSummary(authentication);
     return ResponseEntity.ok(ApiResponse.success(data, "Dashboard data retrieved successfully"));
+  }
+
+  /** The current pay cycle at a glance: what is left to spend, net worth, payday suggestion. */
+  @GetMapping("/overview")
+  public ResponseEntity<ApiResponse<FinanceOverview>> getOverview(Authentication authentication) {
+    return ResponseEntity.ok(ApiResponse.success(analyticsService.getOverview(authentication), "Overview fetched"));
+  }
+
+  /** Sets the day salary lands, which is when each pay cycle (and each budget period) starts. */
+  @PutMapping("/pay-cycle")
+  public ResponseEntity<ApiResponse<FinanceOverview>> updatePayCycle(
+      Authentication authentication, @Valid @RequestBody UpdatePayCycleRequest request) {
+    return ResponseEntity.ok(ApiResponse.success(analyticsService.updatePayCycle(authentication, request), "Pay cycle updated"));
+  }
+
+  /** Sets the names the user appears under in bank narrations; matching transactions become self-transfers. */
+  @PutMapping("/owner-names")
+  public ResponseEntity<ApiResponse<Integer>> updateOwnerNames(
+      Authentication authentication, @Valid @RequestBody UpdateOwnerNamesRequest request) {
+    int relabelled = ownNameService.setNames((UUID) authentication.getPrincipal(), request.getNames());
+    return ResponseEntity.ok(ApiResponse.success(relabelled, "Owner names saved"));
+  }
+
+  @GetMapping("/owner-names")
+  public ResponseEntity<ApiResponse<List<String>>> getOwnerNames(Authentication authentication) {
+    return ResponseEntity.ok(ApiResponse.success(ownNameService.namesFor((UUID) authentication.getPrincipal()), "Owner names fetched"));
   }
 
   @PutMapping("/monthly-income")
@@ -40,6 +71,21 @@ public class AnalyticsController {
         ApiResponse.success(data, "Category trend comparisons fetched successfully"));
   }
 
+  /**
+   * Aggregate of {@link #getCategoryAnalytics} for a whole set of categories, so a page showing
+   * many categories makes one request instead of one per category. Ids are passed as a repeated or
+   * comma-separated {@code categoryIds} query param.
+   */
+  @GetMapping("/categories")
+  public ResponseEntity<ApiResponse<List<CategoryComparison>>> getCategoryAnalyticsBulk(
+      Authentication authentication,
+      @RequestParam(name = "categoryIds", required = false) List<UUID> categoryIds) {
+    List<CategoryComparison> data =
+        analyticsService.getCategoryAnalyticsBulk(authentication, categoryIds);
+    return ResponseEntity.ok(
+        ApiResponse.success(data, "Category trend comparisons fetched successfully"));
+  }
+
   @GetMapping("/trends")
   public ResponseEntity<ApiResponse<List<MonthlyTrend>>> getTrends(Authentication authentication) {
     List<MonthlyTrend> data = analyticsService.getMonthlyTrends(authentication);
@@ -50,7 +96,7 @@ public class AnalyticsController {
   @GetMapping("/merchants")
   public ResponseEntity<ApiResponse<List<MerchantSpend>>> getTopMerchants(
       Authentication authentication, @RequestParam(defaultValue = "10") int limit) {
-    List<MerchantSpend> data = analyticsService.getTopMerchants(authentication, limit);
+    List<MerchantSpend> data = analyticsService.getTopMerchants(authentication, Bounds.clamp(limit, 1, 100));
     return ResponseEntity.ok(
         ApiResponse.success(data, "Top merchants spend distributions fetched successfully"));
   }

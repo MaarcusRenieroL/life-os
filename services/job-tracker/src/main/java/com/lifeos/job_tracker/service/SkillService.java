@@ -110,6 +110,27 @@ public class SkillService {
     log.info("merged {} extracted skills for user {}", extracted.size(), userId);
   }
 
+  /** Converts extracted skills into unsaved {@link Skill} objects for a one-off scoring pass
+   * (e.g. rescoring against a tailored resume) without touching the persisted skill library. */
+  public List<Skill> toTransientSkills(List<ExtractedSkill> extracted) {
+    if (extracted == null) {
+      return List.of();
+    }
+    return extracted.stream()
+        .filter(s -> s.name() != null && !s.name().isBlank())
+        .map(
+            s ->
+                Skill.builder()
+                    .name(s.name().trim())
+                    .category(parseCategory(s.category()))
+                    .proficiency(parseProficiency(s.proficiency()))
+                    .yearsOfExperience(s.yearsOfExperience() == null ? null : BigDecimal.valueOf(s.yearsOfExperience()))
+                    .confidenceScore(s.confidence() == null ? null : BigDecimal.valueOf(s.confidence()))
+                    .source(SkillSource.RESUME_EXTRACTION)
+                    .build())
+        .toList();
+  }
+
   private static SkillCategory parseCategory(String raw) {
     try {
       return raw == null ? SkillCategory.OTHER : SkillCategory.valueOf(raw.trim().toUpperCase());

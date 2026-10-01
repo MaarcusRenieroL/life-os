@@ -1,12 +1,13 @@
 package com.lifeos.notes.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.PageResponse;
 import com.lifeos.notes.domains.dto.request.CreateTemplateRequest;
 import com.lifeos.notes.domains.dto.request.UpdateTemplateRequest;
 import com.lifeos.notes.domains.dto.request.UseTemplateRequest;
 import com.lifeos.notes.domains.dto.response.NoteResponse;
 import com.lifeos.notes.domains.dto.response.TemplateResponse;
-import com.lifeos.notes.domains.record.PageResponse;
 import com.lifeos.notes.service.NoteTemplateService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -40,7 +41,7 @@ public class NoteTemplateController {
     return ResponseEntity.ok(
         ApiResponse.success(
             PageResponse.from(
-                noteTemplateService.list(userId(authentication), category, PageRequest.of(page, size))),
+                noteTemplateService.list(userId(authentication), category, PageRequest.of(Bounds.page(page), Bounds.size(size, 100)))),
             "Templates fetched successfully"));
   }
 

@@ -1,0 +1,66 @@
+server:
+  port: 8009
+
+spring:
+  application:
+    name: tasks
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    schemas: tasks_schema
+    default-schema: tasks_schema
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+jwt:
+  secret: ${JWT_SECRET}
+
+internal:
+  api-key: ${INTERNAL_API_KEY}
+
+# tasks doesn't use EncryptionService itself, but it's component-scanned in from
+# com.lifeos.common (see TasksApplication's @ComponentScan) and its constructor
+# requires this property to be resolvable, so it needs a value.
+encryption:
+  secret: ${ENCRYPTION_SECRET:pQ0+9m8lXwZk3aC7dR1sVh2yTf5eNb4uJq6oGp8zLxA=}
+
+tasks:
+  upcoming:
+    default-window-days: ${TASKS_UPCOMING_WINDOW_DAYS:7}
+  recurrence:
+    generate-cron: ${TASKS_RECURRENCE_GENERATE_CRON:0 5 0 * * *}
+  reminder:
+    dispatch:
+      cron: ${TASKS_REMINDER_DISPATCH_CRON:0 */5 * * * *}
+  overdue:
+    sweep:
+      cron: ${TASKS_OVERDUE_SWEEP_CRON:0 15 0 * * *}
+
+# habit-tracker feeds a goal's habit-consistency progress - see HabitStatsClient.
+habit-tracker:
+  internal-base-url: ${HABIT_TRACKER_INTERNAL_BASE_URL:http://habit-tracker:8008}
+
+# workouts feeds a fitness goal's workout progress - see WorkoutStatsClient.
+workouts:
+  internal-base-url: ${WORKOUTS_INTERNAL_BASE_URL:http://workouts:8011}
+
+# calendar and notes are told when a goal or task they reference is deleted - see CrossModuleCleanup.
+calendar:
+  internal-base-url: ${CALENDAR_INTERNAL_BASE_URL:http://calendar:8010}
+
+notes:
+  internal-base-url: ${NOTES_INTERNAL_BASE_URL:http://notes:8007}
+
+goals:
+  sweep:
+    cron: ${GOALS_SWEEP_CRON:0 30 8 * * *}

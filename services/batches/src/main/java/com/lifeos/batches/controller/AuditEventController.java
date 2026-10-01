@@ -1,16 +1,19 @@
 package com.lifeos.batches.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.batches.domains.dto.responses.AuditEventResponse;
 import com.lifeos.batches.domains.entity.AuditEvent;
 import com.lifeos.batches.repository.AuditEventRepository;
 import com.lifeos.common.domains.dto.response.ApiResponse;
-import java.util.List;
+import com.lifeos.common.domains.dto.response.PageResponse;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -21,14 +24,17 @@ public class AuditEventController {
   private final AuditEventRepository auditEventRepository;
 
   @GetMapping
-  public ResponseEntity<ApiResponse<List<AuditEventResponse>>> getEvents(
-      Authentication authentication) {
+  public ResponseEntity<ApiResponse<PageResponse<AuditEventResponse>>> getEvents(
+      Authentication authentication,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int size) {
     UUID userId = (UUID) authentication.getPrincipal();
 
-    List<AuditEventResponse> events =
-        auditEventRepository.findAllByUserIdOrderByOccurredAtDesc(userId).stream()
-            .map(event -> toResponse(event))
-            .toList();
+    PageResponse<AuditEventResponse> events =
+        PageResponse.from(
+            auditEventRepository
+                .findAllByUserIdOrderByOccurredAtDesc(userId, PageRequest.of(Bounds.page(page), Bounds.size(size, 200)))
+                .map(this::toResponse));
 
     return ResponseEntity.ok(ApiResponse.success(events, "Audit events retrieved successfully"));
   }

@@ -24,13 +24,18 @@ public class AccountService {
 
   private final AccountRepository accountRepository;
   private final EncryptionService encryptionService;
+  private final AccountBalanceService accountBalanceService;
+  private final ImportFailureService importFailureService;
+  private final com.lifeos.finance_tracker.repository.TransactionRepository transactionRepository;
 
+  @Transactional(readOnly = true)
   public List<AccountResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
     return accountRepository.findAllByUserId(userId).stream().map(this::toResponse).toList();
   }
 
+  @Transactional(readOnly = true)
   public AccountResponse get(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -52,6 +57,9 @@ public class AccountService {
             .accountNumberEncrypted(encryptionService.encrypt(request.getAccountNumber()))
             .currencyCode(request.getCurrencyCode())
             .openedDate(request.getOpenedDate())
+            // What the account holds today is its opening balance: transactions recorded from here
+            // on are added to it, and the balance is always opening + net of transactions.
+            .openingBalance(request.getCurrentBalance() != null ? request.getCurrentBalance() : BigDecimal.ZERO)
             .currentBalance(
                 request.getCurrentBalance() != null ? request.getCurrentBalance() : BigDecimal.ZERO)
             .isActive(true)
@@ -60,7 +68,10 @@ public class AccountService {
             .notes(request.getNotes())
             .build();
 
-    return toResponse(accountRepository.save(account));
+    Account created = accountRepository.save(account);
+    // Bank alerts that arrived before this account existed were kept; they can be booked now.
+    importFailureService.retryWaiting(userId);
+    return toResponse(created);
   }
 
   public AccountResponse update(Authentication authentication, UUID id, UpdateAccountRequest request) {
@@ -95,9 +106,10 @@ public class AccountService {
       account.setOpenedDate(request.getOpenedDate());
     }
 
-    if (request.getCurrentBalance() != null) {
-      account.setCurrentBalance(request.getCurrentBalance());
-    }
+    // Typing a new balance means "this is what it holds now": the opening balance moves so the
+    // derived balance equals it, instead of overwriting a number that the next transaction would
+    // silently throw away.
+    BigDecimal statedBalance = request.getCurrentBalance();
 
     if (request.getIsActive() != null) {
       account.setActive(request.getIsActive());
@@ -115,15 +127,35 @@ public class AccountService {
       account.setNotes(request.getNotes());
     }
 
-    return toResponse(accountRepository.save(account));
+    Account saved = accountRepository.save(account);
+    if (statedBalance != null) {
+      accountBalanceService.alignTo(saved, statedBalance);
+    }
+    return toResponse(saved);
   }
 
-  public void delete(Authentication authentication, UUID id) {
+  /**
+   * Deletes an account. One that has transactions is refused unless {@code withTransactions} is set:
+   * the database keeps them tied to the account, so a bare delete used to fail with a raw foreign-key
+   * error, and silently dropping the history would be worse. With the flag, its transactions go too.
+   */
+  public void delete(Authentication authentication, UUID id, boolean withTransactions) {
     UUID userId = (UUID) authentication.getPrincipal();
 
     accountRepository
         .findByIdAndUserId(id, userId)
         .orElseThrow(() -> new AccountNotFoundException(id));
+
+    long count = transactionRepository.countByAccountId(id);
+    if (count > 0) {
+      if (!withTransactions) {
+        throw new com.lifeos.finance_tracker.exception.InvalidRequestException(
+            "This account has " + count + " transaction" + (count == 1 ? "" : "s")
+                + ". Delete the account together with its transactions, or keep it.");
+      }
+      transactionRepository.clearDuplicateLinksInto(id);
+      transactionRepository.deleteAllByAccountId(id);
+    }
 
     accountRepository.deleteByIdAndUserId(id, userId);
   }
@@ -140,9 +172,23 @@ public class AccountService {
             .findByIdAndUserId(id, userId)
             .orElseThrow(() -> new AccountNotFoundException(id));
 
-    account.setCurrentBalance(request.getStatementBalance());
+    // The statement is the truth: pick the opening balance so the books agree with it.
+    accountBalanceService.alignTo(account, request.getStatementBalance());
 
-    return toResponse(accountRepository.save(account));
+    return toResponse(account);
+  }
+
+  /** Recomputes the balance from the ledger - for an account whose number looks off. */
+  public AccountResponse recalculate(Authentication authentication, UUID id) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    Account account =
+        accountRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() -> new AccountNotFoundException(id));
+
+    accountBalanceService.refresh(account);
+    return toResponse(account);
   }
 
   private AccountResponse toResponse(Account account) {
@@ -161,6 +207,8 @@ public class AccountService {
         .currencyCode(account.getCurrencyCode())
         .openedDate(account.getOpenedDate())
         .currentBalance(account.getCurrentBalance())
+        .openingBalance(account.getOpeningBalance())
+        .transactionCount(transactionRepository.countByAccountId(account.getId()))
         .isActive(account.isActive())
         .isPrimary(account.isPrimary())
         .emailForAlerts(account.getEmailForAlerts())

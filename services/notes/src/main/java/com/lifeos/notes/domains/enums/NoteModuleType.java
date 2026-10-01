@@ -5,5 +5,6 @@ public enum NoteModuleType {
   GOAL,
   TASK,
   JOB_APPLICATION,
-  HABIT
+  HABIT,
+  EVENT
 }

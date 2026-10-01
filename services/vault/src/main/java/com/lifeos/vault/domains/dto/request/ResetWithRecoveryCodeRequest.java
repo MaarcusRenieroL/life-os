@@ -10,9 +10,11 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ResetWithRecoveryCodeRequest {
 
-  @NotBlank String code;
+  @NotBlank
+  @Size(max = 64)
+  String code;
 
   @NotBlank
-  @Size(min = 8)
+  @Size(min = 8, max = 72, message = "newMasterPassword must be 8 to 72 characters")
   String newMasterPassword;
 }

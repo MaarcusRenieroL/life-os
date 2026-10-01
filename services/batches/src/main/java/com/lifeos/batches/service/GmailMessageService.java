@@ -7,10 +7,12 @@ import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 import com.google.api.services.gmail.model.MessagePart;
 import com.google.api.services.gmail.model.MessagePartHeader;
+import com.lifeos.batches.domains.enums.GmailPurpose;
 import com.lifeos.batches.domains.record.RawAlertEmail;
 import com.lifeos.batches.domains.record.RawEmail;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -53,7 +55,7 @@ public class GmailMessageService {
     List<String> senderAddresses = List.of(alertSendersConfig.split(","));
     String senderClause = "(from:" + String.join(" OR from:", senderAddresses) + ")";
 
-    return fetchByQuery(senderClause, dateRestriction).stream()
+    return fetchByQuery(senderClause, dateRestriction, GmailPurpose.FINANCE).stream()
         .map(
             email ->
                 new RawAlertEmail(
@@ -65,12 +67,15 @@ public class GmailMessageService {
    * Generic search, for consumers other than the bank-alert pipeline (e.g. job-search email sync)
    * that need their own query clause rather than the fixed sender allowlist above.
    */
-  public List<RawEmail> fetchByQuery(String searchClause, String dateRestriction) throws IOException {
-    Gmail gmail = buildGmailClient();
+  public List<RawEmail> fetchByQuery(
+      String searchClause, String dateRestriction, GmailPurpose purpose) throws IOException {
+    Gmail gmail = buildGmailClient(purpose);
 
     String query = dateRestriction == null ? searchClause : dateRestriction + " " + searchClause;
 
-    log.info("Gmail search query: {}", query);
+    // Naming the mailbox makes "my emails never arrived" diagnosable: it is often a different
+    // Google account from the one the applications were sent to.
+    log.info("Gmail search query (mailbox {}): {}", accountAddress(gmail), query);
 
     // Gmail's messages().list() paginates (default ~100 per page) - a flat
     // single call silently truncated results for any account with more
@@ -112,6 +117,14 @@ public class GmailMessageService {
         .toList();
   }
 
+  private static String accountAddress(Gmail gmail) {
+    try {
+      return gmail.users().getProfile("me").execute().getEmailAddress();
+    } catch (Exception e) {
+      return "unknown (" + e.getMessage() + ")";
+    }
+  }
+
   private RawEmail toRawEmail(Message message) {
     MessagePart payload = message.getPayload();
 
@@ -134,7 +147,7 @@ public class GmailMessageService {
 
   private String headerOrNull(MessagePart payload, String name) {
     return payload.getHeaders().stream()
-        .filter(header -> header.getName().equals(name))
+        .filter(header -> header.getName().equalsIgnoreCase(name))
         .findFirst()
         .map(MessagePartHeader::getValue)
         .orElse(null);
@@ -206,14 +219,23 @@ public class GmailMessageService {
     return Optional.empty();
   }
 
-  private Gmail buildGmailClient() {
+  private Gmail buildGmailClient(GmailPurpose purpose) {
     return new Gmail.Builder(
             TRANSPORT,
             JSON_FACTORY,
-            request ->
-                request
-                    .getHeaders()
-                    .setAuthorization("Bearer " + gmailOAuthService.getValidAccessToken()))
+            request -> {
+              request
+                  .getHeaders()
+                  .setAuthorization("Bearer " + gmailOAuthService.getValidAccessToken(purpose));
+              // Google's client defaults to a 20s connect / 20s read timeout, but it's set per
+              // request and easy to lose track of - pin it explicitly. This runs on the scheduled
+              // poller, and a hung Gmail call with no timeout would hold its thread (and the
+              // service's 6-connection pool is small) indefinitely. Not one of common's
+              // RestClient.Builder beans because this is Google's own HTTP transport, not Spring's
+              // RestClient, so those beans don't apply here.
+              request.setConnectTimeout((int) Duration.ofSeconds(10).toMillis());
+              request.setReadTimeout((int) Duration.ofSeconds(30).toMillis());
+            })
         .setApplicationName("life-os-batches")
         .build();
   }

@@ -38,6 +38,12 @@ public class GlobalExceptionHandler {
         .body(ApiResponse.error(exception.getMessage()));
   }
 
+  @ExceptionHandler(ResumeExtractionException.class)
+  public ResponseEntity<ApiResponse<Void>> handleResumeExtraction(ResumeExtractionException exception) {
+    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+        .body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(MaxUploadSizeExceededException.class)
   public ResponseEntity<ApiResponse<Void>> handleTooLarge(MaxUploadSizeExceededException exception) {
     return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)

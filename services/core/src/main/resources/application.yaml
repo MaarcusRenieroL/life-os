@@ -4,21 +4,91 @@ server:
 spring:
   application:
     name: core
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
       ddl-auto: validate
+    open-in-view: false
   flyway:
     schemas: core_schema
     default-schema: core_schema
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: core_service
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 jwt:
-  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+  secret: ${JWT_SECRET}
 
 internal:
-  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+  api-key: ${INTERNAL_API_KEY}
+
+# Fan-out targets for TodayService's cross-module aggregation - same naming
+# convention as batches' equivalent internal-base-url properties.
+habit-tracker:
+  internal-base-url: ${HABIT_TRACKER_INTERNAL_BASE_URL:http://habit-tracker:8008}
+
+job-tracker:
+  internal-base-url: ${JOB_TRACKER_INTERNAL_BASE_URL:http://job-tracker:8003}
+
+finance:
+  internal-base-url: ${FINANCE_INTERNAL_BASE_URL:http://finance-tracker:8006}
+
+notes:
+  internal-base-url: ${NOTES_INTERNAL_BASE_URL:http://notes:8007}
+
+tasks:
+  internal-base-url: ${TASKS_INTERNAL_BASE_URL:http://tasks:8009}
+
+calendar:
+  internal-base-url: ${CALENDAR_INTERNAL_BASE_URL:http://calendar:8010}
+
+workouts:
+  internal-base-url: ${WORKOUTS_INTERNAL_BASE_URL:http://workouts:8011}
+
+# The zone analytics and automation schedules bucket days in (finance's own jobs use the same).
+analytics:
+  zone: ${ANALYTICS_ZONE:Asia/Kolkata}
 
 # core doesn't use EncryptionService itself, but it's component-scanned in from
 # com.lifeos.common (see CoreApplication's @ComponentScan) and its constructor
 # requires this property to be resolvable, so it needs a value even if unused here.
 encryption:
-  secret: ${ENCRYPTION_SECRET:wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=}
+  secret: ${ENCRYPTION_SECRET:ZZM3kFKNDKuRBXSIKG8e3AZ/qyzwngMnr9zJZfqRXMA=}
+
+# QuickCaptureAiClient's classifier - same provider config shape as job-tracker's, Ollama-first
+# per this codebase's cost-conscious routing convention. Disabled by default so a fresh checkout
+# with no local Ollama server still works (quick-capture just reports "needs approval" and, if
+# the user opts in, uses Claude).
+ollama:
+  base-url: ${OLLAMA_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:qwen2.5:3b}
+  enabled: ${OLLAMA_ENABLED:false}
+
+anthropic:
+  base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-sonnet-5}
+  version: "2023-06-01"
+  max-tokens: 512
+
+# Email hub: classifies inbox mail (via the local model first) and turns bills, appointments,
+# deadlines and subscription receipts into tasks, calendar events and subscriptions.
+email-hub:
+  # Act on HIGH-confidence emails straight away (each stays undoable in the inbox). Off = every
+  # proposal waits for a yes.
+  auto-apply: ${EMAIL_HUB_AUTO_APPLY:true}
+  zone: ${EMAIL_HUB_ZONE:Asia/Kolkata}
+  # Email is private and the local model is free, so Claude is only used if this is turned on.
+  claude-fallback: ${EMAIL_HUB_CLAUDE_FALLBACK:false}

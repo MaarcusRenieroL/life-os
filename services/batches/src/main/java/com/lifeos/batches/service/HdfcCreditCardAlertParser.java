@@ -3,44 +3,45 @@ package com.lifeos.batches.service;
 import com.lifeos.batches.domains.enums.AccountType;
 import com.lifeos.batches.domains.enums.TransactionType;
 import com.lifeos.batches.domains.record.ParsedAlert;
-import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
+/**
+ * HDFC credit-card alerts: a purchase ("transaction of Rs. X at M on d at t") and a payment towards the
+ * card ("We have received payment of INR X on your <card> credit card on d t"), which is money
+ * coming in against the card's balance, not spending.
+ */
 @Service
 public class HdfcCreditCardAlertParser implements BankAlertParser {
+
+  private static final String CURRENCY = "(?:Rs\\.?|INR)\\s?";
+
+  private static final Pattern PURCHASE =
+      Pattern.compile("transaction of " + CURRENCY + "(" + AlertFormat.AMOUNT + ") at (.+?) on (\\d{2}/\\d{2}/\\d{2,4}) at");
+
+  private static final Pattern PAYMENT =
+      Pattern.compile("received payment of " + CURRENCY + "(" + AlertFormat.AMOUNT + ") on your (.+?) credit card on (\\d{2}/\\d{2}/\\d{2,4})");
 
   @Override
   public ParsedAlert parse(
       String messageId, String fromAddress, String subject, String body, Instant receivedAt) {
-    String regex = "transaction of Rs\\. ([\\d.]+) at (.+?) on (\\d{2}/\\d{2}/\\d{2}) at";
-
-    Pattern pattern = Pattern.compile(regex);
-    Matcher matcher = pattern.matcher(body);
-
-    if (!matcher.find()) {
-      throw new IllegalStateException();
+    Matcher purchase = PURCHASE.matcher(body);
+    if (purchase.find()) {
+      return new ParsedAlert(
+          "HDFC Bank", AccountType.CREDIT_CARD, AlertFormat.amount(purchase.group(1)), TransactionType.DEBIT,
+          AlertFormat.date(purchase.group(3)), purchase.group(2).trim(), messageId, null);
     }
 
-    BigDecimal amount = new BigDecimal(matcher.group(1));
-    Instant transactionDate =
-        LocalDate.parse(matcher.group(3), DateTimeFormatter.ofPattern("dd/MM/yy"))
-            .atStartOfDay(ZoneId.of("Asia/Kolkata"))
-            .toInstant();
+    Matcher payment = PAYMENT.matcher(body);
+    if (payment.find()) {
+      return new ParsedAlert(
+          "HDFC Bank", AccountType.CREDIT_CARD, AlertFormat.amount(payment.group(1)), TransactionType.CREDIT,
+          AlertFormat.date(payment.group(3)), "Card payment received", messageId, null);
+    }
 
-    return new ParsedAlert(
-        "HDFC Bank",
-        AccountType.CREDIT_CARD,
-        amount,
-        TransactionType.DEBIT,
-        transactionDate,
-        matcher.group(2).trim(),
-        messageId);
+    throw AlertFormat.unparsed(fromAddress, subject);
   }
 
   @Override

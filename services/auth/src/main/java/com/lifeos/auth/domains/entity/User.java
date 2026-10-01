@@ -38,6 +38,9 @@ public class User {
   @Column(name = "password_hash")
   String passwordHash;
 
+  @Column(name = "avatar_key")
+  String avatarKey;
+
   @Column(name = "created_at")
   Instant createdAt;
 

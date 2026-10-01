@@ -2,11 +2,18 @@ package com.lifeos.notes.domains.dto.request;
 
 import com.lifeos.notes.domains.enums.NoteType;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 @Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateNoteRequest {
 
@@ -25,4 +32,11 @@ public class UpdateNoteRequest {
   Boolean isArchived;
 
   Boolean isFavorite;
+
+  // Optional follow-up reminder date/time. Absent (null) in the request body means "leave
+  // unchanged" - to clear an existing follow-up, callers use clearFollowUpAt below, since a
+  // missing JSON field and an explicit clear are otherwise indistinguishable on a plain Instant.
+  Instant followUpAt;
+
+  Boolean clearFollowUpAt;
 }

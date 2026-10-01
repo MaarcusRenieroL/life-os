@@ -5,6 +5,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -26,7 +28,7 @@ public class InternalApiKeyFilter extends OncePerRequestFilter {
 
     String providedKey = request.getHeader("X-Internal-Api-Key");
 
-    if (providedKey != null && providedKey.equals(internalApiKey)) {
+    if (providedKey != null && constantTimeEquals(providedKey, internalApiKey)) {
       UsernamePasswordAuthenticationToken authToken =
           new UsernamePasswordAuthenticationToken(
               "internal-service", null, List.of(new SimpleGrantedAuthority("INTERNAL_SERVICE")));
@@ -35,5 +37,16 @@ public class InternalApiKeyFilter extends OncePerRequestFilter {
     }
 
     filterChain.doFilter(request, response);
+  }
+
+  /** MessageDigest.isEqual runs in time independent of where the first mismatching byte is,
+   * unlike String.equals - the internal API key is a bearer credential, so a timing side
+   * channel that narrows it down byte-by-byte is worth closing even on an internal network. */
+  private static boolean constantTimeEquals(String provided, String expected) {
+    if (expected == null) {
+      return false;
+    }
+    return MessageDigest.isEqual(
+        provided.getBytes(StandardCharsets.UTF_8), expected.getBytes(StandardCharsets.UTF_8));
   }
 }

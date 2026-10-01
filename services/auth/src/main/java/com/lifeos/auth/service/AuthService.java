@@ -9,7 +9,8 @@ import com.lifeos.auth.domains.entity.User;
 import com.lifeos.auth.domains.record.ChallengeRecord;
 import com.lifeos.auth.exception.EmailAlreadyExistsException;
 import com.lifeos.auth.exception.InvalidCredentialsException;
-import com.lifeos.auth.publisher.AuditEventPublisher;
+import com.lifeos.auth.exception.RegistrationClosedException;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.auth.repository.BiometricEnrollmentRepository;
 import com.lifeos.auth.repository.DeviceSessionRepository;
 import com.lifeos.auth.repository.RefreshTokenRepository;
@@ -54,7 +55,63 @@ public class AuthService {
   private final BiometricEnrollmentRepository biometricEnrollmentRepository;
   private final AuditEventPublisher auditEventPublisher;
 
+  /**
+   * Life OS is a single-owner app: the first account is the owner and every later signup is refused,
+   * so exposing the login page to the internet doesn't also expose account creation. Set
+   * AUTH_ALLOW_REGISTRATION=true to open it again (e.g. to add a second person deliberately).
+   */
+  @Value("${auth.registration.allow-additional:false}")
+  private boolean allowAdditionalRegistrations;
+
+  /**
+   * When set, only this account may sign in, refresh or use biometrics; everyone else gets the same
+   * "Invalid credentials" as a wrong password. Life OS is single-owner, so this keeps leftover test
+   * accounts (and anything created if signup is ever reopened) from being a way in once the site is
+   * on the internet, without deleting their data. Blank disables the check.
+   */
+  @Value("${auth.owner-user-id:}")
+  private String ownerUserId = "";
+
+  private volatile String dummyHash;
+
+  /** A real BCrypt hash of a throwaway value, used only to keep unknown-email logins as slow as real ones. */
+  private String dummyHash() {
+    String hash = dummyHash;
+    if (hash == null) {
+      hash = passwordEncoder.encode(UUID.randomUUID().toString());
+      dummyHash = hash;
+    }
+    return hash;
+  }
+
+  /** Device labels come from the client: never null (Map.of rejects it) and never longer than the column. */
+  private static String cleanLabel(String value, String fallback, int max) {
+    String trimmed = value == null ? "" : value.trim();
+    if (trimmed.isEmpty()) {
+      return fallback;
+    }
+    return trimmed.length() > max ? trimmed.substring(0, max) : trimmed;
+  }
+
+  /** Confirms the signed-in user knows their password before something destructive happens. */
+  public void verifyPassword(UUID userId, String rawPassword) {
+    User user = userService.findById(userId);
+    if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+      throw new InvalidCredentialsException("Incorrect password");
+    }
+  }
+
+  private void requireOwner(UUID userId) {
+    if (!ownerUserId.isBlank() && !userId.toString().equalsIgnoreCase(ownerUserId.trim())) {
+      throw new InvalidCredentialsException("Invalid credentials");
+    }
+  }
+
   public void register(String email, String rawPassword) {
+    if (!allowAdditionalRegistrations && userService.hasAnyUser()) {
+      throw new RegistrationClosedException();
+    }
+
     boolean isExistingUser = userService.existsByEmail(email);
 
     if (isExistingUser) {
@@ -67,29 +124,29 @@ public class AuthService {
   public AuthResponse login(
       String email, String rawPassword, String deviceName, String deviceType) {
 
-    User existingUser =
-        userService
-            .findByEmail(email)
-            .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
+    User existingUser = userService.findByEmail(email).orElse(null);
 
-    if (!passwordEncoder.matches(rawPassword, existingUser.getPasswordHash())) {
+    // Hash-compare even when the email is unknown, so response time does not reveal which emails exist.
+    String hashToCheck = existingUser != null ? existingUser.getPasswordHash() : dummyHash();
+    boolean passwordOk = passwordEncoder.matches(rawPassword, hashToCheck);
+    if (existingUser == null || !passwordOk) {
       throw new InvalidCredentialsException("Invalid credentials");
     }
+    requireOwner(existingUser.getId());
+
+    String device = cleanLabel(deviceName, "Unknown device", 255);
+    String type = cleanLabel(deviceType, "UNKNOWN", 50);
 
     DeviceSession deviceSession =
-        DeviceSession.builder()
-            .deviceName(deviceName)
-            .deviceType(deviceType)
-            .userId(existingUser.getId())
-            .build();
+        DeviceSession.builder().deviceName(device).deviceType(type).userId(existingUser.getId()).build();
 
     deviceSessionRepository.save(deviceSession);
 
     auditEventPublisher.publish(
         existingUser.getId(),
         AuditEventType.LOGIN_SUCCESS,
-        "Signed in from " + deviceName,
-        Map.of("device", deviceName, "deviceType", deviceType));
+        "Signed in from " + device,
+        Map.of("device", device, "deviceType", type));
 
     return issueTokens(deviceSession);
   }
@@ -113,6 +170,7 @@ public class AuthService {
     if (deviceSession.getRevokedAt() != null) {
       throw new InvalidCredentialsException("Invalid credentials");
     }
+    requireOwner(deviceSession.getUserId());
 
     if (existingRefreshToken.getExpiresAt().isBefore(now)) {
       throw new InvalidCredentialsException("Invalid credentials");
@@ -132,6 +190,7 @@ public class AuthService {
     return issueTokens(deviceSession);
   }
 
+  @Transactional(readOnly = true)
   public List<DeviceSession> listSessions(UUID userId) {
     return deviceSessionRepository.findByUserIdAndRevokedAtIsNull(userId);
   }
@@ -162,11 +221,13 @@ public class AuthService {
 
   public void enrollBiometric(UUID userId, String publicKey, String deviceId, String type) {
 
-    boolean isExistingBiometric =
-        biometricEnrollmentRepository.existsByUserIdAndDeviceId(userId, deviceId);
-
-    if (isExistingBiometric) {
+    // A device id maps to one account (login finds the enrollment by it alone), so another account
+    // cannot claim an id that is already enrolled.
+    if (biometricEnrollmentRepository.existsByDeviceId(deviceId)) {
       throw new BiometricAlreadyEnrolledException(deviceId);
+    }
+    if (!isEcPublicKey(publicKey)) {
+      throw new InvalidCredentialsException("Invalid public key");
     }
 
     biometricEnrollmentRepository.save(
@@ -174,7 +235,7 @@ public class AuthService {
             .userId(userId)
             .publicKey(publicKey)
             .deviceId(deviceId)
-            .type(type)
+            .type(cleanLabel(type, "BIOMETRIC", 50))
             .build());
   }
 
@@ -215,23 +276,32 @@ public class AuthService {
     if (!verifySignature(enrollment.getPublicKey(), challengeRecord.challenge(), signature)) {
       throw new InvalidCredentialsException("Invalid credentials");
     }
+    requireOwner(enrollment.getUserId());
+
+    String device = cleanLabel(deviceName, "Unknown device", 255);
+    String type = cleanLabel(deviceType, "UNKNOWN", 50);
 
     DeviceSession deviceSession =
-        DeviceSession.builder()
-            .deviceName(deviceName)
-            .deviceType(deviceType)
-            .userId(enrollment.getUserId())
-            .build();
+        DeviceSession.builder().deviceName(device).deviceType(type).userId(enrollment.getUserId()).build();
 
     deviceSessionRepository.save(deviceSession);
 
     auditEventPublisher.publish(
         enrollment.getUserId(),
         AuditEventType.LOGIN_SUCCESS,
-        "Signed in from " + deviceName,
-        Map.of("device", deviceName, "deviceType", deviceType));
+        "Signed in from " + device,
+        Map.of("device", device, "deviceType", type));
 
     return issueTokens(deviceSession);
+  }
+
+  private static boolean isEcPublicKey(String publicKeyBase64) {
+    try {
+      KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyBase64)));
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
   }
 
   private boolean verifySignature(String publicKeyBase64, String challenge, String signatureBase64) {

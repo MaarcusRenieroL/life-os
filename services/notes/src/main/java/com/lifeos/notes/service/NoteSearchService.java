@@ -8,6 +8,7 @@ import com.lifeos.notes.domains.dto.response.TagResponse;
 import com.lifeos.notes.domains.entity.Note;
 import com.lifeos.notes.domains.entity.NoteTag;
 import com.lifeos.notes.domains.entity.Tag;
+import com.lifeos.notes.exception.NoteValidationException;
 import com.lifeos.notes.repository.NoteFolderRepository;
 import com.lifeos.notes.repository.NoteRepository;
 import com.lifeos.notes.repository.NoteTagRepository;
@@ -19,7 +20,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -53,6 +53,10 @@ public class NoteSearchService {
   // inject here. A plain instance is all recent-searches JSON needs.
   private final ObjectMapper objectMapper = new ObjectMapper();
 
+  // readOnly like suggestions()/recentSearches() below - the only write this
+  // does is the recent-search list in Redis, which a JPA read-only
+  // transaction doesn't affect.
+  @Transactional(readOnly = true)
   public Page<SearchResultResponse> search(UUID userId, String rawQuery, int page, int size) {
     ParsedQuery parsed = parse(rawQuery);
     Pageable pageable = PageRequest.of(page, size);
@@ -113,16 +117,12 @@ public class NoteSearchService {
 
     if (ops.containsKey("before")) {
       java.time.Instant before = parseDate(ops.get("before"));
-      if (before != null) {
-        spec = spec.and((root, query, cb) -> cb.lessThan(root.get("createdAt"), before));
-      }
+      spec = spec.and((root, query, cb) -> cb.lessThan(root.get("createdAt"), before));
     }
 
     if (ops.containsKey("after")) {
       java.time.Instant after = parseDate(ops.get("after"));
-      if (after != null) {
-        spec = spec.and((root, query, cb) -> cb.greaterThan(root.get("createdAt"), after));
-      }
+      spec = spec.and((root, query, cb) -> cb.greaterThan(root.get("createdAt"), after));
     }
 
     if (StringUtils.hasText(parsed.freeText())) {
@@ -138,14 +138,19 @@ public class NoteSearchService {
     return spec;
   }
 
+  // Swallowing a parse failure here would silently drop the date filter and
+  // hand back unfiltered results that still look filtered to the user - a
+  // wrong answer is worse than an error, so a malformed date is a 400
+  // (NoteValidationException is what GlobalExceptionHandler maps to 400).
   private java.time.Instant parseDate(String value) {
     try {
       return java.time.LocalDate.parse(value).atStartOfDay(java.time.ZoneOffset.UTC).toInstant();
-    } catch (Exception e) {
-      return null;
+    } catch (java.time.format.DateTimeParseException e) {
+      throw new NoteValidationException("invalid date filter: " + value + ", expected YYYY-MM-DD");
     }
   }
 
+  @Transactional(readOnly = true)
   public List<SearchSuggestionResponse> suggestions(UUID userId, String query, String type) {
     if (!StringUtils.hasText(query)) {
       return List.of();
@@ -184,6 +189,7 @@ public class NoteSearchService {
     };
   }
 
+  @Transactional(readOnly = true)
   public List<RecentSearchResponse> recentSearches(UUID userId) {
     List<String> raw =
         redisTemplate.opsForList().range(recentSearchesKey(userId), 0, RECENT_SEARCHES_LIMIT - 1);

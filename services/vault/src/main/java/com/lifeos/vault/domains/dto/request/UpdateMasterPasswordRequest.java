@@ -10,9 +10,11 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateMasterPasswordRequest {
 
-  @NotBlank String currentPassword;
+  @NotBlank
+  @Size(max = 72)
+  String currentPassword;
 
   @NotBlank
-  @Size(min = 8)
+  @Size(min = 8, max = 72, message = "newPassword must be 8 to 72 characters")
   String newPassword;
 }

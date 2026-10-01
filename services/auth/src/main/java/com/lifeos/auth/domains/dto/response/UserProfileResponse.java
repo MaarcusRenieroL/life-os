@@ -13,4 +13,6 @@ public class UserProfileResponse {
   String email;
 
   String name;
+
+  boolean hasAvatar;
 }

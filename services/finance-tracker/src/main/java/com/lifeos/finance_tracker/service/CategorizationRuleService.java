@@ -21,6 +21,7 @@ public class CategorizationRuleService {
 
   private final CategorizationRuleRepository categorizationRuleRepository;
 
+  @Transactional(readOnly = true)
   public List<CategorizationRuleResponse> getAll(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -29,6 +30,7 @@ public class CategorizationRuleService {
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public CategorizationRuleResponse get(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
 

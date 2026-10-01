@@ -64,6 +64,10 @@ public class TransactionResponse {
   @JsonProperty("isDuplicate")
   boolean isDuplicate;
 
+  /** One leg of a transfer between the user's own accounts - neither spending nor income. */
+  @JsonProperty("isTransfer")
+  boolean isTransfer;
+
   UUID duplicateOf;
 
   TransactionStatus status;

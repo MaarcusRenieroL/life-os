@@ -9,9 +9,10 @@ import com.lifeos.vault.domains.dto.response.VaultEntryResponse;
 import com.lifeos.vault.domains.dto.response.VaultEntrySummaryResponse;
 import com.lifeos.vault.domains.entity.VaultEntry;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
+import com.lifeos.vault.exception.InvalidVaultRequestException;
 import com.lifeos.vault.exception.VaultEntryNotFoundException;
 import com.lifeos.vault.exception.VaultLockedException;
-import com.lifeos.vault.publisher.AuditEventPublisher;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.vault.repository.VaultEntryRepository;
 import com.lifeos.vault.store.VaultKeyStore;
 import java.util.ArrayList;
@@ -29,17 +30,22 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class VaultEntryService {
 
+  /** One import call never writes more than this, so a huge request cannot tie the service up. */
+  static final int MAX_BULK_IMPORT = 2000;
+
   private final VaultEntryRepository vaultEntryRepository;
   private final EncryptionService encryptionService;
   private final VaultKeyStore vaultKeyStore;
   private final AuditEventPublisher auditEventPublisher;
 
+  @Transactional(readOnly = true)
   public List<VaultEntrySummaryResponse> getEntries(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
 
     return vaultEntryRepository.findAllByUserId(userId).stream().map(this::toSummary).toList();
   }
 
+  @Transactional(readOnly = true)
   public VaultEntryResponse getEntry(Authentication authentication, UUID id) {
     UUID userId = (UUID) authentication.getPrincipal();
     SecretKey key = requireUnlockedKey(userId);
@@ -119,6 +125,12 @@ public class VaultEntryService {
   public BulkImportResultResponse saveEntries(
       Authentication authentication, List<CreateVaultEntryRequest> requests) {
     UUID userId = (UUID) authentication.getPrincipal();
+    if (requests == null || requests.isEmpty()) {
+      throw new InvalidVaultRequestException("Nothing to import");
+    }
+    if (requests.size() > MAX_BULK_IMPORT) {
+      throw new InvalidVaultRequestException("Import at most " + MAX_BULK_IMPORT + " entries at a time");
+    }
     SecretKey key = requireUnlockedKey(userId);
 
     int imported = 0;
@@ -128,7 +140,7 @@ public class VaultEntryService {
       try {
         CreateVaultEntryRequest request = requests.get(i);
 
-        if (!StringUtils.hasText(request.getTitle())) {
+        if (request == null || !StringUtils.hasText(request.getTitle())) {
           throw new IllegalArgumentException("Title is required");
         }
 

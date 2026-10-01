@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -63,8 +64,10 @@ public class AccountController {
 
   @DeleteMapping("/{id}")
   public ResponseEntity<ApiResponse<Void>> deleteAccount(
-      Authentication authentication, @PathVariable UUID id) {
-    accountService.delete(authentication, id);
+      Authentication authentication,
+      @PathVariable UUID id,
+      @RequestParam(defaultValue = "false") boolean withTransactions) {
+    accountService.delete(authentication, id, withTransactions);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Account deleted successfully"));
   }
@@ -78,5 +81,12 @@ public class AccountController {
         ApiResponse.success(
             accountService.reconcile(authentication, id, request),
             "Account reconciled successfully"));
+  }
+
+  @PostMapping("/{id}/recalculate")
+  public ResponseEntity<ApiResponse<AccountResponse>> recalculateAccount(
+      Authentication authentication, @PathVariable UUID id) {
+    return ResponseEntity.ok(
+        ApiResponse.success(accountService.recalculate(authentication, id), "Balance recalculated"));
   }
 }

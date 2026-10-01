@@ -1,10 +1,11 @@
 package com.lifeos.notes.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
+import com.lifeos.common.domains.dto.response.PageResponse;
 import com.lifeos.notes.domains.dto.response.RecentSearchResponse;
 import com.lifeos.notes.domains.dto.response.SearchResultResponse;
 import com.lifeos.notes.domains.dto.response.SearchSuggestionResponse;
-import com.lifeos.notes.domains.record.PageResponse;
 import com.lifeos.notes.service.NoteSearchService;
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +32,7 @@ public class NoteSearchController {
       @RequestParam(defaultValue = "20") int size) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            PageResponse.from(noteSearchService.search(userId(authentication), q, page, size)),
+            PageResponse.from(noteSearchService.search(userId(authentication), q, Bounds.page(page), Bounds.size(size, 100))),
             "Search results fetched successfully"));
   }
 

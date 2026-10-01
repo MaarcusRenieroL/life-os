@@ -10,6 +10,7 @@ import com.lifeos.job_tracker.exception.InvalidRequestException;
 import com.lifeos.job_tracker.exception.ResourceNotFoundException;
 import com.lifeos.job_tracker.integration.AiAssistant;
 import com.lifeos.job_tracker.repository.InterviewRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class InterviewService {
   private final JobListingService jobListingService;
   private final ResumeService resumeService;
   private final AiAssistant ai;
+  private final InterviewCalendarSyncService calendarSyncService;
 
   @Transactional(readOnly = true)
   public List<Interview> list(UUID userId, UUID jobId) {
@@ -54,12 +56,14 @@ public class InterviewService {
             .performanceNotes(request.performanceNotes())
             .result(parseResult(request.result()))
             .build();
+    interview.setCalendarEventId(calendarSyncService.createLinkedEvent(userId, interview, job.getCompany()));
     return interviewRepository.save(interview);
   }
 
   @Transactional
   public Interview update(UUID userId, UUID interviewId, UpsertInterviewRequest request) {
     Interview interview = get(userId, interviewId);
+    Instant previousScheduledAt = interview.getScheduledAt();
     interview.setRoundType(parseRoundType(request.roundType()));
     interview.setScheduledAt(request.scheduledAt());
     interview.setInterviewerName(request.interviewerName());
@@ -68,6 +72,16 @@ public class InterviewService {
     interview.setQuestionsAsked(request.questionsAsked());
     interview.setPerformanceNotes(request.performanceNotes());
     interview.setResult(parseResult(request.result()));
+
+    String companyName = jobListingService.get(userId, interview.getJobId()).getCompany();
+    if (interview.getCalendarEventId() != null) {
+      interview.setCalendarEventId(calendarSyncService.syncLinkedEvent(userId, interview, companyName));
+    } else if (!java.util.Objects.equals(previousScheduledAt, interview.getScheduledAt())) {
+      // Wasn't linked before (e.g. scheduledAt was null, or the original create-time call to
+      // calendar failed) - try again now that there's a concrete time to schedule against.
+      interview.setCalendarEventId(calendarSyncService.createLinkedEvent(userId, interview, companyName));
+    }
+
     return interviewRepository.save(interview);
   }
 
@@ -103,7 +117,9 @@ public class InterviewService {
 
   @Transactional
   public void delete(UUID userId, UUID interviewId) {
-    interviewRepository.delete(get(userId, interviewId));
+    Interview interview = get(userId, interviewId);
+    calendarSyncService.deleteLinkedEvent(userId, interview);
+    interviewRepository.delete(interview);
   }
 
   private static InterviewRoundType parseRoundType(String raw) {

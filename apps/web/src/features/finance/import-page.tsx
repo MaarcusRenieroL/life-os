@@ -1,0 +1,160 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+
+import { SectionHeading } from '@/components/section-heading';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { getErrorMessage } from '@/lib/error';
+
+import { accountApi } from './account-api';
+import { importApi } from './import-api';
+import { ImportFailuresCard } from './import-failures-card';
+
+export function ImportPage() {
+  const queryClient = useQueryClient();
+  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts, staleTime: 5 * 60_000 });
+  const { data: gmailStatus } = useQuery({ queryKey: ['finance', 'gmail-status'], queryFn: importApi.getGmailStatus });
+
+  const [accountId, setAccountId] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [password, setPassword] = useState('');
+  const [dragOver, setDragOver] = useState(false);
+  const [state, setState] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [result, setResult] = useState<{ rowsImported: number; rowsParsed: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
+  const isPdf = file?.name.toLowerCase().endsWith('.pdf') ?? false;
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const dropped = e.dataTransfer.files[0];
+    if (dropped) setFile(dropped);
+  }
+
+  async function parseStatement() {
+    if (!file || !accountId) return;
+    setState('uploading');
+    setError(null);
+    try {
+      const res = await importApi.importStatement(file, accountId, isPdf ? password || undefined : undefined);
+      setResult(res);
+      setState('success');
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+    } catch (err) {
+      setState('error');
+      setError(getErrorMessage(err, 'Could not parse this statement. Please try again.'));
+    }
+  }
+
+  async function syncGmail() {
+    setSyncing(true);
+    setSyncMessage(null);
+    try {
+      const count = await importApi.syncAllGmailHistory();
+      setSyncMessage(`Synced ${count} transaction(s).`);
+      queryClient.invalidateQueries({ queryKey: ['finance'] });
+    } catch (err) {
+      setSyncMessage(getErrorMessage(err, 'Sync failed.'));
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">Import</h1>
+
+      <div className="mt-4">
+        <ImportFailuresCard />
+      </div>
+
+      <section className="mt-4 hud-panel p-5">
+        <SectionHeading>Upload a statement</SectionHeading>
+        {accounts.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">Add an account first — statements need to be linked to one.</p>
+        ) : (
+          <>
+            <div className="mt-3">
+              <Select value={accountId} onValueChange={(v) => setAccountId(v ?? '')}>
+                <SelectTrigger><SelectValue placeholder="Choose account" /></SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.accountName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              className={`mt-3 flex h-28 items-center justify-center rounded-lg border-2 border-dashed text-sm text-muted-foreground ${dragOver ? 'border-primary bg-primary/5' : ''}`}
+            >
+              {file ? file.name : 'Drag & drop a CSV or PDF, or click to browse'}
+              <input
+                type="file"
+                accept=".csv,.pdf"
+                className="absolute h-28 w-full max-w-md cursor-pointer opacity-0"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+
+            {isPdf && (
+              <div className="mt-3">
+                <Input type="password" placeholder="PDF password (optional)" value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+            )}
+
+            <Button className="mt-3" onClick={() => void parseStatement()} disabled={!file || !accountId || state === 'uploading'}>
+              {state === 'uploading' ? 'Parsing…' : 'Parse statement'}
+            </Button>
+
+            {state === 'success' && result && (
+              <p className="mt-2 text-sm text-primary">{result.rowsImported} of {result.rowsParsed} transactions imported.</p>
+            )}
+            {state === 'error' && error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+          </>
+        )}
+
+        <div className="mt-4 border-t pt-3 text-xs text-muted-foreground">
+          <p>1. Upload a CSV or PDF statement for the linked account (PDF password optional).</p>
+          <p>2. It's parsed immediately and categorized using your rules.</p>
+          <p>3. New and duplicate transactions land in the ledger for review.</p>
+        </div>
+      </section>
+
+      <section className="mt-4 hud-panel p-5">
+        <SectionHeading>Gmail sync</SectionHeading>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {gmailStatus?.connected ? 'Bank alerts are read from the Gmail account you connected. ' : 'Gmail is not connected yet. '}
+          Connect or change the bank and job mailboxes in{' '}
+          <Link to="/settings#integrations" className="text-primary hover:underline">Settings</Link>.
+        </p>
+        {gmailStatus?.connected && (
+          <div className="mt-3 flex items-center gap-3">
+            <Button size="sm" variant="outline" onClick={() => void syncGmail()} disabled={syncing}>
+              {syncing ? 'Syncing…' : 'Sync all bank history'}
+            </Button>
+          </div>
+        )}
+        {syncMessage && <p className="mt-2 text-xs text-muted-foreground">{syncMessage}</p>}
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          For a specific period (e.g. the last 1–2 months), download that range as a statement from your bank and
+          upload it here — Gmail sync (right) only looks at new emails going forward, not history.
+        </p>
+      </section>
+    </div>
+  );
+}

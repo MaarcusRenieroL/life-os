@@ -8,16 +8,37 @@ public record ParsedResume(
     String name,
     String email,
     String phone,
+    String location,
+    String githubUrl,
+    String linkedinUrl,
+    String portfolioUrl,
+    String summary,
     List<Experience> experience,
     List<Education> education,
+    List<ProjectExtract> projects,
     List<ExtractedSkill> skills,
     List<String> certifications,
     List<String> achievements) {
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   public record Experience(
-      String title, String company, String startDate, String endDate, String description) {}
+      String title,
+      String company,
+      String location,
+      String startDate,
+      String endDate,
+      List<String> bullets) {}
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   public record Education(String degree, String school, String field, String graduationYear) {}
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  public record ProjectExtract(
+      String name,
+      String description,
+      List<String> techStack,
+      String link,
+      String startDate,
+      String endDate,
+      List<String> bullets) {}
 }

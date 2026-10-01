@@ -1,0 +1,42 @@
+server:
+  port: 8010
+
+spring:
+  application:
+    name: calendar
+  datasource:
+    hikari:
+      maximum-pool-size: 6
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    schemas: calendar_schema
+    default-schema: calendar_schema
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+jwt:
+  secret: ${JWT_SECRET}
+
+internal:
+  api-key: ${INTERNAL_API_KEY}
+
+# calendar doesn't use EncryptionService itself, but it's component-scanned in from
+# com.lifeos.common (see CalendarApplication's @ComponentScan) and its constructor
+# requires this property to be resolvable, so it needs a value.
+encryption:
+  secret: ${ENCRYPTION_SECRET:d3F6xLp8N2vB0kR9wYtC7uJmZ4hQ1sEaX5oGn6iPqTk=}
+
+calendar:
+  recurrence:
+    generate-cron: ${CALENDAR_RECURRENCE_GENERATE_CRON:0 10 0 * * *}
+  reminder:
+    dispatch:
+      cron: ${CALENDAR_REMINDER_DISPATCH_CRON:0 */5 * * * *}

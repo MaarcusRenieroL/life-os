@@ -1,14 +1,17 @@
 package com.lifeos.vault.service;
 
 import com.lifeos.common.events.AuditEventType;
+import com.lifeos.common.events.NotificationEventPublisher;
+import com.lifeos.common.events.NotificationEventType;
 import com.lifeos.vault.domains.dto.response.VaultStatusResponse;
 import com.lifeos.vault.domains.entity.PaymentCard;
 import com.lifeos.vault.domains.entity.VaultEntry;
 import com.lifeos.vault.domains.entity.VaultMasterPassword;
 import com.lifeos.vault.domains.record.VaultKeyRecord;
 import com.lifeos.vault.exception.InvalidMasterPasswordException;
+import com.lifeos.vault.exception.InvalidVaultRequestException;
 import com.lifeos.vault.exception.MasterPasswordAlreadySetException;
-import com.lifeos.vault.publisher.AuditEventPublisher;
+import com.lifeos.common.events.AuditEventPublisher;
 import com.lifeos.vault.repository.PaymentCardRepository;
 import com.lifeos.vault.repository.RecoveryCodeRepository;
 import com.lifeos.vault.repository.VaultEntryRepository;
@@ -28,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class VaultMasterPasswordService {
 
   private static final long VAULT_UNLOCK_DURATION_SECONDS = 900;
+  private static final int MIN_MASTER_PASSWORD_LENGTH = 8;
 
   private final VaultEntryRepository vaultEntryRepository;
   private final VaultMasterPasswordRepository vaultMasterPasswordRepository;
@@ -38,12 +42,18 @@ public class VaultMasterPasswordService {
   private final PasswordEncoder passwordEncoder;
   private final PasswordStrengthService passwordStrengthService;
   private final VaultKeyStore vaultKeyStore;
+  private final UnlockAttemptLimiter attemptLimiter;
 
   private final AuditEventPublisher auditEventPublisher;
+  private final NotificationEventPublisher notificationEventPublisher;
 
   public void setup(UUID userId, String masterPassword) {
     if (vaultMasterPasswordRepository.existsByUserId(userId)) {
       throw new MasterPasswordAlreadySetException();
+    }
+
+    if (masterPassword.length() < MIN_MASTER_PASSWORD_LENGTH) {
+      throw new InvalidVaultRequestException("Master password must be at least " + MIN_MASTER_PASSWORD_LENGTH + " characters");
     }
 
     String salt = encryptionService.generateSalt();
@@ -53,26 +63,32 @@ public class VaultMasterPasswordService {
             .userId(userId)
             .passwordHash(passwordEncoder.encode(masterPassword))
             .salt(salt)
+            .kdfIterations(EncryptionService.CURRENT_ITERATIONS)
             .strength(passwordStrengthService.score(masterPassword).name())
             .build());
   }
 
   public void verify(UUID userId, String masterPassword) {
+    attemptLimiter.checkAllowed(userId);
     VaultMasterPassword vaultMasterPassword =
         vaultMasterPasswordRepository
             .findByUserId(userId)
             .orElseThrow(InvalidMasterPasswordException::new);
 
     if (!passwordEncoder.matches(masterPassword, vaultMasterPassword.getPasswordHash())) {
+      attemptLimiter.recordFailure(userId);
       throw new InvalidMasterPasswordException();
     }
+    attemptLimiter.recordSuccess(userId);
 
-    SecretKey key = encryptionService.deriveKey(masterPassword, vaultMasterPassword.getSalt());
+    SecretKey key =
+        encryptionService.deriveKey(masterPassword, vaultMasterPassword.getSalt(), vaultMasterPassword.effectiveKdfIterations());
 
     vaultKeyStore.save(
         userId, new VaultKeyRecord(key, Instant.now().plusSeconds(VAULT_UNLOCK_DURATION_SECONDS)));
   }
 
+  @Transactional(readOnly = true)
   public VaultStatusResponse getStatus(UUID userId) {
     var vaultMasterPassword = vaultMasterPasswordRepository.findByUserId(userId).orElse(null);
 
@@ -88,20 +104,23 @@ public class VaultMasterPasswordService {
 
   @Transactional
   public void changePassword(UUID userId, String currentPassword, String newPassword) {
+    attemptLimiter.checkAllowed(userId);
     VaultMasterPassword existingMasterPassword =
         vaultMasterPasswordRepository
             .findByUserId(userId)
             .orElseThrow(InvalidMasterPasswordException::new);
 
     if (!passwordEncoder.matches(currentPassword, existingMasterPassword.getPasswordHash())) {
+      attemptLimiter.recordFailure(userId);
       throw new InvalidMasterPasswordException();
     }
+    attemptLimiter.recordSuccess(userId);
 
     SecretKey oldKey =
-        encryptionService.deriveKey(currentPassword, existingMasterPassword.getSalt());
+        encryptionService.deriveKey(currentPassword, existingMasterPassword.getSalt(), existingMasterPassword.effectiveKdfIterations());
 
     String newSalt = encryptionService.generateSalt();
-    SecretKey newKey = encryptionService.deriveKey(newPassword, newSalt);
+    SecretKey newKey = encryptionService.deriveKey(newPassword, newSalt, EncryptionService.CURRENT_ITERATIONS);
 
     List<VaultEntry> entries = vaultEntryRepository.findAllByUserId(userId);
 
@@ -178,6 +197,7 @@ public class VaultMasterPasswordService {
 
     existingMasterPassword.setPasswordHash(passwordEncoder.encode(newPassword));
     existingMasterPassword.setSalt(newSalt);
+    existingMasterPassword.setKdfIterations(EncryptionService.CURRENT_ITERATIONS);
     existingMasterPassword.setStrength(passwordStrengthService.score(newPassword).name());
 
     vaultMasterPasswordRepository.save(existingMasterPassword);
@@ -190,5 +210,11 @@ public class VaultMasterPasswordService {
 
     auditEventPublisher.publish(
         userId, AuditEventType.MASTER_PASSWORD_CHANGED, "Master Password Updated", null);
+
+    notificationEventPublisher.publish(
+        userId,
+        NotificationEventType.VAULT_MASTER_PASSWORD_CHANGED,
+        "Vault master password changed",
+        "Your vault master password was changed. If this wasn't you, secure your account immediately.");
   }
 }
