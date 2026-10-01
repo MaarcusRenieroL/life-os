@@ -39,15 +39,15 @@ spring:
       port: ${REDIS_PORT:6379}
 
 jwt:
-  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+  secret: ${JWT_SECRET}
 
 # This one is actually used (AccountService encrypts account numbers with it) - unlike the
 # other services' inert copy of this property, a real deployment must override this.
 encryption:
-  secret: ${FINANCE_ENCRYPTION_SECRET:FNhRh4Cv3lxh2B68n9ffJUW+r9R65CpKcZEpjte16UE=}
+  secret: ${FINANCE_ENCRYPTION_SECRET}
 
 internal:
-  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+  api-key: ${INTERNAL_API_KEY}
 
 ollama:
   base-url: ${OLLAMA_URL:http://localhost:11434}
