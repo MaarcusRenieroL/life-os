@@ -68,9 +68,9 @@ function Shell() {
 }
 
 function Gate() {
-  const { ready, signedIn } = useSession();
+  const { ready, signedIn, settings } = useSession();
   if (!ready) return <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: 'center' }}><ActivityIndicator color={C.accent} /></View>;
-  return signedIn ? <Shell /> : <Login />;
+  return signedIn ? <Shell /> : <Login key={`${settings.baseUrl}|${settings.cfClientId}|${settings.cfClientSecret}`} />;
 }
 
 export default function RootLayout() {
