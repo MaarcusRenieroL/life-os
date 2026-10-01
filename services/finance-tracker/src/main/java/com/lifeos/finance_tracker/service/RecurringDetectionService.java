@@ -36,8 +36,14 @@ public class RecurringDetectionService {
   private final MerchantClusteringService merchantClusteringService;
 
   public void detectPatterns(UUID userId) {
+    // Only money going out can be a recurring bill. Salary and other credits repeat monthly too and
+    // were being flagged as bills; duplicates, ignored rows and transfers between own accounts are
+    // not real payments either.
     List<Transaction> transactions =
-        transactionRepository.findAllByUserIdOrderByTransactionDateDesc(userId);
+        transactionRepository.findAllByUserIdOrderByTransactionDateDesc(userId).stream()
+            .filter(t -> t.getType() == com.lifeos.finance_tracker.domains.enums.TransactionType.DEBIT)
+            .filter(com.lifeos.finance_tracker.util.Ledger::counts)
+            .toList();
     List<String> distinctDescriptions =
         transactions.stream().map(Transaction::getDescription).distinct().toList();
 
