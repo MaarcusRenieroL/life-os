@@ -20,7 +20,20 @@ class EmailHubSyncServiceTest {
         .contains("in:inbox")
         .contains("-from:alerts@hdfcbank.net")
         .contains("-from:canarabank@canarabank.com")
-        .contains("-from:jobs-noreply@linkedin.com")
-        .contains("-from:noreply@greenhouse.io");
+        .contains("-from:linkedin.com")
+        .contains("-from:greenhouse.io")
+        .contains("-from:linkedin.com")
+        .contains("-subject:\"verification code\"")
+        .contains("-subject:\"otp\"")
+        .contains("subject:\"invoice\"");
+  }
+
+  @Test
+  void securityCodeMailIsRecognisedFromTheSubjectOrTheTopOfTheBody() {
+    assertThat(SecurityMail.matches("Your login verification code", "")).isTrue();
+    assertThat(SecurityMail.matches("[GitHub] Sudo email verification code", null)).isTrue();
+    assertThat(SecurityMail.matches("Hello", "Your OTP is 123456. Do not share this code.")).isTrue();
+    assertThat(SecurityMail.matches("Your electricity bill is due", "Amount due 1,240 by 5 Oct")).isFalse();
+    assertThat(SecurityMail.matches("Booking confirmation", "Your flight is confirmed")).isFalse();
   }
 }

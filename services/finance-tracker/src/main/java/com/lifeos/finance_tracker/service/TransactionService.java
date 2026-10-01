@@ -85,6 +85,7 @@ public class TransactionService {
   private final BudgetSpendService budgetSpendService;
   private final AccountBalanceService accountBalanceService;
   private final AccountResolver accountResolver;
+  private final OwnNameService ownNameService;
 
   @Transactional(readOnly = true)
   public PageResponse<TransactionResponse> getAllPaginated(
@@ -368,6 +369,7 @@ public class TransactionService {
       categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
     }
 
+    ownNameService.applyTo(transaction);
     merchantService.recordTransaction(userId, transaction.getDescription(), transaction.getAmount());
 
     return afterChange(transactionRepository.save(transaction));
@@ -705,6 +707,7 @@ public class TransactionService {
 
     categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
 
+    ownNameService.applyTo(transaction);
     merchantService.recordTransaction(account.getUserId(), description, transaction.getAmount());
 
     afterChange(transactionRepository.save(transaction));
@@ -776,6 +779,7 @@ public class TransactionService {
         Transaction transaction =
             buildCsvRowTransaction(account, request, merchants, categorizationRules, touchedMerchants);
         if (transaction != null) {
+          ownNameService.applyTo(transaction);
           toSave.add(transaction);
         }
       } catch (RuntimeException exception) {
@@ -891,6 +895,7 @@ public class TransactionService {
 
     categorizationService.categorize(transaction).ifPresent(transaction::setCategoryId);
 
+    ownNameService.applyTo(transaction);
     merchantService.recordTransaction(account.getUserId(), description, transaction.getAmount());
 
     afterChange(transactionRepository.save(transaction));
