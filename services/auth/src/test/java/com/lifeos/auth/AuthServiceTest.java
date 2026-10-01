@@ -182,8 +182,90 @@ class AuthServiceTest {
             () -> authService.login("ghost@example.com", "whatever", "Pixel 8", "ANDROID"))
         .isInstanceOf(InvalidCredentialsException.class);
 
-    verify(passwordEncoder, never()).matches(any(), any());
+    // The password is still hashed against a dummy so an unknown email costs the same as a wrong password.
+    verify(passwordEncoder).matches(any(), any());
     verify(deviceSessionRepository, never()).save(any());
+  }
+
+  @Test
+  void loginWithoutDeviceLabelsStillWorksAndUsesSafeDefaults() {
+    when(userService.findByEmail("jane@example.com")).thenReturn(Optional.of(userWithHash("hash")));
+    when(passwordEncoder.matches("secret-pass", "hash")).thenReturn(true);
+    when(accessTokenService.generateAccessToken(userId)).thenReturn("access");
+    stubSessionSaveAssignsId();
+
+    var response = authService.login("jane@example.com", "secret-pass", null, "  ");
+
+    assertThat(response.getAccessToken()).isEqualTo("access");
+    var captor = org.mockito.ArgumentCaptor.forClass(DeviceSession.class);
+    verify(deviceSessionRepository).save(captor.capture());
+    assertThat(captor.getValue().getDeviceName()).isEqualTo("Unknown device");
+    assertThat(captor.getValue().getDeviceType()).isEqualTo("UNKNOWN");
+  }
+
+  @Test
+  void overlongDeviceNamesAreTruncatedToTheColumn() {
+    when(userService.findByEmail("jane@example.com")).thenReturn(Optional.of(userWithHash("hash")));
+    when(passwordEncoder.matches("secret-pass", "hash")).thenReturn(true);
+    when(accessTokenService.generateAccessToken(userId)).thenReturn("access");
+    stubSessionSaveAssignsId();
+
+    authService.login("jane@example.com", "secret-pass", "x".repeat(400), "ANDROID");
+
+    var captor = org.mockito.ArgumentCaptor.forClass(DeviceSession.class);
+    verify(deviceSessionRepository).save(captor.capture());
+    assertThat(captor.getValue().getDeviceName()).hasSize(255);
+  }
+
+  // ---------- biometric enrolment ----------
+
+  private static String freshEcPublicKey() throws Exception {
+    var generator = java.security.KeyPairGenerator.getInstance("EC");
+    generator.initialize(256);
+    return java.util.Base64.getEncoder().encodeToString(generator.generateKeyPair().getPublic().getEncoded());
+  }
+
+  @Test
+  void enrollingADeviceAnotherAccountOwnsIsRefused() throws Exception {
+    when(biometricEnrollmentRepository.existsByDeviceId("phone-1")).thenReturn(true);
+
+    assertThatThrownBy(() -> authService.enrollBiometric(userId, freshEcPublicKey(), "phone-1", "FINGERPRINT"))
+        .isInstanceOf(com.lifeos.auth.exception.BiometricAlreadyEnrolledException.class);
+
+    verify(biometricEnrollmentRepository, never()).save(any());
+  }
+
+  @Test
+  void enrollingAJunkPublicKeyIsRefused() {
+    when(biometricEnrollmentRepository.existsByDeviceId("phone-1")).thenReturn(false);
+
+    assertThatThrownBy(() -> authService.enrollBiometric(userId, "not-a-key", "phone-1", "FINGERPRINT"))
+        .isInstanceOf(InvalidCredentialsException.class);
+
+    verify(biometricEnrollmentRepository, never()).save(any());
+  }
+
+  @Test
+  void enrollingAValidKeySavesIt() throws Exception {
+    when(biometricEnrollmentRepository.existsByDeviceId("phone-1")).thenReturn(false);
+
+    authService.enrollBiometric(userId, freshEcPublicKey(), "phone-1", null);
+
+    var captor = org.mockito.ArgumentCaptor.forClass(com.lifeos.auth.domains.entity.BiometricEnrollment.class);
+    verify(biometricEnrollmentRepository).save(captor.capture());
+    assertThat(captor.getValue().getType()).isEqualTo("BIOMETRIC");
+  }
+
+  // ---------- password confirmation ----------
+
+  @Test
+  void verifyPasswordAcceptsTheRightPasswordAndRejectsAWrongOne() {
+    when(userService.findById(userId)).thenReturn(userWithHash("hash"));
+    when(passwordEncoder.matches("right", "hash")).thenReturn(true);
+    when(passwordEncoder.matches("wrong", "hash")).thenReturn(false);
+
+    authService.verifyPassword(userId, "right");
+    assertThatThrownBy(() -> authService.verifyPassword(userId, "wrong")).isInstanceOf(InvalidCredentialsException.class);
   }
 
   // ---------- refresh ----------

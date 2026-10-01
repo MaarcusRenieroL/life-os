@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { authApi } from '@/features/auth/auth-api';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { vaultApi } from '@/features/vault/vault-api';
 import { getErrorMessage } from '@/lib/error';
 import { tokenStore } from '@/lib/token';
@@ -27,12 +29,15 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [password, setPassword] = useState('');
 
   async function confirmDelete() {
-    if (deleting) return;
+    if (deleting || !password) return;
     setDeleting(true);
     setError(null);
     try {
+      // Check the password first: a wrong one must not leave the vault already wiped.
+      await authApi.verifyPassword(password);
       await vaultApi.deleteAccount();
     } catch (err) {
       setDeleting(false);
@@ -41,7 +46,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
     }
 
     try {
-      await authApi.deleteAccount();
+      await authApi.deleteAccount(password);
       setDeleting(false);
       tokenStore.clear();
       onOpenChange(false);
@@ -58,7 +63,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={(next) => { if (!next) setPassword(''); onOpenChange(next); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="text-destructive">Delete account?</AlertDialogTitle>
@@ -67,6 +72,10 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
             account. This cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div>
+          <Label htmlFor="delete-account-password">Confirm your password</Label>
+          <Input id="delete-account-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={deleting} />
+        </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
@@ -75,7 +84,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: { open: boolean; onO
               e.preventDefault();
               void confirmDelete();
             }}
-            disabled={deleting}
+            disabled={deleting || !password}
             className="bg-destructive text-white hover:bg-destructive/90"
           >
             {deleting ? 'Deleting…' : 'Delete account'}

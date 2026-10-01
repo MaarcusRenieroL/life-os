@@ -18,15 +18,20 @@ public class UserService {
   private final AvatarStorageService avatarStorageService;
 
   public User createUser(String email, String passwordHash) {
-    return userRepository.save(User.builder().email(email).passwordHash(passwordHash).build());
+    return userRepository.save(User.builder().email(normaliseEmail(email)).passwordHash(passwordHash).build());
   }
 
   public Optional<User> findByEmail(String email) {
-    return userRepository.findByEmail(email);
+    return userRepository.findByEmailIgnoreCase(normaliseEmail(email));
   }
 
   public User findById(UUID userId) {
     return userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException(userId));
+  }
+
+  /** Emails are compared case-insensitively and stored lower-cased, so Jane@x.com and jane@x.com are one account. */
+  static String normaliseEmail(String email) {
+    return email == null ? "" : email.trim().toLowerCase(java.util.Locale.ROOT);
   }
 
   public boolean hasAnyUser() {
@@ -34,7 +39,7 @@ public class UserService {
   }
 
   public boolean existsByEmail(String email) {
-    return userRepository.existsByEmail(email);
+    return userRepository.existsByEmailIgnoreCase(normaliseEmail(email));
   }
 
   public UserProfileResponse getProfile(UUID userId) {

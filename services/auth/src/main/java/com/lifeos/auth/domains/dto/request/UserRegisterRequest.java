@@ -13,9 +13,10 @@ public class UserRegisterRequest {
 
   @NotBlank
   @Email
+  @Size(max = 255)
   String email;
 
   @NotBlank
-  @Size(min = 8, message = "rawPassword must be at least 8 characters")
+  @Size(min = 8, max = 72, message = "rawPassword must be 8 to 72 characters (BCrypt ignores anything longer)")
   String rawPassword;
 }
