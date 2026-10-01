@@ -18,7 +18,8 @@ test.describe('analytics and automation', () => {
     const auth = { Authorization: `Bearer ${token}` };
 
     await page.goto('/analytics');
-    await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible();
+    // the dashboard aggregates across every service, which is slow on a cold stack
+    await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText('worth a look')).toBeVisible();
 
     await page.goto('/analytics/weekly');
