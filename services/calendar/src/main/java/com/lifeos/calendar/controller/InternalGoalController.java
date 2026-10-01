@@ -7,6 +7,8 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,6 +22,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class InternalGoalController {
 
   private final EventService eventService;
+
+  @PostMapping("/goals/{goalId}/detach")
+  public ResponseEntity<ApiResponse<Integer>> detachGoal(@PathVariable UUID goalId, @RequestParam UUID userId) {
+    return ResponseEntity.ok(ApiResponse.success(eventService.detachGoal(userId, goalId), "Events detached from the goal"));
+  }
+
+  @PostMapping("/tasks/{taskId}/detach")
+  public ResponseEntity<ApiResponse<Integer>> detachTask(@PathVariable UUID taskId, @RequestParam UUID userId) {
+    return ResponseEntity.ok(ApiResponse.success(eventService.detachSourceTask(userId, taskId), "Events detached from the task"));
+  }
 
   @GetMapping("/goal-event-counts")
   public ResponseEntity<ApiResponse<Map<UUID, Long>>> goalEventCounts(@RequestParam UUID userId) {

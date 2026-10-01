@@ -46,6 +46,7 @@ class GoalManagementServiceTest {
   @Mock private GoalProgressAssembler progressAssembler;
   @Mock private GoalStatusSyncer statusSyncer;
   @Mock private GoalItemsService itemsService;
+  @Mock private com.lifeos.tasks.integration.CrossModuleCleanup crossModuleCleanup;
 
   private GoalManagementService service;
 
@@ -55,7 +56,7 @@ class GoalManagementServiceTest {
   void setUp() {
     service =
         new GoalManagementService(
-            goalRepository, goalLinkRepository, taskRepository, progressAssembler, statusSyncer, itemsService);
+            crossModuleCleanup, goalRepository, goalLinkRepository, taskRepository, progressAssembler, statusSyncer, itemsService);
     when(goalRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     when(goalLinkRepository.findAllByUserId(userId)).thenReturn(List.of());
     // Progress for whatever goals a test hands in: nothing linked, status passes through.
@@ -262,5 +263,18 @@ class GoalManagementServiceTest {
     when(goalRepository.findByIdAndUserId(id, userId)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.delete(userId, id)).isInstanceOf(ResourceNotFoundException.class);
+  }
+
+  @Test
+  void deletingAGoalTellsTheOtherModules() {
+    java.util.UUID user = java.util.UUID.randomUUID();
+    java.util.UUID id = java.util.UUID.randomUUID();
+    var goal = com.lifeos.tasks.domains.entity.Goal.builder().id(id).userId(user).name("Run a half marathon").build();
+    org.mockito.Mockito.when(goalRepository.findByIdAndUserId(id, user)).thenReturn(java.util.Optional.of(goal));
+
+    service.delete(user, id);
+
+    org.mockito.Mockito.verify(goalRepository).delete(goal);
+    org.mockito.Mockito.verify(crossModuleCleanup).goalDeleted(user, id);
   }
 }

@@ -21,6 +21,11 @@ public class InternalGoalController {
   private final SessionService sessionService;
   private final WorkoutStatsService workoutStatsService;
 
+  @PostMapping("/goals/{goalId}/detach")
+  public ResponseEntity<ApiResponse<Integer>> detachGoal(@PathVariable UUID goalId, @RequestParam UUID userId) {
+    return ResponseEntity.ok(ApiResponse.success(sessionService.detachGoal(userId, goalId), "Workouts detached from the goal"));
+  }
+
   @GetMapping("/goal-workout-stats")
   public ResponseEntity<ApiResponse<Map<UUID, GoalWorkoutStatsResponse>>> goalWorkoutStats(@RequestParam UUID userId) {
     return ResponseEntity.ok(ApiResponse.success(sessionService.goalStats(userId), "Goal workout stats fetched successfully"));

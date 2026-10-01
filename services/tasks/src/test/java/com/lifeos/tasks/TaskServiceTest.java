@@ -32,6 +32,7 @@ class TaskServiceTest {
   @Mock private TaskRepository taskRepository;
   @Mock private ProjectRepository projectRepository;
   @Mock private GoalRepository goalRepository;
+  @Mock private com.lifeos.tasks.integration.CrossModuleCleanup crossModuleCleanup;
   @InjectMocks private TaskService taskService;
 
   private final UUID user = UUID.randomUUID();
@@ -99,5 +100,13 @@ class TaskServiceTest {
   @Test
   void aBlankTitleIsRefused() throws Exception {
     assertThatThrownBy(() -> taskService.update(user, task.getId(), body("{\"title\": \"   \"}"))).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void deletingATaskTellsTheOtherModules() {
+    taskService.delete(user, task.getId());
+
+    org.mockito.Mockito.verify(taskRepository).delete(task);
+    org.mockito.Mockito.verify(crossModuleCleanup).taskDeleted(user, task.getId());
   }
 }

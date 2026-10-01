@@ -190,6 +190,16 @@ public class EventService {
     return event.getStartAt() != null && event.getStartAt().isAfter(now);
   }
 
+  /** The goal was deleted elsewhere: its events stay on the calendar without a goal. */
+  public int detachGoal(UUID userId, UUID goalId) {
+    return eventRepository.clearGoal(userId, goalId);
+  }
+
+  /** The task an event was made from was deleted: the event stays, no longer pointing at it. */
+  public int detachSourceTask(UUID userId, UUID taskId) {
+    return eventRepository.clearSourceTask(userId, taskId);
+  }
+
   @Transactional(readOnly = true)
   public EventResponse get(UUID userId, UUID id) {
     return toResponse(findOwned(userId, id));
