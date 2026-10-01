@@ -35,8 +35,13 @@ export const authApi = {
     return unwrap(api.put(`${baseUrl}/me`, { name }));
   },
 
-  async deleteAccount(): Promise<void> {
-    await api.delete(`${baseUrl}/me`);
+  /** Throws unless the password is right; used before anything irreversible starts. */
+  async verifyPassword(password: string): Promise<void> {
+    await api.post(`${baseUrl}/me/verify-password`, { password });
+  },
+
+  async deleteAccount(password: string): Promise<void> {
+    await api.delete(`${baseUrl}/me`, { data: { password } });
   },
 
   updateAvatar(file: File): Promise<UserProfileResponse> {
