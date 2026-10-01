@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { PeriodSummary } from '@/features/analytics/types';
-import type { TodayItem } from '@/features/core/core-api';
+import type { PeriodSummary, TodayItem } from './types';
 
 import {
   ACHIEVEMENTS,
