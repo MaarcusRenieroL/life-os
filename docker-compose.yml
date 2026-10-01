@@ -93,6 +93,8 @@ services:
       context: .
       dockerfile: services/auth/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       AUTH_OWNER_USER_ID: ${OWNER_USER_ID:?set OWNER_USER_ID in .env to your account id}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
@@ -115,6 +117,8 @@ services:
       context: .
       dockerfile: services/vault/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -135,6 +139,8 @@ services:
       context: .
       dockerfile: services/job-tracker/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -177,6 +183,8 @@ services:
       context: .
       dockerfile: services/core/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -208,6 +216,8 @@ services:
       context: .
       dockerfile: services/notes/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -229,6 +239,8 @@ services:
       context: .
       dockerfile: services/batches/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -263,6 +275,8 @@ services:
       context: .
       dockerfile: services/finance-tracker/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -291,6 +305,8 @@ services:
       context: .
       dockerfile: services/habit-tracker/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -315,6 +331,8 @@ services:
       context: .
       dockerfile: services/tasks/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -337,6 +355,8 @@ services:
       context: .
       dockerfile: services/workouts/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
@@ -358,6 +378,8 @@ services:
       context: .
       dockerfile: services/calendar/Dockerfile
     environment:
+      # The owner's timezone: "today", habit reminders and the scheduled jobs all follow it, not UTC.
+      TZ: ${APP_TIMEZONE:-Asia/Kolkata}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lifeos
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres

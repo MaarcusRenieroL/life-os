@@ -98,19 +98,19 @@ public class HabitService {
     if (request.getName() != null) {
       habit.setName(request.getName());
     }
-    if (request.getDescription() != null) {
+    if (request.provided("description")) {
       habit.setDescription(request.getDescription());
     }
     if (request.getType() != null) {
       habit.setType(request.getType());
     }
-    if (request.getCategory() != null) {
+    if (request.provided("category")) {
       habit.setCategory(request.getCategory());
     }
-    if (request.getAreaId() != null) {
+    if (request.provided("areaId")) {
       habit.setAreaId(request.getAreaId());
     }
-    if (request.getGoalId() != null) {
+    if (request.provided("goalId")) {
       habit.setGoalId(request.getGoalId());
     }
     if (request.getFrequencyType() != null) {
@@ -119,31 +119,31 @@ public class HabitService {
     if (request.getFrequencyConfig() != null) {
       habit.setFrequencyConfig(request.getFrequencyConfig());
     }
-    if (request.getTargetValue() != null) {
+    if (request.provided("targetValue")) {
       habit.setTargetValue(request.getTargetValue());
     }
-    if (request.getTargetUnit() != null) {
+    if (request.provided("targetUnit")) {
       habit.setTargetUnit(request.getTargetUnit());
     }
     if (request.getStartDate() != null) {
       habit.setStartDate(request.getStartDate());
     }
-    if (request.getEndDate() != null) {
+    if (request.provided("endDate")) {
       habit.setEndDate(request.getEndDate());
     }
-    if (request.getIcon() != null) {
+    if (request.provided("icon")) {
       habit.setIcon(request.getIcon());
     }
-    if (request.getColor() != null) {
+    if (request.provided("color")) {
       habit.setColor(request.getColor());
     }
-    if (request.getPriority() != null) {
+    if (request.provided("priority")) {
       habit.setPriority(request.getPriority());
     }
-    if (request.getWhy() != null) {
+    if (request.provided("why")) {
       habit.setWhy(request.getWhy());
     }
-    if (request.getDifficulty() != null) {
+    if (request.provided("difficulty")) {
       habit.setDifficulty(request.getDifficulty());
     }
 
