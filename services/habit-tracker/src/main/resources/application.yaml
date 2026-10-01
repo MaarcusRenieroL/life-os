@@ -27,7 +27,7 @@ spring:
       port: ${REDIS_PORT:6379}
 
 jwt:
-  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+  secret: ${JWT_SECRET}
 
 # habit-tracker doesn't use EncryptionService itself, but it's component-scanned
 # in from com.lifeos.common (see HabitTrackerApplication's @ComponentScan) and
@@ -36,7 +36,7 @@ encryption:
   secret: ${ENCRYPTION_SECRET:r2/57VjqHzF7wXuwQNL5Ot4M+YFp5pGuG2bHwjVTdHg=}
 
 internal:
-  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+  api-key: ${INTERNAL_API_KEY}
 
 habit:
   missed-log:
