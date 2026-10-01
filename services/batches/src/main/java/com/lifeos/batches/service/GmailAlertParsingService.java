@@ -18,6 +18,6 @@ public class GmailAlertParsingService {
         .filter(p -> p.supports(fromAddress))
         .findFirst()
         .orElseThrow(() -> new IllegalStateException("No parser found for sender: " + fromAddress))
-        .parse(messageId, fromAddress, subject, body, receivedAt);
+        .parse(messageId, fromAddress, subject, AlertFormat.plainText(body), receivedAt);
   }
 }

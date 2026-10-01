@@ -296,4 +296,84 @@ class TransactionServiceTest {
   private static <T> T eq(T value) {
     return org.mockito.ArgumentMatchers.eq(value);
   }
+
+  // ---- card payments are one movement of your own money, not an expense ---------------------
+
+  private com.lifeos.finance_tracker.domains.dto.request.CreateEmailAlertTransactionRequest cardPaymentAlert(Account card) {
+    return com.lifeos.finance_tracker.domains.dto.request.CreateEmailAlertTransactionRequest.builder()
+        .userId(userId)
+        .bankName("HDFC Bank")
+        .accountType(com.lifeos.finance_tracker.domains.enums.AccountType.CREDIT_CARD)
+        .transactionDate(java.time.Instant.parse("2026-09-30T13:15:00Z"))
+        .description("Card payment received")
+        .amount(new BigDecimal("15000.00"))
+        .type(TransactionType.CREDIT)
+        .sourceReference("alert-card-1")
+        .build();
+  }
+
+  private Account typedAccount(com.lifeos.finance_tracker.domains.enums.AccountType type) {
+    return Account.builder().id(UUID.randomUUID()).userId(userId).accountType(type).isActive(true).build();
+  }
+
+  private Transaction bankDebit(Account bank) {
+    return Transaction.builder()
+        .id(UUID.randomUUID()).userId(userId).accountId(bank.getId()).type(TransactionType.DEBIT).amount(new BigDecimal("15000.00"))
+        .transactionDate(java.time.Instant.parse("2026-09-30T13:14:00Z")).sourceType(com.lifeos.finance_tracker.domains.enums.SourceType.EMAIL_ALERT).build();
+  }
+
+  @Test
+  void aCardPaymentAlertIsLinkedToTheBankDebitThatPaidIt() {
+    Account card = typedAccount(com.lifeos.finance_tracker.domains.enums.AccountType.CREDIT_CARD);
+    Account bank = typedAccount(com.lifeos.finance_tracker.domains.enums.AccountType.SAVINGS);
+    Transaction debit = bankDebit(bank);
+    when(accountResolver.resolve(any(), any(), any(), any())).thenReturn(Optional.of(card));
+    when(merchantService.resolveCorrectedName(any(UUID.class), any(String.class))).thenReturn(Optional.empty());
+    when(transactionRepository.existsBySourceReference("alert-card-1")).thenReturn(false);
+    when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
+      Transaction t = inv.getArgument(0);
+      if (t.getId() == null) t.setId(UUID.randomUUID());
+      return t;
+    });
+    when(accountRepository.findById(card.getId())).thenReturn(Optional.of(card));
+    when(accountRepository.findById(bank.getId())).thenReturn(Optional.of(bank));
+    when(transactionRepository.findAllByUserIdAndAmountAndTypeAndAccountIdNotAndIsTransferFalseAndIsDuplicateFalseAndTransactionDateBetween(
+            eq(userId), eq(new BigDecimal("15000.00")), eq(TransactionType.DEBIT), eq(card.getId()), any(), any()))
+        .thenReturn(List.of(debit));
+
+    transactionService.createFromEmailAlert(cardPaymentAlert(card));
+
+    assertThat(debit.isTransfer()).isTrue();
+    assertThat(debit.getTransferPairId()).isNotNull();
+    ArgumentCaptor<List<Transaction>> legs = ArgumentCaptor.forClass(List.class);
+    verify(transactionRepository).saveAll(legs.capture());
+    assertThat(legs.getValue()).hasSize(2).allSatisfy(leg -> {
+      assertThat(leg.isTransfer()).isTrue();
+      assertThat(leg.getTransferPairId()).isEqualTo(debit.getTransferPairId());
+    });
+    verify(accountBalanceService).refresh(bank.getId());
+  }
+
+  @Test
+  void twoPossibleBankDebitsMeansNoGuessing() {
+    Account card = typedAccount(com.lifeos.finance_tracker.domains.enums.AccountType.CREDIT_CARD);
+    Account bankA = typedAccount(com.lifeos.finance_tracker.domains.enums.AccountType.SAVINGS);
+    Account bankB = typedAccount(com.lifeos.finance_tracker.domains.enums.AccountType.CHECKING);
+    when(accountResolver.resolve(any(), any(), any(), any())).thenReturn(Optional.of(card));
+    when(merchantService.resolveCorrectedName(any(UUID.class), any(String.class))).thenReturn(Optional.empty());
+    when(transactionRepository.save(any(Transaction.class))).thenAnswer(inv -> {
+      Transaction t = inv.getArgument(0);
+      if (t.getId() == null) t.setId(UUID.randomUUID());
+      return t;
+    });
+    when(accountRepository.findById(card.getId())).thenReturn(Optional.of(card));
+    when(accountRepository.findById(bankA.getId())).thenReturn(Optional.of(bankA));
+    when(accountRepository.findById(bankB.getId())).thenReturn(Optional.of(bankB));
+    when(transactionRepository.findAllByUserIdAndAmountAndTypeAndAccountIdNotAndIsTransferFalseAndIsDuplicateFalseAndTransactionDateBetween(any(), any(), any(), any(), any(), any()))
+        .thenReturn(List.of(bankDebit(bankA), bankDebit(bankB)));
+
+    transactionService.createFromEmailAlert(cardPaymentAlert(card));
+
+    verify(transactionRepository, never()).saveAll(any());
+  }
 }

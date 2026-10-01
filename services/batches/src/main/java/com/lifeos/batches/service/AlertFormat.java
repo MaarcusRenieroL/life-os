@@ -66,4 +66,24 @@ final class AlertFormat {
   }
 
   private static final ZoneId ZONE_ID_PUBLIC = ZoneId.of("Asia/Kolkata");
+
+  /**
+   * The readable text of an alert email: HTML tags and entities removed, every run of whitespace
+   * (including non-breaking spaces and line breaks) collapsed to one space. Banks space their
+   * wording inconsistently ("to your account  XXXX7829" with two spaces broke a parser), so the
+   * patterns are written against this normalised text, never the raw body.
+   */
+  static String plainText(String body) {
+    if (body == null) {
+      return "";
+    }
+    return body.replaceAll("(?is)<(script|style)[^>]*>.*?</\\1>", " ")
+        .replaceAll("<[^>]+>", " ")
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replaceAll("[\\s\\u00a0]+", " ")
+        .trim();
+  }
 }

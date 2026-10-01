@@ -19,6 +19,7 @@ import com.lifeos.finance_tracker.domains.entity.CategorizationRule;
 import com.lifeos.finance_tracker.domains.entity.Merchant;
 import com.lifeos.finance_tracker.domains.entity.Transaction;
 import com.lifeos.finance_tracker.domains.entity.TransactionCategory;
+import com.lifeos.finance_tracker.domains.enums.AccountType;
 import com.lifeos.finance_tracker.domains.enums.SourceType;
 import com.lifeos.finance_tracker.domains.enums.TransactionStatus;
 import com.lifeos.finance_tracker.domains.enums.TransactionType;
@@ -377,9 +378,71 @@ public class TransactionService {
    * ledger (never nudged), and the budget it counts toward is re-checked for its alert.
    */
   private Transaction afterChange(Transaction transaction) {
+    if (transaction.getSourceType() == SourceType.EMAIL_ALERT) {
+      linkCardPayment(transaction);
+    }
     accountBalanceService.refresh(transaction.getAccountId());
     budgetSpendService.evaluate(transaction);
     return transaction;
+  }
+
+  /**
+   * Paying a credit card from a bank account shows up twice in email alerts: a debit on the bank
+   * account and a "payment received" credit on the card. It is one movement of the user's own money,
+   * not spending, so when both halves are present they are linked as a transfer (and stop counting
+   * toward budgets and reports). Works whichever alert arrives first.
+   */
+  private void linkCardPayment(Transaction transaction) {
+    if (transaction.isTransfer() || transaction.getId() == null) {
+      return;
+    }
+    Account own = accountRepository.findById(transaction.getAccountId()).orElse(null);
+    if (own == null) {
+      return;
+    }
+    boolean cardSide = own.getAccountType() == AccountType.CREDIT_CARD && transaction.getType() == TransactionType.CREDIT;
+    boolean bankSide = own.getAccountType() != AccountType.CREDIT_CARD && transaction.getType() == TransactionType.DEBIT;
+    if (!cardSide && !bankSide) {
+      return;
+    }
+
+    TransactionType wanted = cardSide ? TransactionType.DEBIT : TransactionType.CREDIT;
+    List<Transaction> candidates =
+        transactionRepository.findAllByUserIdAndAmountAndTypeAndAccountIdNotAndIsTransferFalseAndIsDuplicateFalseAndTransactionDateBetween(
+            transaction.getUserId(),
+            transaction.getAmount(),
+            wanted,
+            own.getId(),
+            transaction.getTransactionDate().minus(1, ChronoUnit.DAYS),
+            transaction.getTransactionDate().plus(1, ChronoUnit.DAYS));
+
+    Transaction other = null;
+    for (Transaction candidate : candidates) {
+      Account account = accountRepository.findById(candidate.getAccountId()).orElse(null);
+      if (account == null) {
+        continue;
+      }
+      // The other half must be on the opposite kind of account: a card for a bank debit, a bank for a card credit.
+      boolean opposite = cardSide ? account.getAccountType() != AccountType.CREDIT_CARD : account.getAccountType() == AccountType.CREDIT_CARD;
+      if (opposite) {
+        if (other != null) {
+          return; // more than one possible partner: do not guess
+        }
+        other = candidate;
+      }
+    }
+    if (other == null) {
+      return;
+    }
+
+    UUID pair = UUID.randomUUID();
+    for (Transaction leg : List.of(transaction, other)) {
+      leg.setTransfer(true);
+      leg.setTransferPairId(pair);
+      leg.setCategoryId(null);
+    }
+    transactionRepository.saveAll(List.of(transaction, other));
+    accountBalanceService.refresh(other.getAccountId());
   }
 
   /**

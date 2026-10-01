@@ -168,6 +168,10 @@ public interface TransactionRepository
 
   long countByAccountId(UUID accountId);
 
+  /** Money-movement candidates for a transfer: same amount and direction, another account, not already linked. */
+  List<Transaction> findAllByUserIdAndAmountAndTypeAndAccountIdNotAndIsTransferFalseAndIsDuplicateFalseAndTransactionDateBetween(
+      UUID userId, BigDecimal amount, TransactionType type, UUID excludedAccountId, Instant from, Instant to);
+
   /** Clears duplicate_of links that point into an account about to be emptied, from other accounts' rows. */
   @org.springframework.data.jpa.repository.Modifying
   @Query(
