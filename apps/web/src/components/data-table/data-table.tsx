@@ -1,5 +1,5 @@
 import { flexRender, type Table as TanstackTable } from '@tanstack/react-table';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 import {
   Table,
@@ -21,6 +21,8 @@ interface DataTableProps<TData> {
   onRowClick?: (row: TData) => void;
   emptyMessage?: ReactNode;
   density?: Density;
+  /** Table rows (not a card) shown right under a row while it is expanded. */
+  renderExpanded?: (row: TData) => ReactNode;
 }
 
 function aggregate<TData>(table: TanstackTable<TData>, columnId: string, kind: 'sum' | 'avg' | 'count'): number {
@@ -33,7 +35,7 @@ function aggregate<TData>(table: TanstackTable<TData>, columnId: string, kind: '
 
 /** The actual `<table>` render for a TanStack Table instance - toolbar and pagination are
  * composed separately so each page can carry its own filters/bulk actions. */
-export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results.', density = 'comfortable' }: DataTableProps<TData>) {
+export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results.', density = 'comfortable', renderExpanded }: DataTableProps<TData>) {
   const columnCount = table.getVisibleLeafColumns().length;
   const sized = table.getState().columnSizing;
   const hasFooter = table.getVisibleLeafColumns().some((c) => c.columnDef.meta?.aggregate);
@@ -79,21 +81,23 @@ export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results
         <TableBody>
           {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() && 'selected'}
-                onClick={() => onRowClick?.(row.original)}
-                className={onRowClick ? 'cursor-pointer' : undefined}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    className={cn(cell.column.columnDef.meta?.align === 'right' && 'text-right tabular-nums', cell.column.columnDef.meta?.className)}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
+              <Fragment key={row.id}>
+                <TableRow
+                  data-state={row.getIsSelected() && 'selected'}
+                  onClick={() => onRowClick?.(row.original)}
+                  className={onRowClick ? 'cursor-pointer' : undefined}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      className={cn(cell.column.columnDef.meta?.align === 'right' && 'text-right tabular-nums', cell.column.columnDef.meta?.className)}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                {renderExpanded && row.getIsExpanded() && renderExpanded(row.original)}
+              </Fragment>
             ))
           ) : (
             <TableRow className="hover:bg-transparent">

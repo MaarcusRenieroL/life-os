@@ -8,6 +8,8 @@ import {
   useReactTable,
   type ColumnDef,
   type ColumnFiltersState,
+  type ExpandedState,
+  type OnChangeFn,
   type RowSelectionState,
   type SortingState,
   type Table,
@@ -60,6 +62,10 @@ export interface DataGridProps<TData> {
   hidePagination?: boolean;
   /** Below the md breakpoint a wide table can't fit, so each row renders as this card instead. */
   mobileCard?: (row: TData) => ReactNode;
+  /** Rows that can open to show more table rows beneath them (e.g. subtasks). Controlled by the page. */
+  renderExpanded?: (row: TData) => ReactNode;
+  expanded?: ExpandedState;
+  onExpandedChange?: OnChangeFn<ExpandedState>;
 }
 
 const PAGE_SIZES = [10, 20, 30, 50, 100];
@@ -94,6 +100,9 @@ export function DataGrid<TData>({
   searchPlaceholder = 'Search…',
   hidePagination,
   mobileCard,
+  renderExpanded,
+  expanded,
+  onExpandedChange,
 }: DataGridProps<TData>) {
   const { layout, patch, reset } = usePersistedGrid(tableId, {
     sorting: initialSorting,
@@ -138,7 +147,10 @@ export function DataGrid<TData>({
       globalFilter,
       rowSelection,
       pagination,
+      ...(expanded ? { expanded } : {}),
     },
+    getRowCanExpand: renderExpanded ? () => true : undefined,
+    onExpandedChange,
     getRowId,
     columnResizeMode: 'onChange',
     enableRowSelection: !!enableSelection,
@@ -287,6 +299,7 @@ export function DataGrid<TData>({
           onRowClick={onRowClick}
           density={layout.density}
           emptyMessage={emptyText}
+          renderExpanded={renderExpanded}
         />
       </div>
 

@@ -10,6 +10,7 @@ import { AuthProvider } from '@/features/auth/auth-context';
 import { AccountDialog } from '@/features/finance/account-dialog';
 import { AddTransactionDialog } from '@/features/finance/add-transaction-dialog';
 import { AccountsPage } from '@/features/finance/accounts-page';
+import { TransactionsPage } from '@/features/finance/transactions-page';
 import { SettingsPage } from '@/features/settings/settings-page';
 import { api } from '@/lib/api-client';
 import { tokenStore } from '@/lib/token';
@@ -23,7 +24,21 @@ const acct = (id: string, accountName: string, accountType: string, bankName: st
   id, accountName, accountType, bankName, accountNumberLastFour: id.padStart(4, '0').slice(-4), currencyCode: 'INR', openedDate: days(400),
   currentBalance: balance, isActive, isPrimary, emailForAlerts: null, notes: null, createdAt: days(400), updatedAt: days(1),
 });
+const merchants = ['Swiggy', 'Amazon', 'Uber', 'Netflix', 'HDFC Credit Card bill', 'Salary', 'Zomato', 'Electricity', 'Rent', 'BookMyShow'];
+const txs = Array.from({ length: 64 }, (_, i) => {
+  const m = merchants[i % merchants.length];
+  const credit = m === 'Salary';
+  return {
+    id: `t${i}`, accountId: i % 3 === 0 ? '1043' : '2277', transactionDate: days(i * 1.7), description: `${m} ${i % 7 === 0 ? 'Bangalore' : ''}`.trim(),
+    amount: credit ? 125000 : 200 + ((i * 937) % 4800), type: credit ? 'CREDIT' : 'DEBIT', categoryId: i % 4 === 0 ? null : 'c1', categoryManuallySet: false,
+    categoryIds: i % 4 === 0 ? [] : ['c1'], notes: i % 9 === 0 ? 'check this' : null, receiptUrl: null, disputeReason: null, disputeDate: null, isRecurring: i % 5 === 0,
+    sourceType: i % 2 ? 'EMAIL_ALERT' : 'CSV_IMPORT', sourceReference: null, isReconciled: i % 6 === 0, isDuplicate: i === 11, duplicateOf: null, status: 'ACTIVE',
+    importedAt: days(i), createdAt: days(i), updatedAt: days(i),
+  };
+});
 const answers: Record<string, unknown> = {
+  '/v1/finance/transactions': { content: txs, totalElements: txs.length, totalPages: 1, size: 500, number: 0, numberOfElements: txs.length, first: true, last: true },
+  '/v1/finance/categories': [{ id: 'c1', name: 'Food & dining', type: 'EXPENSE', color: '#3ddc97', icon: null, parentCategoryId: null, isActive: true, excludeFromAutoLearning: false, displayOrder: 1, createdAt: days(100) }],
   '/v1/finance/accounts': [
     acct('2277', 'HDFC Savings', 'SAVINGS', 'HDFC Bank', 184250.5, true),
     acct('1043', 'Canara Savings', 'SAVINGS', 'Canara Bank', 12480),
@@ -62,6 +77,8 @@ createRoot(document.getElementById('root')!).render(
                   <AccountDialog open onOpenChange={() => {}} editing={null} onSaved={() => {}} />
                 ) : dialog === 'transaction' ? (
                   <AddTransactionDialog open onOpenChange={() => {}} editing={null} onSaved={() => {}} />
+                ) : table === 'transactions' ? (
+                  <TransactionsPage />
                 ) : table === 'accounts' ? (
                   <AccountsPage />
                 ) : (

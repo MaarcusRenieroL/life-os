@@ -1,22 +1,23 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
+import { DataGrid } from '@/components/data-table/data-grid';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { DifficultyRating, MilestoneBadges, nextMilestone } from './habit-badges';
 import { HabitFormDialog } from './habit-form-dialog';
 import { HabitReminderForm } from './habit-reminder-form';
 import { habitsApi } from './habits-api';
-import type { ConsistencyPeriod } from './types';
+import type { ConsistencyPeriod, HabitLog } from './types';
 
 export function HabitDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -71,6 +72,52 @@ export function HabitDetailPage() {
       toast.error('Could not undo that log entry.');
     }
   }
+
+  const logColumns = useMemo<ColumnDef<HabitLog>[]>(
+    () => [
+      {
+        accessorKey: 'logDate',
+        meta: { title: 'Date', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.logDate.slice(0, 10),
+      },
+      {
+        accessorKey: 'status',
+        meta: { title: 'Status', filter: { type: 'select' } },
+        cell: ({ row }) => <Badge variant="outline">{row.original.status}</Badge>,
+      },
+      {
+        accessorKey: 'value',
+        meta: { title: 'Value', align: 'right', filter: { type: 'number' } },
+        cell: ({ row }) => row.original.value ?? '–',
+      },
+      {
+        accessorKey: 'note',
+        meta: { title: 'Note', filter: { type: 'text' } },
+        cell: ({ row }) => <span className="block max-w-64 truncate">{row.original.note ?? '–'}</span>,
+      },
+      {
+        accessorKey: 'failureReason',
+        meta: { title: 'Reason it failed', filter: { type: 'text' } },
+        cell: ({ row }) => row.original.failureReason ?? '–',
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        enableSorting: false,
+        enableResizing: false,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteLog(row.original.id)}>
+              Undo
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id],
+  );
 
   if (isLoading || !habit) {
     return (
@@ -197,34 +244,17 @@ export function HabitDetailPage() {
           ) : sortedLogs.length === 0 ? (
             <EmptyState message="No logs yet." />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Value</TableHead>
-                  <TableHead>Note</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>{log.logDate.slice(0, 10)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{log.status}</Badge>
-                    </TableCell>
-                    <TableCell>{log.value ?? '–'}</TableCell>
-                    <TableCell className="max-w-64 truncate">{log.note ?? '–'}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => void deleteLog(log.id)}>
-                        Undo
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataGrid
+              tableId="habits.logs"
+              data={sortedLogs}
+              columns={logColumns}
+              getRowId={(l) => l.id}
+              initialSorting={[{ id: 'logDate', desc: true }]}
+              initialVisibility={{ failureReason: false }}
+              exportName="habit-logs"
+              searchPlaceholder="Search logs…"
+              hidePagination={sortedLogs.length <= 10}
+            />
           )}
         </CardContent>
       </Card>
