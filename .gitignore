@@ -45,3 +45,6 @@ venv/
 # Built app binaries served at /files/*
 /files/*
 !/files/.gitkeep
+
+# Generated for the e2e stack from nginx.conf
+apps/web/e2e/nginx.e2e.conf
