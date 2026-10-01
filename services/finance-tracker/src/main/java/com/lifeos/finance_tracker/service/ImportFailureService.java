@@ -83,6 +83,20 @@ public class ImportFailureService {
     repository.save(failure);
   }
 
+  /** An alert that was waiting has since been booked (it is re-sent on every poll); close its entry. */
+  @Transactional
+  public void resolveByReference(UUID userId, String reference) {
+    repository
+        .findByUserIdAndReference(userId, reference)
+        .filter(f -> ImportFailure.OPEN.equals(f.getStatus()))
+        .ifPresent(
+            f -> {
+              f.setStatus(ImportFailure.RESOLVED);
+              f.setResolvedAt(Instant.now());
+              repository.save(f);
+            });
+  }
+
   @Transactional(readOnly = true)
   public List<ImportFailureResponse> listOpen(Authentication authentication) {
     UUID userId = (UUID) authentication.getPrincipal();
@@ -145,6 +159,7 @@ public class ImportFailureService {
               .amount(event.amount())
               .type(TransactionType.valueOf(event.type()))
               .sourceReference(event.sourceReference())
+              .accountSuffix(event.accountSuffix())
               .build());
     } catch (AccountNotFoundException exception) {
       throw new InvalidRequestException(

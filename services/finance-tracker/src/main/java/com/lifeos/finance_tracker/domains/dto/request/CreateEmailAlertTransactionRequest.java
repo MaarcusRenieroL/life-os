@@ -41,4 +41,7 @@ public class CreateEmailAlertTransactionRequest {
   @NotNull TransactionType type;
 
   @NotBlank String sourceReference;
+
+  /** Last digits of the account the alert names, when it names one. */
+  String accountSuffix;
 }

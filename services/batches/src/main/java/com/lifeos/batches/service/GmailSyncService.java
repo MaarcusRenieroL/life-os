@@ -73,7 +73,8 @@ public class GmailSyncService {
                 alert.type().name(),
                 alert.transactionDate(),
                 alert.description(),
-                alert.sourceReference());
+                alert.sourceReference(),
+                alert.accountSuffix());
 
         // Wait for the broker's acknowledgement: fire-and-forget counted an alert as processed even
         // when Kafka was unreachable, and it was then lost.

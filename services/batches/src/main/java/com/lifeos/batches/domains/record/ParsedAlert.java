@@ -12,4 +12,6 @@ public record ParsedAlert(
     TransactionType type,
     Instant transactionDate,
     String description,
-    String sourceReference) {}
+    String sourceReference,
+    /** Last digits of the account the alert names, when it names one - lets finance pick the right account. */
+    String accountSuffix) {}

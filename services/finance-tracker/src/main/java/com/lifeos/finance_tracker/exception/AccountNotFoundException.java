@@ -10,6 +10,6 @@ public class AccountNotFoundException extends RuntimeException {
   }
 
   public AccountNotFoundException(String bankName, AccountType accountType) {
-    super("No " + accountType + " account found for bank: " + bankName);
+    super("No " + accountType + " account found for bank: " + bankName + " (no account matches that bank and type, or more than one does)");
   }
 }

@@ -24,6 +24,7 @@ public class HdfcSalaryAccountAlertParser implements BankAlertParser {
           Pattern.CASE_INSENSITIVE);
 
   private static final Pattern DATE = Pattern.compile("\\bon (\\d{2}[-/]\\d{2}[-/]\\d{2,4})");
+  private static final Pattern ACCOUNT = Pattern.compile("account ending (\\S+)", Pattern.CASE_INSENSITIVE);
   private static final Pattern VPA = Pattern.compile("towards VPA (\\S+)(?: \\(([^)]+)\\))?");
   private static final Pattern INFO = Pattern.compile("(?:Info|Narration|Remarks)[:\\s-]+([^\\r\\n.]+)", Pattern.CASE_INSENSITIVE);
   private static final Pattern CHANNEL = Pattern.compile("\\b(NEFT|IMPS|RTGS|ACH|NACH|SALARY)\\b", Pattern.CASE_INSENSITIVE);
@@ -41,6 +42,8 @@ public class HdfcSalaryAccountAlertParser implements BankAlertParser {
     TransactionType type =
         movement.group(2).equalsIgnoreCase("debited") ? TransactionType.DEBIT : TransactionType.CREDIT;
 
+    Matcher account = ACCOUNT.matcher(body);
+
     return new ParsedAlert(
         "HDFC Bank",
         AccountType.SAVINGS,
@@ -48,7 +51,8 @@ public class HdfcSalaryAccountAlertParser implements BankAlertParser {
         type,
         AlertFormat.date(date.group(1)),
         counterparty(body, type),
-        messageId);
+        messageId,
+        account.find() ? AlertFormat.suffix(account.group(1)) : null);
   }
 
   private static String counterparty(String body, TransactionType type) {

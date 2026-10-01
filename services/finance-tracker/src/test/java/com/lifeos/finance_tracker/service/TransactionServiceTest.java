@@ -42,6 +42,7 @@ class TransactionServiceTest {
   @Mock private MerchantService merchantService;
   @Mock private BudgetSpendService budgetSpendService;
   @Mock private AccountBalanceService accountBalanceService;
+  @Mock private AccountResolver accountResolver;
 
   private TransactionService transactionService;
 
@@ -58,7 +59,8 @@ class TransactionServiceTest {
             categorizationService,
             merchantService,
             budgetSpendService,
-            accountBalanceService);
+            accountBalanceService,
+            accountResolver);
 
     lenient().when(categorizationService.categorize(any(Transaction.class))).thenReturn(Optional.empty());
     lenient()
