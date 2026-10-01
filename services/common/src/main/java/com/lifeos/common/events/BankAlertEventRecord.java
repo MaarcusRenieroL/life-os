@@ -17,4 +17,6 @@ public record BankAlertEventRecord(
     String type,
     Instant transactionDate,
     String description,
-    String sourceReference) {}
+    String sourceReference,
+    /** Last digits of the account the alert names ("XXXX7829" -> "7829"), when it names one. */
+    String accountSuffix) {}

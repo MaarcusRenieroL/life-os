@@ -42,7 +42,7 @@ class ImportFailureServiceTest {
   private final Authentication auth = new UsernamePasswordAuthenticationToken(userId, null, List.of());
 
   private BankAlertEventRecord salary() {
-    return new BankAlertEventRecord(userId, "HDFC Bank", "SAVINGS", new BigDecimal("125000.00"), "CREDIT", Instant.parse("2026-09-30T04:00:00Z"), "Credit via NEFT", "msg-1");
+    return new BankAlertEventRecord(userId, "HDFC Bank", "SAVINGS", new BigDecimal("125000.00"), "CREDIT", Instant.parse("2026-09-30T04:00:00Z"), "Credit via NEFT", "msg-1", "2277");
   }
 
   @BeforeEach

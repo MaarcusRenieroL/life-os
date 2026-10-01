@@ -46,9 +46,11 @@ public class BankAlertEventConsumer {
               .amount(event.amount())
               .type(TransactionType.valueOf(event.type()))
               .sourceReference(event.sourceReference())
+              .accountSuffix(event.accountSuffix())
               .build();
 
       transactionService.createFromEmailAlert(request);
+      importFailureService.resolveByReference(event.userId(), event.sourceReference());
     } catch (DataIntegrityViolationException e) {
       // createFromEmailAlert's existsBySourceReference check and its insert are two separate
       // statements, so two concurrent deliveries of the same alert can both pass the check. The

@@ -83,6 +83,7 @@ public class TransactionService {
   private final MerchantService merchantService;
   private final BudgetSpendService budgetSpendService;
   private final AccountBalanceService accountBalanceService;
+  private final AccountResolver accountResolver;
 
   @Transactional(readOnly = true)
   public PageResponse<TransactionResponse> getAllPaginated(
@@ -613,9 +614,8 @@ public class TransactionService {
     }
 
     Account account =
-        accountRepository
-            .findByUserIdAndBankNameAndAccountType(
-                request.getUserId(), request.getBankName(), request.getAccountType())
+        accountResolver
+            .resolve(request.getUserId(), request.getBankName(), request.getAccountType(), request.getAccountSuffix())
             .orElseThrow(
                 () ->
                     new AccountNotFoundException(request.getBankName(), request.getAccountType()));
