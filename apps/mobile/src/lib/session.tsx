@@ -1,3 +1,5 @@
+import { parseSetupLink } from '@life-os/core';
+import * as Linking from 'expo-linking';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { buildRuntime, DEFAULT_SETTINGS, isMock, loadSettings, saveSettings, type Runtime, type Settings } from './runtime';
@@ -23,6 +25,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void loadSettings().then(setSettings);
   }, []);
+
+  // A lifeos://setup link (the QR from scripts/native-access-setup.sh) fills in the server and Access token.
+  const incoming = Linking.useLinkingURL();
+  useEffect(() => {
+    const parsed = incoming ? parseSetupLink(incoming) : null;
+    if (!parsed) return;
+    const next = { ...DEFAULT_SETTINGS, ...parsed };
+    void saveSettings(next).then(() => setSettings(next));
+  }, [incoming]);
 
   // The runtime is a pure function of the settings, so derive it instead of mirroring it in state.
   const runtime = useMemo<Runtime | null>(() => (settings ? buildRuntime(settings, markSignedOut) : null), [settings, markSignedOut]);

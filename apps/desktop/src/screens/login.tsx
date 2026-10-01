@@ -1,3 +1,4 @@
+import { parseSetupLink } from '@life-os/core';
 import { useState, type FormEvent } from 'react';
 
 import { useSession } from '../lib/session';
@@ -31,6 +32,21 @@ export function LoginScreen() {
       <form className="panel login" onSubmit={submit}>
         <div className="brand big">Life_OS</div>
         <p className="muted">Press start to continue your run.</p>
+        <label>
+          <span className="label">Paste a setup link (optional)</span>
+          <input
+            placeholder="lifeos://setup?server=…"
+            autoComplete="off"
+            onChange={(e) => {
+              const parsed = parseSetupLink(e.target.value);
+              if (!parsed) return;
+              setServer(parsed.baseUrl);
+              setCfId(parsed.cfClientId);
+              setCfSecret(parsed.cfClientSecret);
+              e.target.value = '';
+            }}
+          />
+        </label>
         <label>
           <span className="label">Email</span>
           <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoFocus required autoComplete="username" />

@@ -153,3 +153,19 @@ export function createClient(options: ClientOptions) {
 }
 
 export type Client = ReturnType<typeof createClient>;
+
+/**
+ * Reads a `lifeos://setup?server=...&id=...&secret=...` link (printed as a QR by scripts/native-access-setup.sh)
+ * into the server address and Cloudflare Access service token the apps need to sign in from anywhere.
+ */
+export function parseSetupLink(link: string): { baseUrl: string; cfClientId: string; cfClientSecret: string } | null {
+  try {
+    const url = new URL(link.trim());
+    if (url.protocol !== 'lifeos:' || url.hostname !== 'setup') return null;
+    const server = url.searchParams.get('server');
+    if (!server) return null;
+    return { baseUrl: server.replace(/\/+$/, ''), cfClientId: url.searchParams.get('id') ?? '', cfClientSecret: url.searchParams.get('secret') ?? '' };
+  } catch {
+    return null;
+  }
+}

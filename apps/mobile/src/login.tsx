@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { Text, TextInput } from '@/text';
 
@@ -14,6 +14,12 @@ export function Login() {
   const [server, setServer] = useState(settings.baseUrl);
   const [cfId, setCfId] = useState(settings.cfClientId);
   const [cfSecret, setCfSecret] = useState(settings.cfClientSecret);
+  // A setup link scanned while this screen is open replaces the saved settings; show them.
+  useEffect(() => {
+    setServer(settings.baseUrl);
+    setCfId(settings.cfClientId);
+    setCfSecret(settings.cfClientSecret);
+  }, [settings]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

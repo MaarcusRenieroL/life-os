@@ -10,7 +10,10 @@ gateway for developing UI without a backend.
 - Phone on the same Wi-Fi: `http://<your-mac-ip>` (System Settings > Network)
 - From anywhere: `https://life-os.maarcus.dev`. The domain sits behind Cloudflare Access, so the app
   needs an Access **service token** (Zero Trust > Access > Service auth) with a "Service Auth" policy
-  on the application; enter its client id/secret in the app's Settings.
+  on the application. Don't create it by hand: run `scripts/native-access-setup.sh` (needs `CF_API_TOKEN` and
+  `CF_ACCOUNT_ID` in the environment). It creates or rotates the token, adds the Service Auth policy, and prints a
+  `lifeos://setup?...` link plus a QR code. Scan the QR with the phone camera (the app fills in the server and token),
+  or paste the link into the desktop login screen. The secret is shown only once and is never written to disk.
 
 ## Desktop (Tauri 2)
 

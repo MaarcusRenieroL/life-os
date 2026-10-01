@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createClient, type StoredSession, type TokenStorage } from './client';
+import { createClient, parseSetupLink, type StoredSession, type TokenStorage } from './client';
 
 const envelope = (data: unknown, status = 200) =>
   new Response(JSON.stringify({ success: true, message: 'ok', data, timestamp: '' }), { status, headers: { 'Content-Type': 'application/json' } });
@@ -87,5 +87,16 @@ describe('createClient', () => {
     const client = createClient({ baseUrl: 'http://x', storage: memoryStorage(session), fetchImpl: fetchImpl as unknown as typeof fetch });
 
     await expect(client.post('/v1/tasks', {})).rejects.toThrow('Title is required');
+  });
+});
+
+describe('parseSetupLink', () => {
+  it('reads server and token from a setup link', () => {
+    expect(parseSetupLink('lifeos://setup?server=https%3A%2F%2Flife-os.example.dev%2F&id=abc.access&secret=s3cr3t')).toEqual({ baseUrl: 'https://life-os.example.dev', cfClientId: 'abc.access', cfClientSecret: 's3cr3t' });
+  });
+  it('rejects other links', () => {
+    expect(parseSetupLink('https://example.com')).toBeNull();
+    expect(parseSetupLink('lifeos://other?server=x')).toBeNull();
+    expect(parseSetupLink('not a url')).toBeNull();
   });
 });
