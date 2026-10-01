@@ -71,8 +71,18 @@ export function GmailConnections() {
                 )}
               </div>
 
-              <Button asChild size="sm" variant={mailbox ? 'outline' : 'default'} className="mt-3 self-start">
-                <a href={importApi.gmailConnectUrl(purpose)}>{mailbox ? 'Use a different account' : 'Connect Gmail'}</a>
+              <Button
+                size="sm"
+                variant={mailbox ? 'outline' : 'default'}
+                className="mt-3 self-start"
+                onClick={() => {
+                  importApi
+                    .getGmailConnectUrl(purpose)
+                    .then((url) => window.location.assign(url))
+                    .catch((err) => setMessage(getErrorMessage(err, 'Could not start the Gmail connection. Try again.')));
+                }}
+              >
+                {mailbox ? 'Use a different account' : 'Connect Gmail'}
               </Button>
             </div>
           );

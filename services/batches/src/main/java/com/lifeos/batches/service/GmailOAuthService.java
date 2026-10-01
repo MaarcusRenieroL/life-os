@@ -11,6 +11,7 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.lifeos.batches.domains.entity.GmailOAuthToken;
 import com.lifeos.batches.domains.enums.GmailPurpose;
+import com.lifeos.batches.exception.InvalidOAuthStateException;
 import com.lifeos.batches.domains.record.GmailConnectionStatus;
 import com.lifeos.batches.repository.GmailOAuthRepository;
 import com.lifeos.common.security.EncryptionService;
@@ -42,6 +43,8 @@ public class GmailOAuthService {
 
   private final EncryptionService encryptionService;
 
+  private final OAuthStateStore stateStore;
+
   private static final NetHttpTransport NET_HTTP_TRANSPORT = new NetHttpTransport();
   private static final GsonFactory GSON_FACTORY = new GsonFactory().getDefaultInstance();
 
@@ -50,13 +53,14 @@ public class GmailOAuthService {
             gmailClientId, gmailRedirectUri, List.of(GmailScopes.GMAIL_READONLY))
         .setAccessType("offline")
         .set("prompt", "select_account consent")
-        // Round-trips through Google so the callback knows which mailbox this is.
-        .setState(purpose.name())
+        // A random single-use value: the callback only accepts flows this app started, and learns which
+        // mailbox this is from it.
+        .setState(stateStore.issue(purpose))
         .build();
   }
 
   public void handleCallback(String authorizationCode, String state) throws IOException {
-    GmailPurpose purpose = parsePurpose(state);
+    GmailPurpose purpose = stateStore.consume(state).orElseThrow(InvalidOAuthStateException::new);
 
     GoogleTokenResponse response =
         new GoogleAuthorizationCodeTokenRequest(
@@ -81,14 +85,6 @@ public class GmailOAuthService {
     gmailOAuthToken.setEmail(mailboxAddress(response.getAccessToken()));
 
     gmailOAuthRepository.save(gmailOAuthToken);
-  }
-
-  private static GmailPurpose parsePurpose(String state) {
-    try {
-      return GmailPurpose.valueOf(state == null ? "FINANCE" : state.trim().toUpperCase());
-    } catch (IllegalArgumentException e) {
-      return GmailPurpose.FINANCE;
-    }
   }
 
   public GmailConnectionStatus getStatus() {
