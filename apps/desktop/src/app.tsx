@@ -14,6 +14,7 @@ import { QuestsScreen } from './screens/quests';
 import { SettingsScreen } from './screens/settings';
 import { TasksScreen } from './screens/tasks';
 import { TrophiesScreen } from './screens/trophies';
+import { NavContext } from './lib/nav';
 import { LockScreen } from './lock-screen';
 import { LockProvider, useLock } from './lib/lock';
 import { QuickCapture } from './quick-capture';
@@ -91,7 +92,9 @@ function Shell() {
           <PlayerBar key={`bar-${epoch}`} />
         </header>
         <div className="content" key={`${screen}-${epoch}`}>
-          <Active />
+          <NavContext.Provider value={(id) => SCREENS.some((x) => x.id === id) && setScreen(id as ScreenId)}>
+            <Active />
+          </NavContext.Provider>
         </div>
       </main>
       {capturing && (

@@ -19,7 +19,7 @@ export function LoginScreen() {
     setBusy(true);
     setError(null);
     try {
-      await signIn(email.trim(), password, { ...settings, baseUrl: server.trim().replace(/\/+$/, ''), cfClientId: cfId.trim(), cfClientSecret: cfSecret.trim() });
+      await signIn(email.trim(), password, { ...settings, baseUrl: server.trim().replace(/\/+$/, ''), cfClientId: cfId.trim(), cfClientSecret: cfSecret.trim(), email: email.trim() });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not sign in');
     } finally {

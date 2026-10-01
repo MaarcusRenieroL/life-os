@@ -187,3 +187,36 @@ button { cursor: pointer; }
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; } .seg button { background: none; border: 0; padding: 6px 12px; color: var(--muted-foreground); } .seg button.on { background: color-mix(in oklab, var(--primary) 14%, transparent); color: var(--primary); }
 @media (max-width: 900px) { .split { grid-template-columns: 1fr; } .cols { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .xp-fill, .xp-fill::after, .content { animation: none !important; transition: none !important; } }
+
+/* ---- Home / HUD kit ---- */
+.hud-label { font-family: var(--font-display); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted-foreground); }
+.hud-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; } .hud-heading .rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
+.hud-bar { overflow: hidden; border-radius: 1px; background: color-mix(in oklab, var(--foreground) 9%, transparent); }
+.hud-bar > i { display: block; height: 100%; position: relative; background: linear-gradient(90deg, color-mix(in oklab, var(--bar, var(--primary)) 70%, black), var(--bar, var(--primary))); box-shadow: 0 0 12px color-mix(in oklab, var(--bar, var(--primary)) 60%, transparent); transition: width 900ms cubic-bezier(0.22, 1, 0.36, 1); }
+.hud-bar > i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, oklch(1 0 0 / 35%), transparent); transform: translateX(-100%); animation: hud-sweep 3.2s ease-in-out infinite; }
+.panel { --hud-accent: var(--primary); }
+.panel::before, .panel::after { border-color: var(--hud-accent); }
+.level-badge { position: relative; flex-shrink: 0; } .level-badge > div { position: absolute; }
+.level-badge .hex-edge { inset: 0; opacity: 0.55; animation: hud-pulse 2.4s ease-in-out infinite; }
+.level-badge .hex-body { inset: 2px; background: var(--card); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.lv-num { font-family: var(--font-display); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+@keyframes hud-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+.rank-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid; padding: 2px 8px; font-family: var(--font-display); font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; } .rank-chip b { font-size: 14px; line-height: 1; }
+.streak { display: flex; align-items: center; gap: 8px; } .streak-n { font-family: var(--font-display); font-size: 20px; font-weight: 700; line-height: 1; }
+.num { font-family: var(--font-display); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.home { display: flex; flex-direction: column; gap: 20px; max-width: 1280px; margin: 0 auto; }
+.home .cols-2 { display: grid; gap: 20px; grid-template-columns: 1.5fr 1fr; } .home .cols-eq { display: grid; gap: 20px; grid-template-columns: 1fr 1fr; } .home .cols-rev { display: grid; gap: 20px; grid-template-columns: 1fr 1.5fr; }
+@media (max-width: 1000px) { .home .cols-2, .home .cols-eq, .home .cols-rev { grid-template-columns: 1fr; } }
+.home .panel { padding: 20px; animation: hud-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.home h1 { margin: 4px 0 0; font-family: var(--font-display); font-size: 30px; font-weight: 700; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quest { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid; border-left-width: 3px; background: color-mix(in oklab, var(--card) 60%, transparent); }
+.quest-xp { border: 1px solid color-mix(in oklab, var(--hud-gold) 40%, transparent); background: color-mix(in oklab, var(--hud-gold) 10%, transparent); padding: 2px 6px; font-family: var(--font-display); font-size: 11px; font-weight: 700; color: var(--hud-gold); }
+.stat-cell { border: 1px solid var(--border); background: color-mix(in oklab, var(--background) 40%, transparent); padding: 12px; } .stat-n { font-family: var(--font-display); font-size: 24px; font-weight: 700; margin-top: 4px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.medal { display: grid; place-items: center; border: 2px solid; border-radius: 50%; color: var(--hud-gold); flex-shrink: 0; }
+.portal { text-align: left; padding: 14px; border: 1px solid var(--border); border-radius: 2px; background: linear-gradient(180deg, oklch(0.215 0.006 285), oklch(0.18 0.005 285)); position: relative; display: flex; flex-direction: column; gap: 8px; transition: border-color 200ms, box-shadow 200ms; }
+.portal:hover { border-color: color-mix(in oklab, var(--primary) 45%, transparent); box-shadow: 0 0 28px -6px color-mix(in oklab, var(--primary) 35%, transparent); }
+.portal-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+.link-label { background: none; border: 0; padding: 0; cursor: pointer; } .link-label:hover { text-decoration: underline; }
+.heat-cell { width: 14px; height: 14px; border-radius: 2px; border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); display: block; }
+.dashed-ok { border: 1px dashed color-mix(in oklab, var(--primary) 40%, transparent); background: color-mix(in oklab, var(--primary) 5%, transparent); padding: 16px; text-align: center; color: var(--primary); font-family: var(--font-sans); }
