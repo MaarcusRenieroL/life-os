@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Plus } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+import { AttachLinkDialog } from './attach-link-dialog';
 import { FitScoreBadge } from './fit-score-badge';
 import { jobApi } from './job-api';
 import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
@@ -26,6 +27,7 @@ export function JobsListPage() {
   const { data: jobs = [], isLoading } = useQuery({ queryKey: ['jobs', 'list'], queryFn: jobApi.list });
 
   const { confirm, dialog } = useConfirmDialog();
+  const [linkFor, setLinkFor] = useState<JobListing | null>(null);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['jobs'] });
@@ -153,6 +155,19 @@ export function JobsListPage() {
         cell: ({ row }) => row.original.deadline?.slice(0, 10) ?? '—',
       },
       {
+        id: 'needsLink',
+        accessorFn: (j) => !j.jobDescriptionText,
+        meta: { title: 'Needs link', filter: { type: 'boolean', labels: ['Missing details', 'Has details'] }, exportValue: (j) => (j.jobDescriptionText ? 'No' : 'Yes') },
+        cell: ({ row }) =>
+          row.original.jobDescriptionText ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <button className="text-xs text-primary hover:underline" onClick={(e) => { e.stopPropagation(); setLinkFor(row.original); }}>
+              Add link
+            </button>
+          ),
+      },
+      {
         accessorKey: 'createdAt',
         meta: { title: 'Added', filter: { type: 'date' }, className: 'hidden lg:table-cell' },
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.createdAt.slice(0, 10)}</span>,
@@ -258,6 +273,16 @@ export function JobsListPage() {
           />
         </div>
       )}
+      <AttachLinkDialog
+        job={linkFor}
+        open={linkFor !== null}
+        onOpenChange={(open) => !open && setLinkFor(null)}
+        onAttached={(updated) => {
+          invalidate();
+          toast.success('Details filled in from the link');
+          navigate(`/jobs/${updated.id}`);
+        }}
+      />
       {dialog}
     </div>
   );

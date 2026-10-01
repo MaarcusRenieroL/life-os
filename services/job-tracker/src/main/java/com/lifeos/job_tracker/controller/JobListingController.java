@@ -71,6 +71,21 @@ public class JobListingController extends AuthenticatedController {
         .body(ApiResponse.success(body, "Job added from link"));
   }
 
+  /**
+   * Attach a job posting link (or pasted description) to a job that already exists - typically one
+   * created from a confirmation email, which only knew the company and title. Fills in the details
+   * and re-scores. Returns 422 when the site blocked the read, like {@code /from-link}.
+   */
+  @PostMapping("/{jobId}/link")
+  public ResponseEntity<ApiResponse<JobListingResponse>> attachLink(
+      Authentication authentication, @PathVariable UUID jobId, @RequestBody FromLinkRequest request) {
+    JobListingResponse updated =
+        JobListingResponse.from(
+            jobListingService.attachLink(userId(authentication), jobId, request.url(), request.jobDescriptionText()));
+    publish(authentication, updated, AutomationEventRecord.Kind.UPDATED);
+    return ResponseEntity.ok(ApiResponse.success(updated, "Job details filled in from the link"));
+  }
+
   @PatchMapping("/{jobId}")
   public ResponseEntity<ApiResponse<JobListingResponse>> updateStatus(
       Authentication authentication,
