@@ -1,5 +1,6 @@
 package com.lifeos.finance_tracker.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateMonthlyIncomeRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateOwnerNamesRequest;
@@ -95,7 +96,7 @@ public class AnalyticsController {
   @GetMapping("/merchants")
   public ResponseEntity<ApiResponse<List<MerchantSpend>>> getTopMerchants(
       Authentication authentication, @RequestParam(defaultValue = "10") int limit) {
-    List<MerchantSpend> data = analyticsService.getTopMerchants(authentication, limit);
+    List<MerchantSpend> data = analyticsService.getTopMerchants(authentication, Bounds.clamp(limit, 1, 100));
     return ResponseEntity.ok(
         ApiResponse.success(data, "Top merchants spend distributions fetched successfully"));
   }

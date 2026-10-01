@@ -1,5 +1,6 @@
 package com.lifeos.notes.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.common.domains.dto.response.PageResponse;
 import com.lifeos.notes.domains.dto.request.AddNoteLinkRequest;
@@ -82,7 +83,7 @@ public class NoteController {
         ApiResponse.success(
             PageResponse.from(
                 noteService.list(
-                    userId, sort, order, folder, tag, noteType, archived, favorite, pinned, page, size)),
+                    userId, sort, order, folder, tag, noteType, archived, favorite, pinned, Bounds.page(page), Bounds.size(size, 200))),
             "Notes fetched successfully"));
   }
 
@@ -91,7 +92,7 @@ public class NoteController {
       Authentication authentication, @RequestParam(defaultValue = "10") int limit) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            noteService.recent(userId(authentication), limit), "Recent notes fetched successfully"));
+            noteService.recent(userId(authentication), Bounds.clamp(limit, 1, 50)), "Recent notes fetched successfully"));
   }
 
   @GetMapping("/favorites")

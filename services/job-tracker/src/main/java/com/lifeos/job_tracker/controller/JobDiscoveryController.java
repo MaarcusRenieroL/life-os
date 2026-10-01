@@ -1,5 +1,6 @@
 package com.lifeos.job_tracker.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.job_tracker.domains.dto.request.AddWatchedCompanyRequest;
 import com.lifeos.job_tracker.domains.dto.request.DiscoveryPreferencesRequest;
@@ -96,7 +97,7 @@ public class JobDiscoveryController extends AuthenticatedController {
       @RequestParam(defaultValue = "200") int limit) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            discoveryService.inbox(userId(authentication), minScore, companyId, limit).stream()
+            discoveryService.inbox(userId(authentication), minScore, companyId, Bounds.clamp(limit, 1, 500)).stream()
                 .map(job -> DiscoveredJobResponse.from(job, false))
                 .toList(),
             "Discovered jobs fetched"));

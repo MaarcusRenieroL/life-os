@@ -1,5 +1,6 @@
 package com.lifeos.batches.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.batches.domains.dto.responses.AuditEventResponse;
 import com.lifeos.batches.domains.entity.AuditEvent;
 import com.lifeos.batches.repository.AuditEventRepository;
@@ -32,7 +33,7 @@ public class AuditEventController {
     PageResponse<AuditEventResponse> events =
         PageResponse.from(
             auditEventRepository
-                .findAllByUserIdOrderByOccurredAtDesc(userId, PageRequest.of(page, size))
+                .findAllByUserIdOrderByOccurredAtDesc(userId, PageRequest.of(Bounds.page(page), Bounds.size(size, 200)))
                 .map(this::toResponse));
 
     return ResponseEntity.ok(ApiResponse.success(events, "Audit events retrieved successfully"));

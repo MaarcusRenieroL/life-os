@@ -1,5 +1,6 @@
 package com.lifeos.workouts.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.workouts.domains.dto.response.WorkoutAnalyticsResponse;
 import com.lifeos.workouts.exception.InvalidRequestException;
 import com.lifeos.workouts.service.WorkoutAnalyticsService;
@@ -33,6 +34,6 @@ public class AnalyticsController {
       throw new InvalidRequestException("Unknown time zone: " + zone);
     }
     return ResponseEntity.ok(
-        ApiResponse.success(analyticsService.analytics((UUID) authentication.getPrincipal(), weeks, target, resolved), "Analytics fetched successfully"));
+        ApiResponse.success(analyticsService.analytics((UUID) authentication.getPrincipal(), Bounds.clamp(weeks, 1, 104), Bounds.clamp(target, 1, 21), resolved), "Analytics fetched successfully"));
   }
 }

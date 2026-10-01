@@ -1,5 +1,6 @@
 package com.lifeos.habit_tracker.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.habit_tracker.domains.dto.response.HabitAnalyticsResponse;
 import com.lifeos.habit_tracker.domains.dto.response.LoggingTimePatternResponse;
@@ -43,7 +44,7 @@ public class HabitAnalyticsController {
       Authentication authentication, @RequestParam(required = false) Integer weeks) {
     return ResponseEntity.ok(
         ApiResponse.success(
-            habitAnalyticsService.analytics(userId(authentication), weeks),
+            habitAnalyticsService.analytics(userId(authentication), weeks == null ? null : Bounds.clamp(weeks, 1, 104)),
             "Analytics fetched successfully"));
   }
 

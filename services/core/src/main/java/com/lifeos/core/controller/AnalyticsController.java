@@ -1,5 +1,6 @@
 package com.lifeos.core.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.core.analytics.AnalyticsModels;
 import com.lifeos.core.analytics.AnalyticsService;
@@ -45,7 +46,7 @@ public class AnalyticsController {
   @GetMapping("/trends")
   public ResponseEntity<ApiResponse<List<AnalyticsModels.TrendPoint>>> trends(
       Authentication authentication, @RequestParam(defaultValue = "30") int days, @RequestParam(defaultValue = "DAY") String bucket) {
-    return ok(analyticsService.trends(userId(authentication), days, "WEEK".equalsIgnoreCase(bucket)), "Trends fetched");
+    return ok(analyticsService.trends(userId(authentication), Bounds.clamp(days, 1, 730), "WEEK".equalsIgnoreCase(bucket)), "Trends fetched");
   }
 
   @GetMapping("/anomalies")
@@ -56,7 +57,7 @@ public class AnalyticsController {
   @GetMapping("/insights")
   public ResponseEntity<ApiResponse<List<AnalyticsModels.Insight>>> insights(
       Authentication authentication, @RequestParam(defaultValue = "60") int days) {
-    return ok(analyticsService.insights(userId(authentication), days), "Insights fetched");
+    return ok(analyticsService.insights(userId(authentication), Bounds.clamp(days, 1, 730)), "Insights fetched");
   }
 
   private static <T> ResponseEntity<ApiResponse<T>> ok(T data, String message) {
