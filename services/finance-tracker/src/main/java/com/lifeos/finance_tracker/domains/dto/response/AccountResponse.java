@@ -39,6 +39,9 @@ public class AccountResponse {
 
   BigDecimal currentBalance;
 
+  /** What the account held before its first transaction; the balance is this plus the transactions' net. */
+  BigDecimal openingBalance;
+
   @JsonProperty("isActive")
   boolean isActive;
 

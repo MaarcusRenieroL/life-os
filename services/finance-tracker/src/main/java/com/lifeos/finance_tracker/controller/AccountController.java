@@ -79,4 +79,11 @@ public class AccountController {
             accountService.reconcile(authentication, id, request),
             "Account reconciled successfully"));
   }
+
+  @PostMapping("/{id}/recalculate")
+  public ResponseEntity<ApiResponse<AccountResponse>> recalculateAccount(
+      Authentication authentication, @PathVariable UUID id) {
+    return ResponseEntity.ok(
+        ApiResponse.success(accountService.recalculate(authentication, id), "Balance recalculated"));
+  }
 }

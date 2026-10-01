@@ -3,6 +3,7 @@ package com.lifeos.finance_tracker.controller;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.finance_tracker.domains.dto.request.CategorizeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
+import com.lifeos.finance_tracker.domains.dto.request.CreateTransferRequest;
 import com.lifeos.finance_tracker.domains.dto.request.DisputeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest;
 import com.lifeos.finance_tracker.domains.dto.request.RenameTransactionRequest;
@@ -15,6 +16,7 @@ import com.lifeos.finance_tracker.service.TransactionService;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -55,6 +57,14 @@ public class TransactionController {
    * Declared before the {@code /{id}} mapping below for readability - Spring matches the literal
    * path first regardless.
    */
+  /** Moves money between two of the user's own accounts (see TransactionService#createTransfer). */
+  @PostMapping("/transfer")
+  public ResponseEntity<ApiResponse<java.util.List<TransactionResponse>>> createTransfer(
+      Authentication authentication, @Valid @RequestBody CreateTransferRequest request) {
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(ApiResponse.success(transactionService.createTransfer(authentication, request), "Transfer recorded"));
+  }
+
   @GetMapping("/needs-review-count")
   public ResponseEntity<ApiResponse<Long>> getNeedsReviewCount(Authentication authentication) {
     return ResponseEntity.ok(

@@ -1,6 +1,7 @@
 package com.lifeos.finance_tracker.repository;
 
 import com.lifeos.finance_tracker.domains.entity.Transaction;
+import com.lifeos.finance_tracker.domains.enums.SourceType;
 import com.lifeos.finance_tracker.domains.enums.TransactionType;
 import com.lifeos.finance_tracker.domains.record.CategoryPeriodSpend;
 import com.lifeos.finance_tracker.domains.record.DashboardSummary;
@@ -42,7 +43,7 @@ public interface TransactionRepository
    * "N need review". Both used to fetch a page of 50 full transactions and filter it client-side,
    * which both over-fetched and silently undercounted once a user had more than 50 uncategorized.
    */
-  long countByUserIdAndCategoryIdIsNullAndTypeNot(UUID userId, TransactionType type);
+  long countByUserIdAndCategoryIdIsNullAndTypeNotAndIsTransferFalseAndIsDuplicateFalse(UUID userId, TransactionType type);
 
   boolean existsByAccountIdAndAmountAndTransactionDateBetweenAndDescription(
       UUID accountId,
@@ -58,14 +59,16 @@ public interface TransactionRepository
           + "  NULL"
           + ") "
           + "FROM Transaction t "
-          + "WHERE t.userId = :userId AND t.transactionDate BETWEEN :start AND :end")
+          + "WHERE t.userId = :userId AND t.transactionDate BETWEEN :start AND :end"
+          + " AND t.isDuplicate = false AND t.status <> 'IGNORED' AND t.isTransfer = false")
   DashboardSummary getDashboardSummary(
       @Param("userId") UUID userId, @Param("start") Instant start, @Param("end") Instant end);
 
   @Query(
       "SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t "
           + "WHERE t.userId = :userId AND t.categoryId = :categoryId AND t.type = 'DEBIT' "
-          + "AND t.transactionDate BETWEEN :start AND :end")
+          + "AND t.transactionDate BETWEEN :start AND :end"
+          + " AND t.isDuplicate = false AND t.status <> 'IGNORED' AND t.isTransfer = false")
   BigDecimal sumCategorySpendByPeriod(
       @Param("userId") UUID userId,
       @Param("categoryId") UUID categoryId,
@@ -95,6 +98,7 @@ public interface TransactionRepository
           + "FROM Transaction t "
           + "WHERE t.userId = :userId AND t.categoryId IN :categoryIds AND t.type = 'DEBIT' "
           + "AND t.transactionDate BETWEEN :previousStart AND :currentEnd "
+          + "AND t.isDuplicate = false AND t.status <> 'IGNORED' AND t.isTransfer = false "
           + "GROUP BY t.categoryId")
   List<CategoryPeriodSpend> sumCategorySpendForPeriods(
       @Param("userId") UUID userId,
@@ -106,12 +110,13 @@ public interface TransactionRepository
 
   @Query(
       value =
-          "SELECT TO_CHAR(DATE_TRUNC('month', transaction_date), 'YYYY-MM') as month, "
+          "SELECT TO_CHAR(DATE_TRUNC('month', transaction_date AT TIME ZONE 'Asia/Kolkata'), 'YYYY-MM') as month, "
               + "COALESCE(SUM(amount), 0) as total_spend "
               + "FROM finance_schema.transactions "
               + "WHERE user_id = :userId AND type = 'DEBIT' "
+              + "AND is_duplicate = false AND status <> 'IGNORED' AND is_transfer = false "
               + "AND transaction_date >= :since "
-              + "GROUP BY DATE_TRUNC('month', transaction_date) "
+              + "GROUP BY DATE_TRUNC('month', transaction_date AT TIME ZONE 'Asia/Kolkata') "
               + "ORDER BY month DESC",
       nativeQuery = true)
   List<Object[]> getMonthlyTrendsRaw(@Param("userId") UUID userId, @Param("since") Instant since);
@@ -121,6 +126,7 @@ public interface TransactionRepository
           "SELECT LOWER(TRIM(description)) as merchant, COALESCE(SUM(amount), 0) as total_spend "
               + "FROM finance_schema.transactions "
               + "WHERE user_id = :userId AND type = 'DEBIT' "
+              + "AND is_duplicate = false AND status <> 'IGNORED' AND is_transfer = false "
               + "GROUP BY LOWER(TRIM(description)) "
               + "ORDER BY total_spend DESC "
               + "LIMIT :limit",
@@ -129,4 +135,35 @@ public interface TransactionRepository
 
   List<Transaction> findAllByUserIdAndTransactionDateBetweenOrderByTransactionDateAsc(
       UUID userId, Instant start, Instant end);
+
+  /**
+   * What an account's counted transactions add up to: money in minus money out, transfers included
+   * (they move money between accounts) but duplicates and ignored rows left out. The account's
+   * balance is its opening balance plus this, so it can always be recomputed rather than trusted.
+   */
+  @Query(
+      "SELECT COALESCE(SUM(CASE WHEN t.type = 'CREDIT' THEN t.amount "
+          + "WHEN t.type = 'DEBIT' THEN -t.amount ELSE 0 END), 0) "
+          + "FROM Transaction t WHERE t.accountId = :accountId "
+          + "AND t.isDuplicate = false AND t.status <> 'IGNORED'")
+  BigDecimal netForAccount(@Param("accountId") UUID accountId);
+
+  /**
+   * An email alert already booked this same money movement. A statement row for it carries a
+   * different description (the bank's narration vs the UPI payee), so the description-based dedup
+   * misses it and the payment would be counted twice.
+   */
+  @Query(
+      "SELECT COUNT(t) > 0 FROM Transaction t WHERE t.accountId = :accountId AND t.amount = :amount "
+          + "AND t.type = :type AND t.sourceType = com.lifeos.finance_tracker.domains.enums.SourceType.EMAIL_ALERT "
+          + "AND t.isDuplicate = false AND t.transactionDate BETWEEN :from AND :to")
+  boolean existsEmailAlertTwin(
+      @Param("accountId") UUID accountId,
+      @Param("amount") BigDecimal amount,
+      @Param("type") TransactionType type,
+      @Param("from") Instant from,
+      @Param("to") Instant to);
+
+  List<Transaction> findAllByTransferPairId(UUID transferPairId);
+
 }

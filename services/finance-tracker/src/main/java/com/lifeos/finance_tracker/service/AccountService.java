@@ -24,6 +24,7 @@ public class AccountService {
 
   private final AccountRepository accountRepository;
   private final EncryptionService encryptionService;
+  private final AccountBalanceService accountBalanceService;
 
   @Transactional(readOnly = true)
   public List<AccountResponse> getAll(Authentication authentication) {
@@ -54,6 +55,9 @@ public class AccountService {
             .accountNumberEncrypted(encryptionService.encrypt(request.getAccountNumber()))
             .currencyCode(request.getCurrencyCode())
             .openedDate(request.getOpenedDate())
+            // What the account holds today is its opening balance: transactions recorded from here
+            // on are added to it, and the balance is always opening + net of transactions.
+            .openingBalance(request.getCurrentBalance() != null ? request.getCurrentBalance() : BigDecimal.ZERO)
             .currentBalance(
                 request.getCurrentBalance() != null ? request.getCurrentBalance() : BigDecimal.ZERO)
             .isActive(true)
@@ -97,9 +101,10 @@ public class AccountService {
       account.setOpenedDate(request.getOpenedDate());
     }
 
-    if (request.getCurrentBalance() != null) {
-      account.setCurrentBalance(request.getCurrentBalance());
-    }
+    // Typing a new balance means "this is what it holds now": the opening balance moves so the
+    // derived balance equals it, instead of overwriting a number that the next transaction would
+    // silently throw away.
+    BigDecimal statedBalance = request.getCurrentBalance();
 
     if (request.getIsActive() != null) {
       account.setActive(request.getIsActive());
@@ -117,7 +122,11 @@ public class AccountService {
       account.setNotes(request.getNotes());
     }
 
-    return toResponse(accountRepository.save(account));
+    Account saved = accountRepository.save(account);
+    if (statedBalance != null) {
+      accountBalanceService.alignTo(saved, statedBalance);
+    }
+    return toResponse(saved);
   }
 
   public void delete(Authentication authentication, UUID id) {
@@ -142,9 +151,23 @@ public class AccountService {
             .findByIdAndUserId(id, userId)
             .orElseThrow(() -> new AccountNotFoundException(id));
 
-    account.setCurrentBalance(request.getStatementBalance());
+    // The statement is the truth: pick the opening balance so the books agree with it.
+    accountBalanceService.alignTo(account, request.getStatementBalance());
 
-    return toResponse(accountRepository.save(account));
+    return toResponse(account);
+  }
+
+  /** Recomputes the balance from the ledger - for an account whose number looks off. */
+  public AccountResponse recalculate(Authentication authentication, UUID id) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    Account account =
+        accountRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() -> new AccountNotFoundException(id));
+
+    accountBalanceService.refresh(account);
+    return toResponse(account);
   }
 
   private AccountResponse toResponse(Account account) {
@@ -163,6 +186,7 @@ public class AccountService {
         .currencyCode(account.getCurrencyCode())
         .openedDate(account.getOpenedDate())
         .currentBalance(account.getCurrentBalance())
+        .openingBalance(account.getOpeningBalance())
         .isActive(account.isActive())
         .isPrimary(account.isPrimary())
         .emailForAlerts(account.getEmailForAlerts())

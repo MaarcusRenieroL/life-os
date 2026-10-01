@@ -50,6 +50,9 @@ public class Budget {
 
   boolean alertEnabled;
 
+  /** The budget period (its start date) the threshold alert last fired for - so it fires once per period. */
+  String lastAlertCycle;
+
   String notes;
 
   @CreationTimestamp Instant createdAt;

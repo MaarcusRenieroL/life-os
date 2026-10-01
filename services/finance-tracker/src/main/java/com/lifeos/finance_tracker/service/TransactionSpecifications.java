@@ -37,7 +37,8 @@ public final class TransactionSpecifications {
         Predicate needsReview =
             cb.and(
                 cb.isNull(root.get("categoryId")),
-                cb.notEqual(root.get("type"), TransactionType.CREDIT));
+                cb.notEqual(root.get("type"), TransactionType.CREDIT),
+                cb.isFalse(root.get("isTransfer")));
 
         switch (status.toUpperCase()) {
           case "DUPLICATE" -> predicates.add(cb.isTrue(root.get("isDuplicate")));

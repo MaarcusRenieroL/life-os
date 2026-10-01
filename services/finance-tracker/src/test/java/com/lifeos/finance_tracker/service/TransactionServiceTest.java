@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.lifeos.finance_tracker.domains.dto.request.CreateQuickCaptureTransactionRequest;
+import com.lifeos.finance_tracker.domains.dto.request.CreateTransferRequest;
 import com.lifeos.finance_tracker.domains.dto.response.TransactionResponse;
 import com.lifeos.finance_tracker.domains.entity.Account;
 import com.lifeos.finance_tracker.domains.entity.Transaction;
@@ -40,6 +41,7 @@ class TransactionServiceTest {
   @Mock private CategorizationService categorizationService;
   @Mock private MerchantService merchantService;
   @Mock private BudgetSpendService budgetSpendService;
+  @Mock private AccountBalanceService accountBalanceService;
 
   private TransactionService transactionService;
 
@@ -55,7 +57,8 @@ class TransactionServiceTest {
             transactionCategoryRepository,
             categorizationService,
             merchantService,
-            budgetSpendService);
+            budgetSpendService,
+            accountBalanceService);
 
     lenient().when(categorizationService.categorize(any(Transaction.class))).thenReturn(Optional.empty());
     lenient()
@@ -187,8 +190,86 @@ class TransactionServiceTest {
     verify(transactionRepository).save(savedTransaction.capture());
 
     assertThat(savedTransaction.getValue().getCategoryId()).isEqualTo(categoryId);
-    verify(budgetSpendService)
-        .recordSpend(eq(userId), eq(categoryId), eq(new BigDecimal("400")), any());
+    // The budget it counts toward is re-checked, and the balance is recomputed from the ledger.
+    verify(budgetSpendService).evaluate(savedTransaction.getValue());
+    verify(accountBalanceService).refresh(onlyAccount.getId());
+  }
+
+  @Test
+  void aTransferMovesTwoLegsBetweenTwoAccountsAndTouchesNoBudget() {
+    Account from = account(true, false);
+    Account to = account(true, false);
+    from.setAccountName("HDFC Savings");
+    to.setAccountName("HDFC Regalia");
+    when(accountRepository.findByIdAndUserId(from.getId(), userId)).thenReturn(Optional.of(from));
+    when(accountRepository.findByIdAndUserId(to.getId(), userId)).thenReturn(Optional.of(to));
+    when(transactionRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+    CreateTransferRequest request = new CreateTransferRequest();
+    setField(request, "fromAccountId", from.getId());
+    setField(request, "toAccountId", to.getId());
+    setField(request, "amount", new BigDecimal("12500"));
+    setField(request, "transactionDate", java.time.Instant.parse("2026-09-30T00:00:00Z"));
+
+    List<TransactionResponse> legs = transactionService.createTransfer(authFor(userId), request);
+
+    assertThat(legs).hasSize(2);
+    assertThat(legs).allSatisfy(leg -> assertThat(leg.isTransfer()).isTrue());
+    TransactionResponse out = legs.stream().filter(l -> l.getType() == TransactionType.DEBIT).findFirst().orElseThrow();
+    TransactionResponse in = legs.stream().filter(l -> l.getType() == TransactionType.CREDIT).findFirst().orElseThrow();
+    assertThat(out.getAccountId()).isEqualTo(from.getId());
+    assertThat(out.getDescription()).isEqualTo("Transfer to HDFC Regalia");
+    assertThat(in.getAccountId()).isEqualTo(to.getId());
+    verify(accountBalanceService).refreshAll(List.of(from.getId(), to.getId()));
+    verify(budgetSpendService, never()).evaluate(any(Transaction.class));
+  }
+
+  @Test
+  void aTransferToTheSameAccountIsRejected() {
+    UUID same = UUID.randomUUID();
+    CreateTransferRequest request = new CreateTransferRequest();
+    setField(request, "fromAccountId", same);
+    setField(request, "toAccountId", same);
+    setField(request, "amount", new BigDecimal("100"));
+    setField(request, "transactionDate", java.time.Instant.now());
+
+    assertThatThrownBy(() -> transactionService.createTransfer(authFor(userId), request))
+        .isInstanceOf(com.lifeos.finance_tracker.exception.InvalidRequestException.class);
+    verify(transactionRepository, never()).saveAll(any());
+  }
+
+  @Test
+  void deletingOneLegOfATransferRemovesBothAndRefreshesBothAccounts() {
+    UUID pair = UUID.randomUUID();
+    Transaction out = Transaction.builder().id(UUID.randomUUID()).userId(userId).accountId(UUID.randomUUID()).type(TransactionType.DEBIT).amount(BigDecimal.TEN).isTransfer(true).transferPairId(pair).build();
+    Transaction in = Transaction.builder().id(UUID.randomUUID()).userId(userId).accountId(UUID.randomUUID()).type(TransactionType.CREDIT).amount(BigDecimal.TEN).isTransfer(true).transferPairId(pair).build();
+    when(transactionRepository.findByIdAndUserId(out.getId(), userId)).thenReturn(Optional.of(out));
+    when(transactionRepository.findAllByTransferPairId(pair)).thenReturn(List.of(out, in));
+
+    transactionService.delete(authFor(userId), out.getId());
+
+    verify(transactionRepository).deleteAll(List.of(out, in));
+    verify(accountBalanceService).refreshAll(List.of(out.getAccountId(), in.getAccountId()));
+  }
+
+  @Test
+  void mergingADuplicateRecomputesTheBalanceSoItNoLongerCounts() {
+    Transaction canonical = Transaction.builder().id(UUID.randomUUID()).userId(userId).accountId(UUID.randomUUID()).type(TransactionType.DEBIT).amount(BigDecimal.TEN).build();
+    Transaction duplicate = Transaction.builder().id(UUID.randomUUID()).userId(userId).accountId(canonical.getAccountId()).type(TransactionType.DEBIT).amount(BigDecimal.TEN).build();
+    when(transactionRepository.findByIdAndUserId(canonical.getId(), userId)).thenReturn(Optional.of(canonical));
+    when(transactionRepository.findAllByIdInAndUserId(List.of(duplicate.getId()), userId)).thenReturn(List.of(duplicate));
+    com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest merge = new com.lifeos.finance_tracker.domains.dto.request.MergeTransactionsRequest();
+    setField(merge, "duplicateTransactionIds", List.of(duplicate.getId()));
+
+    transactionService.merge(authFor(userId), canonical.getId(), merge);
+
+    assertThat(duplicate.isDuplicate()).isTrue();
+    assertThat(duplicate.getDuplicateOf()).isEqualTo(canonical.getId());
+    verify(accountBalanceService).refreshAll(List.of(canonical.getAccountId()));
+  }
+
+  private org.springframework.security.core.Authentication authFor(UUID id) {
+    return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(id, null, List.of());
   }
 
   private CreateQuickCaptureTransactionRequest quickCaptureRequest() {
