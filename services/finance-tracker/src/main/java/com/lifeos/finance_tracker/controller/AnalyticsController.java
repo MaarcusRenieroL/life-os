@@ -2,7 +2,9 @@ package com.lifeos.finance_tracker.controller;
 
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.finance_tracker.domains.dto.request.UpdateMonthlyIncomeRequest;
+import com.lifeos.finance_tracker.domains.dto.request.UpdateOwnerNamesRequest;
 import com.lifeos.finance_tracker.domains.dto.request.UpdatePayCycleRequest;
+import com.lifeos.finance_tracker.service.OwnNameService;
 import com.lifeos.finance_tracker.domains.record.*;
 import com.lifeos.finance_tracker.service.AnalyticsService;
 import jakarta.validation.Valid;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class AnalyticsController {
 
   private final AnalyticsService analyticsService;
+  private final OwnNameService ownNameService;
 
   @GetMapping("/dashboard")
   public ResponseEntity<ApiResponse<DashboardSummary>> getDashboard(Authentication authentication) {
@@ -37,6 +40,19 @@ public class AnalyticsController {
   public ResponseEntity<ApiResponse<FinanceOverview>> updatePayCycle(
       Authentication authentication, @Valid @RequestBody UpdatePayCycleRequest request) {
     return ResponseEntity.ok(ApiResponse.success(analyticsService.updatePayCycle(authentication, request), "Pay cycle updated"));
+  }
+
+  /** Sets the names the user appears under in bank narrations; matching transactions become self-transfers. */
+  @PutMapping("/owner-names")
+  public ResponseEntity<ApiResponse<Integer>> updateOwnerNames(
+      Authentication authentication, @Valid @RequestBody UpdateOwnerNamesRequest request) {
+    int relabelled = ownNameService.setNames((UUID) authentication.getPrincipal(), request.getNames());
+    return ResponseEntity.ok(ApiResponse.success(relabelled, "Owner names saved"));
+  }
+
+  @GetMapping("/owner-names")
+  public ResponseEntity<ApiResponse<List<String>>> getOwnerNames(Authentication authentication) {
+    return ResponseEntity.ok(ApiResponse.success(ownNameService.namesFor((UUID) authentication.getPrincipal()), "Owner names fetched"));
   }
 
   @PutMapping("/monthly-income")

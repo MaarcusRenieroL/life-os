@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -45,6 +47,18 @@ public class EmailHubSyncService {
   @Value("${gmail.job-search.senders}")
   private String jobSenders;
 
+  /** Extra senders or domains the hub may read, on top of the subject keywords. */
+  @Value("${gmail.email-hub.senders:}")
+  private String allowedSenders = "";
+
+  /** Bills, banks and bookings: a subject must mention one of these (or come from an allowed sender). */
+  @Value("${gmail.email-hub.subject-keywords:invoice,bill,receipt,statement,payment,booking,reservation,confirmation,order,due,renewal,subscription,ticket,appointment}")
+  private String subjectKeywords = "invoice,bill,receipt,statement,payment,booking,reservation,confirmation,order,due,renewal,subscription,ticket,appointment";
+
+  /** Whole domains that never reach the hub; job boards are added automatically from the job-search senders. */
+  @Value("${gmail.email-hub.blocked-domains:successfactors.com,join.com,jobgether.com,sysvine.com,ambitionbox.com}")
+  private String blockedDomains = "";
+
   private final GmailMessageService gmailMessageService;
   private final GmailOAuthService gmailOAuthService;
   private final KafkaTemplate<String, EmailHubEventRecord> emailHubEventKafkaTemplate;
@@ -63,25 +77,37 @@ public class EmailHubSyncService {
     return sent;
   }
 
+  private static List<String> split(String csv) {
+    return Arrays.stream(csv.split(",")).map(String::trim).filter(x -> !x.isEmpty()).toList();
+  }
+
   String searchClause() {
     // Bank alerts and job-board mail each have their own pipeline; the hub guessing at them as well
-    // produced duplicate tasks and "ignored" verdicts on real applications.
-    String skipBankAlerts =
-        Arrays.stream((bankAlertSenders + "," + jobSenders).split(","))
-            .map(String::trim)
-            .filter(s -> !s.isEmpty())
-            .map(s -> "-from:" + s)
-            .reduce("", (a, b) -> a + " " + b);
-    // Updates is deliberately kept: Gmail files receipts, bills, statements and booking
-    // confirmations there, which is most of what the hub exists to catch.
-    return "in:inbox -category:promotions -category:social -category:forums" + skipBankAlerts;
+    // produced duplicate tasks and "ignored" verdicts on real applications. Job boards are blocked by
+    // domain (linkedin.com, naukri.com, ...) because they send from many addresses.
+    List<String> blocked = new java.util.ArrayList<>(split(blockedDomains));
+    split(jobSenders).forEach(sender -> blocked.add(sender.substring(sender.indexOf('@') + 1)));
+    String skipSenders =
+        Stream.concat(split(bankAlertSenders).stream().map(a -> "-from:" + a), blocked.stream().distinct().map(d -> "-from:" + d))
+            .collect(Collectors.joining(" "));
+
+    // Security codes are never fetched: excluded here, and SecurityMail re-checks what gets through.
+    String skipSecurity =
+        SecurityMail.SUBJECT_PHRASES.stream().map(p -> "-subject:\"" + p + "\"").collect(Collectors.joining(" "));
+
+    // Allow-list: only bills, banks and bookings. A subject keyword or a named sender qualifies.
+    String keywords = split(subjectKeywords).stream().map(k -> "subject:\"" + k + "\"").collect(Collectors.joining(" OR "));
+    String senders = split(allowedSenders).stream().map(a -> "from:" + a).collect(Collectors.joining(" OR "));
+    String allow = senders.isEmpty() ? keywords : keywords + " OR " + senders;
+
+    return "in:inbox -category:promotions -category:social -category:forums " + skipSenders + " " + skipSecurity + " (" + allow + ")";
   }
 
   private int process(List<RawEmail> emails) {
     UUID userId = UUID.fromString(ownerUserId);
     int sent = 0;
 
-    for (RawEmail email : emails.stream().limit(MAX_PER_SYNC).toList()) {
+    for (RawEmail email : emails.stream().filter(e -> !SecurityMail.matches(e.subject(), e.body())).limit(MAX_PER_SYNC).toList()) {
       try {
         EmailHubEventRecord event =
             new EmailHubEventRecord(
@@ -99,7 +125,7 @@ public class EmailHubSyncService {
       }
     }
 
-    int attempted = Math.min(emails.size(), MAX_PER_SYNC);
+    int attempted = Math.min((int) emails.stream().filter(e -> !SecurityMail.matches(e.subject(), e.body())).count(), MAX_PER_SYNC);
     if (attempted > 0 && sent < attempted / 2.0) {
       notificationEventPublisher.publish(
           userId,

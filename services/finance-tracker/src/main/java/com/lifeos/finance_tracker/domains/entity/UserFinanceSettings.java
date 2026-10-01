@@ -34,5 +34,8 @@ public class UserFinanceSettings {
   /** Day of the month salary lands (1-28). Budgets and the dashboard measure a month from this day. */
   @Builder.Default int payCycleStartDay = 1;
 
+  /** Comma-separated names the user appears under in bank narrations; a match marks a self-transfer. */
+  String ownerNames;
+
   @UpdateTimestamp Instant updatedAt;
 }
