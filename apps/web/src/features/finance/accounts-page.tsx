@@ -11,6 +11,7 @@ import { getErrorMessage } from '@/lib/error';
 
 import { AccountDialog } from './account-dialog';
 import { accountApi } from './account-api';
+import { OwnerNamesCard } from './owner-names-card';
 import { ReconcileDialog } from './reconcile-dialog';
 import { ACCOUNT_TYPE_LABELS, type AccountResponse } from './types';
 import { accountSubLabel, formatINR } from './utils';
@@ -147,6 +148,10 @@ export function AccountsPage() {
         <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>+ Add account</Button>
       </div>
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+
+      <div className="mt-4">
+        <OwnerNamesCard />
+      </div>
 
       {accounts.length === 0 ? (
         <EmptyState

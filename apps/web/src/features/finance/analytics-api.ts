@@ -30,6 +30,14 @@ export const analyticsApi = {
   setPayCycle(startDay: number): Promise<FinanceOverview> {
     return unwrap(api.put(`${baseUrl}/pay-cycle`, { startDay }));
   },
+  /** The names you appear under in bank narrations (UPI, NEFT, IMPS). */
+  getOwnerNames(): Promise<string[]> {
+    return unwrap(api.get(`${baseUrl}/owner-names`));
+  },
+  /** Saves them and re-labels existing transactions that carry one as transfers; resolves to how many changed. */
+  setOwnerNames(names: string[]): Promise<number> {
+    return unwrap(api.put(`${baseUrl}/owner-names`, { names }));
+  },
   updateMonthlyIncome(monthlyIncome: number): Promise<DashboardSummary> {
     return unwrap(api.put(`${baseUrl}/monthly-income`, { monthlyIncome }));
   },
