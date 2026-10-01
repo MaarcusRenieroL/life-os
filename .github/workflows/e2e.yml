@@ -4,6 +4,9 @@ name: E2E
 # the Playwright suite against the built web app. Run it by hand from the Actions tab, or it runs on pull
 # requests into main as the release gate.
 on:
+  push:
+    branches:
+      - chore/e2e-stack # TEMPORARY: first run, removed before merge
   workflow_dispatch:
   pull_request:
     branches:
