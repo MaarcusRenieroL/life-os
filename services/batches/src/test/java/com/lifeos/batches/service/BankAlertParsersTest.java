@@ -172,4 +172,32 @@ class BankAlertParsersTest {
     assertThat(AlertFormat.suffix("XXXX")).isNull();
     assertThat(AlertFormat.suffix(null)).isNull();
   }
+
+  @Test
+  void irregularSpacingAndHtmlInTheRealEmailDoNotBreakParsing() {
+    GmailAlertParsingService service = new GmailAlertParsingService(java.util.List.of(canara, card, salary));
+
+    ParsedAlert alert =
+        service.parse(
+            "m11",
+            "canarabank@canarabank.com",
+            "UPI/IMPS/MB Transaction Alert",
+            "An amount of INR 40,000.00 has been CREDITED on 30/09/26 to your account  XXXX7829\r\nfrom MAARCUS RENI with UPI Ref No.:663937859272.",
+            NOW);
+
+    assertThat(alert.amount()).isEqualByComparingTo("40000.00");
+    assertThat(alert.description()).isEqualTo("MAARCUS RENI");
+    assertThat(alert.accountSuffix()).isEqualTo("7829");
+
+    ParsedAlert html =
+        service.parse(
+            "m12", "HDFC Bank <alerts@hdfcbank.net>", "Payment", "<p>We have received payment of INR&nbsp;15000.00 on your <b>Pixel Play</b> credit card on 30/09/26 18:45</p>", NOW);
+    assertThat(html.amount()).isEqualByComparingTo("15000.00");
+  }
+
+  @Test
+  void plainTextCollapsesTagsEntitiesAndWhitespace() {
+    assertThat(AlertFormat.plainText("<div>Rs.&nbsp;1,000 \u00a0 debited</div>\r\n<style>x{}</style>from A/c")).isEqualTo("Rs. 1,000 debited from A/c");
+    assertThat(AlertFormat.plainText(null)).isEmpty();
+  }
 }
