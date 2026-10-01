@@ -41,3 +41,7 @@ venv/
 .cache/
 
 .cloudflared/
+
+# Built app binaries served at /files/*
+/files/*
+!/files/.gitkeep
