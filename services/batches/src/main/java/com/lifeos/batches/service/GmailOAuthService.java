@@ -7,8 +7,10 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.lifeos.batches.domains.entity.GmailOAuthToken;
+import com.lifeos.batches.domains.enums.GmailPurpose;
 import com.lifeos.batches.domains.record.GmailConnectionStatus;
 import com.lifeos.batches.repository.GmailOAuthRepository;
 import com.lifeos.common.security.EncryptionService;
@@ -43,15 +45,19 @@ public class GmailOAuthService {
   private static final NetHttpTransport NET_HTTP_TRANSPORT = new NetHttpTransport();
   private static final GsonFactory GSON_FACTORY = new GsonFactory().getDefaultInstance();
 
-  public String buildAuthorizationUrl() {
+  public String buildAuthorizationUrl(GmailPurpose purpose) {
     return new GoogleAuthorizationCodeRequestUrl(
             gmailClientId, gmailRedirectUri, List.of(GmailScopes.GMAIL_READONLY))
         .setAccessType("offline")
-        .set("prompt", "consent")
+        .set("prompt", "select_account consent")
+        // Round-trips through Google so the callback knows which mailbox this is.
+        .setState(purpose.name())
         .build();
   }
 
-  public void handleCallback(String authorizationCode) throws IOException {
+  public void handleCallback(String authorizationCode, String state) throws IOException {
+    GmailPurpose purpose = parsePurpose(state);
+
     GoogleTokenResponse response =
         new GoogleAuthorizationCodeTokenRequest(
                 NET_HTTP_TRANSPORT,
@@ -66,38 +72,74 @@ public class GmailOAuthService {
 
     GmailOAuthToken gmailOAuthToken =
         gmailOAuthRepository
-            .findByUserId(userId)
-            .orElseGet(() -> GmailOAuthToken.builder().userId(userId).build());
+            .findByUserIdAndPurpose(userId, purpose)
+            .orElseGet(() -> GmailOAuthToken.builder().userId(userId).purpose(purpose).build());
 
     gmailOAuthToken.setAccessTokenEncrypted(encryptionService.encrypt(response.getAccessToken()));
     gmailOAuthToken.setRefreshTokenEncrypted(encryptionService.encrypt(response.getRefreshToken()));
     gmailOAuthToken.setExpiresAt(Instant.now().plusSeconds(expiresInSeconds(response)));
+    gmailOAuthToken.setEmail(mailboxAddress(response.getAccessToken()));
 
     gmailOAuthRepository.save(gmailOAuthToken);
+  }
+
+  private static GmailPurpose parsePurpose(String state) {
+    try {
+      return GmailPurpose.valueOf(state == null ? "FINANCE" : state.trim().toUpperCase());
+    } catch (IllegalArgumentException e) {
+      return GmailPurpose.FINANCE;
+    }
   }
 
   public GmailConnectionStatus getStatus() {
     UUID userId = UUID.fromString(ownerUserId);
 
-    return gmailOAuthRepository
-        .findByUserId(userId)
-        .map(
-            token ->
-                new GmailConnectionStatus(
-                    true, token.getCreatedAt(), token.getUpdatedAt(), mailboxAddress()))
-        .orElseGet(() -> new GmailConnectionStatus(false, null, null, null));
+    List<GmailConnectionStatus.Mailbox> mailboxes =
+        gmailOAuthRepository.findAllByUserId(userId).stream()
+            .map(
+                token ->
+                    new GmailConnectionStatus.Mailbox(
+                        token.getPurpose().name(),
+                        addressOf(token),
+                        token.getCreatedAt(),
+                        token.getUpdatedAt()))
+            .toList();
+
+    GmailConnectionStatus.Mailbox finance =
+        mailboxes.stream().filter(m -> m.purpose().equals("FINANCE")).findFirst().orElse(null);
+    GmailConnectionStatus.Mailbox primary = finance != null ? finance : mailboxes.stream().findFirst().orElse(null);
+
+    return primary == null
+        ? new GmailConnectionStatus(false, null, null, null, mailboxes)
+        : new GmailConnectionStatus(
+            true, primary.connectedAt(), primary.lastRefreshedAt(), primary.email(), mailboxes);
   }
 
-  /**
-   * Which Google account the tokens belong to. Applications and bank alerts only show up if they
-   * were sent to this mailbox, so the UI names it; best effort, since status must never fail.
-   */
-  private String mailboxAddress() {
+  /** The purposes that have a mailbox connected, so inbox-wide jobs can visit each one. */
+  public List<GmailPurpose> connectedPurposes() {
+    return gmailOAuthRepository.findAllByUserId(UUID.fromString(ownerUserId)).stream()
+        .map(GmailOAuthToken::getPurpose)
+        .toList();
+  }
+
+  /** Stored address, learned lazily for connections that predate purposes. */
+  private String addressOf(GmailOAuthToken token) {
+    if (token.getEmail() == null) {
+      try {
+        token.setEmail(mailboxAddress(getValidAccessToken(token.getPurpose())));
+        gmailOAuthRepository.save(token);
+      } catch (Exception ignored) {
+        // status must never fail because Google is unreachable
+      }
+    }
+    return token.getEmail();
+  }
+
+  private static String mailboxAddress(String accessToken) {
     try {
-      String accessToken = getValidAccessToken();
       return new Gmail.Builder(
-              new NetHttpTransport(),
-              GsonFactory.getDefaultInstance(),
+              NET_HTTP_TRANSPORT,
+              GSON_FACTORY,
               request -> request.getHeaders().setAuthorization("Bearer " + accessToken))
           .setApplicationName("life-os")
           .build()
@@ -110,12 +152,17 @@ public class GmailOAuthService {
     }
   }
 
-  public String getValidAccessToken() {
+  /**
+   * A valid access token for the mailbox serving {@code purpose}. When only one mailbox is
+   * connected it serves every purpose, so single-address setups keep working unchanged.
+   */
+  public String getValidAccessToken(GmailPurpose purpose) {
     UUID userId = UUID.fromString(ownerUserId);
 
     GmailOAuthToken gmailOAuthToken =
         gmailOAuthRepository
-            .findByUserId(userId)
+            .findByUserIdAndPurpose(userId, purpose)
+            .or(() -> gmailOAuthRepository.findAllByUserId(userId).stream().findFirst())
             .orElseThrow(
                 () ->
                     new IllegalStateException(

@@ -131,34 +131,41 @@ export function ImportPage() {
 
       <section className="mt-4 hud-panel p-5">
         <SectionHeading>Gmail sync</SectionHeading>
-        {gmailStatus?.connected ? (
-          <div className="mt-2 text-sm">
-            <p className="text-primary">Connected {gmailStatus.connectedAt ? `since ${new Date(gmailStatus.connectedAt).toLocaleDateString()}` : ''}</p>
-            {gmailStatus.email && (
-              <p className="text-sm">
-                Reading <span className="font-medium">{gmailStatus.email}</span>
-                <span className="text-xs text-muted-foreground"> - bank alerts, job emails and your inbox are only picked up from this mailbox. Mail sent to another address never arrives; use Reconnect to switch.</span>
-              </p>
-            )}
-            {gmailStatus.lastRefreshedAt && (
-              <p className="text-xs text-muted-foreground">Token last refreshed {new Date(gmailStatus.lastRefreshedAt).toLocaleDateString()}</p>
-            )}
-            <div className="mt-3 flex items-center gap-3">
-              <Button size="sm" variant="outline" onClick={() => void syncGmail()} disabled={syncing}>
-                {syncing ? 'Syncing…' : 'Sync all history'}
-              </Button>
-              <a href={importApi.gmailConnectUrl()} className="text-xs text-primary hover:underline">Reconnect</a>
-            </div>
-            {syncMessage && <p className="mt-2 text-xs text-muted-foreground">{syncMessage}</p>}
-          </div>
-        ) : (
-          <div className="mt-2">
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px]">not connected</span>
-            <div className="mt-2">
-              <a href={importApi.gmailConnectUrl()} className="text-sm text-primary hover:underline">Connect Gmail</a>
-            </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Bank alerts and job emails can arrive at different addresses, so each is connected on its own. Only mail
+          sent to a connected address is ever seen.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {([['FINANCE', 'Bank alerts'], ['JOBS', 'Job emails']] as const).map(([purpose, label]) => {
+            const mailbox = gmailStatus?.mailboxes?.find((m) => m.purpose === purpose);
+            return (
+              <div key={purpose} className="rounded-md border p-3 text-sm">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
+                {mailbox ? (
+                  <>
+                    <p className="mt-1 font-medium">{mailbox.email ?? 'Connected'}</p>
+                    {mailbox.connectedAt && <p className="text-xs text-muted-foreground">since {new Date(mailbox.connectedAt).toLocaleDateString()}</p>}
+                  </>
+                ) : (
+                  <p className="mt-1 text-muted-foreground">
+                    {gmailStatus?.connected ? 'Not connected - using the other mailbox' : 'Not connected'}
+                  </p>
+                )}
+                <a href={importApi.gmailConnectUrl(purpose)} className="mt-2 inline-block text-xs text-primary hover:underline">
+                  {mailbox ? 'Reconnect with another account' : 'Connect'}
+                </a>
+              </div>
+            );
+          })}
+        </div>
+        {gmailStatus?.connected && (
+          <div className="mt-3 flex items-center gap-3">
+            <Button size="sm" variant="outline" onClick={() => void syncGmail()} disabled={syncing}>
+              {syncing ? 'Syncing…' : 'Sync all bank history'}
+            </Button>
           </div>
         )}
+        {syncMessage && <p className="mt-2 text-xs text-muted-foreground">{syncMessage}</p>}
         <p className="mt-3 text-[11px] text-muted-foreground">
           For a specific period (e.g. the last 1–2 months), download that range as a statement from your bank and
           upload it here — Gmail sync (right) only looks at new emails going forward, not history.

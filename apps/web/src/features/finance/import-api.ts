@@ -1,6 +1,6 @@
 import { api, unwrap } from '@/lib/api-client';
 
-import type { GmailConnectionStatus, StatementImportResult } from './types';
+import type { GmailConnectionStatus, GmailPurpose, StatementImportResult } from './types';
 
 // Lives in the "batches" microservice, not finance-tracker.
 export const importApi = {
@@ -16,8 +16,9 @@ export const importApi = {
     return unwrap(api.get('/v1/batches/gmail/status'));
   },
 
-  gmailConnectUrl(): string {
-    return '/v1/batches/gmail/connect';
+  /** Bank alerts and job emails can live in different Google accounts, so each connects separately. */
+  gmailConnectUrl(purpose: GmailPurpose = 'FINANCE'): string {
+    return `/v1/batches/gmail/connect?purpose=${purpose}`;
   },
 
   syncAllGmailHistory(): Promise<number> {

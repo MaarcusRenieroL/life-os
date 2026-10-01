@@ -271,7 +271,15 @@ export interface MerchantSpend {
   totalSpend: number;
 }
 
+export type GmailPurpose = 'FINANCE' | 'JOBS';
+export interface GmailMailbox {
+  purpose: GmailPurpose;
+  email: string | null;
+  connectedAt: string | null;
+  lastRefreshedAt: string | null;
+}
 export interface GmailConnectionStatus {
+  mailboxes?: GmailMailbox[];
   connected: boolean;
   connectedAt: string | null;
   lastRefreshedAt: string | null;
