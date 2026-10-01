@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import '@/index.css';
 
@@ -14,6 +14,7 @@ import { TransactionsPage } from '@/features/finance/transactions-page';
 import { AttachLinkDialog } from '@/features/job-tracker/attach-link-dialog';
 import { FinanceDashboardPage } from '@/features/finance/dashboard-page';
 import { TransferDialog } from '@/features/finance/transfer-dialog';
+import { ModuleSetupPage, SetupPage } from '@/features/setup/setup-page';
 import { SettingsPage } from '@/features/settings/settings-page';
 import { api } from '@/lib/api-client';
 import { tokenStore } from '@/lib/token';
@@ -59,7 +60,7 @@ const answers: Record<string, unknown> = {
     acct('0001', 'Wallet', 'CASH', null, 2300, false, false),
   ],
   '/v1/auth/me': { id: 'u1', email: 'maarcusreniero.l@gmail.com', name: 'Maarcus Reniero L', hasAvatar: false },
-  '/v1/core/modules': [{ moduleCode: 'FINANCE', enabled: false }],
+  '/v1/core/modules': [{ moduleCode: 'WK', enabled: false }],
   '/v1/core/settings': [{ module: 'finance', key: 'budget-alert-threshold', value: '0.9' }],
   '/v1/batches/gmail/status': {
     connected: true, connectedAt: days(14), lastRefreshedAt: days(0), email: 'maarcusreniero@gmail.com',
@@ -88,17 +89,21 @@ const table = new URLSearchParams(location.search).get('table');
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[table === 'module-setup' ? '/setup/FN' : '/']}>
         <TooltipProvider>
           <AuthProvider>
             <div className="dark hud-bg min-h-screen bg-background p-6 text-foreground">
               <div className="mx-auto max-w-6xl">
-                {dialog === 'account' ? (
+                {table === 'module-setup' ? (
+                  <Routes><Route path="/setup/:code" element={<ModuleSetupPage />} /></Routes>
+                ) : dialog === 'account' ? (
                   <AccountDialog open onOpenChange={() => {}} editing={null} onSaved={() => {}} />
                 ) : dialog === 'transaction' ? (
                   <AddTransactionDialog open onOpenChange={() => {}} editing={null} onSaved={() => {}} />
                 ) : dialog === 'transfer' ? (
                   <TransferDialog open onOpenChange={() => {}} onSaved={() => {}} />
+                ) : table === 'setup' ? (
+                  <SetupPage />
                 ) : table === 'finance-dashboard' ? (
                   <FinanceDashboardPage />
                 ) : dialog === 'attach' ? (

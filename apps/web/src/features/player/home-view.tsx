@@ -3,7 +3,7 @@ import { Coins, Dumbbell, ListTodo, Timer, TriangleAlert, type LucideIcon } from
 import { Link } from 'react-router-dom';
 
 import type { PeriodSummary } from '@/features/analytics/types';
-import { NAV_ITEMS } from '@/layout/nav-items';
+import { useVisibleNavItems } from '@/features/modules/use-modules';
 
 import { AttributeMeter, AttributeRadar, HudHeading, HudLabel, HudPanel, LevelBadge, RankChip, StreakFlame, XpBar } from './hud';
 import { AlmostThere, CampaignLog, DailyChallengeCard } from './game-panels';
@@ -37,6 +37,7 @@ export interface HomeViewProps {
 const inr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
 
 export function HomeView(p: HomeViewProps) {
+  const navItems = useVisibleNavItems();
   const rankColor = RANK_COLOR[p.rank.letter];
   const nextLevel = p.progress.level + 1;
   const remaining = p.quests.length;
@@ -215,7 +216,7 @@ export function HomeView(p: HomeViewProps) {
       <div>
         <HudHeading>portals</HudHeading>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {NAV_ITEMS.filter((n) => n.to !== '/home' && n.to !== '/today').map((n, i) => {
+          {navItems.filter((n) => n.to !== '/home' && n.to !== '/today').map((n, i) => {
             const alerts = p.portalAlerts[n.to] ?? 0;
             return (
               <Link key={n.to} to={n.to} className="animate-hud-in" style={{ animationDelay: `${380 + i * 25}ms` }}>

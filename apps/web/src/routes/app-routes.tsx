@@ -47,6 +47,8 @@ export const router = createBrowserRouter([
           { path: 'achievements', lazy: page(() => import('@/features/player/trophy-room'), 'TrophyRoomPage') },
           { path: 'email', lazy: page(() => import('@/features/email-hub/email-inbox-page'), 'EmailInboxPage') },
           { path: 'home', lazy: page(() => import('@/features/home/home-page'), 'HomePage') },
+          { path: 'setup', lazy: page(() => import('@/features/setup/setup-page'), 'SetupPage') },
+          { path: 'setup/:code', lazy: page(() => import('@/features/setup/setup-page'), 'ModuleSetupPage') },
           { path: 'settings', lazy: page(() => import('@/features/settings/settings-page'), 'SettingsPage') },
           { path: 'vault', lazy: page(() => import('@/features/vault/vault-unlock-page'), 'VaultUnlockPage') },
           {
