@@ -1,28 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type SortingState,
-  type VisibilityState,
-} from '@tanstack/react-table';
-import { useMemo, useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { useMemo } from 'react';
 
-import { DataTable } from '@/components/data-table/data-table';
-import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
-import { DataTablePagination } from '@/components/data-table/data-table-pagination';
-import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
+import { DataGrid } from '@/components/data-table/data-grid';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 import { auditLogApi } from './audit-log-api';
 import type { AuditEventResponse, AuditEventType } from './types';
@@ -34,9 +15,18 @@ interface AuditRow {
   type: UiType;
   dot: DotTone;
   text: string;
-  meta: string;
-  days: number;
+  occurredAt: string;
+  eventCode: string;
+  device: string;
+  location: string;
 }
+
+const TYPE_LABELS: Record<UiType, string> = {
+  login: 'Sign-ins',
+  change: 'Changes',
+  alert: 'Alerts',
+  add: 'New items',
+};
 
 const EVENT_TYPE_MAP: Record<AuditEventType, { type: UiType; dot: DotTone }> = {
   LOGIN_SUCCESS: { type: 'login', dot: 'muted' },
@@ -70,44 +60,37 @@ const DOT_CLASS: Record<DotTone, string> = {
   muted: 'bg-foreground/35',
 };
 
-function formatMeta(occurredAt: string, metadata: Record<string, string> | null): string {
-  const date = new Date(occurredAt);
-  const dateLabel = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  const timeLabel = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-  const context = [metadata?.device, metadata?.location].filter(Boolean).join(', ');
-  return context ? `${dateLabel}, ${timeLabel} - from ${context}` : `${dateLabel}, ${timeLabel}`;
-}
-
 function toAuditEvent(response: AuditEventResponse): AuditRow {
   const { type, dot } = EVENT_TYPE_MAP[response.eventType as AuditEventType] ?? UNKNOWN_EVENT;
-  const days = Math.floor((Date.now() - new Date(response.occurredAt).getTime()) / 86_400_000);
-  return { type, dot, text: response.description, meta: formatMeta(response.occurredAt, response.metadata), days };
+  return {
+    type,
+    dot,
+    text: response.description,
+    occurredAt: response.occurredAt,
+    eventCode: response.eventType,
+    device: response.metadata?.device ?? '',
+    location: response.metadata?.location ?? '',
+  };
 }
 
-const FILTER_CHIPS: { label: string; type: UiType | 'all' }[] = [
-  { label: 'All', type: 'all' },
-  { label: 'Logins', type: 'login' },
-  { label: 'Password changes', type: 'change' },
-  { label: 'Alerts', type: 'alert' },
-  { label: 'New entries', type: 'add' },
+const dayOffset = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+
+const RANGES: { label: string; days: number | null }[] = [
+  { label: 'Last 7 days', days: 7 },
+  { label: 'Last 30 days', days: 30 },
+  { label: 'All time', days: null },
 ];
 
 export function AuditLogPage() {
-  // The endpoint is paginated now. Search/type/date filtering below all run client-side over the
-  // fetched set, so this takes one large page rather than the server's 50-row default - that keeps
-  // the filters working over a useful window while still bounding what used to be the entire
-  // (unbounded, Kafka-fed) audit_events table.
-  const { data: page } = useQuery({
+  // The endpoint is paginated. Search and every filter run client-side over the fetched set, so this
+  // takes one large page rather than the server's 50-row default - that keeps the filters working
+  // over a useful window while still bounding what used to be the entire (unbounded, Kafka-fed)
+  // audit_events table.
+  const { data: page, isLoading } = useQuery({
     queryKey: ['vault', 'audit-log'],
     queryFn: () => auditLogApi.getEvents(),
   });
   const truncated = page ? page.totalElements > page.numberOfElements : false;
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<UiType | 'all'>('all');
-  const [dateRange, setDateRange] = useState<7 | 30 | 9999>(30);
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-
   const rows = useMemo(() => (page?.content ?? []).map(toAuditEvent), [page?.content]);
 
   // Surfaced so a user looking at a filtered view knows the window is capped rather than
@@ -116,32 +99,20 @@ export function AuditLogPage() {
     ? `Showing the ${page?.numberOfElements ?? 0} most recent of ${page?.totalElements ?? 0} events.`
     : null;
 
-  const filtered = useMemo(() => {
-    return rows.filter((r) => {
-      if (typeFilter !== 'all' && r.type !== typeFilter) return false;
-      if (r.days > dateRange) return false;
-      if (search.trim() && !`${r.text} ${r.meta}`.toLowerCase().includes(search.toLowerCase())) return false;
-      return true;
-    });
-  }, [rows, typeFilter, dateRange, search]);
-
-  function exportCsv() {
-    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    const csv = ['text,meta,type', ...filtered.map((r) => [escape(r.text), escape(r.meta), r.type].join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'audit-log.csv';
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
   const columns = useMemo<ColumnDef<AuditRow>[]>(
     () => [
       {
+        accessorKey: 'occurredAt',
+        meta: { title: 'When', filter: { type: 'date' } },
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            {new Date(row.original.occurredAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          </span>
+        ),
+      },
+      {
         accessorKey: 'text',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Event" />,
+        meta: { title: 'Event', filter: { type: 'text' } },
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <span className={`size-1.5 shrink-0 rounded-full ${DOT_CLASS[row.original.dot]}`} />
@@ -150,67 +121,66 @@ export function AuditLogPage() {
         ),
       },
       {
-        accessorKey: 'type',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+        id: 'category',
+        accessorFn: (r) => TYPE_LABELS[r.type],
+        meta: { title: 'Category', filter: { type: 'select' } },
       },
       {
-        accessorKey: 'meta',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="When" />,
-        cell: ({ row }) => <span className="text-muted-foreground">{row.original.meta}</span>,
+        accessorKey: 'eventCode',
+        meta: { title: 'Event type', filter: { type: 'select' } },
+      },
+      {
+        accessorKey: 'device',
+        meta: { title: 'Device', filter: { type: 'select' } },
+        cell: ({ row }) => row.original.device || '—',
+      },
+      {
+        accessorKey: 'location',
+        meta: { title: 'Location', filter: { type: 'select' } },
+        cell: ({ row }) => row.original.location || '—',
       },
     ],
     [],
   );
 
-  const table = useReactTable({
-    data: filtered,
-    columns,
-    state: { sorting, columnVisibility },
-    onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  });
-
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Audit log</h1>
-        <Button variant="ghost" size="sm" onClick={exportCsv}>Export CSV</Button>
-      </div>
+      <h1 className="text-2xl font-semibold tracking-tight">Audit log</h1>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" className="max-w-xs" />
-        {FILTER_CHIPS.map((chip) => (
-          <Button
-            key={chip.type}
-            size="sm"
-            variant={typeFilter === chip.type ? 'secondary' : 'ghost'}
-            onClick={() => setTypeFilter(chip.type)}
-          >
-            {chip.label}
-          </Button>
-        ))}
-        <Select value={String(dateRange)} onValueChange={(v) => setDateRange(Number(v) as 7 | 30 | 9999)}>
-          <SelectTrigger size="sm" className="text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">Last 7 days</SelectItem>
-            <SelectItem value="30">Last 30 days</SelectItem>
-            <SelectItem value="9999">All time</SelectItem>
-          </SelectContent>
-        </Select>
-        <DataTableViewOptions table={table} />
-      </div>
-
-      {truncationNotice && (
-        <p className="mt-3 text-xs text-muted-foreground">{truncationNotice}</p>
-      )}
+      {truncationNotice && <p className="mt-3 text-xs text-muted-foreground">{truncationNotice}</p>}
 
       <div className="mt-4">
-        <DataTable table={table} emptyMessage="No events match." />
+        <DataGrid
+          tableId="vault.audit-log"
+          data={rows}
+          columns={columns}
+          loading={isLoading}
+          initialSorting={[{ id: 'occurredAt', desc: true }]}
+          initialFilters={[{ id: 'occurredAt', value: [dayOffset(30), ''] }]}
+          initialVisibility={{ eventCode: false, device: false, location: false }}
+          exportName="audit-log"
+          searchPlaceholder="Search events…"
+          emptyMessage="No events match."
+          toolbarStart={(table) => (
+            <div className="flex flex-wrap items-center gap-1">
+              {RANGES.map(({ label, days }) => {
+                const current = table.getColumn('occurredAt')?.getFilterValue() as [string, string] | undefined;
+                const active = days === null ? !current : current?.[0] === dayOffset(days) && !current[1];
+                return (
+                  <Button
+                    key={label}
+                    size="sm"
+                    variant={active ? 'secondary' : 'ghost'}
+                    onClick={() => table.getColumn('occurredAt')?.setFilterValue(days === null ? undefined : [dayOffset(days), ''])}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </div>
+          )}
+        />
       </div>
-      <DataTablePagination table={table} />
     </div>
   );
 }

@@ -1,23 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type SortingState,
-  type VisibilityState,
-} from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
-import { DataTable } from '@/components/data-table/data-table';
-import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
-import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
+import { DataGrid } from '@/components/data-table/data-grid';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 
 import { CategoryDialog } from './category-dialog';
 import { categoryApi } from './category-api';
@@ -34,9 +23,6 @@ export function CategoriesPage() {
   const queryClient = useQueryClient();
   const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
 
-  const [query, setQuery] = useState('');
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'type', desc: false }]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryResponse | null>(null);
   const { confirm, dialog } = useConfirmDialog();
@@ -61,22 +47,47 @@ export function CategoriesPage() {
     () => [
       {
         accessorKey: 'name',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
+        meta: { title: 'Name', filter: { type: 'text' } },
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            {row.original.color && <span className="size-2.5 rounded-full" style={{ background: row.original.color }} />}
+            {row.original.name}
+          </div>
+        ),
       },
       {
-        accessorKey: 'type',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
+        id: 'type',
+        accessorFn: (c) => TYPE_LABELS[c.type] ?? c.type,
+        meta: { title: 'Type', filter: { type: 'select' } },
         cell: ({ row }) => <Badge variant="outline">{TYPE_LABELS[row.original.type] ?? row.original.type}</Badge>,
       },
       {
+        id: 'parent',
+        accessorFn: (c) => categories.find((p) => p.id === c.parentCategoryId)?.name ?? '',
+        meta: { title: 'Parent category', filter: { type: 'select' } },
+        cell: ({ getValue }) => (getValue() as string) || '—',
+      },
+      {
         accessorKey: 'excludeFromAutoLearning',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Auto-learning" />,
+        meta: { title: 'Auto-learning', filter: { type: 'boolean', labels: ['Excluded', 'Included'] }, exportValue: (c) => (c.excludeFromAutoLearning ? 'Excluded' : 'Included') },
         cell: ({ row }) => (row.original.excludeFromAutoLearning ? 'Excluded' : 'Included'),
+      },
+      {
+        accessorKey: 'isActive',
+        meta: { title: 'Active', filter: { type: 'boolean', labels: ['Active', 'Inactive'] }, exportValue: (c) => (c.isActive ? 'Yes' : 'No') },
+        cell: ({ row }) => (row.original.isActive ? 'Yes' : 'No'),
+      },
+      {
+        accessorKey: 'createdAt',
+        meta: { title: 'Created', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.createdAt.slice(0, 10),
       },
       {
         id: 'actions',
         header: '',
         enableHiding: false,
+        enableSorting: false,
+        enableResizing: false,
         cell: ({ row }) => (
           <div className="flex gap-2 text-xs">
             <button className="text-primary hover:underline" onClick={(e) => { e.stopPropagation(); openEdit(row.original); }}>Edit</button>
@@ -85,21 +96,9 @@ export function CategoriesPage() {
         ),
       },
     ],
-    [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [categories],
   );
-
-  const table = useReactTable({
-    data: categories,
-    columns,
-    state: { sorting, columnVisibility, globalFilter: query },
-    onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
-    onGlobalFilterChange: setQuery,
-    globalFilterFn: (row, _id, filter) => row.original.name.toLowerCase().includes(String(filter).toLowerCase()),
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
 
   return (
     <div>
@@ -114,15 +113,20 @@ export function CategoriesPage() {
           message="No categories yet — create one to start budgeting and categorizing transactions."
         />
       ) : (
-        <>
-          <div className="mt-4 flex items-center gap-2">
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search categories…" className="max-w-xs" />
-            <DataTableViewOptions table={table} />
-          </div>
-          <div className="mt-3">
-            <DataTable table={table} onRowClick={openEdit} />
-          </div>
-        </>
+        <div className="mt-4">
+          <DataGrid
+            tableId="finance.categories"
+            data={categories}
+            columns={columns}
+            getRowId={(c) => c.id}
+            onRowClick={openEdit}
+            initialSorting={[{ id: 'type', desc: false }]}
+            initialVisibility={{ parent: false, isActive: false, createdAt: false }}
+            exportName="categories"
+            searchPlaceholder="Search categories…"
+            hidePagination={categories.length <= 10}
+          />
+        </div>
       )}
 
       <CategoryDialog open={dialogOpen} onOpenChange={setDialogOpen} editing={editing} onSaved={invalidate} />

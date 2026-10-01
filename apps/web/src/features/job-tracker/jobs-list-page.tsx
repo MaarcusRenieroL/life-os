@@ -1,28 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type RowSelectionState,
-  type SortingState,
-  type VisibilityState,
-} from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
-import { DataTable } from '@/components/data-table/data-table';
-import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
-import { DataTablePagination } from '@/components/data-table/data-table-pagination';
-import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
-import { selectionColumn } from '@/components/data-table/selection-column';
+import { DataGrid } from '@/components/data-table/data-grid';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -35,18 +20,11 @@ import { FitScoreBadge } from './fit-score-badge';
 import { jobApi } from './job-api';
 import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
 
-type StatusFilter = 'ALL' | JobStatus;
-
 export function JobsListPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { data: jobs = [], isLoading } = useQuery({ queryKey: ['jobs', 'list'], queryFn: jobApi.list });
 
-  const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'fitScore', desc: true }]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const { confirm, dialog } = useConfirmDialog();
 
   function invalidate() {
@@ -73,32 +51,24 @@ export function JobsListPage() {
     toast.success(`Removed ${job.title}`);
   }
 
-  const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
-
-  async function removeSelected() {
+  async function removeSelected(ids: string[]) {
     const ok = await confirm({
-      title: `Remove ${selectedIds.length} job(s)?`,
+      title: `Remove ${ids.length} job(s)?`,
       description: 'This cannot be undone.',
       confirmLabel: 'Remove',
     });
-    if (!ok) return;
-    await Promise.all(selectedIds.map((id) => jobApi.delete(id)));
-    setRowSelection({});
+    if (!ok) return false;
+    await Promise.all(ids.map((id) => jobApi.delete(id)));
     invalidate();
-    toast.success(`Removed ${selectedIds.length} job(s)`);
+    toast.success(`Removed ${ids.length} job(s)`);
+    return true;
   }
-
-  const filtered = useMemo(
-    () => (statusFilter === 'ALL' ? jobs : jobs.filter((j) => (j.status ?? 'INTERESTED') === statusFilter)),
-    [jobs, statusFilter],
-  );
 
   const columns = useMemo<ColumnDef<JobListing>[]>(
     () => [
-      selectionColumn<JobListing>(),
       {
         accessorKey: 'title',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Role" />,
+        meta: { title: 'Role', filter: { type: 'text' } },
         cell: ({ row }) => (
           <div className="max-w-[14rem] min-w-0 lg:max-w-xs">
             <div className="truncate font-medium">{row.original.title}</div>
@@ -107,19 +77,13 @@ export function JobsListPage() {
         ),
       },
       {
-        id: 'location',
-        meta: { className: 'hidden xl:table-cell' },
-        accessorFn: (j) => [j.location, j.workModel].filter(Boolean).join(' · '),
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Location" />,
-        cell: ({ row }) => (
-          <span className="block max-w-48 truncate text-muted-foreground">
-            {[row.original.location, row.original.workModel].filter(Boolean).join(' · ') || '—'}
-          </span>
-        ),
+        accessorKey: 'company',
+        meta: { title: 'Company', filter: { type: 'select' } },
       },
       {
-        accessorKey: 'status',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
+        id: 'status',
+        accessorFn: (j) => JOB_STATUS_LABELS[j.status ?? 'INTERESTED'],
+        meta: { title: 'Status', filter: { type: 'select', options: JOB_STATUSES.map((s) => ({ value: JOB_STATUS_LABELS[s], label: JOB_STATUS_LABELS[s] })) } },
         cell: ({ row }) => (
           <Select
             value={row.original.status ?? 'INTERESTED'}
@@ -138,19 +102,67 @@ export function JobsListPage() {
       },
       {
         accessorKey: 'fitScore',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Fit" />,
+        meta: { title: 'Fit score', align: 'right', filter: { type: 'number' } },
         cell: ({ row }) => (row.original.fitScore !== null ? <FitScoreBadge score={row.original.fitScore} /> : <span className="text-muted-foreground">—</span>),
       },
       {
+        accessorKey: 'location',
+        meta: { title: 'Location', filter: { type: 'text' }, className: 'hidden xl:table-cell' },
+        cell: ({ row }) => <span className="block max-w-48 truncate text-muted-foreground">{row.original.location ?? '—'}</span>,
+      },
+      {
+        id: 'workModel',
+        accessorFn: (j) => (j.workModel ? j.workModel.charAt(0) + j.workModel.slice(1).toLowerCase() : ''),
+        meta: { title: 'Work model', filter: { type: 'select' } },
+        cell: ({ getValue }) => (getValue() as string) || '—',
+      },
+      {
+        accessorKey: 'seniorityLevel',
+        meta: { title: 'Seniority', filter: { type: 'select' } },
+        cell: ({ row }) => row.original.seniorityLevel ?? '—',
+      },
+      {
+        accessorKey: 'source',
+        meta: { title: 'Source', filter: { type: 'select' } },
+        cell: ({ row }) => row.original.source ?? '—',
+      },
+      {
+        accessorKey: 'salaryMin',
+        meta: { title: 'Salary from', align: 'right', filter: { type: 'number' } },
+        cell: ({ row }) => (row.original.salaryMin ? `${row.original.salaryMin.toLocaleString()} ${row.original.currency ?? ''}` : '—'),
+      },
+      {
+        accessorKey: 'salaryMax',
+        meta: { title: 'Salary to', align: 'right', filter: { type: 'number' } },
+        cell: ({ row }) => (row.original.salaryMax ? `${row.original.salaryMax.toLocaleString()} ${row.original.currency ?? ''}` : '—'),
+      },
+      {
+        id: 'visa',
+        accessorFn: (j) => (j.visaSponsorship ? j.visaSponsorship.charAt(0) + j.visaSponsorship.slice(1).toLowerCase() : ''),
+        meta: { title: 'Visa sponsorship', filter: { type: 'select' } },
+        cell: ({ getValue }) => (getValue() as string) || '—',
+      },
+      {
+        accessorKey: 'appliedAt',
+        meta: { title: 'Applied on', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.appliedAt?.slice(0, 10) ?? '—',
+      },
+      {
+        accessorKey: 'deadline',
+        meta: { title: 'Deadline', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.deadline?.slice(0, 10) ?? '—',
+      },
+      {
         accessorKey: 'createdAt',
-        meta: { className: 'hidden lg:table-cell' },
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Added" />,
+        meta: { title: 'Added', filter: { type: 'date' }, className: 'hidden lg:table-cell' },
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.createdAt.slice(0, 10)}</span>,
       },
       {
         id: 'actions',
         header: '',
         enableHiding: false,
+        enableSorting: false,
+        enableResizing: false,
         cell: ({ row }) => (
           <button
             className="text-xs text-destructive hover:underline"
@@ -164,25 +176,6 @@ export function JobsListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-
-  const table = useReactTable({
-    data: filtered,
-    columns,
-    state: { sorting, columnVisibility, rowSelection, globalFilter: query },
-    getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: setQuery,
-    globalFilterFn: (row, _id, filter) => {
-      const needle = String(filter).toLowerCase();
-      return row.original.title.toLowerCase().includes(needle) || row.original.company.toLowerCase().includes(needle);
-    },
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-  });
 
   return (
     <div>
@@ -204,59 +197,30 @@ export function JobsListPage() {
           .
         </p>
       ) : (
-        <>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search role or company…"
-              className="max-w-xs"
-            />
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-              <SelectTrigger size="sm" className="min-w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All statuses</SelectItem>
-                {JOB_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>{JOB_STATUS_LABELS[s]}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <DataTableViewOptions table={table} />
-          </div>
-
-          {selectedIds.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2 text-xs">
-              <span>{selectedIds.length} selected</span>
-              <button className="text-destructive hover:underline" onClick={() => void removeSelected()}>Remove</button>
-              <button className="ml-auto hover:underline" onClick={() => setRowSelection({})}>Clear</button>
-            </div>
-          )}
-
-          <div className="mt-3 hidden md:block">
-            <DataTable
-              table={table}
-              onRowClick={(job) => navigate(`/jobs/${job.id}`)}
-              emptyMessage={isLoading ? 'Loading jobs…' : 'No jobs match this filter.'}
-            />
-          </div>
-
-          {/* Below md a seven-column table cannot fit, so each job becomes a card instead of the
-              table scrolling sideways. Same rows, same sorting/filtering/pagination state. */}
-          <ul className="mt-3 flex flex-col gap-2 md:hidden">
-            {table.getRowModel().rows.length === 0 && (
-              <li className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
-                {isLoading ? 'Loading jobs…' : 'No jobs match this filter.'}
-              </li>
+        <div className="mt-4">
+          <DataGrid
+            tableId="jobs.list"
+            data={jobs}
+            columns={columns}
+            getRowId={(j) => j.id}
+            onRowClick={(job) => navigate(`/jobs/${job.id}`)}
+            loading={isLoading}
+            enableSelection
+            initialSorting={[{ id: 'fitScore', desc: true }]}
+            initialVisibility={{ company: false, workModel: false, seniorityLevel: false, source: false, salaryMin: false, salaryMax: false, visa: false, appliedAt: false, deadline: false }}
+            exportName="jobs"
+            searchPlaceholder="Search role or company…"
+            emptyMessage="No jobs match."
+            bulkActions={(selected, clear) => (
+              <button className="text-destructive hover:underline" onClick={() => void removeSelected(selected.map((j) => j.id)).then((ok) => ok && clear())}>
+                Remove
+              </button>
             )}
-            {table.getRowModel().rows.map((row) => {
-              const job = row.original;
+            // Below md a wide table cannot fit, so each job becomes a card instead of scrolling sideways.
+            mobileCard={(job) => {
               const place = [job.location, job.workModel].filter(Boolean).join(' · ');
               return (
-                <li
-                  key={row.id}
-                  className="cursor-pointer rounded-lg border p-3 active:bg-muted/50"
-                  onClick={() => navigate(`/jobs/${job.id}`)}
-                >
+                <div className="cursor-pointer rounded-lg border p-3 active:bg-muted/50" onClick={() => navigate(`/jobs/${job.id}`)}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-medium break-words">{job.title}</div>
@@ -288,13 +252,11 @@ export function JobsListPage() {
                       Remove
                     </button>
                   </div>
-                </li>
+                </div>
               );
-            })}
-          </ul>
-
-          <DataTablePagination table={table} />
-        </>
+            }}
+          />
+        </div>
       )}
       {dialog}
     </div>

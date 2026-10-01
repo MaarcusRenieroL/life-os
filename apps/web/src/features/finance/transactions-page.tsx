@@ -1,90 +1,69 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type ColumnDef,
-  type RowSelectionState,
-  type SortingState,
-  type VisibilityState,
-} from '@tanstack/react-table';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useConfirmDialog } from '@/components/confirm-dialog';
-import { DataTable } from '@/components/data-table/data-table';
-import { DataTableColumnHeader } from '@/components/data-table/data-table-column-header';
-import { DataTablePagination } from '@/components/data-table/data-table-pagination';
-import { DataTableViewOptions } from '@/components/data-table/data-table-view-options';
-import { selectionColumn } from '@/components/data-table/selection-column';
+import { DataGrid } from '@/components/data-table/data-grid';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useDebouncedCallback } from '@/lib/use-debounced-callback';
 
+import { accountApi } from './account-api';
 import { AddTransactionDialog } from './add-transaction-dialog';
 import { categoryApi } from './category-api';
 import { CategorizeDialog } from './categorize-dialog';
 import { DisputeDialog } from './dispute-dialog';
 import { transactionApi } from './transaction-api';
-import type { TransactionFilters, TransactionResponse } from './types';
-import { formatINR } from './utils';
+import type { TransactionResponse } from './types';
+import { accountLabel, formatINR } from './utils';
 
-const PAGE_SIZE = 50;
+const REVIEW = { needs: 'Needs review', categorized: 'Categorized', duplicate: 'Duplicate' } as const;
 
-type StatusChip = 'ALL' | 'NEEDS_REVIEW' | 'CATEGORIZED' | 'DUPLICATE';
+const SOURCE_LABELS: Record<string, string> = {
+  EMAIL_ALERT: 'Email alert',
+  CSV_IMPORT: 'Statement import',
+  MANUAL_ENTRY: 'Manual',
+  API: 'API',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pending',
+  ACTIVE: 'Active',
+  RECONCILED: 'Reconciled',
+  DISPUTED: 'Disputed',
+  IGNORED: 'Ignored',
+};
 
 function needsReview(t: TransactionResponse): boolean {
   return t.categoryId === null && t.type !== 'CREDIT';
+}
+
+/** Money in is positive, money out negative - so sorting, filtering and the footer total all agree. */
+function signed(t: TransactionResponse): number {
+  return t.type === 'CREDIT' ? t.amount : -t.amount;
 }
 
 export function TransactionsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const [page, setPage] = useState(0);
-  const [statusChip, setStatusChip] = useState<StatusChip>('ALL');
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [addOpen, setAddOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<TransactionResponse | null>(null);
   const [categorizeOpen, setCategorizeOpen] = useState(false);
   const [categorizeTargets, setCategorizeTargets] = useState<string[]>([]);
   const [disputeOpen, setDisputeOpen] = useState(false);
+  const [disputeTargets, setDisputeTargets] = useState<string[]>([]);
   const { confirm, dialog } = useConfirmDialog();
 
-  const debouncedSearch = useDebouncedCallback((value: string) => {
-    setSearch(value);
-    setPage(0);
-  }, 350);
-
-  const filters: TransactionFilters = {
-    search: search || undefined,
-    status: statusChip === 'ALL' ? undefined : statusChip,
-    categoryId: categoryId ?? undefined,
-  };
-
   const { data: categories = [] } = useQuery({ queryKey: ['finance', 'categories'], queryFn: categoryApi.getCategories, staleTime: 5 * 60_000 });
-  const { data: txPage, isLoading } = useQuery({
-    queryKey: ['finance', 'transactions', page, filters],
-    queryFn: () => transactionApi.getTransactions(page, PAGE_SIZE, filters),
+  const { data: accounts = [] } = useQuery({ queryKey: ['finance', 'accounts'], queryFn: accountApi.getAccounts, staleTime: 5 * 60_000 });
+  // Everything is loaded and handled in the browser, so filters, sorting and totals cover all rows.
+  const { data: transactions = [], isLoading } = useQuery({
+    queryKey: ['finance', 'transactions', 'all'],
+    queryFn: () => transactionApi.getAllTransactions(),
   });
-
-  const transactions = useMemo(() => txPage?.content ?? [], [txPage]);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['finance', 'transactions'] });
-    setRowSelection({});
   }
 
   function categoryNames(t: TransactionResponse): string {
@@ -93,6 +72,11 @@ export function TransactionsPage() {
     }
     if (t.categoryId) return categories.find((c) => c.id === t.categoryId)?.name ?? t.categoryId;
     return 'Uncategorized';
+  }
+
+  function accountName(id: string): string {
+    const account = accounts.find((a) => a.id === id);
+    return account ? accountLabel(account) : 'Unknown account';
   }
 
   function rowClick(t: TransactionResponse) {
@@ -109,73 +93,44 @@ export function TransactionsPage() {
     invalidate();
   }
 
-  const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
-
-  async function markDuplicate() {
-    if (selectedIds.length < 2) return;
-    await transactionApi.merge(selectedIds[0], { duplicateTransactionIds: selectedIds.slice(1) });
+  async function markDuplicate(ids: string[]) {
+    if (ids.length < 2) return;
+    await transactionApi.merge(ids[0], { duplicateTransactionIds: ids.slice(1) });
     invalidate();
   }
 
   async function disputeSelected(reason: string) {
-    await Promise.all(selectedIds.map((id) => transactionApi.dispute(id, { reason })));
+    await Promise.all(disputeTargets.map((id) => transactionApi.dispute(id, { reason })));
     invalidate();
   }
 
-  async function deleteSelected() {
-    const ok = await confirm({ title: `Delete ${selectedIds.length} transaction(s)?`, confirmLabel: 'Delete' });
+  async function deleteSelected(ids: string[]) {
+    const ok = await confirm({ title: `Delete ${ids.length} transaction(s)?`, confirmLabel: 'Delete' });
     if (!ok) return;
-    await Promise.all(selectedIds.map((id) => transactionApi.deleteTransaction(id)));
+    await Promise.all(ids.map((id) => transactionApi.deleteTransaction(id)));
     invalidate();
   }
-
-  function exportCsv() {
-    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    const rows = transactions.map((t) =>
-      [
-        t.transactionDate.slice(0, 10),
-        escape(t.description),
-        escape(categoryNames(t)),
-        t.accountId,
-        t.sourceType,
-        t.type === 'CREDIT' ? t.amount : -t.amount,
-      ].join(','),
-    );
-    const csv = ['Date,Description,Category,Account,Source,Amount', ...rows].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'transactions.csv';
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  const netTotal = useMemo(
-    () => transactions.reduce((sum, t) => sum + (t.type === 'CREDIT' ? t.amount : -t.amount), 0),
-    [transactions],
-  );
 
   const columns = useMemo<ColumnDef<TransactionResponse>[]>(
     () => [
-      selectionColumn<TransactionResponse>(),
       {
         accessorKey: 'transactionDate',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Date" />,
+        meta: { title: 'Date', filter: { type: 'date' } },
         cell: ({ row }) => row.original.transactionDate.slice(0, 10),
       },
       {
         accessorKey: 'description',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Description" />,
+        meta: { title: 'Description', filter: { type: 'text' } },
       },
       {
         id: 'category',
         accessorFn: (t) => categoryNames(t),
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Category" />,
+        meta: { title: 'Category', filter: { type: 'select' } },
       },
       {
-        accessorKey: 'amount',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Amount" />,
+        id: 'amount',
+        accessorFn: (t) => signed(t),
+        meta: { title: 'Amount', align: 'right', aggregate: 'sum', format: (v) => formatINR(Number(v)), filter: { type: 'number' } },
         cell: ({ row }) => (
           <span className={row.original.type === 'CREDIT' ? 'text-primary' : ''}>
             {row.original.type === 'CREDIT' ? '+' : '-'}
@@ -183,105 +138,121 @@ export function TransactionsPage() {
           </span>
         ),
       },
+      {
+        id: 'type',
+        accessorFn: (t) => (t.type === 'CREDIT' ? 'Money in' : t.type === 'DEBIT' ? 'Money out' : 'Transfer'),
+        meta: { title: 'Direction', filter: { type: 'select' } },
+      },
+      {
+        id: 'account',
+        accessorFn: (t) => accountName(t.accountId),
+        meta: { title: 'Account', filter: { type: 'select' } },
+      },
+      {
+        id: 'review',
+        accessorFn: (t) => (t.isDuplicate ? REVIEW.duplicate : needsReview(t) ? REVIEW.needs : REVIEW.categorized),
+        meta: { title: 'Review state', filter: { type: 'select' } },
+      },
+      {
+        id: 'status',
+        accessorFn: (t) => STATUS_LABELS[t.status] ?? t.status,
+        meta: { title: 'Status', filter: { type: 'select' } },
+      },
+      {
+        id: 'source',
+        accessorFn: (t) => SOURCE_LABELS[t.sourceType] ?? t.sourceType,
+        meta: { title: 'Source', filter: { type: 'select' } },
+      },
+      {
+        accessorKey: 'isRecurring',
+        meta: { title: 'Recurring', filter: { type: 'boolean' }, exportValue: (t) => (t.isRecurring ? 'Yes' : 'No') },
+        cell: ({ row }) => (row.original.isRecurring ? 'Yes' : '—'),
+      },
+      {
+        accessorKey: 'isReconciled',
+        meta: { title: 'Reconciled', filter: { type: 'boolean' }, exportValue: (t) => (t.isReconciled ? 'Yes' : 'No') },
+        cell: ({ row }) => (row.original.isReconciled ? 'Yes' : '—'),
+      },
+      {
+        accessorKey: 'notes',
+        meta: { title: 'Notes', filter: { type: 'text' } },
+        cell: ({ row }) => row.original.notes ?? '—',
+      },
+      {
+        accessorKey: 'disputeReason',
+        meta: { title: 'Dispute reason', filter: { type: 'text' } },
+        cell: ({ row }) => row.original.disputeReason ?? '—',
+      },
+      {
+        accessorKey: 'importedAt',
+        meta: { title: 'Imported', filter: { type: 'date' } },
+        cell: ({ row }) => row.original.importedAt?.slice(0, 10) ?? '—',
+      },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [categories],
+    [categories, accounts],
   );
-
-  const table = useReactTable({
-    data: transactions,
-    columns,
-    state: {
-      sorting,
-      columnVisibility,
-      rowSelection,
-      pagination: { pageIndex: page, pageSize: PAGE_SIZE },
-    },
-    getRowId: (row) => row.id,
-    manualPagination: true,
-    pageCount: txPage?.totalPages ?? -1,
-    onPaginationChange: (updater) => {
-      const next = typeof updater === 'function' ? updater({ pageIndex: page, pageSize: PAGE_SIZE }) : updater;
-      setPage(next.pageIndex);
-    },
-    onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportCsv}>Export CSV</Button>
-          <Button size="sm" onClick={() => { setEditingTx(null); setAddOpen(true); }}>+ Add transaction</Button>
-        </div>
+        <Button size="sm" onClick={() => { setEditingTx(null); setAddOpen(true); }}>+ Add transaction</Button>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Input
-          value={searchInput}
-          onChange={(e) => { setSearchInput(e.target.value); debouncedSearch(e.target.value); }}
-          placeholder="Search…"
-          className="max-w-xs"
-        />
-        {(['ALL', 'NEEDS_REVIEW', 'CATEGORIZED', 'DUPLICATE'] as StatusChip[]).map((chip) => (
-          <Button
-            key={chip}
-            size="sm"
-            variant={statusChip === chip ? 'secondary' : 'ghost'}
-            onClick={() => { setStatusChip(chip); setPage(0); }}
-          >
-            {chip === 'ALL' ? 'All' : chip === 'NEEDS_REVIEW' ? 'Needs review' : chip === 'CATEGORIZED' ? 'Categorized' : 'Duplicates'}
-          </Button>
-        ))}
-        <Select value={categoryId ?? '__all__'} onValueChange={(v) => { setCategoryId(v === '__all__' ? null : v); setPage(0); }}>
-          <SelectTrigger size="sm" className="w-40"><SelectValue placeholder="Category" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">All categories</SelectItem>
-            {categories.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <DataTableViewOptions table={table} />
-      </div>
-
-      {selectedIds.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2 text-xs">
-          <span>{selectedIds.length} selected</span>
-          {selectedIds.length === 1 && (
-            <button className="hover:underline" onClick={() => { setEditingTx(transactions.find((t) => t.id === selectedIds[0])!); setAddOpen(true); }}>
-              Edit
-            </button>
-          )}
-          <button className="hover:underline" onClick={() => { setCategorizeTargets(selectedIds); setCategorizeOpen(true); }}>
-            Set categories
-          </button>
-          {selectedIds.length >= 2 && <button className="hover:underline" onClick={() => void markDuplicate()}>Mark as duplicate</button>}
-          <button className="hover:underline" onClick={() => setDisputeOpen(true)}>Dispute</button>
-          <button className="text-destructive hover:underline" onClick={() => void deleteSelected()}>Delete</button>
-          <button className="ml-auto hover:underline" onClick={() => setRowSelection({})}>Clear</button>
-        </div>
-      )}
-
-      <div className="mt-3">
-        <DataTable
-          table={table}
+      <div className="mt-4">
+        <DataGrid
+          tableId="finance.transactions"
+          data={transactions}
+          columns={columns}
+          getRowId={(t) => t.id}
           onRowClick={rowClick}
-          emptyMessage={isLoading ? 'Loading transactions…' : 'No transactions found.'}
+          loading={isLoading}
+          enableSelection
+          initialSorting={[{ id: 'transactionDate', desc: true }]}
+          initialVisibility={{ type: false, status: false, source: false, isRecurring: false, isReconciled: false, notes: false, disputeReason: false, importedAt: false }}
+          initialPageSize={50}
+          exportName="transactions"
+          searchPlaceholder="Search transactions…"
+          emptyMessage="No transactions found."
+          toolbarStart={(table) => (
+            <div className="flex flex-wrap items-center gap-1">
+              {([['All', null], ['Needs review', REVIEW.needs], ['Categorized', REVIEW.categorized], ['Duplicates', REVIEW.duplicate]] as const).map(([label, value]) => {
+                const current = (table.getColumn('review')?.getFilterValue() as string[] | undefined) ?? [];
+                const active = value === null ? current.length === 0 : current.length === 1 && current[0] === value;
+                return (
+                  <Button
+                    key={label}
+                    size="sm"
+                    variant={active ? 'secondary' : 'ghost'}
+                    onClick={() => table.getColumn('review')?.setFilterValue(value === null ? undefined : [value])}
+                  >
+                    {label}
+                  </Button>
+                );
+              })}
+            </div>
+          )}
+          bulkActions={(selected, clear) => {
+            const ids = selected.map((t) => t.id);
+            return (
+              <>
+                {selected.length === 1 && (
+                  <button className="hover:underline" onClick={() => { setEditingTx(selected[0]); setAddOpen(true); }}>
+                    Edit
+                  </button>
+                )}
+                <button className="hover:underline" onClick={() => { setCategorizeTargets(ids); setCategorizeOpen(true); }}>
+                  Set categories
+                </button>
+                {selected.length >= 2 && <button className="hover:underline" onClick={() => void markDuplicate(ids).then(clear)}>Mark as duplicate</button>}
+                <button className="hover:underline" onClick={() => { setDisputeTargets(ids); setDisputeOpen(true); }}>Dispute</button>
+                <button className="text-destructive hover:underline" onClick={() => void deleteSelected(ids).then(clear)}>Delete</button>
+              </>
+            );
+          }}
         />
-        {transactions.length > 0 && (
-          <div className="mt-2 flex justify-end border-t pt-2 text-sm font-medium">
-            Net: {formatINR(netTotal)}
-          </div>
-        )}
       </div>
-
-      <DataTablePagination table={table} />
 
       <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} editing={editingTx} onSaved={invalidate} />
       <CategorizeDialog
@@ -290,7 +261,7 @@ export function TransactionsPage() {
         transactionLabel={categorizeTargets.length === 1 ? transactions.find((t) => t.id === categorizeTargets[0])?.description ?? '' : `${categorizeTargets.length} selected transactions`}
         onSave={(ids) => void saveCategories(ids)}
       />
-      <DisputeDialog open={disputeOpen} onOpenChange={setDisputeOpen} count={selectedIds.length} onSubmit={(reason) => void disputeSelected(reason)} />
+      <DisputeDialog open={disputeOpen} onOpenChange={setDisputeOpen} count={disputeTargets.length} onSubmit={(reason) => void disputeSelected(reason)} />
       {dialog}
     </div>
   );

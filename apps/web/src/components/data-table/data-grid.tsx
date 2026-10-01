@@ -10,6 +10,7 @@ import {
   type ColumnFiltersState,
   type RowSelectionState,
   type SortingState,
+  type Table,
   type VisibilityState,
 } from '@tanstack/react-table';
 import { Download, Filter, Rows3, Search, X } from 'lucide-react';
@@ -40,14 +41,16 @@ export interface DataGridProps<TData> {
   loading?: boolean;
   emptyMessage?: ReactNode;
   initialSorting?: SortingState;
+  /** Filters applied on first load (not saved), e.g. a default date window. */
+  initialFilters?: ColumnFiltersState;
   /** Columns that start hidden, e.g. `{ notes: false }`. */
   initialVisibility?: VisibilityState;
   initialPageSize?: number;
   enableSelection?: boolean;
   /** Shown when rows are selected - buttons that act on them. */
   bulkActions?: (selected: TData[], clear: () => void) => ReactNode;
-  /** Quick filters / chips, placed right after the search box. */
-  toolbarStart?: ReactNode;
+  /** Quick filters / chips, placed right after the search box. A function gets the table, to set filters. */
+  toolbarStart?: ReactNode | ((table: Table<TData>) => ReactNode);
   /** Page-level buttons, placed at the end of the toolbar. */
   toolbarEnd?: ReactNode;
   /** Enables the CSV export button; the file is named after this. */
@@ -55,6 +58,8 @@ export interface DataGridProps<TData> {
   searchPlaceholder?: string;
   /** For short, fixed lists where paging is noise. */
   hidePagination?: boolean;
+  /** Below the md breakpoint a wide table can't fit, so each row renders as this card instead. */
+  mobileCard?: (row: TData) => ReactNode;
 }
 
 const PAGE_SIZES = [10, 20, 30, 50, 100];
@@ -78,6 +83,7 @@ export function DataGrid<TData>({
   loading,
   emptyMessage,
   initialSorting = [],
+  initialFilters = [],
   initialVisibility = {},
   initialPageSize = 20,
   enableSelection,
@@ -87,6 +93,7 @@ export function DataGrid<TData>({
   exportName,
   searchPlaceholder = 'Search…',
   hidePagination,
+  mobileCard,
 }: DataGridProps<TData>) {
   const { layout, patch, reset } = usePersistedGrid(tableId, {
     sorting: initialSorting,
@@ -96,7 +103,7 @@ export function DataGrid<TData>({
     pageSize: PAGE_SIZES.includes(initialPageSize) ? initialPageSize : 20,
     density: 'comfortable',
   });
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(initialFilters);
   const [globalFilter, setGlobalFilter] = useState('');
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: layout.pageSize });
@@ -189,6 +196,7 @@ export function DataGrid<TData>({
     URL.revokeObjectURL(url);
   }
 
+  const emptyText = loading ? 'Loading…' : filtering ? 'Nothing matches these filters.' : (emptyMessage ?? 'No results.');
   const filterable = table.getAllLeafColumns().some((c) => c.columnDef.meta?.filter);
 
   return (
@@ -204,7 +212,7 @@ export function DataGrid<TData>({
             className="pl-8"
           />
         </div>
-        {toolbarStart}
+        {typeof toolbarStart === 'function' ? toolbarStart(table) : toolbarStart}
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {filterable && (
             <Popover>
@@ -273,16 +281,25 @@ export function DataGrid<TData>({
         </div>
       )}
 
-      <div className="mt-3">
+      <div className={mobileCard ? 'mt-3 hidden md:block' : 'mt-3'}>
         <DataTable
           table={table}
           onRowClick={onRowClick}
           density={layout.density}
-          emptyMessage={
-            loading ? 'Loading…' : filtering ? 'Nothing matches these filters.' : (emptyMessage ?? 'No results.')
-          }
+          emptyMessage={emptyText}
         />
       </div>
+
+      {mobileCard && (
+        <ul className="mt-3 flex flex-col gap-2 md:hidden">
+          {table.getRowModel().rows.length === 0 && (
+            <li className="rounded-lg border p-6 text-center text-sm text-muted-foreground">{emptyText}</li>
+          )}
+          {table.getRowModel().rows.map((row) => (
+            <li key={row.id}>{mobileCard(row.original)}</li>
+          ))}
+        </ul>
+      )}
 
       {!hidePagination && <DataTablePagination table={table} pageSizes={PAGE_SIZES} totalUnfiltered={data.length} />}
     </div>
