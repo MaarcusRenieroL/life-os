@@ -2,9 +2,14 @@ import { useState, type FormEvent } from 'react';
 
 import { useLock } from '../lib/lock';
 import { useSession } from '../lib/session';
-import { Panel } from '../ui';
+import { IntegrationsTab, ModulesTab, NotificationsTab, ProfileTab, SetupTab } from '../modules/settings-extra';
+import { Panel, Tabs } from '../ui';
+
+const TABS = [{ id: 'general', label: 'General' }, { id: 'profile', label: 'Profile' }, { id: 'modules', label: 'Modules' }, { id: 'setup', label: 'Setup' }, { id: 'integrations', label: 'Integrations' }, { id: 'notifications', label: 'Notifications' }] as const;
+type TabId = (typeof TABS)[number]['id'];
 
 export function SettingsScreen() {
+  const [tab, setTab] = useState<TabId>('general');
   const { settings, updateSettings, signOut } = useSession();
   const [draft, setDraft] = useState(settings);
   const [saved, setSaved] = useState(false);
@@ -24,8 +29,18 @@ export function SettingsScreen() {
     </label>
   );
 
+  if (tab !== 'general') {
+    return (
+      <div className="stack">
+        <Tabs tabs={TABS} value={tab} onChange={setTab} />
+        {tab === 'profile' ? <ProfileTab /> : tab === 'modules' ? <ModulesTab /> : tab === 'setup' ? <SetupTab /> : tab === 'integrations' ? <IntegrationsTab /> : <NotificationsTab />}
+      </div>
+    );
+  }
+
   return (
     <div className="stack">
+      <Tabs tabs={TABS} value={tab} onChange={setTab} />
       <Panel title="Server">
         <form className="form" onSubmit={save}>
           {field('baseUrl', 'Gateway address', 'http://localhost')}
