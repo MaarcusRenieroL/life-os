@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, ExpandedState } from '@tanstack/react-table';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { calendarApi } from '@/features/calendar/calendar-api';
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TableQuest } from '@/features/player/table-quest';
 
 import { isOverdue, OverdueBadge, PriorityBadge, RecurringIcon, StatusBadge } from './task-badges';
 import { SubtaskRows } from './subtask-rows';
@@ -324,12 +325,19 @@ export function TaskList({ tasks, isLoading, emptyMessage, onEdit, invalidateKey
     );
   }
 
+  // Show the quest once there has been something open to clear, and keep it up while the last one is ticked off.
+  const hadOpen = useRef(false);
+  if (topLevel.some((t) => t.status !== 'DONE')) hadOpen.current = true;
+
   if (topLevel.length === 0) {
     return <p className="mt-6 text-sm text-muted-foreground">{emptyMessage}</p>;
   }
 
   return (
     <>
+      {hadOpen.current && (
+        <TableQuest title="Clear your quests" done={topLevel.filter((t) => t.status === 'DONE').length} total={topLevel.length} unit="tasks" doneText="All quests cleared" />
+      )}
       <DataGrid
         tableId="tasks.list"
         data={topLevel}

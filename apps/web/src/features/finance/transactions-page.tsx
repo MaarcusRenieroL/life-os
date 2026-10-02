@@ -12,6 +12,8 @@ import { AddTransactionDialog } from './add-transaction-dialog';
 import { categoryApi } from './category-api';
 import { CategorizeDialog } from './categorize-dialog';
 import { DisputeDialog } from './dispute-dialog';
+import { TableQuest } from '@/features/player/table-quest';
+
 import { transactionApi } from './transaction-api';
 import { TransferDialog } from './transfer-dialog';
 import type { TransactionResponse } from './types';
@@ -207,6 +209,12 @@ export function TransactionsPage() {
       </div>
 
       <div className="mt-4">
+        {(() => {
+          // Transfers between your own accounts and duplicates need no category.
+          const countable = transactions.filter((t) => !t.isTransfer && !t.isDuplicate);
+          const sorted = countable.filter((t) => t.categoryId || (t.categoryIds?.length ?? 0) > 0).length;
+          return <TableQuest title="Sort every transaction into a category" done={sorted} total={countable.length} unit="categorised" doneText="Every transaction is categorised" />;
+        })()}
         <DataGrid
           tableId="finance.transactions"
           data={transactions}

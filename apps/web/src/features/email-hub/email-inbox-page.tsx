@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataGrid } from '@/components/data-table/data-grid';
+import { TableQuest } from '@/features/player/table-quest';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import {
@@ -184,6 +185,7 @@ export function EmailInboxPage() {
   );
 
   const waiting = (items.data ?? []).filter((i) => i.status === 'NEEDS_REVIEW' || i.status === 'FAILED').length;
+  const handled = (items.data ?? []).filter((i) => i.status === 'APPLIED' || i.status === 'UNDONE' || i.status === 'DISMISSED').length;
 
   return (
     <div>
@@ -202,6 +204,7 @@ export function EmailInboxPage() {
       </div>
 
       <div className="mt-5">
+        <TableQuest title="Clear your inbox" done={handled} total={handled + waiting} unit="proposals" doneText="Inbox clear" />
         {items.isLoading ? (
           <Skeleton className="h-40 w-full" />
         ) : items.isError ? (
