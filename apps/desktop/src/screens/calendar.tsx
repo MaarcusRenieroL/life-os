@@ -5,12 +5,15 @@ import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { Empty, ErrorNote, Field, Modal, opts, Panel, Select, Tabs } from '../ui';
 
-type Mode = 'month' | 'agenda' | 'free';
+type Mode = 'month' | 'week' | 'day' | 'agenda' | 'free';
 const MODES = [
   { id: 'month', label: 'Month' },
+  { id: 'week', label: 'Week' },
+  { id: 'day', label: 'Day' },
   { id: 'agenda', label: 'Agenda' },
   { id: 'free', label: 'Free time' },
 ] as const;
+const monday = (iso: string) => { const d = new Date(`${iso}T12:00:00`); return dayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7))); };
 const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 const eventDay = (e: CalendarEvent) => e.startDate ?? (e.startAt ? dayKey(new Date(e.startAt)) : '');
@@ -20,6 +23,7 @@ export function CalendarScreen() {
   const api = useApi();
   const [mode, setMode] = useState<Mode>('month');
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
+  const [selected, setSelected] = useState(dayKey(new Date()));
   const [editing, setEditing] = useState<{ event: CalendarEvent | null; date: string } | null>(null);
 
   // Month grid starts on Monday and always shows six weeks.
@@ -31,7 +35,16 @@ export function CalendarScreen() {
   const list = events.data ?? [];
   const today = dayKey(new Date());
   const monthLabel = cursor.toLocaleDateString([], { month: 'long', year: 'numeric' });
-  const shift = (n: number) => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + n, 1));
+  const shift = (n: number) => {
+    if (mode === 'week' || mode === 'day') {
+      const next = shiftDay(selected, n * (mode === 'week' ? 7 : 1));
+      setSelected(next);
+      const d = new Date(`${next}T12:00:00`);
+      setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+    } else setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + n, 1));
+  };
+  const dayEvents = (day: string) => list.filter((e) => eventDay(e) === day).sort((a, b) => (a.startAt ?? '').localeCompare(b.startAt ?? ''));
+  const label = mode === 'week' ? `${monday(selected)} → ${shiftDay(monday(selected), 6)}` : mode === 'day' ? new Date(`${selected}T12:00:00`).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }) : monthLabel;
 
   return (
     <div className="stack">
@@ -39,9 +52,9 @@ export function CalendarScreen() {
         <Tabs tabs={MODES} value={mode} onChange={setMode} />
         <div className="actions">
           <button className="ghost" onClick={() => shift(-1)}>‹</button>
-          <b style={{ minWidth: 150, textAlign: 'center' }}>{monthLabel}</b>
+          <b style={{ minWidth: 190, textAlign: 'center' }}>{label}</b>
           <button className="ghost" onClick={() => shift(1)}>›</button>
-          <button className="ghost" onClick={() => { const d = new Date(); d.setDate(1); setCursor(d); }}>Today</button>
+          <button className="ghost" onClick={() => { const d = new Date(); d.setDate(1); setCursor(d); setSelected(dayKey(new Date())); }}>Today</button>
           <button className="primary" onClick={() => setEditing({ event: null, date: today })}>+ Event</button>
         </div>
       </div>
@@ -64,6 +77,16 @@ export function CalendarScreen() {
         </div>
       )}
 
+      {mode === 'week' && Array.from({ length: 7 }, (_, i) => shiftDay(monday(selected), i)).map((d) => (
+        <Panel key={d} title={`${new Date(`${d}T12:00:00`).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}${d === today ? ' · today' : ''}`} accent={d === today ? 'var(--accent)' : undefined}>
+          {dayEvents(d).length === 0 ? <Empty>Free.</Empty> : <ul className="list">{dayEvents(d).map((e) => <li key={e.id} className="clickable" onClick={() => setEditing({ event: e, date: d })}><small className="muted" style={{ width: 90 }}>{e.allDay ? 'All day' : `${timeOf(e.startAt)}–${timeOf(e.endAt)}`}</small><span className="grow">{e.title}{e.location && <small className="muted"> · {e.location}</small>}</span><span className="pill">{e.category.toLowerCase()}</span></li>)}</ul>}
+        </Panel>
+      ))}
+      {mode === 'day' && (
+        <Panel title={`${dayEvents(selected).length} events`}>
+          {dayEvents(selected).length === 0 ? <Empty>Nothing planned.</Empty> : <ul className="list">{dayEvents(selected).map((e) => <li key={e.id} className="clickable" onClick={() => setEditing({ event: e, date: selected })}><small className="muted" style={{ width: 90 }}>{e.allDay ? 'All day' : `${timeOf(e.startAt)}–${timeOf(e.endAt)}`}</small><span className="grow">{e.title}{e.location && <small className="muted"> · {e.location}</small>}</span><span className="pill">{e.category.toLowerCase()}</span></li>)}</ul>}
+        </Panel>
+      )}
       {mode === 'agenda' && <Agenda events={list.filter((e) => eventDay(e) >= today).sort((a, b) => (a.startAt ?? a.startDate ?? '').localeCompare(b.startAt ?? b.startDate ?? ''))} onOpen={(e) => setEditing({ event: e, date: eventDay(e) })} />}
       {mode === 'free' && <FreeTime />}
 

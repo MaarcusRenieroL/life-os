@@ -3,15 +3,16 @@ import { useState, type FormEvent } from 'react';
 
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
-import { Empty, ErrorNote, Field, Modal, opts, Panel, pretty, Select, Tabs } from '../ui';
+import { Bars, Empty, ErrorNote, Field, Modal, opts, Panel, pretty, ProgressRow, Select, Stat, Tabs } from '../ui';
 
-type TabId = 'today' | 'upcoming' | 'list' | 'board' | 'completed';
+type TabId = 'today' | 'upcoming' | 'list' | 'board' | 'completed' | 'analytics';
 const TABS = [
   { id: 'today', label: 'Today' },
   { id: 'upcoming', label: 'Upcoming' },
   { id: 'list', label: 'List' },
   { id: 'board', label: 'Board' },
   { id: 'completed', label: 'Completed' },
+  { id: 'analytics', label: 'Analytics' },
 ] as const;
 
 const ORDER: Record<TaskPriority, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
@@ -30,6 +31,7 @@ export function TasksScreen() {
       case 'today': return api.tasks.list({ view: 'TODAY', q });
       case 'upcoming': return api.tasks.list({ view: 'UPCOMING', upcomingDays: 14, q });
       case 'completed': return api.tasks.list({ view: 'COMPLETED', q });
+      case 'analytics': return api.tasks.list({});
       default: return api.tasks.list({ q });
     }
   }, [api, tab, query]);
@@ -70,7 +72,9 @@ export function TasksScreen() {
         <Panel title={`Overdue · ${overdue.data!.length}`} accent="var(--magenta)"><ul className="list">{overdue.data!.sort(byUrgency).map(row)}</ul></Panel>
       )}
 
-      {tab === 'board' ? (
+      {tab === 'analytics' ? (
+        <TaskAnalytics tasks={list} />
+      ) : tab === 'board' ? (
         <Board tasks={list} onOpen={setEditing} onMove={(t, status) => runner.run(() => api.tasks.update(t.id, { status }), reloadAll)} />
       ) : tab === 'upcoming' ? (
         <Upcoming tasks={list} row={row} />
@@ -202,5 +206,29 @@ function TaskEditor({ task, onClose, onSaved }: { task: Task | null; onClose: ()
         </div>
       </form>
     </Modal>
+  );
+}
+
+/** The shape of your task list: how much is done, what is late, and where the weight sits. */
+function TaskAnalytics({ tasks }: { tasks: Task[] }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const top = tasks.filter((t) => !t.parentTaskId);
+  const done = top.filter((t) => t.status === 'DONE');
+  const open = top.filter((t) => t.status !== 'DONE');
+  const overdue = open.filter((t) => t.dueDate && t.dueDate < today);
+  const count = <K extends string>(keys: readonly K[], pick: (t: Task) => K) => keys.map((k) => ({ label: pretty(k), value: top.filter((t) => pick(t) === k).length }));
+  const pct = top.length ? (done.length / top.length) * 100 : 0;
+  return (
+    <div className="stack">
+      <Panel title="Overview">
+        <div className="stats"><Stat label="Tasks" value={top.length} /><Stat label="Done" value={done.length} sub={`${Math.round(pct)}%`} /><Stat label="Open" value={open.length} /><Stat label="Overdue" value={overdue.length} /></div>
+        <ProgressRow label="Completion" pct={pct} />
+      </Panel>
+      <div className="grid">
+        <Panel title="By priority"><Bars rows={count(TASK_PRIORITIES, (t) => t.priority)} /></Panel>
+        <Panel title="By status"><Bars rows={count(TASK_STATUSES, (t) => t.status)} /></Panel>
+      </div>
+      <Panel title="Overdue">{overdue.length === 0 ? <Empty>Nothing is late.</Empty> : <ul className="list">{overdue.map((t) => <li key={t.id}><span className="grow">{t.title}</span><small className="muted">{t.dueDate}</small></li>)}</ul>}</Panel>
+    </div>
   );
 }
