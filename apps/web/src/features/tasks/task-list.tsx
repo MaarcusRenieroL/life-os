@@ -48,6 +48,7 @@ export function TaskList({ tasks, isLoading, emptyMessage, onEdit, invalidateKey
   const [subtaskFormOpen, setSubtaskFormOpen] = useState(false);
 
   const topLevel = useMemo(() => tasks.filter((t) => !t.parentTaskId), [tasks]);
+  const hadOpen = useRef(false);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -326,7 +327,6 @@ export function TaskList({ tasks, isLoading, emptyMessage, onEdit, invalidateKey
   }
 
   // Show the quest once there has been something open to clear, and keep it up while the last one is ticked off.
-  const hadOpen = useRef(false);
   if (topLevel.some((t) => t.status !== 'DONE')) hadOpen.current = true;
 
   if (topLevel.length === 0) {
