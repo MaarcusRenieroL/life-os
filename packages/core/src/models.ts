@@ -595,10 +595,15 @@ export type JobStatus =
   | 'OFFER_ACCEPTED'
   | 'OFFER_REJECTED'
   | 'REJECTED'
-  | 'WITHDRAWN';
+  | 'WITHDRAWN'
+  | 'NO_LONGER_ACCEPTING'
+  | 'NOT_INTERESTED';
 
 /** Pipeline order, not alphabetical. */
-export const JOB_STATUSES: JobStatus[] = ['INTERESTED', 'WAITING_FOR_REFERRAL', 'REFERRED', 'APPLIED', 'INTERVIEWING', 'WAITING_FOR_HR', 'OFFER_ACCEPTED', 'OFFER_REJECTED', 'REJECTED', 'WITHDRAWN'];
+/** Words for the statuses whose enum names read badly on their own. */
+export const JOB_STATUS_NAMES: Partial<Record<JobStatus, string>> = { NO_LONGER_ACCEPTING: 'No longer accepting applications', NOT_INTERESTED: 'Not interested' };
+
+export const JOB_STATUSES: JobStatus[] = ['INTERESTED', 'WAITING_FOR_REFERRAL', 'REFERRED', 'APPLIED', 'INTERVIEWING', 'WAITING_FOR_HR', 'OFFER_ACCEPTED', 'OFFER_REJECTED', 'REJECTED', 'WITHDRAWN', 'NO_LONGER_ACCEPTING', 'NOT_INTERESTED'];
 
 export interface JobListing {
   id: string;

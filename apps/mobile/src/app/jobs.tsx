@@ -12,7 +12,7 @@ import { ErrorNote, Muted, Panel, s } from '@/ui';
 type TabId = 'dashboard' | 'list' | 'add' | 'analytics';
 const TABS = [{ id: 'dashboard', label: 'Dashboard' }, { id: 'list', label: 'Jobs' }, { id: 'add', label: 'Add a job' }, { id: 'analytics', label: 'Analytics' }] as const;
 const fit = (n: number | null) => (n == null ? null : <Pill label={`${n}% fit`} color={n >= 75 ? C.accent : n >= 55 ? C.gold : C.muted} />);
-const CLOSED: JobStatus[] = ['REJECTED', 'WITHDRAWN', 'OFFER_REJECTED', 'OFFER_ACCEPTED'];
+const CLOSED: JobStatus[] = ['REJECTED', 'WITHDRAWN', 'OFFER_REJECTED', 'OFFER_ACCEPTED', 'NO_LONGER_ACCEPTING', 'NOT_INTERESTED'];
 
 export default function Jobs() {
   const api = useApi();

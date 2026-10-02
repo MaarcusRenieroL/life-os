@@ -39,7 +39,7 @@ export function JobsScreen() {
 
 function Dashboard({ jobs, onOpen }: { jobs: JobListing[]; onOpen: (j: JobListing) => void }) {
   const count = (s: JobStatus) => jobs.filter((j) => j.status === s).length;
-  const active = jobs.filter((j) => j.status && !['REJECTED', 'WITHDRAWN', 'OFFER_REJECTED', 'OFFER_ACCEPTED'].includes(j.status));
+  const active = jobs.filter((j) => j.status && !['REJECTED', 'WITHDRAWN', 'OFFER_REJECTED', 'OFFER_ACCEPTED', 'NO_LONGER_ACCEPTING', 'NOT_INTERESTED'].includes(j.status));
   const followUps = jobs.filter((j) => j.followUpAt && active.includes(j)).sort((a, b) => a.followUpAt!.localeCompare(b.followUpAt!)).slice(0, 5);
   return (
     <div className="stack">
