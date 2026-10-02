@@ -1,5 +1,5 @@
 import type { Table } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, RotateCcw, SlidersHorizontal } from 'lucide-react';
+import { ArrowDown, ArrowUp, Download, RotateCcw, Rows3, SlidersHorizontal } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +18,19 @@ import { columnTitle } from './column-utils';
  * Show/hide columns, by their real names, and reorder them. `onReset` (when given) restores the
  * table's default layout.
  */
-export function DataTableViewOptions<TData>({ table, onReset }: { table: Table<TData>; onReset?: () => void }) {
+export function DataTableViewOptions<TData>({
+  table,
+  onReset,
+  compact,
+  onToggleDensity,
+  onExport,
+}: {
+  table: Table<TData>;
+  onReset?: () => void;
+  compact?: boolean;
+  onToggleDensity?: () => void;
+  onExport?: () => void;
+}) {
   const columns = table.getAllLeafColumns().filter((column) => column.getCanHide());
   const order = table.getState().columnOrder;
 
@@ -65,6 +77,16 @@ export function DataTableViewOptions<TData>({ table, onReset }: { table: Table<T
           </div>
         ))}
         <DropdownMenuSeparator />
+        {onToggleDensity && (
+          <DropdownMenuItem onClick={onToggleDensity}>
+            <Rows3 /> {compact ? 'Comfortable rows' : 'Compact rows'}
+          </DropdownMenuItem>
+        )}
+        {onExport && (
+          <DropdownMenuItem onClick={onExport}>
+            <Download /> Export CSV
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => table.toggleAllColumnsVisible(true)} onSelect={(e) => e.preventDefault()}>
           Show all columns
         </DropdownMenuItem>

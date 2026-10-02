@@ -15,7 +15,7 @@ import {
   type Table,
   type VisibilityState,
 } from '@tanstack/react-table';
-import { Download, Layers, Rows3, Search, X } from 'lucide-react';
+import { Layers, Search, X } from 'lucide-react';
 import { flexRender } from '@tanstack/react-table';
 import { useMemo, useState, type ReactNode } from 'react';
 
@@ -269,7 +269,7 @@ export function DataGrid<TData>({
       )}
       <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-full max-w-xs min-w-48">
+        <div className="relative w-full max-w-56 min-w-40 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={globalFilter}
@@ -291,21 +291,13 @@ export function DataGrid<TData>({
             <Layers /> <span className="hidden @xl:inline">Views</span>
           </Button>
           <DataGridSort table={table} />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => patch('density', layout.density === 'compact' ? 'comfortable' : 'compact')}
-            aria-pressed={layout.density === 'compact'}
-            title="Toggle compact rows"
-          >
-            <Rows3 /> <span className="hidden @xl:inline">{layout.density === 'compact' ? 'Compact' : 'Comfortable'}</span>
-          </Button>
-          <DataTableViewOptions table={table} onReset={reset} />
-          {exportName !== undefined && (
-            <Button variant="outline" size="sm" onClick={exportCsv} disabled={table.getFilteredRowModel().rows.length === 0}>
-              <Download /> <span className="hidden @xl:inline">Export CSV</span>
-            </Button>
-          )}
+          <DataTableViewOptions
+            table={table}
+            onReset={reset}
+            compact={layout.density === 'compact'}
+            onToggleDensity={() => patch('density', layout.density === 'compact' ? 'comfortable' : 'compact')}
+            onExport={exportName !== undefined && table.getFilteredRowModel().rows.length > 0 ? exportCsv : undefined}
+          />
           {toolbarEnd}
         </div>
       </div>
