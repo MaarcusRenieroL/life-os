@@ -22,7 +22,7 @@ export function DataGridSort<TData>({ table }: { table: Table<TData> }) {
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-8">
-          <ArrowDownAZ /> Sort
+          <ArrowDownAZ /> <span className="hidden @xl:inline">Sort</span>
           {sorting.length > 0 && <Badge variant="secondary" className="ml-0.5 h-4 rounded-sm px-1 text-[10px] font-normal">{sorting.length}</Badge>}
         </Button>
       </PopoverTrigger>

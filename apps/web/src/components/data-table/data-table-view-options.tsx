@@ -35,7 +35,7 @@ export function DataTableViewOptions<TData>({ table, onReset }: { table: Table<T
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm">
-          <SlidersHorizontal /> View
+          <SlidersHorizontal /> <span className="hidden @xl:inline">View</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">

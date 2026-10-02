@@ -16,6 +16,7 @@ import {
   type VisibilityState,
 } from '@tanstack/react-table';
 import { Download, Layers, Rows3, Search, X } from 'lucide-react';
+import { flexRender } from '@tanstack/react-table';
 import { useMemo, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ import { DataTablePagination } from './data-table-pagination';
 import { DataTableViewOptions } from './data-table-view-options';
 import { FacetFilters } from './data-grid-facet-filters';
 import { DataGridSort } from './data-grid-sort';
+import { DataGridRowDrawer } from './data-grid-row-drawer';
 import { DataGridViews, useSavedViews, type GridView } from './data-grid-views';
 import { selectionColumn } from './selection-column';
 import { usePersistedGrid } from './use-persisted-grid';
@@ -66,6 +68,14 @@ export interface DataGridProps<TData> {
   renderExpanded?: (row: TData) => ReactNode;
   expanded?: ExpandedState;
   onExpandedChange?: OnChangeFn<ExpandedState>;
+  /** Click a row to open its record in a side drawer (default on). Turn off for tables whose rows do something else. */
+  rowDrawer?: boolean;
+  /** The drawer's heading for a row; defaults to the first column. */
+  drawerTitle?: (row: TData) => ReactNode;
+  /** The label on the drawer's button that runs `onRowClick` (a full page, an edit form). */
+  drawerOpenLabel?: string;
+  /** Extra content under the fields in the drawer. */
+  drawerExtra?: (row: TData) => ReactNode;
   /** Ready-made views shown first in the Views side list, e.g. "Open" or "This month". "All" is always there. */
   views?: GridView[];
 }
@@ -106,6 +116,10 @@ export function DataGrid<TData>({
   expanded,
   onExpandedChange,
   views: builtInViews = [],
+  rowDrawer = true,
+  drawerTitle,
+  drawerOpenLabel,
+  drawerExtra,
 }: DataGridProps<TData>) {
   const { layout, patch, reset } = usePersistedGrid(tableId, {
     sorting: initialSorting,
@@ -121,6 +135,7 @@ export function DataGrid<TData>({
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: layout.pageSize });
   const saved = useSavedViews(tableId);
   const [activeView, setActiveView] = useState('all');
+  const [drawerId, setDrawerId] = useState<string | null>(null);
 
   const preparedColumns = useMemo<ColumnDef<TData>[]>(() => {
     const prepared = columns.map((column) => {
@@ -237,7 +252,8 @@ export function DataGrid<TData>({
   const emptyText = loading ? 'Loading…' : filtering ? 'Nothing matches these filters.' : (emptyMessage ?? 'No results.');
 
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:items-start">
+    <div className="@container">
+    <div className="flex flex-col gap-3 @3xl:flex-row @3xl:items-start">
       {saved.open && (
         <DataGridViews
           builtIn={[allView, ...builtInViews]}
@@ -264,7 +280,7 @@ export function DataGrid<TData>({
           />
         </div>
         {typeof toolbarStart === 'function' ? toolbarStart(table) : toolbarStart}
-        <FacetFilters table={table} />
+        <FacetFilters table={table} total={data.length} />
         {filtering && (
           <Button variant="ghost" size="sm" className="h-8 px-2" onClick={clearFilters}>
             Reset <X />
@@ -272,7 +288,7 @@ export function DataGrid<TData>({
         )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button variant={saved.open ? 'secondary' : 'outline'} size="sm" className="h-8" aria-pressed={saved.open} onClick={() => saved.setOpen(!saved.open)}>
-            <Layers /> Views
+            <Layers /> <span className="hidden @xl:inline">Views</span>
           </Button>
           <DataGridSort table={table} />
           <Button
@@ -282,12 +298,12 @@ export function DataGrid<TData>({
             aria-pressed={layout.density === 'compact'}
             title="Toggle compact rows"
           >
-            <Rows3 /> {layout.density === 'compact' ? 'Compact' : 'Comfortable'}
+            <Rows3 /> <span className="hidden @xl:inline">{layout.density === 'compact' ? 'Compact' : 'Comfortable'}</span>
           </Button>
           <DataTableViewOptions table={table} onReset={reset} />
           {exportName !== undefined && (
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={table.getFilteredRowModel().rows.length === 0}>
-              <Download /> Export CSV
+              <Download /> <span className="hidden @xl:inline">Export CSV</span>
             </Button>
           )}
           {toolbarEnd}
@@ -308,29 +324,74 @@ export function DataGrid<TData>({
         </div>
       )}
 
-      <div className={mobileCard ? 'mt-3 hidden md:block' : 'mt-3'}>
+      <div className="mt-3 hidden @2xl:block">
         <DataTable
           table={table}
-          onRowClick={onRowClick}
+          onRowClick={
+            rowDrawer
+              ? (original) => {
+                  const hit = table.getPrePaginationRowModel().rows.find((r) => r.original === original);
+                  if (hit) setDrawerId(hit.id);
+                }
+              : onRowClick
+          }
           density={layout.density}
           emptyMessage={emptyText}
           renderExpanded={renderExpanded}
         />
       </div>
 
-      {mobileCard && (
-        <ul className="mt-3 flex flex-col gap-2 md:hidden">
-          {table.getRowModel().rows.length === 0 && (
-            <li className="rounded-lg border p-6 text-center text-sm text-muted-foreground">{emptyText}</li>
-          )}
-          {table.getRowModel().rows.map((row) => (
-            <li key={row.id}>{mobileCard(row.original)}</li>
-          ))}
-        </ul>
+      <ul className="mt-3 flex flex-col gap-2 @2xl:hidden">
+        {table.getRowModel().rows.length === 0 && (
+          <li className="rounded-lg border p-6 text-center text-sm text-muted-foreground">{emptyText}</li>
+        )}
+        {table.getRowModel().rows.map((row) => (
+          <li key={row.id}>
+            {mobileCard ? (
+              mobileCard(row.original)
+            ) : (
+              // No hand-made card for this table: show its first column as the heading and the next few
+              // visible ones as label / value lines, so every table works on a phone without extra work.
+              <button type="button" className="w-full rounded-lg border bg-card p-3 text-left active:bg-muted/50" onClick={() => (rowDrawer ? setDrawerId(row.id) : onRowClick?.(row.original))}>
+                {(() => {
+                  const cells = row.getVisibleCells().filter((c) => c.column.id !== 'select' && c.column.id !== 'actions');
+                  const [lead, ...rest] = cells;
+                  return (
+                    <>
+                      {lead && <div className="font-medium break-words">{flexRender(lead.column.columnDef.cell, lead.getContext())}</div>}
+                      <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
+                        {rest.slice(0, 4).map((cell) => (
+                          <div key={cell.id} className="contents">
+                            <dt className="text-xs text-muted-foreground">{columnTitle(cell.column)}</dt>
+                            <dd className="min-w-0 truncate text-right">{flexRender(cell.column.columnDef.cell, cell.getContext())}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </>
+                  );
+                })()}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {rowDrawer && (
+        <DataGridRowDrawer
+          rows={table.getPrePaginationRowModel().rows}
+          rowId={drawerId}
+          onClose={() => setDrawerId(null)}
+          onSelect={setDrawerId}
+          onOpen={onRowClick ? (row) => { setDrawerId(null); onRowClick(row); } : undefined}
+          openLabel={drawerOpenLabel}
+          title={drawerTitle}
+          extra={drawerExtra}
+        />
       )}
 
       {!hidePagination && <DataTablePagination table={table} pageSizes={PAGE_SIZES} totalUnfiltered={data.length} />}
       </div>
+    </div>
     </div>
   );
 }

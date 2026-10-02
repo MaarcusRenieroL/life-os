@@ -116,13 +116,13 @@ export function DataGridViews({
   );
 
   return (
-    <aside className="w-full shrink-0 rounded-lg border bg-card p-2 md:w-52" aria-label="Views">
-      <p className="flex items-center gap-1.5 px-2 pb-1 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+    <aside className="w-full shrink-0 rounded-lg border bg-card p-2 @3xl:w-52" aria-label="Views">
+      <p className="hidden items-center gap-1.5 px-2 pb-1 text-[11px] @3xl:flex font-medium tracking-wider text-muted-foreground uppercase">
         <Layers className="size-3.5" /> Views
       </p>
-      <ul className="flex flex-col gap-0.5">
+      <ul className="flex gap-0.5 overflow-x-auto @3xl:flex-col @3xl:overflow-visible">
         {builtIn.map((v) => row(v, false))}
-        {saved.length > 0 && <li className="mx-2 my-1 border-t" aria-hidden />}
+        {saved.length > 0 && <li className="mx-1 my-1 border-l @3xl:mx-2 @3xl:border-t @3xl:border-l-0" aria-hidden />}
         {saved.map((v) => row(v, true))}
       </ul>
       <div className="mt-2 border-t pt-2">
