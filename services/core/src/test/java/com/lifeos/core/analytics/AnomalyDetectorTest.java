@@ -124,4 +124,10 @@ class AnomalyDetectorTest {
   void missingModulesJustContributeNothing() {
     assertThat(AnomalyDetector.detect(null, null, null, null, null, null, TODAY)).isEmpty();
   }
+
+  @Test
+  void aBaselineWithAlmostNoSpendingGivesNoSpikes() {
+    // 30 empty days, then a normal week of spending: nothing to compare against, so nothing is "unusual".
+    assertThat(AnomalyDetector.spendingSpikes(spendDays(37, 0, 4000, 4000, 4000, 4000, 4000, 4000, 4000))).isEmpty();
+  }
 }
