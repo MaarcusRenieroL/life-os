@@ -10,7 +10,8 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdatePayCycleRequest {
 
-  @Min(1)
+  /** 1-28, or 0 for the last working day of the month. */
+  @Min(0)
   @Max(28)
   int startDay;
 }

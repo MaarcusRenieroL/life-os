@@ -107,13 +107,19 @@ class FinanceOverviewTest {
   }
 
   @Test
-  void aSalarySizedCreditOnTheThirtiethSuggestsStartingTheCycleThere() {
+  void aSalarySizedCreditOnAFixedDaySuggestsStartingTheCycleThere() {
     when(settingsRepository.findById(userId)).thenReturn(Optional.of(UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).payCycleStartDay(1).build()));
-    salaryOn("2026-09-30T04:00:00Z", "125000");
+    salaryOn("2026-09-25T04:00:00Z", "125000");
 
-    FinanceOverview o = service.getOverview(principal);
+    assertThat(service.getOverview(principal).suggestedPayCycleStartDay()).isEqualTo(25);
+  }
 
-    assertThat(o.suggestedPayCycleStartDay()).isEqualTo(28);
+  @Test
+  void aSalarySizedCreditOnTheLastWorkingDaySuggestsThatRatherThanAFixedDay() {
+    when(settingsRepository.findById(userId)).thenReturn(Optional.of(UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).payCycleStartDay(1).build()));
+    salaryOn("2026-09-30T04:00:00Z", "125000"); // a Wednesday, the last weekday of September
+
+    assertThat(service.getOverview(principal).suggestedPayCycleStartDay()).isZero();
   }
 
   @Test

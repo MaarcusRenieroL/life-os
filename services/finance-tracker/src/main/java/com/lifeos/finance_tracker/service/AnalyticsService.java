@@ -153,8 +153,14 @@ public class AnalyticsService {
         fixedIncome != null && fixedIncome.signum() > 0
             ? credit.getAmount().compareTo(fixedIncome.multiply(new BigDecimal("0.8"))) >= 0
             : credit.getAmount().compareTo(new BigDecimal("1000")) >= 0;
-    int day = credit.getTransactionDate().atZone(PayCycle.ZONE).getDayOfMonth();
-    return salarySized && day != 1 ? PayCycle.clamp(day) : null;
+    LocalDate landed = credit.getTransactionDate().atZone(PayCycle.ZONE).toLocalDate();
+    if (!salarySized) {
+      return null;
+    }
+    if (landed.equals(PayCycle.lastWorkingDay(java.time.YearMonth.from(landed)))) {
+      return PayCycle.LAST_WORKING_DAY;
+    }
+    return landed.getDayOfMonth() != 1 ? PayCycle.clamp(landed.getDayOfMonth()) : null;
   }
 
   public DashboardSummary updateMonthlyIncome(
