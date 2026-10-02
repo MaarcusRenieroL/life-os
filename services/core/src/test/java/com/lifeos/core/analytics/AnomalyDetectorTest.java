@@ -128,6 +128,8 @@ class AnomalyDetectorTest {
   @Test
   void aBaselineWithAlmostNoSpendingGivesNoSpikes() {
     // 30 empty days, then a normal week of spending: nothing to compare against, so nothing is "unusual".
-    assertThat(AnomalyDetector.spendingSpikes(spendDays(37, 0, 4000, 4000, 4000, 4000, 4000, 4000, 4000))).isEmpty();
+    List<ModuleData.SpendDay> days = new ArrayList<>();
+    for (int i = 0; i < 37; i++) days.add(new ModuleData.SpendDay(TODAY.minusDays(36 - i), i >= 30 ? BigDecimal.valueOf(4000) : BigDecimal.ZERO, BigDecimal.ZERO));
+    assertThat(AnomalyDetector.spendingSpikes(days)).isEmpty();
   }
 }
