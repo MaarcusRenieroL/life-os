@@ -1,5 +1,5 @@
 import { dayKey, shiftDay, type Habit, type HabitLog } from '@life-os/core';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from '@/text';
 
@@ -115,7 +115,6 @@ export function HabitDetailSheet({ habit, onClose }: { habit: Habit; onClose: ()
   const reminders = useAsync(() => api.habitTools.reminders(habit.id), habit.id);
   const [time, setTime] = useState('08:00');
   const [days, setDays] = useState<string[]>([]);
-  useEffect(() => { void streak.reload(); }, [logs.data]);
   return (
     <Sheet title={habit.name} onClose={onClose}>
       {runner.error ? <ErrorNote message={runner.error} /> : null}

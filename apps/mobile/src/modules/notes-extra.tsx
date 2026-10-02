@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Switch, View } from 'react-native';
 import { Text } from '@/text';
 
-import { Bars, Btn, Chips, DateInput, Empty, Field, Input, opts, pretty, Pill, Progress, Row, Sheet, Stat, StatGrid } from '@/kit';
+import { Btn, Chips, DateInput, Empty, Field, Input, opts, pretty, Pill, Row, Sheet, Stat, StatGrid } from '@/kit';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
