@@ -1,83 +1,106 @@
-import type { Column, Table } from '@tanstack/react-table';
-import { PlusCircle, SlidersHorizontal } from 'lucide-react';
+import type { Table } from '@tanstack/react-table';
+import { ListFilter, Plus, X } from 'lucide-react';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import { columnTitle, describeFilter } from './column-utils';
-import { FilterControl, FilterList } from './data-grid-filters';
-
-/** At most this many columns get their own pill in the toolbar; the rest live under "More". */
-const PILLS = 4;
+import { FilterControl } from './data-grid-filters';
 
 function isActive(value: unknown): boolean {
   return value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && value.length === 0);
 }
 
-/** One column's filter as a dashed pill (like tablecn / Linear): "+ Status", or "Status | Done, Open" when set. */
-function FacetPill<TData>({ column }: { column: Column<TData, unknown> }) {
-  const meta = column.columnDef.meta!;
-  const value = column.getFilterValue();
-  const active = isActive(value);
-
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 border-dashed">
-          <PlusCircle />
-          {columnTitle(column)}
-          {active && (
-            <>
-              <Separator orientation="vertical" className="mx-1 h-4" />
-              <Badge variant="secondary" className="max-w-40 truncate rounded-sm px-1.5 font-normal">
-                {describeFilter(meta.filter!, value, meta.format)}
-              </Badge>
-            </>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-3">
-        <FilterControl column={column} />
-        {active && (
-          <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => column.setFilterValue(undefined)}>
-            Clear filter
-          </Button>
-        )}
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-/** The filter pills for a table's filterable columns, plus a "More" popover for the rest. */
+/**
+ * One "Filter" button instead of a pill per column: it opens a small builder where each row is a
+ * column and its value, with "Add filter" for more. Filters that are set show as removable chips
+ * beside the button, so what the table is narrowed by is always visible.
+ */
 export function FacetFilters<TData>({ table }: { table: Table<TData> }) {
   const filterable = table.getAllLeafColumns().filter((c) => c.columnDef.meta?.filter);
+  // Rows the user has added but not given a value yet; rows with a value come from the table itself.
+  const [pending, setPending] = useState<string[]>([]);
   if (filterable.length === 0) return null;
 
-  // Columns that already have a filter set always get a pill, so an active filter is never hidden.
   const active = filterable.filter((c) => isActive(c.getFilterValue()));
-  const rest = filterable.filter((c) => !active.includes(c));
-  const pills = [...active, ...rest.slice(0, Math.max(0, PILLS - active.length))];
-  const more = filterable.filter((c) => !pills.includes(c));
+  const rowIds = [...active.map((c) => c.id), ...pending.filter((id) => !active.some((c) => c.id === id))];
+  const rows = rowIds.map((id) => filterable.find((c) => c.id === id)).filter((c) => !!c);
+  const unused = filterable.filter((c) => !rowIds.includes(c.id));
+
+  function changeColumn(from: string, to: string) {
+    table.getColumn(from)?.setFilterValue(undefined);
+    setPending((prev) => [...prev.filter((id) => id !== from && id !== to), to]);
+  }
+
+  function removeRow(id: string) {
+    table.getColumn(id)?.setFilterValue(undefined);
+    setPending((prev) => prev.filter((p) => p !== id));
+  }
 
   return (
     <>
-      {pills.map((column) => (
-        <FacetPill key={column.id} column={column} />
-      ))}
-      {more.length > 0 && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8">
-              <SlidersHorizontal /> More filters
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8">
+            <ListFilter /> Filter
+            {active.length > 0 && <Badge variant="secondary" className="ml-0.5 h-4 rounded-sm px-1 text-[10px] font-normal">{active.length}</Badge>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-[26rem] max-w-[calc(100vw-2rem)] p-3">
+          <p className="text-sm font-medium">{rows.length ? 'Show rows where' : 'No filters applied'}</p>
+          <p className="mb-3 text-xs text-muted-foreground">{rows.length ? 'All of these must match.' : 'Add a filter to narrow the table.'}</p>
+          <div className="flex flex-col gap-3">
+            {rows.map((column) => (
+              <div key={column.id} className="rounded-md border p-2">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <Select value={column.id} onValueChange={(to) => changeColumn(column.id, to)}>
+                    <SelectTrigger size="sm" className="min-w-0 flex-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[column, ...unused].map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{columnTitle(c)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="icon-sm" aria-label={`Remove ${columnTitle(column)} filter`} onClick={() => removeRow(column.id)}>
+                    <X className="size-3.5" />
+                  </Button>
+                </div>
+                <FilterControl column={column} />
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Button size="sm" disabled={unused.length === 0} onClick={() => setPending((prev) => [...prev, unused[0].id])}>
+              <Plus /> Add filter
             </Button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-80">
-            <FilterList table={table} only={more.map((c) => c.id)} />
-          </PopoverContent>
-        </Popover>
-      )}
+            {rows.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  active.forEach((c) => c.setFilterValue(undefined));
+                  setPending([]);
+                }}
+              >
+                Clear all
+              </Button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {active.map((column) => (
+        <Badge key={column.id} variant="secondary" className="h-8 gap-1.5 rounded-md pr-1 pl-2.5 font-normal">
+          <span className="text-muted-foreground">{columnTitle(column)}</span>
+          <span className="max-w-40 truncate font-medium">{describeFilter(column.columnDef.meta!.filter!, column.getFilterValue(), column.columnDef.meta?.format)}</span>
+          <button type="button" aria-label={`Clear ${columnTitle(column)} filter`} className="rounded p-0.5 hover:bg-background/60" onClick={() => removeRow(column.id)}>
+            <X className="size-3.5" />
+          </button>
+        </Badge>
+      ))}
     </>
   );
 }
