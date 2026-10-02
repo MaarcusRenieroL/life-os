@@ -1,15 +1,19 @@
 import { JOB_STATUSES, type JobListing, type JobStatus } from '@life-os/core';
 import { useState, type FormEvent } from 'react';
 
+import { DiscoveryTab, OpeningsTab, ResumeTab } from '../modules/jobs-extra';
 import { openExternal } from '../lib/runtime';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { Bars, Empty, ErrorNote, Field, Modal, opts, Panel, pretty, Select, Stat, Tabs } from '../ui';
 
-type TabId = 'dashboard' | 'list' | 'add' | 'analytics';
+type TabId = 'dashboard' | 'list' | 'openings' | 'discovery' | 'resumes' | 'add' | 'analytics';
 const TABS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'list', label: 'Jobs' },
+  { id: 'openings', label: 'Openings' },
+  { id: 'discovery', label: 'Watchlist' },
+  { id: 'resumes', label: 'Resume & profile' },
   { id: 'add', label: 'Add a job' },
   { id: 'analytics', label: 'Analytics' },
 ] as const;
@@ -30,6 +34,9 @@ export function JobsScreen() {
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
       {tab === 'dashboard' && <Dashboard jobs={list} onOpen={setOpen} />}
       {tab === 'list' && <JobList jobs={list} onOpen={setOpen} />}
+      {tab === 'openings' && <OpeningsTab onPromoted={() => void jobs.reload()} />}
+      {tab === 'discovery' && <DiscoveryTab />}
+      {tab === 'resumes' && <ResumeTab />}
       {tab === 'add' && <AddJob onAdded={async (job) => { await jobs.reload(); setTab('list'); setOpen(job); }} />}
       {tab === 'analytics' && <Analytics />}
       {open && <JobModal job={open} onClose={() => setOpen(null)} onChanged={async () => { await jobs.reload(); }} onUpdated={setOpen} />}
