@@ -72,7 +72,8 @@ export function createClient(options: ClientOptions) {
       if (value !== undefined) url.searchParams.set(key, String(value));
     }
     const headers: Record<string, string> = { Accept: 'application/json', ...options.headers?.() };
-    if (init.body) headers['Content-Type'] = 'application/json';
+    // A multipart body must not get a JSON content type: fetch sets its own with the boundary.
+    if (init.body && !(typeof FormData !== 'undefined' && init.body instanceof FormData)) headers['Content-Type'] = 'application/json';
     if (token) headers.Authorization = `Bearer ${token}`;
     return doFetch(url.toString(), { ...init, headers });
   }
@@ -89,7 +90,8 @@ export function createClient(options: ClientOptions) {
   }
 
   async function request<T>(method: string, path: string, body?: unknown, query?: Query): Promise<T> {
-    const init = { method, body: body === undefined ? undefined : JSON.stringify(body), query };
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+    const init = { method, body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body), query };
     let response = await raw(path, init, (await current())?.accessToken ?? null);
 
     const authRelated = path.startsWith('/v1/auth/login') || path.startsWith('/v1/auth/refresh');
@@ -125,7 +127,9 @@ export function createClient(options: ClientOptions) {
     post: <T>(path: string, body: unknown = {}) => request<T>('POST', path, body),
     put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
     patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
-    delete: <T>(path: string) => request<T>('DELETE', path),
+    delete: <T>(path: string, body?: unknown) => request<T>('DELETE', path, body),
+    /** Multipart upload (a file plus fields). */
+    upload: <T>(path: string, form: FormData) => request<T>('POST', path, form),
 
     async signIn(email: string, rawPassword: string, deviceName: string, deviceType: string): Promise<void> {
       const response = await raw('/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, rawPassword, deviceName, deviceType }) }, null);

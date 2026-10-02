@@ -1,11 +1,13 @@
 import type { Client } from './client';
 import type {
+  CareerProfile, CareerProfileBundle, CareerProfileInput, DeviceSession, DiscoveredJob, DiscoveryPreferences, GmailPurpose, GmailStatus, ImportFailure, ProjectEntry, ProjectInput,
+  Resume, StatementImportResult, UserProfile, WatchedCompany, WorkExperience, WorkExperienceInput, JobBoard,
   HabitConsistencyScore, HabitReminder,
   AuditEvent, AutomationExecution, AutomationRule, AutomationTemplate, BackupSummary, EmailHubItem, EmailHubStatus, JournalEntry, JournalInsights, JournalPrompt,
   NoteAttachment, NoteGraph, NoteSearchResult, NoteSettings, NoteTemplate, RecoveryCodeStatus, SaveJournalEntryRequest, SaveRuleRequest, VaultCard, VaultCardInput,
   VaultCategory, VaultEntryDetail, VaultEntrySummary, VaultEntryWriteRequest, VaultExport, VaultHealthSummary, VaultStatus,
 } from './models-extra';
-import type { Note, NoteFolder, NoteType, Page } from './models';
+import type { JobListing, Merchant, Note, NoteFolder, NoteType, Page } from './models';
 import type { Anomaly, Insight, PeriodSummary } from './types';
 
 export interface ModuleSetting { moduleCode: string; enabled: boolean }
@@ -113,6 +115,54 @@ export function createExtraApis(client: Client) {
       addReminder: (id: string, body: { reminderTime: string; daysOfWeek?: number[] | null; enabled?: boolean }) => post<HabitReminder>(`/v1/habits/${id}/reminders`, body),
       updateReminder: (id: string, reminderId: string, body: { reminderTime?: string; daysOfWeek?: number[] | null; enabled?: boolean }) => put<HabitReminder>(`/v1/habits/${id}/reminders/${reminderId}`, body),
       deleteReminder: (id: string, reminderId: string) => del<void>(`/v1/habits/${id}/reminders/${reminderId}`),
+    },
+
+    jobTools: {
+      companies: () => get<WatchedCompany[]>('/v1/jobs/discovery/companies'),
+      addCompany: (body: { name: string; board: JobBoard; slug: string; domain?: string; alert?: boolean }) => post<WatchedCompany>('/v1/jobs/discovery/companies', body),
+      updateCompany: (id: string, body: { active?: boolean; alert?: boolean }) => client.patch<WatchedCompany>(`/v1/jobs/discovery/companies/${id}`, body),
+      removeCompany: (id: string) => del<void>(`/v1/jobs/discovery/companies/${id}`),
+      scanCompany: (id: string) => post<{ companiesScanned: number; newOpenings: number; closedOpenings: number; errors: string[] }>(`/v1/jobs/discovery/companies/${id}/scan`, {}),
+      scanAll: () => post<boolean>('/v1/jobs/discovery/scan', {}),
+      openings: (params: { minScore?: number; companyId?: string; limit?: number } = {}) => get<DiscoveredJob[]>('/v1/jobs/discovery/jobs', { ...params }),
+      promote: (id: string) => post<JobListing>(`/v1/jobs/discovery/jobs/${id}/promote`, {}),
+      dismiss: (id: string) => post<DiscoveredJob>(`/v1/jobs/discovery/jobs/${id}/dismiss`, {}),
+      preferences: () => get<DiscoveryPreferences>('/v1/jobs/discovery/preferences'),
+      savePreferences: (body: DiscoveryPreferences) => put<DiscoveryPreferences>('/v1/jobs/discovery/preferences', body),
+      resume: () => get<Resume>('/v1/resumes'),
+      uploadResume: (form: FormData) => client.upload<Resume>('/v1/resumes/upload', form),
+      profile: () => get<CareerProfileBundle>('/v1/career-profile'),
+      saveProfile: (body: CareerProfileInput) => put<CareerProfile>('/v1/career-profile', body),
+      seedFromResume: (form: FormData) => client.upload<CareerProfile>('/v1/career-profile/seed-from-resume', form),
+      addExperience: (body: WorkExperienceInput) => post<WorkExperience>('/v1/career-profile/work-experiences', body),
+      deleteExperience: (id: string) => del<void>(`/v1/career-profile/work-experiences/${id}`),
+      addProject: (body: ProjectInput) => post<ProjectEntry>('/v1/career-profile/projects', body),
+      deleteProject: (id: string) => del<void>(`/v1/career-profile/projects/${id}`),
+    },
+
+    financeTools: {
+      importFailures: () => get<ImportFailure[]>('/v1/finance/import-failures'),
+      retryFailure: (id: string) => post<void>(`/v1/finance/import-failures/${id}/retry`, {}),
+      dismissFailure: (id: string) => post<void>(`/v1/finance/import-failures/${id}/dismiss`, {}),
+      importStatement: (form: FormData) => client.upload<StatementImportResult>('/v1/batches/finance/import-statement', form),
+      gmailStatus: () => get<GmailStatus>('/v1/batches/gmail/status'),
+      gmailConnectUrl: (purpose: GmailPurpose = 'FINANCE') => get<string>('/v1/batches/gmail/connect-url', { purpose }),
+      syncAllGmail: () => post<number>('/v1/batches/gmail/sync-all', {}),
+      syncJobEmails: () => post<number>('/v1/batches/gmail/jobs/sync-recent', {}),
+      setPayCycle: (startDay: number) => put<unknown>('/v1/finance/analytics/pay-cycle', { startDay }),
+      setMonthlyIncome: (monthlyIncome: number) => put<unknown>('/v1/finance/analytics/monthly-income', { monthlyIncome }),
+      ownerNames: () => get<string[]>('/v1/finance/analytics/owner-names'),
+      setOwnerNames: (names: string[]) => put<number>('/v1/finance/analytics/owner-names', { names }),
+      renameMerchant: (id: string, name: string) => put<Merchant>(`/v1/finance/merchants/${id}`, { name }),
+    },
+
+    account: {
+      me: () => get<UserProfile>('/v1/auth/me'),
+      updateName: (name: string) => put<UserProfile>('/v1/auth/me', { name }),
+      sessions: () => get<DeviceSession[]>('/v1/auth/sessions'),
+      revokeSession: (id: string) => post<void>(`/v1/auth/sessions/${id}/revoke`, {}),
+      verifyPassword: (password: string) => post<void>('/v1/auth/me/verify-password', { password }),
+      deleteAccount: (password: string) => client.delete<void>('/v1/auth/me', { password }),
     },
 
     core: {

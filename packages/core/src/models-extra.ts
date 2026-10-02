@@ -333,3 +333,210 @@ export interface HabitConsistencyScore {
   scheduledOccurrences: number;
   score: number;
 }
+
+// ---------------------------------------------------------------- job tracker extras
+export type JobBoard = 'GREENHOUSE' | 'LEVER' | 'ASHBY' | 'WORKABLE' | 'WORKDAY' | 'ORACLE';
+
+export const JOB_BOARDS: { value: JobBoard; label: string; hint: string }[] = [
+  { value: 'GREENHOUSE', label: 'Greenhouse', hint: 'boards.greenhouse.io/figma → figma' },
+  { value: 'ASHBY', label: 'Ashby', hint: 'jobs.ashbyhq.com/ramp → ramp' },
+  { value: 'LEVER', label: 'Lever', hint: 'jobs.lever.co/spotify → spotify' },
+  { value: 'WORKABLE', label: 'Workable', hint: 'apply.workable.com/acme → acme' },
+  { value: 'WORKDAY', label: 'Workday', hint: 'adobe.wd5.myworkdayjobs.com/external → adobe/wd5/external' },
+  { value: 'ORACLE', label: 'Oracle Recruiting', hint: 'host.oraclecloud.com + site → host.oraclecloud.com/CX_1' },
+];
+
+export interface WatchedCompany {
+  id: string;
+  name: string;
+  board: JobBoard;
+  slug: string;
+  domain: string | null;
+  alert: boolean;
+  active: boolean;
+  baselinedAt: string | null;
+  lastFetchedAt: string | null;
+  lastFetchError: string | null;
+  lastOpenCount: number | null;
+}
+
+export interface DiscoveredJob {
+  id: string;
+  watchedCompanyId: string;
+  company: string;
+  title: string;
+  url: string | null;
+  location: string | null;
+  postedAt: string | null;
+  firstSeenAt: string;
+  fitScore: number | null;
+  fitExplanation: { matchedSkills?: string[]; caps?: string[]; confidence?: string } | null;
+  status: 'NEW' | 'DISMISSED' | 'PROMOTED';
+  promotedJobId: string | null;
+  description: string | null;
+}
+
+export type SeniorityLevel = 'INTERN' | 'JUNIOR' | 'MID' | 'SENIOR' | 'STAFF' | 'LEAD' | 'PRINCIPAL';
+export const SENIORITY_LEVELS: SeniorityLevel[] = ['INTERN', 'JUNIOR', 'MID', 'SENIOR', 'STAFF', 'LEAD', 'PRINCIPAL'];
+
+export interface DiscoveryPreferences {
+  titleInclude: string[];
+  titleExclude: string[];
+  locations: string[];
+  maxSeniority: SeniorityLevel | null;
+  alertMinScore: number;
+}
+
+export interface Resume {
+  id: string;
+  label: string | null;
+  fileName: string;
+  fileSize: number;
+  extractionStatus: string | null;
+  extractionError: string | null;
+  parsed: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface CareerProfile {
+  userId: string;
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  githubUrl: string | null;
+  linkedinUrl: string | null;
+  portfolioUrl: string | null;
+  summary: string | null;
+  education: { school: string; degree: string; location: string; dates: string }[] | null;
+  achievements: string[] | null;
+}
+
+export interface WorkExperience {
+  id: string;
+  title: string;
+  company: string;
+  location: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  current: boolean;
+  bullets: string[] | null;
+  displayOrder: number;
+}
+
+export interface WorkExperienceInput {
+  title: string;
+  company: string;
+  location: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  current: boolean;
+  bullets: string[];
+  displayOrder: number;
+}
+
+export interface ProjectEntry {
+  id: string;
+  name: string;
+  description: string | null;
+  techStack: string[] | null;
+  link: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  bullets: string[] | null;
+  displayOrder: number;
+}
+
+export interface ProjectInput {
+  name: string;
+  description: string | null;
+  techStack: string[];
+  link: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  bullets: string[];
+  displayOrder: number;
+}
+
+export interface CareerSkill {
+  id: string;
+  name: string;
+  category: string | null;
+  proficiency: string | null;
+  yearsOfExperience: number | null;
+}
+
+export interface CareerProfileBundle {
+  onboarded: boolean;
+  profile: CareerProfile | null;
+  experiences: WorkExperience[];
+  projects: ProjectEntry[];
+  skills: CareerSkill[];
+}
+
+export interface CareerProfileInput {
+  fullName: string | null;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
+  githubUrl: string | null;
+  linkedinUrl: string | null;
+  portfolioUrl: string | null;
+  summary: string | null;
+}
+
+// ---------------------------------------------------------------- finance extras
+export interface ImportFailure {
+  id: string;
+  source: 'EMAIL_ALERT' | 'STATEMENT';
+  reason: 'NO_ACCOUNT' | 'UNPARSED' | 'ERROR';
+  reference: string;
+  sender: string | null;
+  subject: string | null;
+  snippet: string | null;
+  detail: string | null;
+  bankName: string | null;
+  accountType: string | null;
+  amount: number | null;
+  type: string | null;
+  transactionDate: string | null;
+  description: string | null;
+}
+
+export type GmailPurpose = 'FINANCE' | 'JOBS';
+
+export interface GmailStatus {
+  mailboxes?: { purpose: GmailPurpose; email: string | null; connectedAt: string | null; lastRefreshedAt: string | null }[];
+  connected: boolean;
+  connectedAt: string | null;
+  lastRefreshedAt: string | null;
+  email?: string | null;
+}
+
+export interface StatementImportResult {
+  rowsParsed: number;
+  rowsImported: number;
+}
+
+export interface FinanceSettingsOverview {
+  payCycleStartDay: number;
+  suggestedPayCycleStartDay: number | null;
+}
+
+// ---------------------------------------------------------------- account
+export interface DeviceSession {
+  id: string;
+  userId: string;
+  deviceName: string;
+  deviceType: string;
+  createdAt: string;
+  lastActiveAt: string;
+  revokedAt: string | null;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  hasAvatar: boolean;
+}
