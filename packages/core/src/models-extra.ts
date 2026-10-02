@@ -316,3 +316,20 @@ export interface NoteAttachment {
   noteId: string;
   noteTitle: string;
 }
+
+// ---------------------------------------------------------------- habits extras
+export interface HabitReminder {
+  id: string;
+  habitId: string;
+  reminderTime: string;
+  /** ISO day-of-week integers (1=Monday..7=Sunday). */
+  daysOfWeek: number[] | null;
+  enabled: boolean;
+}
+
+export interface HabitConsistencyScore {
+  period: 'week' | 'month';
+  completions: number;
+  scheduledOccurrences: number;
+  score: number;
+}

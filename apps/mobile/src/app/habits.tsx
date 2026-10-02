@@ -7,10 +7,11 @@ import { Bars, Btn, Chips, Empty, Field, Input, opts, Pill, pretty, Progress, Ro
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
+import { CalendarTab, HabitDetailSheet, WeeklyTab } from '@/modules/habits-extra';
 import { Check, ErrorNote, Muted, Panel, s, success } from '@/ui';
 
-type TabId = 'today' | 'all' | 'analytics';
-const TABS = [{ id: 'today', label: 'Today' }, { id: 'all', label: 'All habits' }, { id: 'analytics', label: 'Analytics' }] as const;
+type TabId = 'today' | 'all' | 'weekly' | 'calendar' | 'analytics';
+const TABS = [{ id: 'today', label: 'Today' }, { id: 'all', label: 'All habits' }, { id: 'weekly', label: 'Weekly grid' }, { id: 'calendar', label: 'Calendar' }, { id: 'analytics', label: 'Analytics' }] as const;
 const TYPES: HabitType[] = ['BINARY', 'COUNT', 'DURATION', 'NEGATIVE'];
 const FREQS: HabitFrequencyType[] = ['DAILY', 'WEEKLY_DAYS', 'X_PER_WEEK', 'X_PER_MONTH', 'CUSTOM_INTERVAL'];
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -19,10 +20,12 @@ export default function Habits() {
   const [tab, setTab] = useState<TabId>('today');
   const [editing, setEditing] = useState<Habit | 'new' | null>(null);
   const [epoch, setEpoch] = useState(0);
+  const [detail, setDetail] = useState<Habit | null>(null);
   return (
     <Screen title="Habits" back={false} action={<Btn label="+ New" onPress={() => setEditing('new')} style={{ paddingVertical: 7 }} />}>
       <Seg tabs={TABS} value={tab} onChange={setTab} />
-      {tab === 'today' ? <Today key={epoch} /> : tab === 'all' ? <All key={epoch} onEdit={setEditing} /> : <Analytics />}
+      {tab === 'today' ? <Today key={epoch} /> : tab === 'all' ? <All key={epoch} onEdit={setEditing} onOpen={setDetail} /> : tab === 'weekly' ? <WeeklyTab /> : tab === 'calendar' ? <CalendarTab /> : <Analytics />}
+      {detail ? <HabitDetailSheet habit={detail} onClose={() => setDetail(null)} /> : null}
       {editing ? <HabitSheet habit={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setEpoch((n) => n + 1); }} /> : null}
     </Screen>
   );
@@ -61,7 +64,7 @@ function Today() {
   );
 }
 
-function All({ onEdit }: { onEdit: (h: Habit) => void }) {
+function All({ onEdit, onOpen }: { onEdit: (h: Habit) => void; onOpen: (h: Habit) => void }) {
   const api = useApi();
   const runner = useRunner();
   const habits = useAsync(() => api.habits.list(), api);
@@ -73,19 +76,20 @@ function All({ onEdit }: { onEdit: (h: Habit) => void }) {
       {groups.length === 0 && !habits.loading ? <Panel><Empty>No habits yet.</Empty></Panel> : null}
       {groups.map((g) => (
         <Panel key={g.status} title={`${pretty(g.status)} · ${g.items.length}`}>
-          {g.items.map((h) => <HabitRow key={h.id} habit={h} onEdit={() => onEdit(h)} onPause={() => void runner.run(() => (h.status === 'PAUSED' ? api.habits.resume(h.id) : api.habits.pause(h.id)), habits.reload)} />)}
+          {g.items.map((h) => <HabitRow key={h.id} habit={h} onOpen={() => onOpen(h)} onEdit={() => onEdit(h)} onPause={() => void runner.run(() => (h.status === 'PAUSED' ? api.habits.resume(h.id) : api.habits.pause(h.id)), habits.reload)} />)}
         </Panel>
       ))}
     </>
   );
 }
 
-function HabitRow({ habit, onEdit, onPause }: { habit: Habit; onEdit: () => void; onPause: () => void }) {
+function HabitRow({ habit, onEdit, onOpen, onPause }: { habit: Habit; onEdit: () => void; onOpen: () => void; onPause: () => void }) {
   const api = useApi();
   const streak = useAsync(() => api.habits.streak(habit.id), habit.id);
   return (
-    <Row onPress={onEdit}>
+    <Row onPress={onOpen}>
       <View style={{ flex: 1 }}><Text style={s.body}>{habit.icon} {habit.name}</Text><Muted style={{ fontSize: 11 }}>{pretty(habit.frequencyType)} · 🔥 {streak.data?.currentStreak ?? 0} · best {streak.data?.longestStreak ?? 0}</Muted></View>
+      <Pressable onPress={onEdit} hitSlop={8}><Text style={{ color: C.muted }}>Edit</Text></Pressable>
       {habit.status !== 'ARCHIVED' ? <Pressable onPress={onPause} hitSlop={8}><Text style={{ color: C.accent }}>{habit.status === 'PAUSED' ? 'Resume' : 'Pause'}</Text></Pressable> : null}
     </Row>
   );

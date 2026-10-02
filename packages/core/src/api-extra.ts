@@ -1,5 +1,6 @@
 import type { Client } from './client';
 import type {
+  HabitConsistencyScore, HabitReminder,
   AuditEvent, AutomationExecution, AutomationRule, AutomationTemplate, BackupSummary, EmailHubItem, EmailHubStatus, JournalEntry, JournalInsights, JournalPrompt,
   NoteAttachment, NoteGraph, NoteSearchResult, NoteSettings, NoteTemplate, RecoveryCodeStatus, SaveJournalEntryRequest, SaveRuleRequest, VaultCard, VaultCardInput,
   VaultCategory, VaultEntryDetail, VaultEntrySummary, VaultEntryWriteRequest, VaultExport, VaultHealthSummary, VaultStatus,
@@ -104,6 +105,14 @@ export function createExtraApis(client: Client) {
       createFolder: (name: string, parentFolderId?: string | null) => post<NoteFolder>('/v1/folders', { name, parentFolderId: parentFolderId ?? null }),
       renameFolder: (id: string, name: string) => put<NoteFolder>(`/v1/folders/${id}`, { name }),
       deleteFolder: (id: string) => del<void>(`/v1/folders/${id}`),
+    },
+
+    habitTools: {
+      consistency: (id: string, period: 'week' | 'month') => get<HabitConsistencyScore>(`/v1/habits/${id}/consistency`, { period }),
+      reminders: (id: string) => get<HabitReminder[]>(`/v1/habits/${id}/reminders`),
+      addReminder: (id: string, body: { reminderTime: string; daysOfWeek?: number[] | null; enabled?: boolean }) => post<HabitReminder>(`/v1/habits/${id}/reminders`, body),
+      updateReminder: (id: string, reminderId: string, body: { reminderTime?: string; daysOfWeek?: number[] | null; enabled?: boolean }) => put<HabitReminder>(`/v1/habits/${id}/reminders/${reminderId}`, body),
+      deleteReminder: (id: string, reminderId: string) => del<void>(`/v1/habits/${id}/reminders/${reminderId}`),
     },
 
     core: {
