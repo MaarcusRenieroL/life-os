@@ -4,3 +4,7 @@ export * from './player-model';
 export * from './types';
 export * from './mock';
 export * from './player';
+export * from './models-extra';
+export * from './api-extra';
+export * from './automation';
+export * from './vault-utils';

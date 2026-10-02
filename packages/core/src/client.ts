@@ -12,6 +12,17 @@ export interface StoredSession {
   deviceSessionId: string;
 }
 
+/** Thrown when the "API" answers with HTML: almost always Cloudflare Access (or a captive portal) in front of the server. */
+export const NOT_THE_API = 'The server answered with a web page instead of the API. If it sits behind Cloudflare Access, enter the Access client id and secret on the sign-in screen.';
+
+async function readJson<T>(response: Response): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new ApiError(response.status, NOT_THE_API);
+  }
+}
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -61,7 +72,8 @@ export function createClient(options: ClientOptions) {
       if (value !== undefined) url.searchParams.set(key, String(value));
     }
     const headers: Record<string, string> = { Accept: 'application/json', ...options.headers?.() };
-    if (init.body) headers['Content-Type'] = 'application/json';
+    // A multipart body must not get a JSON content type: fetch sets its own with the boundary.
+    if (init.body && !(typeof FormData !== 'undefined' && init.body instanceof FormData)) headers['Content-Type'] = 'application/json';
     if (token) headers.Authorization = `Bearer ${token}`;
     return doFetch(url.toString(), { ...init, headers });
   }
@@ -71,14 +83,15 @@ export function createClient(options: ClientOptions) {
     if (!existing) throw new ApiError(401, 'Not signed in');
     const response = await raw('/v1/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken: existing.refreshToken }) }, null);
     if (!response.ok) throw new ApiError(response.status, 'Session expired');
-    const auth = ((await response.json()) as ApiResponse<AuthResponse>).data;
+    const auth = (await readJson<ApiResponse<AuthResponse>>(response)).data;
     const next = { accessToken: auth.accessToken, refreshToken: auth.refreshToken, deviceSessionId: auth.deviceSessionId };
     await save(next);
     return next;
   }
 
   async function request<T>(method: string, path: string, body?: unknown, query?: Query): Promise<T> {
-    const init = { method, body: body === undefined ? undefined : JSON.stringify(body), query };
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+    const init = { method, body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body), query };
     let response = await raw(path, init, (await current())?.accessToken ?? null);
 
     const authRelated = path.startsWith('/v1/auth/login') || path.startsWith('/v1/auth/refresh');
@@ -106,21 +119,24 @@ export function createClient(options: ClientOptions) {
       throw new ApiError(response.status, message);
     }
     if (response.status === 204) return undefined as T;
-    return ((await response.json()) as ApiResponse<T>).data;
+    return (await readJson<ApiResponse<T>>(response)).data;
   }
 
   return {
     get: <T>(path: string, query?: Query) => request<T>('GET', path, undefined, query),
     post: <T>(path: string, body: unknown = {}) => request<T>('POST', path, body),
     put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
-    delete: <T>(path: string) => request<T>('DELETE', path),
+    patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
+    delete: <T>(path: string, body?: unknown) => request<T>('DELETE', path, body),
+    /** Multipart upload (a file plus fields). */
+    upload: <T>(path: string, form: FormData) => request<T>('POST', path, form),
 
     async signIn(email: string, rawPassword: string, deviceName: string, deviceType: string): Promise<void> {
       const response = await raw('/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, rawPassword, deviceName, deviceType }) }, null);
       if (!response.ok) {
         throw new ApiError(response.status, response.status === 401 || response.status === 403 ? 'Wrong email or password' : `Sign-in failed (${response.status})`);
       }
-      const auth = ((await response.json()) as ApiResponse<AuthResponse>).data;
+      const auth = (await readJson<ApiResponse<AuthResponse>>(response)).data;
       await save({ accessToken: auth.accessToken, refreshToken: auth.refreshToken, deviceSessionId: auth.deviceSessionId });
     },
 
@@ -141,3 +157,19 @@ export function createClient(options: ClientOptions) {
 }
 
 export type Client = ReturnType<typeof createClient>;
+
+/**
+ * Reads a `lifeos://setup?server=...&id=...&secret=...` link (printed as a QR by scripts/native-access-setup.sh)
+ * into the server address and Cloudflare Access service token the apps need to sign in from anywhere.
+ */
+export function parseSetupLink(link: string): { baseUrl: string; cfClientId: string; cfClientSecret: string } | null {
+  try {
+    const url = new URL(link.trim());
+    if (url.protocol !== 'lifeos:' || url.hostname !== 'setup') return null;
+    const server = url.searchParams.get('server');
+    if (!server) return null;
+    return { baseUrl: server.replace(/\/+$/, ''), cfClientId: url.searchParams.get('id') ?? '', cfClientSecret: url.searchParams.get('secret') ?? '' };
+  } catch {
+    return null;
+  }
+}

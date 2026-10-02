@@ -5,6 +5,8 @@ export interface Settings {
   /** Optional Cloudflare Access service token, for reaching the public domain from outside the Mac. */
   cfClientId: string;
   cfClientSecret: string;
+  /** Who is signed in, for the greeting. */
+  email: string;
 }
 
 const SETTINGS_KEY = 'lifeos.settings';
@@ -16,11 +18,11 @@ const inTauri = '__TAURI_INTERNALS__' in window;
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return { baseUrl: 'http://localhost', cfClientId: '', cfClientSecret: '', ...(JSON.parse(raw) as Partial<Settings>) };
+    if (raw) return { baseUrl: 'http://localhost', cfClientId: '', cfClientSecret: '', email: '', ...(JSON.parse(raw) as Partial<Settings>) };
   } catch {
     /* corrupt settings fall back to defaults */
   }
-  return { baseUrl: 'http://localhost', cfClientId: '', cfClientSecret: '' };
+  return { baseUrl: 'http://localhost', cfClientId: '', cfClientSecret: '', email: '' };
 }
 
 export function saveSettings(settings: Settings) {
@@ -60,3 +62,9 @@ export async function buildRuntime(settings: Settings, onSignedOut: () => void) 
 }
 
 export type Runtime = Awaited<ReturnType<typeof buildRuntime>>;
+
+/** Opens a URL in the system browser: the Tauri opener when packaged, a new tab in a plain browser. */
+export async function openExternal(url: string) {
+  if (inTauri) await (await import('@tauri-apps/plugin-opener')).openUrl(url);
+  else window.open(url, '_blank', 'noopener');
+}

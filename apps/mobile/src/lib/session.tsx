@@ -1,3 +1,5 @@
+import { parseSetupLink } from '@life-os/core';
+import * as Linking from 'expo-linking';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { buildRuntime, DEFAULT_SETTINGS, isMock, loadSettings, saveSettings, type Runtime, type Settings } from './runtime';
@@ -8,7 +10,8 @@ interface SessionValue {
   settings: Settings;
   signedIn: boolean;
   updateSettings: (next: Settings) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  /** Pass `next` to sign in against new server settings in the same step (the memoised runtime is still the old one). */
+  signIn: (email: string, password: string, next?: Settings) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -22,6 +25,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void loadSettings().then(setSettings);
   }, []);
+
+  // A lifeos://setup link (the QR from scripts/native-access-setup.sh) fills in the server and Access token.
+  const incoming = Linking.useLinkingURL();
+  useEffect(() => {
+    const parsed = incoming ? parseSetupLink(incoming) : null;
+    if (!parsed) return;
+    const next = { ...DEFAULT_SETTINGS, ...parsed };
+    void saveSettings(next).then(() => setSettings(next));
+  }, [incoming]);
 
   // The runtime is a pure function of the settings, so derive it instead of mirroring it in state.
   const runtime = useMemo<Runtime | null>(() => (settings ? buildRuntime(settings, markSignedOut) : null), [settings, markSignedOut]);
@@ -45,9 +57,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         await saveSettings(next);
         setSettings(next);
       },
-      async signIn(email, password) {
-        if (!runtime) throw new Error('Not ready yet');
-        await runtime.client.signIn(email, password, isMock ? 'Preview' : 'Life OS Mobile', 'MOBILE');
+      async signIn(email, password, next) {
+        const target = next ? buildRuntime(next, markSignedOut) : runtime;
+        if (!target) throw new Error('Not ready yet');
+        await target.client.signIn(email, password, isMock ? 'Preview' : 'Life OS Mobile', 'MOBILE');
+        if (next) {
+          await saveSettings(next);
+          setSettings(next);
+        }
         setSignedIn(true);
       },
       async signOut() {
@@ -55,7 +72,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setSignedIn(false);
       },
     }),
-    [runtime, settings, signedIn],
+    [runtime, settings, signedIn, markSignedOut],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

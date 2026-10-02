@@ -17,6 +17,8 @@ export default defineConfig(async () => ({
     port: 1420,
     strictPort: true,
     host: host || false,
+    // Lets the plain-browser dev preview reach the gateway without CORS; the Tauri build uses its own HTTP client.
+    proxy: { '/v1': 'http://localhost' },
     hmr: host
       ? {
           protocol: "ws",

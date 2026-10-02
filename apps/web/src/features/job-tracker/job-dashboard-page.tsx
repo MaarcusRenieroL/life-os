@@ -13,7 +13,7 @@ import { aiUsageApi, jobAnalyticsApi, jobApi } from './job-api';
 import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
 
 const ACTIVE_STATUSES: JobStatus[] = ['INTERESTED', 'WAITING_FOR_REFERRAL', 'REFERRED', 'APPLIED', 'INTERVIEWING', 'WAITING_FOR_HR'];
-const CLOSED_STATUSES: JobStatus[] = ['OFFER_ACCEPTED', 'OFFER_REJECTED', 'REJECTED', 'WITHDRAWN'];
+const CLOSED_STATUSES: JobStatus[] = ['OFFER_ACCEPTED', 'OFFER_REJECTED', 'REJECTED', 'WITHDRAWN', 'NO_LONGER_ACCEPTING', 'NOT_INTERESTED'];
 
 const STATUS_BAR_CLASS: Record<JobStatus, string> = {
   INTERESTED: 'bg-foreground/25',
@@ -26,6 +26,8 @@ const STATUS_BAR_CLASS: Record<JobStatus, string> = {
   OFFER_REJECTED: 'bg-destructive',
   REJECTED: 'bg-destructive',
   WITHDRAWN: 'bg-foreground/25',
+  NO_LONGER_ACCEPTING: 'bg-foreground/25',
+  NOT_INTERESTED: 'bg-foreground/25',
 };
 
 function daysUntil(dateStr: string): number {

@@ -1,6 +1,7 @@
 import { groupQuests, toQuests, type Quest, type QuestTier } from '@life-os/core';
 import { useState } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
+import { Text } from '@/text';
 
 import { useApi } from '@/lib/session';
 import { useAsync } from '@/lib/use-async';
