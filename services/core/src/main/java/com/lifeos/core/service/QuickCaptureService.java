@@ -8,7 +8,6 @@ import com.lifeos.core.domains.record.EmailAction;
 import com.lifeos.core.integration.QuickCaptureAiClient;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,8 +30,6 @@ public class QuickCaptureService {
   private final RestClient notesRestClient;
   private final EmailActionExecutor executor;
   private final String internalApiKey;
-
-  private static final ZoneId ZONE = ZoneId.of("Asia/Kolkata");
 
   public QuickCaptureService(
       QuickCaptureAiClient aiClient,
@@ -71,9 +68,8 @@ public class QuickCaptureService {
       case "finance" -> routeFinance(userId, classification.finance());
       case "job" -> routeJob(userId, classification.job());
       case "task" -> routeTask(userId, classification.task());
-      case "event" -> classification.event() != null && parseDate(classification.event().date()) != null
-          ? routeEvent(userId, classification.event())
-          : routeTask(userId, taskFromEvent(classification.event()));
+      // appointments and meetings are tasks with a date and time, never calendar events
+      case "event" -> routeTask(userId, taskFromEvent(classification.event()));
       default -> routeNote(userId, rawText, classification.note());
     };
   }
@@ -119,28 +115,9 @@ public class QuickCaptureService {
     return new QuickCaptureResult("created", "task", capture.title() + (due == null ? "" : " (due " + due + ")"));
   }
 
-  private QuickCaptureResult routeEvent(UUID userId, QuickCaptureClassification.EventCapture capture) {
-    if (isBlank(capture.title())) {
-      throw new QuickCaptureRoutingException("Couldn't work out what the event is");
-    }
-    LocalDate date = parseDate(capture.date());
-    LocalTime start = parseTime(capture.startTime());
-    EmailAction action;
-    if (start == null) {
-      action = new EmailAction("EVENT", clip(capture.title(), 200), null, null, null, null, true, null, null, date, date, capture.location(), null, null, null);
-    } else {
-      LocalTime end = parseTime(capture.endTime());
-      java.time.Instant startAt = date.atTime(start).atZone(ZONE).toInstant();
-      java.time.Instant endAt = end != null && end.isAfter(start) ? date.atTime(end).atZone(ZONE).toInstant() : startAt.plusSeconds(3600);
-      action = new EmailAction("EVENT", clip(capture.title(), 200), null, null, null, null, false, startAt, endAt, null, null, capture.location(), null, null, null);
-    }
-    run(() -> executor.execute(userId, action));
-    return new QuickCaptureResult("created", "event", capture.title() + " (" + date + (start == null ? "" : " " + start) + ")");
-  }
-
-  /** An "event" with no usable date is really something to do, so it is kept as a task. */
+  /** A model that still answers "event" gets the same result: a task due at that date and time. */
   private static QuickCaptureClassification.TaskCapture taskFromEvent(QuickCaptureClassification.EventCapture event) {
-    return event == null ? null : new QuickCaptureClassification.TaskCapture(event.title(), null, null, null);
+    return event == null ? null : new QuickCaptureClassification.TaskCapture(event.title(), event.date(), event.startTime(), null);
   }
 
   private void run(Supplier<?> action) {

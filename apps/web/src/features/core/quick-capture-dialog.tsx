@@ -14,7 +14,6 @@ const MODULE_LABELS: Record<string, string> = {
   finance: 'Finance',
   job: 'Job Tracker',
   task: 'Tasks',
-  event: 'Calendar',
   note: 'Notes',
 };
 
@@ -64,7 +63,6 @@ export function QuickCaptureDialog() {
       toast.success(`Captured to ${MODULE_LABELS[result.module ?? ''] ?? result.module}: ${result.summary}`);
       void queryClient.invalidateQueries({ queryKey: ['core', 'today'] });
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      void queryClient.invalidateQueries({ queryKey: ['calendar'] });
       setOpen(false);
       reset();
     } catch (err) {
