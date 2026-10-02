@@ -10,7 +10,9 @@ export type JobStatus =
   | 'OFFER_ACCEPTED'
   | 'OFFER_REJECTED'
   | 'REJECTED'
-  | 'WITHDRAWN';
+  | 'WITHDRAWN'
+  | 'NO_LONGER_ACCEPTING'
+  | 'NOT_INTERESTED';
 
 /** Pipeline order - matches the candidate's actual flow, not alphabetical. */
 export const JOB_STATUSES: JobStatus[] = [
@@ -24,6 +26,8 @@ export const JOB_STATUSES: JobStatus[] = [
   'OFFER_REJECTED',
   'REJECTED',
   'WITHDRAWN',
+  'NO_LONGER_ACCEPTING',
+  'NOT_INTERESTED',
 ];
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
@@ -37,6 +41,8 @@ export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   OFFER_REJECTED: 'Offer rejected',
   REJECTED: 'Rejected',
   WITHDRAWN: 'Withdrawn',
+  NO_LONGER_ACCEPTING: 'No longer accepting applications',
+  NOT_INTERESTED: 'Not interested',
 };
 
 export interface JobListing {

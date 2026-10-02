@@ -11,5 +11,9 @@ public enum JobStatus {
   OFFER_ACCEPTED,
   OFFER_REJECTED,
   REJECTED,
-  WITHDRAWN
+  WITHDRAWN,
+  /** The company has closed the role to new applications. */
+  NO_LONGER_ACCEPTING,
+  /** Not a role the candidate wants any more. */
+  NOT_INTERESTED
 }
