@@ -42,7 +42,8 @@ export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results
   const compact = density === 'compact';
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div className="hud-panel">
+    <div className="hud-table overflow-x-auto">
       <Table className={cn(compact && '[&_td]:py-1 [&_td]:text-[13px] [&_th]:h-8')}>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -131,6 +132,7 @@ export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results
           </TableFooter>
         )}
       </Table>
+    </div>
     </div>
   );
 }

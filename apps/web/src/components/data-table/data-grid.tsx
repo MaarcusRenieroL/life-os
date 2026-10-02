@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { columnTitle, FILTER_FNS, filterFnFor } from './column-utils';
+import { DataChip, toneFor } from './data-chip';
 import { DataTable } from './data-table';
 import { DataTableColumnHeader } from './data-table-column-header';
 import { DataTablePagination } from './data-table-pagination';
@@ -141,8 +142,19 @@ export function DataGrid<TData>({
     const prepared = columns.map((column) => {
       const meta = column.meta;
       const filter = meta?.filter;
+      // A plain filterable status column ("Active", "Needs review", "Failed") becomes a coloured chip; text
+      // that is not a status (names, places) stays as it is.
+      const chipCell =
+        !column.cell && (filter?.type === 'select')
+          ? ({ getValue }: { getValue: () => unknown }) => {
+              const value = getValue();
+              const text = Array.isArray(value) ? value.join(', ') : value === null || value === undefined ? '' : String(value);
+              return text && toneFor(text) !== 'neutral' ? <DataChip>{text}</DataChip> : text || '—';
+            }
+          : undefined;
       return {
         ...column,
+        ...(chipCell ? { cell: chipCell } : {}),
         header:
           column.header ??
           (({ column: c }) => <DataTableColumnHeader column={c} title={columnTitle(c)} className={meta?.align === 'right' ? 'justify-end' : undefined} />),
