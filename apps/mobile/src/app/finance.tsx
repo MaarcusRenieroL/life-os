@@ -4,20 +4,21 @@ import { Pressable, Switch, View } from 'react-native';
 import { Text } from '@/text';
 
 import { Bars, Btn, Chips, DateInput, Empty, Field, Input, money, opts, Pill, pretty, Progress, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
+import { FinanceAnalyticsTab, ImportTab, MerchantsTab, ReportTab, RulesTab } from '@/modules/finance-extra';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
 import { ErrorNote, Muted, Panel, s } from '@/ui';
 
-type TabId = 'dashboard' | 'transactions' | 'subscriptions' | 'budgets' | 'accounts' | 'categories';
-const TABS = [{ id: 'dashboard', label: 'Dashboard' }, { id: 'transactions', label: 'Transactions' }, { id: 'subscriptions', label: 'Subscriptions' }, { id: 'budgets', label: 'Budgets' }, { id: 'accounts', label: 'Accounts' }, { id: 'categories', label: 'Categories' }] as const;
+type TabId = 'dashboard' | 'transactions' | 'subscriptions' | 'budgets' | 'analytics' | 'report' | 'import' | 'rules' | 'accounts' | 'categories' | 'merchants';
+const TABS = [{ id: 'dashboard', label: 'Dashboard' }, { id: 'transactions', label: 'Transactions' }, { id: 'subscriptions', label: 'Subscriptions' }, { id: 'budgets', label: 'Budgets' }, { id: 'analytics', label: 'Analytics' }, { id: 'report', label: 'Report' }, { id: 'import', label: 'Import' }, { id: 'rules', label: 'Rules' }, { id: 'accounts', label: 'Accounts' }, { id: 'categories', label: 'Categories' }, { id: 'merchants', label: 'Merchants' }] as const;
 
 export default function Finance() {
   const [tab, setTab] = useState<TabId>('dashboard');
   return (
     <Screen title="Finance">
       <Seg tabs={TABS} value={tab} onChange={setTab} />
-      {tab === 'dashboard' ? <Dashboard /> : tab === 'transactions' ? <Transactions /> : tab === 'subscriptions' ? <Subscriptions /> : tab === 'budgets' ? <Budgets /> : tab === 'accounts' ? <Accounts /> : <Categories />}
+      {tab === 'dashboard' ? <Dashboard /> : tab === 'transactions' ? <Transactions /> : tab === 'subscriptions' ? <Subscriptions /> : tab === 'budgets' ? <Budgets /> : tab === 'analytics' ? <FinanceAnalyticsTab /> : tab === 'report' ? <ReportTab /> : tab === 'import' ? <ImportTab /> : tab === 'rules' ? <RulesTab /> : tab === 'accounts' ? <Accounts /> : tab === 'categories' ? <Categories /> : <MerchantsTab />}
     </Screen>
   );
 }
