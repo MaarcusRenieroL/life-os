@@ -44,7 +44,7 @@ export function DataGridRowDrawer<TData>({
   const hasValue = (value: unknown) => value !== null && value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0);
 
   const lead = (
-    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+    <div className="flex items-center gap-1 pr-2 text-xs text-muted-foreground">
       <span>{index + 1} of {rows.length}</span>
       <Button variant="ghost" size="icon-sm" className="size-6" disabled={index <= 0} aria-label="Previous record" onClick={() => onSelect(rows[index - 1].id)}>
         <ChevronUp className="size-4" />
@@ -52,6 +52,11 @@ export function DataGridRowDrawer<TData>({
       <Button variant="ghost" size="icon-sm" className="size-6" disabled={index >= rows.length - 1} aria-label="Next record" onClick={() => onSelect(rows[index + 1].id)}>
         <ChevronDown className="size-4" />
       </Button>
+      {onOpen && row && (
+        <Button size="sm" className="ml-auto h-7" onClick={() => onOpen(row.original)}>
+          <ExternalLink /> {openLabel}
+        </Button>
+      )}
     </div>
   );
 

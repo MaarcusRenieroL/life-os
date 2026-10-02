@@ -19,6 +19,8 @@ export type Density = 'comfortable' | 'compact';
 interface DataTableProps<TData> {
   table: TanstackTable<TData>;
   onRowClick?: (row: TData) => void;
+  /** Double-click runs the page's own row action straight away, skipping the drawer. */
+  onRowDoubleClick?: (row: TData) => void;
   emptyMessage?: ReactNode;
   density?: Density;
   /** Table rows (not a card) shown right under a row while it is expanded. */
@@ -35,7 +37,7 @@ function aggregate<TData>(table: TanstackTable<TData>, columnId: string, kind: '
 
 /** The actual `<table>` render for a TanStack Table instance - toolbar and pagination are
  * composed separately so each page can carry its own filters/bulk actions. */
-export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results.', density = 'comfortable', renderExpanded }: DataTableProps<TData>) {
+export function DataTable<TData>({ table, onRowClick, onRowDoubleClick, emptyMessage = 'No results.', density = 'comfortable', renderExpanded }: DataTableProps<TData>) {
   const columnCount = table.getVisibleLeafColumns().length;
   const sized = table.getState().columnSizing;
   const hasFooter = table.getVisibleLeafColumns().some((c) => c.columnDef.meta?.aggregate);
@@ -86,6 +88,7 @@ export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results
                 <TableRow
                   data-state={row.getIsSelected() && 'selected'}
                   onClick={() => onRowClick?.(row.original)}
+                  onDoubleClick={() => onRowDoubleClick?.(row.original)}
                   className={onRowClick ? 'cursor-pointer' : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (

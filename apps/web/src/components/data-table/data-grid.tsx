@@ -355,6 +355,7 @@ export function DataGrid<TData>({
                 }
               : onRowClick
           }
+          onRowDoubleClick={rowDrawer && onRowClick ? (row) => { setDrawerId(null); onRowClick(row); } : undefined}
           density={layout.density}
           emptyMessage={emptyText}
           renderExpanded={renderExpanded}
