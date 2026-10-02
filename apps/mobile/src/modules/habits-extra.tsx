@@ -34,7 +34,7 @@ export function WeeklyTab() {
   const today = dayKey(new Date());
 
   async function toggle(h: Habit, date: string, log: HabitLog | undefined) {
-    await runner.run(() => (log ? api.habits.deleteLog(h.id, log.id) : api.habits.log(h.id, 'COMPLETED', { logDate: date })), logs.reload);
+    await runner.run(async () => { if (log) await api.habits.deleteLog(h.id, log.id); else await api.habits.log(h.id, 'COMPLETED', { logDate: date }); }, logs.reload);
   }
 
   return (
