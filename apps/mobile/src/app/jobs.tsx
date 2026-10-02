@@ -4,13 +4,14 @@ import { Linking, View } from 'react-native';
 import { Text } from '@/text';
 
 import { Bars, Btn, Chips, DateInput, Empty, Field, Input, opts, Pill, pretty, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
+import { DiscoveryTab, OpeningsTab, ResumeTab } from '@/modules/jobs-extra';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
 import { ErrorNote, Muted, Panel, s } from '@/ui';
 
-type TabId = 'dashboard' | 'list' | 'add' | 'analytics';
-const TABS = [{ id: 'dashboard', label: 'Dashboard' }, { id: 'list', label: 'Jobs' }, { id: 'add', label: 'Add a job' }, { id: 'analytics', label: 'Analytics' }] as const;
+type TabId = 'dashboard' | 'list' | 'openings' | 'discovery' | 'resumes' | 'add' | 'analytics';
+const TABS = [{ id: 'dashboard', label: 'Dashboard' }, { id: 'list', label: 'Jobs' }, { id: 'openings', label: 'Openings' }, { id: 'discovery', label: 'Watchlist' }, { id: 'resumes', label: 'Resume & profile' }, { id: 'add', label: 'Add a job' }, { id: 'analytics', label: 'Analytics' }] as const;
 const fit = (n: number | null) => (n == null ? null : <Pill label={`${n}% fit`} color={n >= 75 ? C.accent : n >= 55 ? C.gold : C.muted} />);
 const CLOSED: JobStatus[] = ['REJECTED', 'WITHDRAWN', 'OFFER_REJECTED', 'OFFER_ACCEPTED', 'NO_LONGER_ACCEPTING', 'NOT_INTERESTED'];
 
@@ -26,6 +27,9 @@ export default function Jobs() {
       {jobs.error && !jobs.data ? <ErrorNote message={jobs.error} onRetry={jobs.reload} /> : null}
       {tab === 'dashboard' ? <Dashboard jobs={list} onOpen={setOpen} /> : null}
       {tab === 'list' ? <List jobs={list} onOpen={setOpen} /> : null}
+      {tab === 'openings' ? <OpeningsTab onPromoted={() => void jobs.reload()} /> : null}
+      {tab === 'discovery' ? <DiscoveryTab /> : null}
+      {tab === 'resumes' ? <ResumeTab /> : null}
       {tab === 'add' ? <Add onAdded={async (j) => { await jobs.reload(); setTab('list'); setOpen(j); }} /> : null}
       {tab === 'analytics' ? <Analytics /> : null}
       {open ? <JobSheet job={open} onClose={() => setOpen(null)} onChanged={jobs.reload} onUpdated={setOpen} /> : null}

@@ -2,13 +2,18 @@ import { useState } from 'react';
 import { Switch, View } from 'react-native';
 import { Text, TextInput } from '@/text';
 
-import { Btn, Screen } from '@/kit';
+import { Btn, Screen, Seg } from '@/kit';
+import { IntegrationsTab, ModulesTab, NotificationsTab, ProfileTab, SetupTab } from '@/modules/settings-extra';
 import { useLock } from '@/lib/lock';
 import { useSession } from '@/lib/session';
 import { C } from '@/theme';
 import { Label, Muted, Panel, s } from '@/ui';
 
+const TABS = [{ id: 'general', label: 'General' }, { id: 'profile', label: 'Profile' }, { id: 'modules', label: 'Modules' }, { id: 'setup', label: 'Setup' }, { id: 'integrations', label: 'Integrations' }, { id: 'notifications', label: 'Notifications' }] as const;
+type TabId = (typeof TABS)[number]['id'];
+
 export default function Settings() {
+  const [tab, setTab] = useState<TabId>('general');
   const { settings, updateSettings, signOut } = useSession();
   const [draft, setDraft] = useState(settings);
   const [saved, setSaved] = useState(false);
@@ -22,6 +27,9 @@ export default function Settings() {
   );
   return (
     <Screen title="Settings">
+      <Seg tabs={TABS} value={tab} onChange={setTab} />
+      {tab === 'profile' ? <ProfileTab /> : tab === 'modules' ? <ModulesTab /> : tab === 'setup' ? <SetupTab /> : tab === 'integrations' ? <IntegrationsTab /> : tab === 'notifications' ? <NotificationsTab /> : (
+      <>
       <Panel title="Server">
         {field('baseUrl', 'Gateway address')}
         <Muted style={{ marginBottom: 12 }}>Use your Mac&apos;s address on the same Wi-Fi (for example http://192.168.1.2), or https://life-os-api.maarcus.dev from anywhere.</Muted>
@@ -41,6 +49,8 @@ export default function Settings() {
         {lockError ? <Text style={{ color: C.destructive, marginTop: 8 }}>{lockError}</Text> : null}
       </Panel>
       <Panel title="Account"><Btn kind="danger" label="Sign out" onPress={() => void signOut()} /></Panel>
+      </>
+      )}
     </Screen>
   );
 }

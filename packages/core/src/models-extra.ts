@@ -540,3 +540,18 @@ export interface UserProfile {
   name: string | null;
   hasAvatar: boolean;
 }
+
+// ---------------------------------------------------------------- modules
+/** The modules a user can switch on or off. `enabled` is the default; the user's own choice wins. */
+export const APP_MODULE_LIST: { code: string; name: string; enabled: boolean; href: string }[] = [
+  { code: 'PM', name: 'Password Manager', enabled: true, href: '/vault' },
+  { code: 'JT', name: 'Job Tracker', enabled: true, href: '/jobs' },
+  { code: 'TK', name: 'Tasks', enabled: true, href: '/tasks' },
+  { code: 'FN', name: 'Finance', enabled: true, href: '/finance' },
+  { code: 'WK', name: 'Workouts', enabled: true, href: '/workouts' },
+  { code: 'GL', name: 'Goals', enabled: true, href: '/goals' },
+  { code: 'HB', name: 'Habits', enabled: true, href: '/habits' },
+  { code: 'CL', name: 'Calendar', enabled: true, href: '/calendar' },
+  { code: 'NT', name: 'Notes', enabled: true, href: '/notes' },
+  { code: 'AN', name: 'Analytics', enabled: true, href: '/analytics' },
+];
