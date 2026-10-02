@@ -125,7 +125,7 @@ export function TransactionsPage() {
       },
       {
         accessorKey: 'description',
-        meta: { title: 'Description', filter: { type: 'text' } },
+        meta: { title: 'Description', filter: { type: 'text' }, edit: { type: 'text' } },
       },
       {
         id: 'category',
@@ -135,7 +135,7 @@ export function TransactionsPage() {
       {
         id: 'amount',
         accessorFn: (t) => signed(t),
-        meta: { title: 'Amount', align: 'right', aggregate: 'sum', format: (v) => formatINR(Number(v)), filter: { type: 'number' } },
+        meta: { title: 'Amount', align: 'right', aggregate: 'sum', format: (v) => formatINR(Number(v)), filter: { type: 'number' }, edit: { type: 'number', value: (t) => t.amount } },
         cell: ({ row }) => (
           <span className={row.original.type === 'CREDIT' ? 'text-primary' : ''}>
             {row.original.type === 'CREDIT' ? '+' : '-'}
@@ -180,7 +180,7 @@ export function TransactionsPage() {
       },
       {
         accessorKey: 'notes',
-        meta: { title: 'Notes', filter: { type: 'text' } },
+        meta: { title: 'Notes', filter: { type: 'text' }, edit: { type: 'textarea' } },
         cell: ({ row }) => row.original.notes ?? '—',
       },
       {
@@ -221,6 +221,15 @@ export function TransactionsPage() {
           columns={columns}
           getRowId={(t) => t.id}
           onRowClick={rowClick}
+          drawerTitle={(t) => t.description}
+          onEditRow={async (t, changes) => {
+            await transactionApi.updateTransaction(t.id, {
+              ...(changes.description !== undefined ? { description: String(changes.description ?? '') } : {}),
+              ...(changes.amount !== undefined && changes.amount !== null ? { amount: Number(changes.amount) } : {}),
+              ...(changes.notes !== undefined ? { notes: changes.notes === null ? '' : String(changes.notes) } : {}),
+            });
+            invalidate();
+          }}
           loading={isLoading}
           enableSelection
           initialSorting={[{ id: 'transactionDate', desc: true }]}

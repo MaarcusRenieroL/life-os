@@ -77,6 +77,8 @@ export interface DataGridProps<TData> {
   drawerOpenLabel?: string;
   /** Extra content under the fields in the drawer. */
   drawerExtra?: (row: TData) => ReactNode;
+  /** Saves edits made in the record drawer (columns opt in with `meta.edit`). */
+  onEditRow?: (row: TData, changes: Record<string, string | number | null>) => Promise<unknown>;
   /** Ready-made views shown first in the Views side list, e.g. "Open" or "This month". "All" is always there. */
   views?: GridView[];
 }
@@ -138,6 +140,7 @@ export function DataGrid<TData>({
   drawerTitle,
   drawerOpenLabel,
   drawerExtra,
+  onEditRow,
 }: DataGridProps<TData>) {
   const { layout, patch, reset } = usePersistedGrid(tableId, {
     sorting: initialSorting,
@@ -410,6 +413,7 @@ export function DataGrid<TData>({
           openLabel={drawerOpenLabel}
           title={drawerTitle}
           extra={drawerExtra}
+          onEditRow={onEditRow}
         />
       )}
 

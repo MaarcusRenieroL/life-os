@@ -76,7 +76,7 @@ export function NotesListPage() {
     () => [
       {
         accessorKey: 'title',
-        meta: { title: 'Title', filter: { type: 'text' } },
+        meta: { title: 'Title', filter: { type: 'text' }, edit: { type: 'text' } },
         cell: ({ row }) => {
           const note = row.original;
           const meta = noteTypeMeta(note.noteType);
@@ -91,7 +91,7 @@ export function NotesListPage() {
           );
         },
       },
-      { accessorKey: 'description', meta: { title: 'Summary', filter: { type: 'text' } }, cell: ({ row }) => <span className="line-clamp-1 text-muted-foreground">{row.original.description ?? '—'}</span> },
+      { accessorKey: 'description', meta: { title: 'Summary', filter: { type: 'text' }, edit: { type: 'textarea' } }, cell: ({ row }) => <span className="line-clamp-1 text-muted-foreground">{row.original.description ?? '—'}</span> },
       { id: 'noteType', accessorFn: (n) => noteTypeMeta(n.noteType).label, meta: { title: 'Type', filter: { type: 'select' } } },
       {
         id: 'tags',
@@ -156,6 +156,15 @@ export function NotesListPage() {
           columns={columns}
           getRowId={(n) => n.id}
           onRowClick={(n) => navigate(`/notes/${n.id}`)}
+          drawerTitle={(n) => n.title}
+          drawerOpenLabel="Open note"
+          onEditRow={async (n, changes) => {
+            await notesApi.update(n.id, {
+              ...(changes.title ? { title: String(changes.title) } : {}),
+              ...(changes.description !== undefined ? { description: String(changes.description ?? '') } : {}),
+            });
+            queryClient.invalidateQueries({ queryKey: ['notes'] });
+          }}
           loading={isLoading}
           initialSorting={[{ id: 'updatedAt', desc: true }]}
           initialFilters={[{ id: 'isArchived', value: ['false'] }]}
