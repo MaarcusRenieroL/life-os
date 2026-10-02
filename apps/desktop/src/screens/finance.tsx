@@ -1,18 +1,24 @@
 import { ACCOUNT_TYPES, dayKey, type AccountType, type BillingCycle, type FinanceAccount, type CategoryType, type FinanceCategory, type TransactionType } from '@life-os/core';
 import { useState, type FormEvent } from 'react';
 
+import { FinanceAnalyticsTab, ImportTab, MerchantsTab, ReportTab, RulesTab } from '../modules/finance-extra';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { Bars, Empty, ErrorNote, Field, Modal, money, opts, Panel, pretty, ProgressRow, Select, Stat, Tabs } from '../ui';
 
-type TabId = 'dashboard' | 'transactions' | 'subscriptions' | 'budgets' | 'accounts' | 'categories';
+type TabId = 'dashboard' | 'transactions' | 'subscriptions' | 'budgets' | 'analytics' | 'report' | 'import' | 'rules' | 'accounts' | 'categories' | 'merchants';
 const TABS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'transactions', label: 'Transactions' },
   { id: 'subscriptions', label: 'Subscriptions' },
   { id: 'budgets', label: 'Budgets' },
+  { id: 'analytics', label: 'Analytics' },
+  { id: 'report', label: 'Report' },
+  { id: 'import', label: 'Import' },
+  { id: 'rules', label: 'Rules' },
   { id: 'accounts', label: 'Accounts' },
   { id: 'categories', label: 'Categories' },
+  { id: 'merchants', label: 'Merchants' },
 ] as const;
 
 export function FinanceScreen() {
@@ -24,8 +30,13 @@ export function FinanceScreen() {
       {tab === 'transactions' && <TransactionsTab />}
       {tab === 'subscriptions' && <SubscriptionsTab />}
       {tab === 'budgets' && <BudgetsTab />}
+      {tab === 'analytics' && <FinanceAnalyticsTab />}
+      {tab === 'report' && <ReportTab />}
+      {tab === 'import' && <ImportTab />}
+      {tab === 'rules' && <RulesTab />}
       {tab === 'accounts' && <AccountsTab />}
       {tab === 'categories' && <CategoriesTab />}
+      {tab === 'merchants' && <MerchantsTab />}
     </div>
   );
 }
