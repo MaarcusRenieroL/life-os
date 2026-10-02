@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, CheckSquare, CreditCard, Loader2, Mail, Receipt, Undo2, X } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataGrid } from '@/components/data-table/data-grid';
+import { TableQuest } from '@/features/player/table-quest';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import {
   emailHubApi,
@@ -32,9 +34,17 @@ const MODULE_LINK: Record<string, { label: string; to: string }> = {
   finance: { label: 'Open subscriptions', to: '/finance/subscriptions' },
 };
 
-const WAITING: EmailHubStatus[] = ['NEEDS_REVIEW', 'FAILED'];
-const DONE: EmailHubStatus[] = ['APPLIED', 'UNDONE'];
-const SKIPPED: EmailHubStatus[] = ['IGNORED', 'DISMISSED'];
+const ALL_STATUSES: EmailHubStatus[] = ['NEEDS_REVIEW', 'FAILED', 'APPLIED', 'UNDONE', 'IGNORED', 'DISMISSED'];
+
+/** The stage of an email in plain words; the views on the left are groups of these. */
+const STATUS_LABEL: Record<EmailHubStatus, string> = {
+  NEEDS_REVIEW: 'Needs your OK',
+  FAILED: 'Failed',
+  APPLIED: 'Done for you',
+  UNDONE: 'Undone',
+  IGNORED: 'Skipped',
+  DISMISSED: 'Dismissed',
+};
 
 function when(iso: string | null | undefined, withTime = false): string | null {
   if (!iso) return null;
@@ -67,12 +77,9 @@ function senderName(from: string | null): string {
 
 export function EmailInboxPage() {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState('waiting');
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const waiting = useQuery({ queryKey: ['email-hub', 'items', 'waiting'], queryFn: () => emailHubApi.items(WAITING) });
-  const done = useQuery({ queryKey: ['email-hub', 'items', 'done'], queryFn: () => emailHubApi.items(DONE) });
-  const skipped = useQuery({ queryKey: ['email-hub', 'items', 'skipped'], queryFn: () => emailHubApi.items(SKIPPED, 60) });
+  const items = useQuery({ queryKey: ['email-hub', 'items', 'all'], queryFn: () => emailHubApi.items(ALL_STATUSES, 200) });
 
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ['email-hub'] });
@@ -107,52 +114,78 @@ export function EmailInboxPage() {
     }
   }
 
-  function Row({ item, children }: { item: EmailHubItem; children?: ReactNode }) {
-    const meta = CATEGORY[item.category];
-    const Icon = meta.icon;
-    const plan = describe(item.proposal);
-    const link = item.targetModule ? MODULE_LINK[item.targetModule] : undefined;
-    return (
-      <li className="rounded-lg border p-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-1 gap-3">
-            <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <div className="min-w-0">
-              <p className="font-medium break-words">{item.summary || item.subject || '(no subject)'}</p>
-              {plan && <p className="mt-0.5 text-sm break-words">{plan}</p>}
-              <p className="mt-1 truncate text-xs text-muted-foreground">
-                {senderName(item.fromAddress)}
-                {item.subject ? ` · ${item.subject}` : ''}
-              </p>
-              {item.note && (
-                <p className={`mt-1 text-xs ${item.status === 'FAILED' ? 'text-destructive' : 'text-muted-foreground'}`}>{item.note}</p>
+  const columns = useMemo<ColumnDef<EmailHubItem>[]>(
+    () => [
+      {
+        id: 'summary',
+        accessorFn: (i) => i.summary || i.subject || '(no subject)',
+        meta: { title: 'Email', filter: { type: 'text' } },
+        cell: ({ row }) => {
+          const item = row.original;
+          const Icon = CATEGORY[item.category].icon;
+          const link = item.targetModule ? MODULE_LINK[item.targetModule] : undefined;
+          return (
+            <div className="flex min-w-0 gap-2.5">
+              <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <p className="font-medium break-words">{item.summary || item.subject || '(no subject)'}</p>
+                {item.note && <p className={`mt-0.5 text-xs ${item.status === 'FAILED' ? 'text-destructive' : 'text-muted-foreground'}`}>{item.note}</p>}
+                {link && item.status === 'APPLIED' && (
+                  <Link to={link.to} onClick={(e) => e.stopPropagation()} className="mt-0.5 inline-block text-xs text-primary hover:underline">{link.label}</Link>
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      { id: 'category', accessorFn: (i) => CATEGORY[i.category].label, meta: { title: 'Type', filter: { type: 'select' } } },
+      { id: 'status', accessorFn: (i) => STATUS_LABEL[i.status], meta: { title: 'Status', filter: { type: 'select' } } },
+      { id: 'plan', accessorFn: (i) => describe(i.proposal) ?? '', meta: { title: 'What it will do', filter: { type: 'text' } }, cell: ({ row }) => describe(row.original.proposal) ?? '—' },
+      { id: 'from', accessorFn: (i) => senderName(i.fromAddress), meta: { title: 'From', filter: { type: 'select' } } },
+      { accessorKey: 'subject', meta: { title: 'Subject', filter: { type: 'text' } }, cell: ({ row }) => row.original.subject ?? '—' },
+      {
+        id: 'confidence',
+        accessorFn: (i) => (i.confidence ? i.confidence.toLowerCase() : ''),
+        meta: { title: 'Confidence', filter: { type: 'select' } },
+        cell: ({ row }) => (row.original.confidence ? <Badge variant="outline" className="text-[10px]">{row.original.confidence.toLowerCase()}</Badge> : '—'),
+      },
+      {
+        id: 'receivedAt',
+        accessorFn: (i) => i.receivedAt ?? i.createdAt,
+        meta: { title: 'Received', filter: { type: 'date' } },
+        cell: ({ row }) => (row.original.receivedAt ?? row.original.createdAt).slice(0, 10),
+      },
+      {
+        id: 'actions',
+        header: '',
+        enableHiding: false,
+        enableSorting: false,
+        enableResizing: false,
+        cell: ({ row }) => {
+          const item = row.original;
+          if (busyId === item.id) return <Loader2 className="size-4 animate-spin text-muted-foreground" />;
+          return (
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              {(item.status === 'NEEDS_REVIEW' || item.status === 'FAILED') && (
+                <>
+                  {item.proposal && <Button size="sm" onClick={() => void act(item, 'approve')}>{item.status === 'FAILED' ? 'Try again' : 'Do it'}</Button>}
+                  <Button size="icon" variant="ghost" title="Dismiss" aria-label="Dismiss" onClick={() => void act(item, 'dismiss')}><X className="size-4" /></Button>
+                </>
               )}
-              {link && item.status === 'APPLIED' && (
-                <Link to={link.to} className="mt-1 inline-block text-xs text-primary hover:underline">
-                  {link.label}
-                </Link>
+              {item.status === 'APPLIED' && (
+                <Button size="sm" variant="ghost" onClick={() => void act(item, 'undo')}><Undo2 className="size-4" /> Undo</Button>
               )}
             </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {item.confidence && item.status === 'NEEDS_REVIEW' && (
-              <Badge variant="outline" className="text-[10px]">
-                {item.confidence.toLowerCase()} confidence
-              </Badge>
-            )}
-            {busyId === item.id ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : children}
-          </div>
-        </div>
-      </li>
-    );
-  }
+          );
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [busyId],
+  );
 
-  const list = (query: typeof waiting, empty: string, render: (item: EmailHubItem) => ReactNode) => {
-    if (query.isLoading) return <Skeleton className="h-20 w-full" />;
-    if (query.isError) return <p className="text-sm text-destructive">Could not load this list.</p>;
-    if (!query.data?.length) return <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">{empty}</p>;
-    return <ul className="flex flex-col gap-2">{query.data.map(render)}</ul>;
-  };
+  const waiting = (items.data ?? []).filter((i) => i.status === 'NEEDS_REVIEW' || i.status === 'FAILED').length;
+  const handled = (items.data ?? []).filter((i) => i.status === 'APPLIED' || i.status === 'UNDONE' || i.status === 'DISMISSED').length;
 
   return (
     <div>
@@ -160,8 +193,8 @@ export function EmailInboxPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Email</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Your inbox, read for you. Bills, appointments, deadlines and subscription receipts become tasks, calendar
-            events and subscriptions. Anything it isn&apos;t sure about waits here for your OK.
+            Your inbox, read for you. Bills, appointments, deadlines and subscription receipts wait here as proposals
+            until you click Do it. Nothing is created without your OK.
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={() => sync.mutate()} disabled={sync.isPending}>
@@ -170,54 +203,47 @@ export function EmailInboxPage() {
         </Button>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab} className="mt-5">
-        <TabsList>
-          <TabsTrigger value="waiting">
-            Needs your OK
-            {!!waiting.data?.length && <Badge className="ml-1.5 h-4 min-w-4 rounded-full px-1 text-[10px]">{waiting.data.length}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="done">Done for you</TabsTrigger>
-          <TabsTrigger value="skipped">Skipped</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="waiting" className="mt-4">
-          {list(waiting, 'Nothing is waiting on you.', (item) => (
-            <Row key={item.id} item={item}>
-              {item.proposal && (
-                <Button size="sm" onClick={() => void act(item, 'approve')}>
-                  {item.status === 'FAILED' ? 'Try again' : 'Do it'}
-                </Button>
-              )}
-              <Button size="icon" variant="ghost" title="Dismiss" onClick={() => void act(item, 'dismiss')}>
-                <X className="size-4" />
-              </Button>
-            </Row>
-          ))}
-        </TabsContent>
-
-        <TabsContent value="done" className="mt-4">
-          {list(done, 'Nothing has been added from your email yet.', (item) => (
-            <Row key={item.id} item={item}>
-              {item.status === 'APPLIED' ? (
-                <Button size="sm" variant="ghost" onClick={() => void act(item, 'undo')}>
-                  <Undo2 className="size-4" /> Undo
-                </Button>
-              ) : (
-                <Badge variant="secondary">Undone</Badge>
-              )}
-            </Row>
-          ))}
-        </TabsContent>
-
-        <TabsContent value="skipped" className="mt-4">
-          <p className="mb-2 text-xs text-muted-foreground">
-            Mail that needed nothing, or that you dismissed. Check here if you think something was missed.
-          </p>
-          {list(skipped, 'Nothing skipped yet.', (item) => (
-            <Row key={item.id} item={item} />
-          ))}
-        </TabsContent>
-      </Tabs>
+      <div className="mt-5">
+        <TableQuest title="Clear your inbox" done={handled} total={handled + waiting} unit="proposals" doneText="Inbox clear" />
+        {items.isLoading ? (
+          <Skeleton className="h-40 w-full" />
+        ) : items.isError ? (
+          <p className="text-sm text-destructive">Could not load your email.</p>
+        ) : (
+          <DataGrid
+            tableId="email.inbox"
+            data={items.data ?? []}
+            columns={columns}
+            getRowId={(i) => i.id}
+            initialSorting={[{ id: 'receivedAt', desc: true }]}
+            initialFilters={[{ id: 'status', value: waiting > 0 ? ['Needs your OK', 'Failed'] : ['Needs your OK', 'Failed', 'Done for you', 'Undone'] }]}
+            initialVisibility={{ subject: false, confidence: false, from: false }}
+            views={[
+              { id: 'waiting', name: `Needs your OK${waiting ? ` (${waiting})` : ''}`, filters: [{ id: 'status', value: ['Needs your OK', 'Failed'] }] },
+              { id: 'done', name: 'Done for you', filters: [{ id: 'status', value: ['Done for you', 'Undone'] }] },
+              { id: 'skipped', name: 'Skipped', filters: [{ id: 'status', value: ['Skipped', 'Dismissed'] }] },
+              { id: 'bills', name: 'Bills', filters: [{ id: 'category', value: ['Bill'] }] },
+            ]}
+            exportName="email"
+            searchPlaceholder="Search email…"
+            emptyMessage="Nothing here yet."
+            mobileCard={(item) => (
+              <div className="rounded-lg border p-3">
+                <p className="font-medium break-words">{item.summary || item.subject || '(no subject)'}</p>
+                <p className="mt-0.5 text-sm break-words">{describe(item.proposal)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{senderName(item.fromAddress)} · {STATUS_LABEL[item.status]}</p>
+                {(item.status === 'NEEDS_REVIEW' || item.status === 'FAILED') && (
+                  <div className="mt-2 flex gap-2">
+                    {item.proposal && <Button size="sm" onClick={() => void act(item, 'approve')}>Do it</Button>}
+                    <Button size="sm" variant="ghost" onClick={() => void act(item, 'dismiss')}>Dismiss</Button>
+                  </div>
+                )}
+                {item.status === 'APPLIED' && <Button size="sm" variant="ghost" className="mt-2" onClick={() => void act(item, 'undo')}>Undo</Button>}
+              </div>
+            )}
+          />
+        )}
+      </div>
     </div>
   );
 }

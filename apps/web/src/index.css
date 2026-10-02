@@ -161,6 +161,23 @@
       0 0 28px -6px color-mix(in oklab, var(--hud-accent, var(--primary)) 35%, transparent);
   }
 
+  /* Data tables: HUD column headers and a glowing accent on the row under the cursor or selected. */
+  .hud-table thead th {
+    font-family: var(--font-display);
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    background: color-mix(in oklab, var(--foreground) 3%, transparent);
+  }
+  .hud-table tbody tr { transition: background-color 120ms, box-shadow 120ms; }
+  .hud-table tbody tr:hover > td:first-child,
+  .hud-table tbody tr[data-state='selected'] > td:first-child {
+    box-shadow: inset 2px 0 0 var(--primary);
+  }
+  .hud-table tbody tr:hover { background: color-mix(in oklab, var(--primary) 5%, transparent); }
+  .hud-table tbody tr[data-state='selected'] { background: color-mix(in oklab, var(--primary) 9%, transparent); }
+
   /* Tiny uppercase tracking label: "STATUS", "QUESTS". */
   .hud-label {
     font-family: var(--font-display);

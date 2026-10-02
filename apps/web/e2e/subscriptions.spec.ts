@@ -28,8 +28,11 @@ test.describe('subscriptions', () => {
 
     await expect(page.getByText(name, { exact: true })).toBeVisible();
     await page.getByRole('button', { name: `Pause ${name}` }).click();
-    // Paused subscriptions leave the Active list and show under "Paused & cancelled".
+    // Paused subscriptions leave the Active list and show under the "Paused & cancelled" saved filter.
+    await expect(page.getByText(name, { exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Filters' }).click();
     await page.getByRole('button', { name: 'Paused & cancelled' }).click();
+    await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: `Resume ${name}` })).toBeVisible();
 
     const token = await page.evaluate(() => localStorage.getItem('life_os_access_token'));

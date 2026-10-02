@@ -19,6 +19,8 @@ export type Density = 'comfortable' | 'compact';
 interface DataTableProps<TData> {
   table: TanstackTable<TData>;
   onRowClick?: (row: TData) => void;
+  /** Double-click runs the page's own row action straight away, skipping the drawer. */
+  onRowDoubleClick?: (row: TData) => void;
   emptyMessage?: ReactNode;
   density?: Density;
   /** Table rows (not a card) shown right under a row while it is expanded. */
@@ -35,14 +37,15 @@ function aggregate<TData>(table: TanstackTable<TData>, columnId: string, kind: '
 
 /** The actual `<table>` render for a TanStack Table instance - toolbar and pagination are
  * composed separately so each page can carry its own filters/bulk actions. */
-export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results.', density = 'comfortable', renderExpanded }: DataTableProps<TData>) {
+export function DataTable<TData>({ table, onRowClick, onRowDoubleClick, emptyMessage = 'No results.', density = 'comfortable', renderExpanded }: DataTableProps<TData>) {
   const columnCount = table.getVisibleLeafColumns().length;
   const sized = table.getState().columnSizing;
   const hasFooter = table.getVisibleLeafColumns().some((c) => c.columnDef.meta?.aggregate);
   const compact = density === 'compact';
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div className="hud-panel">
+    <div className="hud-table overflow-x-auto">
       <Table className={cn(compact && '[&_td]:py-1 [&_td]:text-[13px] [&_th]:h-8')}>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -85,12 +88,14 @@ export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results
                 <TableRow
                   data-state={row.getIsSelected() && 'selected'}
                   onClick={() => onRowClick?.(row.original)}
+                  onDoubleClick={() => onRowDoubleClick?.(row.original)}
                   className={onRowClick ? 'cursor-pointer' : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={cn(cell.column.columnDef.meta?.align === 'right' && 'text-right tabular-nums', cell.column.columnDef.meta?.className)}
+                      className={cn('max-w-72 truncate', cell.column.columnDef.meta?.align === 'right' && 'text-right tabular-nums', cell.column.columnDef.meta?.className)}
+                      title={typeof cell.getValue() === 'string' ? (cell.getValue() as string) : undefined}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -130,6 +135,7 @@ export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results
           </TableFooter>
         )}
       </Table>
+    </div>
     </div>
   );
 }

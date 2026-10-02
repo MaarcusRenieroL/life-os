@@ -15,20 +15,23 @@ import {
   type Table,
   type VisibilityState,
 } from '@tanstack/react-table';
-import { Download, Filter, Rows3, Search, X } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { Search, X } from 'lucide-react';
+import { flexRender } from '@tanstack/react-table';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-import { columnTitle, describeFilter, FILTER_FNS, filterFnFor } from './column-utils';
+import { columnTitle, FILTER_FNS, filterFnFor } from './column-utils';
+import { DataChip, toneFor } from './data-chip';
 import { DataTable } from './data-table';
 import { DataTableColumnHeader } from './data-table-column-header';
 import { DataTablePagination } from './data-table-pagination';
 import { DataTableViewOptions } from './data-table-view-options';
-import { FilterList } from './data-grid-filters';
+import { FacetFilters } from './data-grid-facet-filters';
+import { DataGridSort } from './data-grid-sort';
+import { DataGridRowDrawer } from './data-grid-row-drawer';
+import { useSavedViews, type GridView } from './data-grid-views';
 import { selectionColumn } from './selection-column';
 import { usePersistedGrid } from './use-persisted-grid';
 
@@ -66,9 +69,38 @@ export interface DataGridProps<TData> {
   renderExpanded?: (row: TData) => ReactNode;
   expanded?: ExpandedState;
   onExpandedChange?: OnChangeFn<ExpandedState>;
+  /** Click a row to open its record in a side drawer (default on). Turn off for tables whose rows do something else. */
+  rowDrawer?: boolean;
+  /** The drawer's heading for a row; defaults to the first column. */
+  drawerTitle?: (row: TData) => ReactNode;
+  /** The label on the drawer's button that runs `onRowClick` (a full page, an edit form). */
+  drawerOpenLabel?: string;
+  /** Extra content under the fields in the drawer. */
+  drawerExtra?: (row: TData) => ReactNode;
+  /** Saves edits made in the record drawer (columns opt in with `meta.edit`). */
+  onEditRow?: (row: TData, changes: Record<string, string | number | null>) => Promise<unknown>;
+  /** Ready-made views shown first in the Views side list, e.g. "Open" or "This month". "All" is always there. */
+  views?: GridView[];
 }
 
 const PAGE_SIZES = [10, 20, 30, 50, 100];
+
+/** Below this width (the grid's own, not the screen's) a table gives way to cards. */
+const CARD_BELOW = 672;
+
+/** True while the element is narrower than `limit`, so only one of table / cards is ever in the page. */
+function useNarrow(ref: React.RefObject<HTMLElement | null>, limit: number): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => setNarrow(entry.contentRect.width < limit));
+    observer.observe(el);
+    setNarrow(el.getBoundingClientRect().width < limit);
+    return () => observer.disconnect();
+  }, [ref, limit]);
+  return narrow;
+}
 
 function csvCell(value: unknown): string {
   const text = Array.isArray(value) ? value.join('; ') : value === null || value === undefined ? '' : String(value);
@@ -103,6 +135,12 @@ export function DataGrid<TData>({
   renderExpanded,
   expanded,
   onExpandedChange,
+  views: builtInViews = [],
+  rowDrawer = true,
+  drawerTitle,
+  drawerOpenLabel,
+  drawerExtra,
+  onEditRow,
 }: DataGridProps<TData>) {
   const { layout, patch, reset } = usePersistedGrid(tableId, {
     sorting: initialSorting,
@@ -116,13 +154,29 @@ export function DataGrid<TData>({
   const [globalFilter, setGlobalFilter] = useState('');
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: layout.pageSize });
+  const saved = useSavedViews(tableId);
+  const [activeView, setActiveView] = useState('all');
+  const [drawerId, setDrawerId] = useState<string | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const narrow = useNarrow(gridRef, CARD_BELOW);
 
   const preparedColumns = useMemo<ColumnDef<TData>[]>(() => {
     const prepared = columns.map((column) => {
       const meta = column.meta;
       const filter = meta?.filter;
+      // A plain filterable status column ("Active", "Needs review", "Failed") becomes a coloured chip; text
+      // that is not a status (names, places) stays as it is.
+      const chipCell =
+        !column.cell && (filter?.type === 'select')
+          ? ({ getValue }: { getValue: () => unknown }) => {
+              const value = getValue();
+              const text = Array.isArray(value) ? value.join(', ') : value === null || value === undefined ? '' : String(value);
+              return text && toneFor(text) !== 'neutral' ? <DataChip>{text}</DataChip> : text || '—';
+            }
+          : undefined;
       return {
         ...column,
+        ...(chipCell ? { cell: chipCell } : {}),
         header:
           column.header ??
           (({ column: c }) => <DataTableColumnHeader column={c} title={columnTitle(c)} className={meta?.align === 'right' ? 'justify-end' : undefined} />),
@@ -208,13 +262,35 @@ export function DataGrid<TData>({
     URL.revokeObjectURL(url);
   }
 
+  const allView: GridView = useMemo(
+    () => ({ id: 'all', name: 'All', filters: initialFilters, sorting: initialSorting, visibility: initialVisibility, search: '' }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  function applyView(view: GridView) {
+    setActiveView(view.id);
+    setColumnFilters(view.filters ?? []);
+    setGlobalFilter(view.search ?? '');
+    if (view.sorting) patch('sorting', view.sorting);
+    // A view that names visibility starts from "everything the page shows by default", then applies it.
+    if (view.visibility) patch('visibility', { ...initialVisibility, ...view.visibility });
+  }
+
+  function saveCurrentView(name: string) {
+    const id = `v-${Date.now().toString(36)}`;
+    saved.save({ id, name, search: globalFilter, filters: columnFilters, sorting: layout.sorting, visibility: layout.visibility });
+    setActiveView(id);
+  }
+
   const emptyText = loading ? 'Loading…' : filtering ? 'Nothing matches these filters.' : (emptyMessage ?? 'No results.');
-  const filterable = table.getAllLeafColumns().some((c) => c.columnDef.meta?.filter);
 
   return (
+    <div className="@container" ref={gridRef}>
     <div>
+      <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-full max-w-xs min-w-48">
+        <div className="relative w-full max-w-56 min-w-40 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={globalFilter}
@@ -225,64 +301,41 @@ export function DataGrid<TData>({
           />
         </div>
         {typeof toolbarStart === 'function' ? toolbarStart(table) : toolbarStart}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {filterable && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Filter /> Filters
-                  {activeFilters.length > 0 && <Badge variant="secondary" className="ml-1 px-1.5">{activeFilters.length}</Badge>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-80">
-                <FilterList table={table} />
-              </PopoverContent>
-            </Popover>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => patch('density', layout.density === 'compact' ? 'comfortable' : 'compact')}
-            aria-pressed={layout.density === 'compact'}
-            title="Toggle compact rows"
-          >
-            <Rows3 /> {layout.density === 'compact' ? 'Compact' : 'Comfortable'}
+        <FacetFilters
+          table={table}
+          total={data.length}
+          presets={[allView, ...builtInViews]}
+          saved={saved.views}
+          activeId={activeView}
+          onApply={applyView}
+          onSave={saveCurrentView}
+          onRemove={(id) => {
+            saved.remove(id);
+            if (activeView === id) setActiveView('all');
+          }}
+        />
+        {filtering && (
+          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={clearFilters}>
+            Reset <X />
           </Button>
-          <DataTableViewOptions table={table} onReset={reset} />
-          {exportName !== undefined && (
-            <Button variant="outline" size="sm" onClick={exportCsv} disabled={table.getFilteredRowModel().rows.length === 0}>
-              <Download /> Export CSV
-            </Button>
-          )}
+        )}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <DataGridSort table={table} />
+          <DataTableViewOptions
+            table={table}
+            onReset={reset}
+            compact={layout.density === 'compact'}
+            onToggleDensity={() => patch('density', layout.density === 'compact' ? 'comfortable' : 'compact')}
+            onExport={exportName !== undefined && table.getFilteredRowModel().rows.length > 0 ? exportCsv : undefined}
+          />
           {toolbarEnd}
         </div>
       </div>
 
       {filtering && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-          {globalFilter.trim() !== '' && (
-            <Badge variant="secondary" className="gap-1 pr-1">
-              Search: “{globalFilter}”
-              <button type="button" aria-label="Clear search" onClick={() => setGlobalFilter('')}><X className="size-3" /></button>
-            </Badge>
-          )}
-          {activeFilters.map((filter) => {
-            const column = table.getColumn(filter.id)!;
-            const meta = column.columnDef.meta!;
-            return (
-              <Badge key={filter.id} variant="secondary" className="gap-1 pr-1">
-                {columnTitle(column)}: {describeFilter(meta.filter!, filter.value, meta.format)}
-                <button type="button" aria-label={`Clear ${columnTitle(column)} filter`} onClick={() => column.setFilterValue(undefined)}><X className="size-3" /></button>
-              </Badge>
-            );
-          })}
-          <button type="button" className="ml-1 text-muted-foreground underline-offset-2 hover:underline" onClick={clearFilters}>
-            Clear all
-          </button>
-          <span className="text-muted-foreground">
-            · {table.getFilteredRowModel().rows.length} of {data.length}
-          </span>
-        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {table.getFilteredRowModel().rows.length} of {data.length} rows
+        </p>
       )}
 
       {enableSelection && selectedRows.length > 0 && (
@@ -293,28 +346,80 @@ export function DataGrid<TData>({
         </div>
       )}
 
-      <div className={mobileCard ? 'mt-3 hidden md:block' : 'mt-3'}>
+      {!narrow && (
+      <div className="mt-3">
         <DataTable
           table={table}
-          onRowClick={onRowClick}
+          onRowClick={
+            rowDrawer
+              ? (original) => {
+                  const hit = table.getPrePaginationRowModel().rows.find((r) => r.original === original);
+                  if (hit) setDrawerId(hit.id);
+                }
+              : onRowClick
+          }
+          onRowDoubleClick={rowDrawer && onRowClick ? (row) => { setDrawerId(null); onRowClick(row); } : undefined}
           density={layout.density}
           emptyMessage={emptyText}
           renderExpanded={renderExpanded}
         />
       </div>
+      )}
 
-      {mobileCard && (
-        <ul className="mt-3 flex flex-col gap-2 md:hidden">
-          {table.getRowModel().rows.length === 0 && (
-            <li className="rounded-lg border p-6 text-center text-sm text-muted-foreground">{emptyText}</li>
-          )}
-          {table.getRowModel().rows.map((row) => (
-            <li key={row.id}>{mobileCard(row.original)}</li>
-          ))}
-        </ul>
+      {narrow && (
+      <ul className="mt-3 flex flex-col gap-2">
+        {table.getRowModel().rows.length === 0 && (
+          <li className="rounded-lg border p-6 text-center text-sm text-muted-foreground">{emptyText}</li>
+        )}
+        {table.getRowModel().rows.map((row) => (
+          <li key={row.id}>
+            {mobileCard ? (
+              mobileCard(row.original)
+            ) : (
+              // No hand-made card for this table: show its first column as the heading and the next few
+              // visible ones as label / value lines, so every table works on a phone without extra work.
+              <button type="button" className="w-full rounded-lg border bg-card p-3 text-left active:bg-muted/50" onClick={() => (rowDrawer ? setDrawerId(row.id) : onRowClick?.(row.original))}>
+                {(() => {
+                  const cells = row.getVisibleCells().filter((c) => c.column.id !== 'select' && c.column.id !== 'actions');
+                  const [lead, ...rest] = cells;
+                  return (
+                    <>
+                      {lead && <div className="font-medium break-words">{flexRender(lead.column.columnDef.cell, lead.getContext())}</div>}
+                      <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-sm">
+                        {rest.slice(0, 4).map((cell) => (
+                          <div key={cell.id} className="contents">
+                            <dt className="text-xs text-muted-foreground">{columnTitle(cell.column)}</dt>
+                            <dd className="min-w-0 truncate text-right">{flexRender(cell.column.columnDef.cell, cell.getContext())}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </>
+                  );
+                })()}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+      )}
+
+      {rowDrawer && (
+        <DataGridRowDrawer
+          rows={table.getPrePaginationRowModel().rows}
+          rowId={drawerId}
+          onClose={() => setDrawerId(null)}
+          onSelect={setDrawerId}
+          onOpen={onRowClick ? (row) => { setDrawerId(null); onRowClick(row); } : undefined}
+          openLabel={drawerOpenLabel}
+          title={drawerTitle}
+          extra={drawerExtra}
+          onEditRow={onEditRow}
+        />
       )}
 
       {!hidePagination && <DataTablePagination table={table} pageSizes={PAGE_SIZES} totalUnfiltered={data.length} />}
+      </div>
+    </div>
     </div>
   );
 }
