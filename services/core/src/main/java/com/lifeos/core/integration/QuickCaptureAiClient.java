@@ -33,19 +33,23 @@ public class QuickCaptureAiClient {
 
   private static final Logger log = LoggerFactory.getLogger(QuickCaptureAiClient.class);
 
-  private static final String SYSTEM_PROMPT =
+  private static final String SYSTEM_PROMPT_TEMPLATE =
       """
       You are a quick-capture classifier for a personal life-organizer app. Given one short
-      piece of free text the user typed, decide which of three things they meant and extract
-      structured fields. Respond with ONLY a JSON object, no prose, no markdown fence, matching
-      exactly this shape:
+      piece of free text the user typed, decide which of five things they meant and extract
+      structured fields. Today is %s (%s), the user's timezone is Asia/Kolkata. Respond with ONLY
+      a JSON object, no prose, no markdown fence, matching exactly this shape:
 
-      {"module": "finance" | "job" | "note",
+      {"module": "finance" | "job" | "task" | "event" | "note",
        "finance": {"description": string, "amount": number, "type": "DEBIT" | "CREDIT"} | null,
        "job": {"company": string, "title": string} | null,
+       "task": {"title": string, "dueDate": "yyyy-MM-dd" | null, "dueTime": "HH:mm" | null,
+                "priority": "URGENT" | "HIGH" | "MEDIUM" | "LOW"} | null,
+       "event": {"title": string, "date": "yyyy-MM-dd", "startTime": "HH:mm" | null,
+                 "endTime": "HH:mm" | null, "location": string | null} | null,
        "note": {"title": string, "body": string} | null}
 
-      Only the field matching "module" should be non-null; the other two must be null.
+      Only the field matching "module" should be non-null; all the others must be null.
 
       Use "finance" when the text describes spending or receiving money (e.g. "spent 400 on
       groceries", "got paid 50000 salary") - type is DEBIT for money spent, CREDIT for money
@@ -54,10 +58,26 @@ public class QuickCaptureAiClient {
       Use "job" when the text describes applying to or hearing about a job (e.g. "applied to
       Stripe for backend engineer") - company and title are your best extraction.
 
-      Use "note" for everything else, including anything ambiguous or that doesn't clearly fit
-      finance or job - this is the safe default, never leave the input uncaptured. title is a
-      short (under 60 char) summary you write, body is the original text.
+      Use "task" for something the user has to DO, with or without a deadline (e.g. "renew the
+      passport", "call the bank tomorrow", "submit report by friday"). title is a short action
+      phrase. Work out dueDate from words like tomorrow, friday, next week, the 15th using today's
+      date; leave it null when none is said. priority is MEDIUM unless the text says it is urgent
+      or important (HIGH/URGENT) or low priority (LOW).
+
+      Use "event" for something that happens at a particular date or time and is attended rather
+      than done (a meeting, appointment, dinner, flight, birthday), e.g. "dentist on monday at
+      5pm". date is required; startTime/endTime only if said.
+
+      Use "note" for everything else - ideas, facts to remember, anything that is not clearly one
+      of the above. This is the safe default, never leave the input uncaptured. title is a short
+      (under 60 char) summary you write, body is the original text.
       """;
+
+  private static String systemPrompt() {
+    java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Kolkata"));
+    return SYSTEM_PROMPT_TEMPLATE.formatted(
+        today, today.getDayOfWeek().getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH));
+  }
 
   private final OllamaProperties ollamaProperties;
   private final AnthropicProperties anthropicProperties;
@@ -92,7 +112,7 @@ public class QuickCaptureAiClient {
             "format", "json",
             "messages",
                 List.of(
-                    Map.of("role", "system", "content", SYSTEM_PROMPT),
+                    Map.of("role", "system", "content", systemPrompt()),
                     Map.of("role", "user", "content", text)));
 
     try {
@@ -119,7 +139,7 @@ public class QuickCaptureAiClient {
         Map.of(
             "model", anthropicProperties.model(),
             "max_tokens", 512,
-            "system", SYSTEM_PROMPT,
+            "system", systemPrompt(),
             "messages", List.of(Map.of("role", "user", "content", text)));
 
     try {
