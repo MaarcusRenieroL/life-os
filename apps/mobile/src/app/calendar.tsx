@@ -9,8 +9,9 @@ import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
 import { ErrorNote, Muted, Panel, s } from '@/ui';
 
-type Mode = 'month' | 'agenda' | 'free';
-const MODES = [{ id: 'month', label: 'Month' }, { id: 'agenda', label: 'Agenda' }, { id: 'free', label: 'Free time' }] as const;
+type Mode = 'month' | 'week' | 'day' | 'agenda' | 'free';
+const MODES = [{ id: 'month', label: 'Month' }, { id: 'week', label: 'Week' }, { id: 'day', label: 'Day' }, { id: 'agenda', label: 'Agenda' }, { id: 'free', label: 'Free time' }] as const;
+const monday = (iso: string) => { const d = new Date(`${iso}T12:00:00`); return dayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7))); };
 const eventDay = (e: CalendarEvent) => e.startDate ?? (e.startAt ? dayKey(new Date(e.startAt)) : '');
 const timeOf = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
 
@@ -27,7 +28,14 @@ export default function Calendar() {
   const events = useAsync(() => api.calendar.list(gridStart, gridEnd), gridStart);
   const list = events.data ?? [];
   const today = dayKey(new Date());
-  const shift = (n: number) => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + n, 1));
+  const shift = (n: number) => {
+    if (mode === 'week' || mode === 'day') {
+      const next = shiftDay(selected, n * (mode === 'week' ? 7 : 1));
+      setSelected(next);
+      const d = new Date(`${next}T12:00:00`);
+      setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+    } else setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + n, 1));
+  };
   const dayEvents = (day: string) => list.filter((e) => eventDay(e) === day).sort((a, b) => (a.startAt ?? '').localeCompare(b.startAt ?? ''));
 
   const eventRow = (e: CalendarEvent) => (
@@ -45,7 +53,7 @@ export default function Calendar() {
       {mode !== 'free' ? (
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <Pressable hitSlop={12} onPress={() => shift(-1)}><Text style={{ color: C.accent, fontSize: 24 }}>‹</Text></Pressable>
-          <Text style={[s.h2, { fontSize: 17 }]}>{cursor.toLocaleDateString([], { month: 'long', year: 'numeric' })}</Text>
+          <Text style={[s.h2, { fontSize: 17 }]}>{mode === 'week' ? `${monday(selected)} → ${shiftDay(monday(selected), 6)}` : mode === 'day' ? new Date(`${selected}T12:00:00`).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }) : cursor.toLocaleDateString([], { month: 'long', year: 'numeric' })}</Text>
           <Pressable hitSlop={12} onPress={() => shift(1)}><Text style={{ color: C.accent, fontSize: 24 }}>›</Text></Pressable>
         </View>
       ) : null}
@@ -73,6 +81,18 @@ export default function Calendar() {
             {dayEvents(selected).length === 0 ? <Empty>Nothing planned.</Empty> : dayEvents(selected).map(eventRow)}
           </Panel>
         </>
+      ) : null}
+
+      {mode === 'week' ? Array.from({ length: 7 }, (_, i) => shiftDay(monday(selected), i)).map((d) => (
+        <Panel key={d} title={`${new Date(`${d}T12:00:00`).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}${d === today ? ' · today' : ''}`} accent={d === today ? C.accent : undefined}>
+          {dayEvents(d).length === 0 ? <Empty>Free.</Empty> : dayEvents(d).map(eventRow)}
+        </Panel>
+      )) : null}
+
+      {mode === 'day' ? (
+        <Panel title={`${dayEvents(selected).length} events`}>
+          {dayEvents(selected).length === 0 ? <Empty>Nothing planned.</Empty> : dayEvents(selected).map(eventRow)}
+        </Panel>
       ) : null}
 
       {mode === 'agenda' ? (() => {

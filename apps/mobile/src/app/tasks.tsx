@@ -3,19 +3,20 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from '@/text';
 
-import { Btn, Chips, DateInput, Empty, Field, Input, opts, pretty, Row, Screen, Seg, Sheet } from '@/kit';
+import { Bars, Btn, Chips, DateInput, Empty, Field, Input, opts, pretty, Progress, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
 import { Check, ErrorNote, Muted, Panel, s } from '@/ui';
 
-type TabId = 'today' | 'upcoming' | 'list' | 'board' | 'done';
+type TabId = 'today' | 'upcoming' | 'list' | 'board' | 'done' | 'analytics';
 const TABS = [
   { id: 'today', label: 'Today' },
   { id: 'upcoming', label: 'Upcoming' },
   { id: 'list', label: 'List' },
   { id: 'board', label: 'Board' },
   { id: 'done', label: 'Completed' },
+  { id: 'analytics', label: 'Analytics' },
 ] as const;
 const ORDER: Record<TaskPriority, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
 const PRIORITY_COLOR: Record<TaskPriority, string> = { URGENT: C.magenta, HIGH: C.gold, MEDIUM: C.muted, LOW: C.muted };
@@ -32,6 +33,7 @@ export default function Tasks() {
     if (tab === 'today') return api.tasks.list({ view: 'TODAY', q });
     if (tab === 'upcoming') return api.tasks.list({ view: 'UPCOMING', upcomingDays: 14, q });
     if (tab === 'done') return api.tasks.list({ view: 'COMPLETED', q });
+    if (tab === 'analytics') return api.tasks.list({});
     return api.tasks.list({ q });
   }, `${tab}|${query}`);
   const overdue = useAsync(() => (tab === 'today' ? api.tasks.list({ view: 'OVERDUE' }) : Promise.resolve([] as Task[])), `${tab}-overdue`);
@@ -61,7 +63,8 @@ export default function Tasks() {
       {runner.error ? <ErrorNote message={runner.error} /> : null}
       {tasks.error && !tasks.data ? <ErrorNote message={tasks.error} onRetry={tasks.reload} /> : null}
       {tab === 'today' && (overdue.data?.length ?? 0) > 0 ? <Panel title={`Overdue · ${overdue.data!.length}`} accent={C.magenta}>{[...overdue.data!].sort(byUrgency).map(row)}</Panel> : null}
-      {tab === 'board' ? TASK_STATUSES.map((status) => {
+      {tab === 'analytics' ? <TaskAnalytics tasks={list} /> : null}
+      {tab === 'analytics' ? null : tab === 'board' ? TASK_STATUSES.map((status) => {
         const lane = list.filter((t) => t.status === status).sort(byUrgency);
         return <Panel key={status} title={`${pretty(status)} · ${lane.length}`}>{lane.length === 0 ? <Muted>Empty</Muted> : lane.map(row)}</Panel>;
       }) : tab === 'upcoming' ? (list.length === 0 && !tasks.loading ? <Panel><Empty>Nothing due in the next two weeks.</Empty></Panel> : days.map((d) => <Panel key={d} title={d}>{list.filter((t) => (t.dueDate ?? 'No date') === d).sort(byUrgency).map(row)}</Panel>)) : (
@@ -116,5 +119,29 @@ function TaskSheet({ task, onClose, onSaved }: { task: Task | null; onClose: () 
         {task ? <Btn kind="danger" label="Delete" onPress={() => void runner.run(() => api.tasks.remove(task.id), onSaved)} /> : null}
       </View>
     </Sheet>
+  );
+}
+
+/** The shape of your task list: how much is done, what is late, and where the weight sits. */
+function TaskAnalytics({ tasks }: { tasks: Task[] }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const top = tasks.filter((t) => !t.parentTaskId);
+  const done = top.filter((t) => t.status === 'DONE');
+  const open = top.filter((t) => t.status !== 'DONE');
+  const overdue = open.filter((t) => t.dueDate && t.dueDate < today);
+  const count = <K extends string>(keys: readonly K[], pick: (t: Task) => K) => keys.map((k) => ({ label: pretty(k), value: top.filter((t) => pick(t) === k).length }));
+  const pct = top.length ? (done.length / top.length) * 100 : 0;
+  return (
+    <>
+      <Panel title="Overview"><StatGrid>
+        <Stat label="Tasks" value={top.length} />
+        <Stat label="Done" value={done.length} sub={`${Math.round(pct)}%`} />
+        <Stat label="Open" value={open.length} />
+        <Stat label="Overdue" value={overdue.length} />
+      </StatGrid><Progress label="Completion" pct={pct} /></Panel>
+      <Panel title="By priority"><Bars rows={count(TASK_PRIORITIES, (t) => t.priority)} /></Panel>
+      <Panel title="By status"><Bars rows={count(TASK_STATUSES, (t) => t.status)} /></Panel>
+      <Panel title="Overdue">{overdue.length === 0 ? <Empty>Nothing is late.</Empty> : overdue.map((t) => <Row key={t.id}><Text style={[s.body, { flex: 1 }]}>{t.title}</Text><Muted>{t.dueDate}</Muted></Row>)}</Panel>
+    </>
   );
 }
