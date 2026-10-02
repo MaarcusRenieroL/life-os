@@ -15,7 +15,7 @@ import {
   type Table,
   type VisibilityState,
 } from '@tanstack/react-table';
-import { Layers, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { flexRender } from '@tanstack/react-table';
 import { useMemo, useState, type ReactNode } from 'react';
 
@@ -30,7 +30,7 @@ import { DataTableViewOptions } from './data-table-view-options';
 import { FacetFilters } from './data-grid-facet-filters';
 import { DataGridSort } from './data-grid-sort';
 import { DataGridRowDrawer } from './data-grid-row-drawer';
-import { DataGridViews, useSavedViews, type GridView } from './data-grid-views';
+import { useSavedViews, type GridView } from './data-grid-views';
 import { selectionColumn } from './selection-column';
 import { usePersistedGrid } from './use-persisted-grid';
 
@@ -253,20 +253,7 @@ export function DataGrid<TData>({
 
   return (
     <div className="@container">
-    <div className="flex flex-col gap-3 @3xl:flex-row @3xl:items-start">
-      {saved.open && (
-        <DataGridViews
-          builtIn={[allView, ...builtInViews]}
-          saved={saved.views}
-          activeId={activeView}
-          onApply={applyView}
-          onSave={saveCurrentView}
-          onRemove={(id) => {
-            saved.remove(id);
-            if (activeView === id) setActiveView('all');
-          }}
-        />
-      )}
+    <div>
       <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-56 min-w-40 flex-1">
@@ -280,16 +267,25 @@ export function DataGrid<TData>({
           />
         </div>
         {typeof toolbarStart === 'function' ? toolbarStart(table) : toolbarStart}
-        <FacetFilters table={table} total={data.length} />
+        <FacetFilters
+          table={table}
+          total={data.length}
+          presets={[allView, ...builtInViews]}
+          saved={saved.views}
+          activeId={activeView}
+          onApply={applyView}
+          onSave={saveCurrentView}
+          onRemove={(id) => {
+            saved.remove(id);
+            if (activeView === id) setActiveView('all');
+          }}
+        />
         {filtering && (
           <Button variant="ghost" size="sm" className="h-8 px-2" onClick={clearFilters}>
             Reset <X />
           </Button>
         )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button variant={saved.open ? 'secondary' : 'outline'} size="sm" className="h-8" aria-pressed={saved.open} onClick={() => saved.setOpen(!saved.open)}>
-            <Layers /> <span className="hidden @xl:inline">Views</span>
-          </Button>
           <DataGridSort table={table} />
           <DataTableViewOptions
             table={table}
