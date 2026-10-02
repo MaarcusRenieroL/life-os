@@ -222,6 +222,11 @@ export function SubscriptionsPage() {
               onRowClick={(s) => { if (s.status !== 'CANCELLED') { setEditing(s); setDialogOpen(true); } }}
               initialSorting={[{ id: 'nextBillingDate', desc: false }]}
               initialFilters={[{ id: 'status', value: ['Active'] }]}
+              views={[
+                { id: 'paused', name: 'Paused & cancelled', filters: [{ id: 'status', value: ['Paused', 'Cancelled'] }] },
+                { id: 'lowuse', name: 'Low use, high cost', filters: [{ id: 'wasteful', value: ['true'] }] },
+                { id: 'everything', name: 'Everything', filters: [] },
+              ]}
               initialVisibility={{ billingCycle: false, yearlyCost: false, usageRating: false, lastUsedOn: false, wasteful: false }}
               exportName="subscriptions"
               searchPlaceholder="Search subscriptions…"

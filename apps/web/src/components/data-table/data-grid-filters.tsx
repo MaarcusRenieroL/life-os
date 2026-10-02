@@ -86,8 +86,8 @@ function ChoiceFilter<TData>({ column }: { column: Column<TData, unknown> }) {
 }
 
 /** Every filterable column's control in one scrollable list. */
-export function FilterList<TData>({ table }: { table: Table<TData> }) {
-  const columns = table.getAllLeafColumns().filter((c) => c.columnDef.meta?.filter);
+export function FilterList<TData>({ table, only }: { table: Table<TData>; only?: string[] }) {
+  const columns = table.getAllLeafColumns().filter((c) => c.columnDef.meta?.filter && (!only || only.includes(c.id)));
   if (columns.length === 0) return <p className="text-sm text-muted-foreground">Nothing to filter by.</p>;
   return (
     <div className="flex max-h-[26rem] flex-col gap-4 overflow-y-auto pr-1">

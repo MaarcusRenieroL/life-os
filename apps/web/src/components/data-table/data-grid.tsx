@@ -15,20 +15,20 @@ import {
   type Table,
   type VisibilityState,
 } from '@tanstack/react-table';
-import { Download, Filter, Rows3, Search, X } from 'lucide-react';
+import { Download, Layers, Rows3, Search, X } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-import { columnTitle, describeFilter, FILTER_FNS, filterFnFor } from './column-utils';
+import { columnTitle, FILTER_FNS, filterFnFor } from './column-utils';
 import { DataTable } from './data-table';
 import { DataTableColumnHeader } from './data-table-column-header';
 import { DataTablePagination } from './data-table-pagination';
 import { DataTableViewOptions } from './data-table-view-options';
-import { FilterList } from './data-grid-filters';
+import { FacetFilters } from './data-grid-facet-filters';
+import { DataGridSort } from './data-grid-sort';
+import { DataGridViews, useSavedViews, type GridView } from './data-grid-views';
 import { selectionColumn } from './selection-column';
 import { usePersistedGrid } from './use-persisted-grid';
 
@@ -66,6 +66,8 @@ export interface DataGridProps<TData> {
   renderExpanded?: (row: TData) => ReactNode;
   expanded?: ExpandedState;
   onExpandedChange?: OnChangeFn<ExpandedState>;
+  /** Ready-made views shown first in the Views side list, e.g. "Open" or "This month". "All" is always there. */
+  views?: GridView[];
 }
 
 const PAGE_SIZES = [10, 20, 30, 50, 100];
@@ -103,6 +105,7 @@ export function DataGrid<TData>({
   renderExpanded,
   expanded,
   onExpandedChange,
+  views: builtInViews = [],
 }: DataGridProps<TData>) {
   const { layout, patch, reset } = usePersistedGrid(tableId, {
     sorting: initialSorting,
@@ -116,6 +119,8 @@ export function DataGrid<TData>({
   const [globalFilter, setGlobalFilter] = useState('');
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: layout.pageSize });
+  const saved = useSavedViews(tableId);
+  const [activeView, setActiveView] = useState('all');
 
   const preparedColumns = useMemo<ColumnDef<TData>[]>(() => {
     const prepared = columns.map((column) => {
@@ -208,11 +213,45 @@ export function DataGrid<TData>({
     URL.revokeObjectURL(url);
   }
 
+  const allView: GridView = useMemo(
+    () => ({ id: 'all', name: 'All', filters: initialFilters, sorting: initialSorting, visibility: initialVisibility, search: '' }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  function applyView(view: GridView) {
+    setActiveView(view.id);
+    setColumnFilters(view.filters ?? []);
+    setGlobalFilter(view.search ?? '');
+    if (view.sorting) patch('sorting', view.sorting);
+    // A view that names visibility starts from "everything the page shows by default", then applies it.
+    if (view.visibility) patch('visibility', { ...initialVisibility, ...view.visibility });
+  }
+
+  function saveCurrentView(name: string) {
+    const id = `v-${Date.now().toString(36)}`;
+    saved.save({ id, name, search: globalFilter, filters: columnFilters, sorting: layout.sorting, visibility: layout.visibility });
+    setActiveView(id);
+  }
+
   const emptyText = loading ? 'Loading…' : filtering ? 'Nothing matches these filters.' : (emptyMessage ?? 'No results.');
-  const filterable = table.getAllLeafColumns().some((c) => c.columnDef.meta?.filter);
 
   return (
-    <div>
+    <div className="flex flex-col gap-3 md:flex-row md:items-start">
+      {saved.open && (
+        <DataGridViews
+          builtIn={[allView, ...builtInViews]}
+          saved={saved.views}
+          activeId={activeView}
+          onApply={applyView}
+          onSave={saveCurrentView}
+          onRemove={(id) => {
+            saved.remove(id);
+            if (activeView === id) setActiveView('all');
+          }}
+        />
+      )}
+      <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full max-w-xs min-w-48">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -225,20 +264,17 @@ export function DataGrid<TData>({
           />
         </div>
         {typeof toolbarStart === 'function' ? toolbarStart(table) : toolbarStart}
+        <FacetFilters table={table} />
+        {filtering && (
+          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={clearFilters}>
+            Reset <X />
+          </Button>
+        )}
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {filterable && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Filter /> Filters
-                  {activeFilters.length > 0 && <Badge variant="secondary" className="ml-1 px-1.5">{activeFilters.length}</Badge>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-80">
-                <FilterList table={table} />
-              </PopoverContent>
-            </Popover>
-          )}
+          <Button variant={saved.open ? 'secondary' : 'outline'} size="sm" className="h-8" aria-pressed={saved.open} onClick={() => saved.setOpen(!saved.open)}>
+            <Layers /> Views
+          </Button>
+          <DataGridSort table={table} />
           <Button
             variant="outline"
             size="sm"
@@ -259,30 +295,9 @@ export function DataGrid<TData>({
       </div>
 
       {filtering && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
-          {globalFilter.trim() !== '' && (
-            <Badge variant="secondary" className="gap-1 pr-1">
-              Search: “{globalFilter}”
-              <button type="button" aria-label="Clear search" onClick={() => setGlobalFilter('')}><X className="size-3" /></button>
-            </Badge>
-          )}
-          {activeFilters.map((filter) => {
-            const column = table.getColumn(filter.id)!;
-            const meta = column.columnDef.meta!;
-            return (
-              <Badge key={filter.id} variant="secondary" className="gap-1 pr-1">
-                {columnTitle(column)}: {describeFilter(meta.filter!, filter.value, meta.format)}
-                <button type="button" aria-label={`Clear ${columnTitle(column)} filter`} onClick={() => column.setFilterValue(undefined)}><X className="size-3" /></button>
-              </Badge>
-            );
-          })}
-          <button type="button" className="ml-1 text-muted-foreground underline-offset-2 hover:underline" onClick={clearFilters}>
-            Clear all
-          </button>
-          <span className="text-muted-foreground">
-            · {table.getFilteredRowModel().rows.length} of {data.length}
-          </span>
-        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {table.getFilteredRowModel().rows.length} of {data.length} rows
+        </p>
       )}
 
       {enableSelection && selectedRows.length > 0 && (
@@ -315,6 +330,7 @@ export function DataGrid<TData>({
       )}
 
       {!hidePagination && <DataTablePagination table={table} pageSizes={PAGE_SIZES} totalUnfiltered={data.length} />}
+      </div>
     </div>
   );
 }
