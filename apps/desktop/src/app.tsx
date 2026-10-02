@@ -1,10 +1,12 @@
-import { Briefcase, Calendar as CalendarIcon, ChartNoAxesCombined, Dumbbell, Home as HomeIcon, ListChecks, ListTodo, Settings, StickyNote, Swords, Target, Trophy, Wallet, type LucideIcon } from 'lucide-react';
+import { Briefcase, Calendar as CalendarIcon, ChartNoAxesCombined, Dumbbell, Home as HomeIcon, ListChecks, ListTodo, Mail, Settings, ShieldCheck, StickyNote, Swords, Target, Trophy, Wallet, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AnalyticsScreen } from './screens/analytics';
 import { CalendarScreen } from './screens/calendar';
 import { GoalsScreen } from './screens/goals';
 import { HabitsScreen } from './screens/habits';
 import { NotesScreen } from './screens/notes';
+import { EmailScreen } from './screens/email';
+import { VaultScreen } from './screens/vault';
 import { WorkoutsScreen } from './screens/workouts';
 import { HomeScreen } from './screens/home';
 import { JobsScreen } from './screens/jobs';
@@ -24,11 +26,13 @@ import { PlayerBar } from './player-bar';
 const SCREENS = [
   { id: 'home', label: 'Command', Icon: HomeIcon, View: HomeScreen },
   { id: 'quests', label: 'Quests', Icon: Swords, View: QuestsScreen },
+  { id: 'email', label: 'Email', Icon: Mail, View: EmailScreen },
   { id: 'tasks', label: 'Tasks', Icon: ListTodo, View: TasksScreen },
   { id: 'habits', label: 'Habits', Icon: ListChecks, View: HabitsScreen },
   { id: 'goals', label: 'Goals', Icon: Target, View: GoalsScreen },
   { id: 'calendar', label: 'Calendar', Icon: CalendarIcon, View: CalendarScreen },
   { id: 'notes', label: 'Notes', Icon: StickyNote, View: NotesScreen },
+  { id: 'vault', label: 'Password Manager', Icon: ShieldCheck, View: VaultScreen },
   { id: 'workouts', label: 'Workouts', Icon: Dumbbell, View: WorkoutsScreen },
   { id: 'jobs', label: 'Jobs', Icon: Briefcase, View: JobsScreen },
   { id: 'finance', label: 'Finance', Icon: Wallet, View: FinanceScreen },
