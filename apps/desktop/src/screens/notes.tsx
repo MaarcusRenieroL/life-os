@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
-import { Empty, ErrorNote, opts, Panel, pretty, Select } from '../ui';
+import { AttachmentsTab, GraphTab, JournalTab, NoteSettingsTab, SearchTab, TemplatesTab } from '../modules/notes-extra';
+import { Empty, ErrorNote, opts, Panel, pretty, Select, Tabs } from '../ui';
 
 type Scope = 'all' | 'pinned' | 'favorites' | 'archived' | 'trash';
 const SCOPES: { id: Scope; label: string }[] = [
@@ -16,7 +17,7 @@ const SCOPES: { id: Scope; label: string }[] = [
 
 const flatten = (folders: NoteFolder[], depth = 0): { folder: NoteFolder; depth: number }[] => folders.flatMap((f) => [{ folder: f, depth }, ...flatten(f.children ?? [], depth + 1)]);
 
-export function NotesScreen() {
+export function NotesTab({ initialOpenId = null }: { initialOpenId?: string | null }) {
   const api = useApi();
   const runner = useRunner();
   const [scope, setScope] = useState<Scope>('all');
@@ -24,7 +25,7 @@ export function NotesScreen() {
   const [tag, setTag] = useState('');
   const [noteType, setNoteType] = useState<NoteType | ''>('');
   const [query, setQuery] = useState('');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialOpenId);
 
   const folders = useAsync(() => api.notes.folders(), [api]);
   const tags = useAsync(() => api.notes.tags(), [api]);
@@ -160,5 +161,20 @@ function NoteEditor({ id, onClose, onChanged }: { id: string; onClose: () => voi
         <textarea className="editor" value={content} placeholder="Start writing… (Markdown is fine)" onChange={(e) => { setContent(e.target.value); setSaved('dirty'); }} />
       </div>
     </Panel>
+  );
+}
+
+const TABS = [{ id: 'notes', label: 'All notes' }, { id: 'journal', label: 'Journal' }, { id: 'search', label: 'Search' }, { id: 'templates', label: 'Templates' }, { id: 'graph', label: 'Graph' }, { id: 'attachments', label: 'Attachments' }, { id: 'settings', label: 'Settings' }] as const;
+type TabId = (typeof TABS)[number]['id'];
+
+export function NotesScreen() {
+  const [tab, setTab] = useState<TabId>('notes');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = (id: string) => { setOpenId(id); setTab('notes'); };
+  return (
+    <div className="stack">
+      <Tabs tabs={TABS} value={tab} onChange={setTab} />
+      {tab === 'notes' ? <NotesTab key={openId ?? 'none'} initialOpenId={openId} /> : tab === 'journal' ? <JournalTab /> : tab === 'search' ? <SearchTab onOpen={open} /> : tab === 'templates' ? <TemplatesTab onOpen={open} /> : tab === 'graph' ? <GraphTab onOpen={open} /> : tab === 'attachments' ? <AttachmentsTab onOpen={open} /> : <NoteSettingsTab />}
+    </div>
   );
 }
