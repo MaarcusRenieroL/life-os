@@ -52,7 +52,7 @@ public class SpendingStatsService {
     BigDecimal income = BigDecimal.ZERO;
 
     for (Transaction t : transactions) {
-      if (t.isDuplicate() || t.getStatus() == TransactionStatus.IGNORED || t.getType() == TransactionType.TRANSFER) continue;
+      if (t.isDuplicate() || t.getStatus() == TransactionStatus.IGNORED || t.getType() == TransactionType.TRANSFER || t.isTransfer()) continue;
       BigDecimal[] slot = byDay.get(t.getTransactionDate().atZone(zone).toLocalDate());
       if (slot == null) continue;
       if (t.getType() == TransactionType.DEBIT) {

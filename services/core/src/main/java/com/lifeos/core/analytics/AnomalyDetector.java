@@ -16,6 +16,8 @@ import java.util.stream.Collectors;
 public final class AnomalyDetector {
 
   static final int SPIKE_BASELINE_MIN_DAYS = 14;
+  /** Days with any spending the baseline needs before a "typical day" means something. */
+  static final int SPIKE_BASELINE_MIN_SPENDING_DAYS = 7;
   static final double SPIKE_SIGMAS = 2.5;
   static final double CATEGORY_SPIKE_FACTOR = 2.0;
   static final int HABIT_QUIET_DAYS = 3;
@@ -48,6 +50,9 @@ public final class AnomalyDetector {
     if (days.size() <= 7 + SPIKE_BASELINE_MIN_DAYS) return List.of();
     List<ModuleData.SpendDay> baseline = days.subList(0, days.size() - 7);
     List<Double> values = baseline.stream().map(d -> d.spend().doubleValue()).toList();
+    // A baseline that is mostly empty days (new account, history just cleared) has no "typical" spending to
+    // judge a day against - everything would look like a spike against a zero average.
+    if (values.stream().filter(v -> v > 0).count() < SPIKE_BASELINE_MIN_SPENDING_DAYS) return List.of();
     double mean = Statistics.mean(values);
     double std = Statistics.stdDev(values);
     // With a near-flat baseline a couple of rupees would read as "extreme" - require the day to
