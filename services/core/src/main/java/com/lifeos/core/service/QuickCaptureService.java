@@ -4,7 +4,12 @@ import com.lifeos.core.domains.record.QuickCaptureClassification;
 import com.lifeos.core.domains.record.QuickCaptureResult;
 import com.lifeos.core.exception.AiUnavailableException;
 import com.lifeos.core.exception.QuickCaptureRoutingException;
+import com.lifeos.core.domains.record.EmailAction;
 import com.lifeos.core.integration.QuickCaptureAiClient;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -24,18 +29,23 @@ public class QuickCaptureService {
   private final RestClient financeTrackerRestClient;
   private final RestClient jobTrackerRestClient;
   private final RestClient notesRestClient;
+  private final EmailActionExecutor executor;
   private final String internalApiKey;
+
+  private static final ZoneId ZONE = ZoneId.of("Asia/Kolkata");
 
   public QuickCaptureService(
       QuickCaptureAiClient aiClient,
       RestClient financeTrackerRestClient,
       RestClient jobTrackerRestClient,
       RestClient notesRestClient,
+      EmailActionExecutor executor,
       @Value("${internal.api-key}") String internalApiKey) {
     this.aiClient = aiClient;
     this.financeTrackerRestClient = financeTrackerRestClient;
     this.jobTrackerRestClient = jobTrackerRestClient;
     this.notesRestClient = notesRestClient;
+    this.executor = executor;
     this.internalApiKey = internalApiKey;
   }
 
@@ -60,6 +70,10 @@ public class QuickCaptureService {
     return switch (classification.module()) {
       case "finance" -> routeFinance(userId, classification.finance());
       case "job" -> routeJob(userId, classification.job());
+      case "task" -> routeTask(userId, classification.task());
+      case "event" -> classification.event() != null && parseDate(classification.event().date()) != null
+          ? routeEvent(userId, classification.event())
+          : routeTask(userId, taskFromEvent(classification.event()));
       default -> routeNote(userId, rawText, classification.note());
     };
   }
@@ -87,6 +101,74 @@ public class QuickCaptureService {
 
     return new QuickCaptureResult(
         "created", "finance", capture.description() + " (" + capture.amount() + ")");
+  }
+
+  private QuickCaptureResult routeTask(UUID userId, QuickCaptureClassification.TaskCapture capture) {
+    if (capture == null || isBlank(capture.title())) {
+      throw new QuickCaptureRoutingException("Couldn't work out what the task is");
+    }
+    LocalDate due = parseDate(capture.dueDate());
+    LocalTime time = due == null ? null : parseTime(capture.dueTime());
+    String priority = capture.priority() == null ? "MEDIUM" : capture.priority().trim().toUpperCase();
+    if (!java.util.Set.of("URGENT", "HIGH", "MEDIUM", "LOW").contains(priority)) {
+      priority = "MEDIUM";
+    }
+    EmailAction action =
+        new EmailAction("TASK", clip(capture.title(), 200), null, priority, due, time, time == null, null, null, null, null, null, null, null, null);
+    run(() -> executor.execute(userId, action));
+    return new QuickCaptureResult("created", "task", capture.title() + (due == null ? "" : " (due " + due + ")"));
+  }
+
+  private QuickCaptureResult routeEvent(UUID userId, QuickCaptureClassification.EventCapture capture) {
+    if (isBlank(capture.title())) {
+      throw new QuickCaptureRoutingException("Couldn't work out what the event is");
+    }
+    LocalDate date = parseDate(capture.date());
+    LocalTime start = parseTime(capture.startTime());
+    EmailAction action;
+    if (start == null) {
+      action = new EmailAction("EVENT", clip(capture.title(), 200), null, null, null, null, true, null, null, date, date, capture.location(), null, null, null);
+    } else {
+      LocalTime end = parseTime(capture.endTime());
+      java.time.Instant startAt = date.atTime(start).atZone(ZONE).toInstant();
+      java.time.Instant endAt = end != null && end.isAfter(start) ? date.atTime(end).atZone(ZONE).toInstant() : startAt.plusSeconds(3600);
+      action = new EmailAction("EVENT", clip(capture.title(), 200), null, null, null, null, false, startAt, endAt, null, null, capture.location(), null, null, null);
+    }
+    run(() -> executor.execute(userId, action));
+    return new QuickCaptureResult("created", "event", capture.title() + " (" + date + (start == null ? "" : " " + start) + ")");
+  }
+
+  /** An "event" with no usable date is really something to do, so it is kept as a task. */
+  private static QuickCaptureClassification.TaskCapture taskFromEvent(QuickCaptureClassification.EventCapture event) {
+    return event == null ? null : new QuickCaptureClassification.TaskCapture(event.title(), null, null, null);
+  }
+
+  private void run(Supplier<?> action) {
+    try {
+      action.get();
+    } catch (EmailActionExecutor.EmailActionException failure) {
+      throw new QuickCaptureRoutingException(failure.getMessage());
+    }
+  }
+
+  private static LocalDate parseDate(String value) {
+    try {
+      return value == null || value.isBlank() ? null : LocalDate.parse(value.trim());
+    } catch (DateTimeParseException ignored) {
+      return null;
+    }
+  }
+
+  private static LocalTime parseTime(String value) {
+    try {
+      return value == null || value.isBlank() ? null : LocalTime.parse(value.trim());
+    } catch (DateTimeParseException ignored) {
+      return null;
+    }
+  }
+
+  private static String clip(String value, int max) {
+    return value.length() <= max ? value : value.substring(0, max);
   }
 
   private QuickCaptureResult routeJob(UUID userId, QuickCaptureClassification.JobCapture capture) {
