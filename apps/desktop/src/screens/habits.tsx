@@ -3,12 +3,15 @@ import { useState, type FormEvent } from 'react';
 
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
+import { CalendarTab, HabitDetailModal, WeeklyTab } from '../modules/habits-extra';
 import { Bars, Empty, ErrorNote, Field, Modal, opts, Panel, pretty, ProgressRow, Select, Stat, Tabs } from '../ui';
 
-type TabId = 'today' | 'all' | 'analytics';
+type TabId = 'today' | 'all' | 'weekly' | 'calendar' | 'analytics';
 const TABS = [
   { id: 'today', label: 'Today' },
   { id: 'all', label: 'All habits' },
+  { id: 'weekly', label: 'Weekly grid' },
+  { id: 'calendar', label: 'Calendar' },
   { id: 'analytics', label: 'Analytics' },
 ] as const;
 
@@ -19,6 +22,7 @@ const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 export function HabitsScreen() {
   const [tab, setTab] = useState<TabId>('today');
   const [editing, setEditing] = useState<Habit | 'new' | null>(null);
+  const [detail, setDetail] = useState<Habit | null>(null);
   const reloadKey = useState(0);
   const [epoch, setEpoch] = reloadKey;
 
@@ -29,8 +33,11 @@ export function HabitsScreen() {
         <button className="primary" onClick={() => setEditing('new')}>+ New habit</button>
       </div>
       {tab === 'today' && <TodayTab key={epoch} />}
-      {tab === 'all' && <AllTab key={epoch} onEdit={setEditing} />}
+      {tab === 'all' && <AllTab key={epoch} onEdit={setEditing} onOpen={setDetail} />}
+      {tab === 'weekly' && <WeeklyTab />}
+      {tab === 'calendar' && <CalendarTab />}
       {tab === 'analytics' && <AnalyticsTab />}
+      {detail && <HabitDetailModal habit={detail} onClose={() => setDetail(null)} />}
       {editing && <HabitEditor habit={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); setEpoch((n) => n + 1); }} />}
     </div>
   );
@@ -74,7 +81,7 @@ function TodayTab() {
   );
 }
 
-function AllTab({ onEdit }: { onEdit: (h: Habit) => void }) {
+function AllTab({ onEdit, onOpen }: { onEdit: (h: Habit) => void; onOpen: (h: Habit) => void }) {
   const api = useApi();
   const habits = useAsync(() => api.habits.list(), [api]);
   const runner = useRunner();
@@ -88,7 +95,7 @@ function AllTab({ onEdit }: { onEdit: (h: Habit) => void }) {
       {groups.map((g) => (
         <Panel key={g.status} title={`${pretty(g.status)} · ${g.items.length}`}>
           <ul className="list">
-            {g.items.map((h) => <HabitRow key={h.id} habit={h} onEdit={() => onEdit(h)} onPause={() => runner.run(() => (h.status === 'PAUSED' ? api.habits.resume(h.id) : api.habits.pause(h.id)), habits.reload)} />)}
+            {g.items.map((h) => <HabitRow key={h.id} habit={h} onOpen={() => onOpen(h)} onEdit={() => onEdit(h)} onPause={() => runner.run(() => (h.status === 'PAUSED' ? api.habits.resume(h.id) : api.habits.pause(h.id)), habits.reload)} />)}
           </ul>
         </Panel>
       ))}
@@ -96,14 +103,15 @@ function AllTab({ onEdit }: { onEdit: (h: Habit) => void }) {
   );
 }
 
-function HabitRow({ habit, onEdit, onPause }: { habit: Habit; onEdit: () => void; onPause: () => void }) {
+function HabitRow({ habit, onEdit, onOpen, onPause }: { habit: Habit; onEdit: () => void; onOpen: () => void; onPause: () => void }) {
   const api = useApi();
   const streak = useAsync(() => api.habits.streak(habit.id), [api, habit.id]);
   return (
-    <li className="clickable" onClick={onEdit}>
+    <li className="clickable" onClick={onOpen}>
       <span className="grow"><b>{habit.icon} {habit.name}</b> <small className="muted">{pretty(habit.frequencyType)}</small></span>
       <span className="pill good">🔥 {streak.data?.currentStreak ?? 0}</span>
       <small className="muted">best {streak.data?.longestStreak ?? 0}</small>
+      <button className="link" onClick={(e) => { e.stopPropagation(); onEdit(); }}>Edit</button>
       {habit.status !== 'ARCHIVED' && <button className="link" onClick={(e) => { e.stopPropagation(); onPause(); }}>{habit.status === 'PAUSED' ? 'Resume' : 'Pause'}</button>}
     </li>
   );
