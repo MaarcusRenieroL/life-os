@@ -10,7 +10,7 @@ export function PlayerBar() {
   const pct = Math.min(100, Math.round(progress.pct));
 
   return (
-    <header className="player-bar">
+    <div className="player-bar">
       <div className="lv" style={{ borderColor: color, color }}>
         <small>LV</small>
         {loading && !player.ready ? '–' : progress.level}
@@ -30,6 +30,6 @@ export function PlayerBar() {
       </div>
       <div className="chip">🔥 {streak.current}<small>day streak</small></div>
       <div className="chip gold">+{player.earnedToday}<small>XP today</small></div>
-    </header>
+    </div>
   );
 }

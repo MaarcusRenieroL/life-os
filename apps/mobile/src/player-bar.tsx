@@ -1,5 +1,6 @@
 import { RANK_HEX } from '@life-os/core';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@/text';
 
 import { usePlayer } from '@/lib/player';
 import { C } from '@/theme';
@@ -12,7 +13,7 @@ export function PlayerBar() {
   const color = RANK_HEX[rank.letter];
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderBottomColor: C.line, borderBottomWidth: 1, backgroundColor: '#0c0f13' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderBottomColor: C.line, borderBottomWidth: 1, backgroundColor: C.sidebar }}>
       <View style={{ width: 46, height: 46, borderWidth: 2, borderColor: color, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ color, fontSize: 8, letterSpacing: 2 }}>LV</Text>
         <Text style={{ color, fontSize: 20, fontWeight: '800', marginTop: -2 }}>{player.ready ? progress.level : '–'}</Text>

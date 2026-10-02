@@ -1,19 +1,33 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Text } from '@/text';
 import * as Haptics from 'expo-haptics';
 
-import { C } from './theme';
+import { C, F } from './theme';
 
 export const tap = () => void Haptics.selectionAsync().catch(() => {});
 export const success = () => void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
+/** Section label: glowing marker, display type, a rule trailing off (the web's SectionHeading). */
 export function Label({ children }: { children: ReactNode }) {
-  return <Text style={s.label}>{String(children).toUpperCase()}</Text>;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      <View style={{ width: 3, height: 11, backgroundColor: C.accent, shadowColor: C.accent, shadowOpacity: 0.9, shadowRadius: 5, shadowOffset: { width: 0, height: 0 } }} />
+      <Text style={s.label}>{String(children).toUpperCase()}</Text>
+      <View style={{ flex: 1, height: 1, backgroundColor: C.line }} />
+    </View>
+  );
 }
 
+/** Framed HUD panel: gradient body, corner brackets (the website's hud-panel). */
 export function Panel({ title, accent, children, style }: { title?: string; accent?: string; children: ReactNode; style?: ViewStyle }) {
+  const bracket = accent ?? C.accent;
   return (
     <View style={[s.panel, accent ? { borderColor: accent } : null, style]}>
+      <LinearGradient colors={['#19191c', '#111114']} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+      <View pointerEvents="none" style={{ position: 'absolute', top: -1, left: -1, width: 10, height: 10, borderTopWidth: 2, borderLeftWidth: 2, borderColor: bracket }} />
+      <View pointerEvents="none" style={{ position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderBottomWidth: 2, borderRightWidth: 2, borderColor: bracket }} />
       {title ? <Label>{title}</Label> : null}
       {children}
     </View>
@@ -23,7 +37,7 @@ export function Panel({ title, accent, children, style }: { title?: string; acce
 export function Bar({ pct, color = C.accent }: { pct: number; color?: string }) {
   return (
     <View style={s.track}>
-      <View style={{ height: '100%', width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: color }} />
+      <View style={{ height: '100%', width: `${Math.max(0, Math.min(100, pct))}%`, backgroundColor: color, shadowColor: color, shadowOpacity: 0.7, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } }} />
     </View>
   );
 }
@@ -39,8 +53,8 @@ export function Check({ on, disabled, onPress }: { on: boolean; disabled?: boole
         tap();
         onPress();
       }}
-      style={[s.check, on && { backgroundColor: C.accent, borderColor: C.accent }, disabled && !on && { opacity: 0.35 }]}>
-      {on ? <Text style={{ color: '#06120d', fontWeight: '800' }}>✓</Text> : null}
+      style={[s.check, on && { backgroundColor: C.accent, borderColor: C.accent, shadowColor: C.accent, shadowOpacity: 0.7, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } }, disabled && !on && { opacity: 0.35 }]}>
+      {on ? <Text style={{ color: C.accentFg, fontWeight: '800' }}>✓</Text> : null}
     </Pressable>
   );
 }
@@ -53,8 +67,8 @@ export function Xp({ value }: { value: number }) {
   );
 }
 
-export function Muted({ children, style }: { children: ReactNode; style?: object }) {
-  return <Text style={[{ color: C.muted, fontSize: 13 }, style]}>{children}</Text>;
+export function Muted({ children, style, numberOfLines }: { children: ReactNode; style?: object; numberOfLines?: number }) {
+  return <Text numberOfLines={numberOfLines} style={[{ color: C.muted, fontSize: 13 }, style]}>{children}</Text>;
 }
 
 export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
@@ -71,15 +85,15 @@ export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () 
 }
 
 export const s = StyleSheet.create({
-  label: { color: C.muted, fontSize: 11, letterSpacing: 1.6, marginBottom: 8 },
-  panel: { backgroundColor: C.panel, borderColor: C.line, borderWidth: 1, borderRadius: 4, padding: 14, marginBottom: 12 },
-  track: { height: 7, backgroundColor: '#171c23', borderRadius: 2, overflow: 'hidden' },
-  check: { width: 26, height: 26, borderWidth: 1, borderColor: C.muted, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
-  xp: { borderColor: '#4a3a16', borderWidth: 1, borderRadius: 3, paddingHorizontal: 6, paddingVertical: 1 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderBottomColor: '#171c23', borderBottomWidth: 1 },
-  h2: { color: C.text, fontSize: 20, fontWeight: '700' },
-  body: { color: C.text, fontSize: 15, flex: 1 },
-  input: { backgroundColor: '#0b0e12', borderColor: C.line, borderWidth: 1, borderRadius: 4, padding: 12, color: C.text, fontSize: 16 },
-  primary: { backgroundColor: C.accent, padding: 13, borderRadius: 4, alignItems: 'center' },
-  primaryText: { color: '#06120d', fontWeight: '800', letterSpacing: 1 },
+  label: { color: C.muted, fontSize: 11, letterSpacing: 2.2, fontFamily: F.display },
+  panel: { backgroundColor: C.panelBottom, borderColor: C.line, borderWidth: 1, borderRadius: 2, padding: 14, marginBottom: 14 },
+  track: { height: 8, backgroundColor: '#ffffff17', borderRadius: 1, overflow: 'visible' },
+  check: { width: 24, height: 24, borderWidth: 1, borderColor: C.input, backgroundColor: '#ffffff0d', borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  xp: { borderColor: '#f0bb3b59', borderWidth: 1, borderRadius: 2, paddingHorizontal: 6, paddingVertical: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderBottomColor: '#ffffff0f', borderBottomWidth: 1 },
+  h2: { color: C.text, fontSize: 20, fontFamily: F.display, fontWeight: '600' },
+  body: { color: C.text, fontSize: 14, flex: 1 },
+  input: { backgroundColor: '#ffffff0d', borderColor: C.input, borderWidth: 1, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 10, color: C.text, fontSize: 15 },
+  primary: { backgroundColor: C.accent, padding: 12, borderRadius: 6, alignItems: 'center' },
+  primaryText: { color: C.accentFg, fontWeight: '700', letterSpacing: 1 },
 });

@@ -44,6 +44,12 @@
             "usesCleartextTraffic": true
           }
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Life OS uses Face ID to unlock the app."
+        }
       ]
     ],
     "experiments": {

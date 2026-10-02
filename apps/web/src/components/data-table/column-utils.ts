@@ -18,8 +18,14 @@ declare module '@tanstack/react-table' {
     format?: (value: unknown) => string;
     /** The value written to CSV when it differs from the raw cell value. */
     exportValue?: (row: TData) => string | number | null;
+    /** Lets the record drawer edit this field. The page's `onEditRow` receives the change keyed by column id. */
+    edit?: ColumnEditMeta<TData>;
   }
 }
+
+export type ColumnEditMeta<TData> =
+  | { type: 'text' | 'textarea' | 'number' | 'date'; value?: (row: TData) => string | number | null }
+  | { type: 'select'; options: { label: string; value: string }[]; value?: (row: TData) => string | null };
 
 export type ColumnFilterMeta =
   | { type: 'text' }

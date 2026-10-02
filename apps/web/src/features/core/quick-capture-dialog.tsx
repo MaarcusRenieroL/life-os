@@ -13,6 +13,7 @@ import { coreApi } from './core-api';
 const MODULE_LABELS: Record<string, string> = {
   finance: 'Finance',
   job: 'Job Tracker',
+  task: 'Tasks',
   note: 'Notes',
 };
 
@@ -61,6 +62,7 @@ export function QuickCaptureDialog() {
       }
       toast.success(`Captured to ${MODULE_LABELS[result.module ?? ''] ?? result.module}: ${result.summary}`);
       void queryClient.invalidateQueries({ queryKey: ['core', 'today'] });
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setOpen(false);
       reset();
     } catch (err) {
@@ -90,7 +92,7 @@ export function QuickCaptureDialog() {
 
           <Textarea
             autoFocus
-            placeholder="spent 400 on groceries, applied to Stripe for backend engineer, remember to renew the passport…"
+            placeholder="spent 400 on groceries, applied to Stripe for backend engineer, renew the passport by friday, dentist monday 5pm…"
             value={text}
             onChange={(e) => {
               setText(e.target.value);

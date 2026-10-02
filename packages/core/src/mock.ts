@@ -1,3 +1,4 @@
+import { createModuleMock } from './mock-modules';
 import { dayKey, shiftDay } from './player-model';
 import type { Task } from './api';
 import type { TodayItem, TrendPoint } from './types';
@@ -47,6 +48,7 @@ export function createMockFetch(): typeof fetch {
     spendingByCategory: [], goals: [], goalBreakdown: { milestone: null, task: null, habit: null, metric: null, workout: null, goalCount: 0 }, unavailableModules: [],
   };
 
+  const moduleRoute = createModuleMock();
   const reply = (data: unknown) => new Response(JSON.stringify({ success: true, message: 'ok', data, timestamp: new Date().toISOString() }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   return async (input, init) => {
@@ -88,6 +90,8 @@ export function createMockFetch(): typeof fetch {
     }
     if (path === '/v1/jobs') return reply(jobs);
     if (path === '/v1/finance/analytics/dashboard') return reply({ totalIncome: 60000, totalExpenses: 38200, savings: 21800, fixedMonthlyIncome: 60000 });
+    const extra = moduleRoute(path, method);
+    if (extra !== undefined) return reply(extra);
     return new Response(JSON.stringify({ message: `mock: no route for ${method} ${path}` }), { status: 404 });
   };
 }
