@@ -17,7 +17,7 @@ import {
 } from '@tanstack/react-table';
 import { Search, X } from 'lucide-react';
 import { flexRender } from '@tanstack/react-table';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,6 +83,23 @@ export interface DataGridProps<TData> {
 
 const PAGE_SIZES = [10, 20, 30, 50, 100];
 
+/** Below this width (the grid's own, not the screen's) a table gives way to cards. */
+const CARD_BELOW = 672;
+
+/** True while the element is narrower than `limit`, so only one of table / cards is ever in the page. */
+function useNarrow(ref: React.RefObject<HTMLElement | null>, limit: number): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => setNarrow(entry.contentRect.width < limit));
+    observer.observe(el);
+    setNarrow(el.getBoundingClientRect().width < limit);
+    return () => observer.disconnect();
+  }, [ref, limit]);
+  return narrow;
+}
+
 function csvCell(value: unknown): string {
   const text = Array.isArray(value) ? value.join('; ') : value === null || value === undefined ? '' : String(value);
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
@@ -137,6 +154,8 @@ export function DataGrid<TData>({
   const saved = useSavedViews(tableId);
   const [activeView, setActiveView] = useState('all');
   const [drawerId, setDrawerId] = useState<string | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const narrow = useNarrow(gridRef, CARD_BELOW);
 
   const preparedColumns = useMemo<ColumnDef<TData>[]>(() => {
     const prepared = columns.map((column) => {
@@ -264,7 +283,7 @@ export function DataGrid<TData>({
   const emptyText = loading ? 'Loading…' : filtering ? 'Nothing matches these filters.' : (emptyMessage ?? 'No results.');
 
   return (
-    <div className="@container">
+    <div className="@container" ref={gridRef}>
     <div>
       <div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center gap-2">
@@ -324,7 +343,8 @@ export function DataGrid<TData>({
         </div>
       )}
 
-      <div className="mt-3 hidden @2xl:block">
+      {!narrow && (
+      <div className="mt-3">
         <DataTable
           table={table}
           onRowClick={
@@ -340,8 +360,10 @@ export function DataGrid<TData>({
           renderExpanded={renderExpanded}
         />
       </div>
+      )}
 
-      <ul className="mt-3 flex flex-col gap-2 @2xl:hidden">
+      {narrow && (
+      <ul className="mt-3 flex flex-col gap-2">
         {table.getRowModel().rows.length === 0 && (
           <li className="rounded-lg border p-6 text-center text-sm text-muted-foreground">{emptyText}</li>
         )}
@@ -375,6 +397,7 @@ export function DataGrid<TData>({
           </li>
         ))}
       </ul>
+      )}
 
       {rowDrawer && (
         <DataGridRowDrawer
