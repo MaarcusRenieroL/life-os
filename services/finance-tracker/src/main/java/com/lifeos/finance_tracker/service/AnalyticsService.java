@@ -93,6 +93,7 @@ public class AnalyticsService {
     UserFinanceSettings settings =
         userFinanceSettingsRepository.findById(userId).orElseGet(() -> UserFinanceSettings.builder().userId(userId).build());
     settings.setPayCycleStartDay(PayCycle.clamp(request.getStartDay()));
+    settings.setPayCycleAuto(false);
     userFinanceSettingsRepository.save(settings);
     return getOverview(authentication);
   }
@@ -105,6 +106,14 @@ public class AnalyticsService {
     BigDecimal fixedIncome = settings == null ? null : settings.getMonthlyIncome();
 
     Instant now = Instant.now();
+    Integer suggested = startDay == 1 ? suggestedPayDay(userId, fixedIncome, now) : null;
+    if (suggested != null && settings != null && settings.isPayCycleAuto()) {
+      // Nobody has chosen a payday yet, so follow the salary: the month starts when it lands.
+      settings.setPayCycleStartDay(suggested);
+      userFinanceSettingsRepository.save(settings);
+      startDay = suggested;
+      suggested = null;
+    }
     PayCycle.Window cycle = PayCycle.containing(now, startDay);
     DashboardSummary summary = transactionRepository.getDashboardSummary(userId, cycle.start(), cycle.end());
     LocalDate today = now.atZone(PayCycle.ZONE).toLocalDate();
@@ -132,7 +141,7 @@ public class AnalyticsService {
         summary.totalExpenses() == null ? BigDecimal.ZERO : summary.totalExpenses(),
         upcomingBills,
         netWorth,
-        startDay == 1 ? suggestedPayDay(userId, fixedIncome, now) : null);
+        suggested);
   }
 
   /**

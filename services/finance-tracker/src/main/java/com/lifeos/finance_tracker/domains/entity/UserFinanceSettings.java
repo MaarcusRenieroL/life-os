@@ -31,8 +31,11 @@ public class UserFinanceSettings {
   // or a month not yet fully imported.
   BigDecimal monthlyIncome;
 
-  /** Day of the month salary lands (1-28). Budgets and the dashboard measure a month from this day. */
+  /** Day of the month salary lands (1-28, or 0 for the last working day). Budgets and the dashboard measure a month from this day. */
   @Builder.Default int payCycleStartDay = 1;
+
+  /** Until the user picks a payday themselves, it is worked out from the salary credits that arrive. */
+  @Builder.Default boolean payCycleAuto = true;
 
   /** Comma-separated names the user appears under in bank narrations; a match marks a self-transfer. */
   String ownerNames;
