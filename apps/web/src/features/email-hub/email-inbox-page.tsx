@@ -213,7 +213,7 @@ export function EmailInboxPage() {
             columns={columns}
             getRowId={(i) => i.id}
             initialSorting={[{ id: 'receivedAt', desc: true }]}
-            initialFilters={waiting > 0 ? [{ id: 'status', value: ['Needs your OK', 'Failed'] }] : []}
+            initialFilters={[{ id: 'status', value: waiting > 0 ? ['Needs your OK', 'Failed'] : ['Needs your OK', 'Failed', 'Done for you', 'Undone'] }]}
             initialVisibility={{ subject: false, confidence: false, from: false }}
             views={[
               { id: 'waiting', name: `Needs your OK${waiting ? ` (${waiting})` : ''}`, filters: [{ id: 'status', value: ['Needs your OK', 'Failed'] }] },

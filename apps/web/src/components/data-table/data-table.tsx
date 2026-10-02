@@ -90,7 +90,8 @@ export function DataTable<TData>({ table, onRowClick, emptyMessage = 'No results
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={cn(cell.column.columnDef.meta?.align === 'right' && 'text-right tabular-nums', cell.column.columnDef.meta?.className)}
+                      className={cn('max-w-72 truncate', cell.column.columnDef.meta?.align === 'right' && 'text-right tabular-nums', cell.column.columnDef.meta?.className)}
+                      title={typeof cell.getValue() === 'string' ? (cell.getValue() as string) : undefined}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
