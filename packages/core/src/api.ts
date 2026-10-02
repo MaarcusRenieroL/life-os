@@ -9,6 +9,7 @@ import type {
   TodayHabitEntry, CategoryInput, CategorizationRule, RuleInput, Merchant, TransactionFilters, TransactionInput, TrashedNote, WorkoutAnalytics, ExerciseCategory, Equipment, SubscriptionStatus,
 } from './models';
 import type { Dashboard, TodayItem, TrendPoint } from './types';
+import { createExtraApis } from './api-extra';
 
 export * from './models';
 
@@ -25,6 +26,7 @@ const zone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 export function createApis(client: Client) {
   const { get, post, put, patch, delete: del } = client;
   return {
+    ...createExtraApis(client),
     today: () => get<TodayItem[]>('/v1/core/today'),
     trends: (days = 365) => get<TrendPoint[]>('/v1/core/analytics/trends', { days, bucket: 'DAY' }),
     dashboard: () => get<Dashboard>('/v1/core/analytics/dashboard'),

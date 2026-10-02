@@ -1,65 +1,21 @@
-import { dayKey, shiftDay, type TrendPoint } from '@life-os/core';
 import { useState } from 'react';
-import { Text } from '@/text';
 
-import { Bars, Empty, money, Progress, Row, Screen, Seg, Stat, StatGrid, Pill } from '@/kit';
-import { useApi } from '@/lib/session';
-import { useAsync } from '@/lib/use-async';
-import { C } from '@/theme';
-import { ErrorNote, Panel, s } from '@/ui';
+import { Screen, Seg } from '@/kit';
+import { HistoryTab, RulesTab, TemplatesTab } from '@/modules/automation';
+import { InsightsTab, OverviewTab, PeriodTab, TrendsTab } from '@/modules/analytics';
 
-const RANGES = [{ id: 'week', label: 'This week' }, { id: 'trends', label: 'Trends' }] as const;
-
-/** Sums daily points into Monday-start weeks, oldest first. */
-function byWeek(points: TrendPoint[], weeks: number) {
-  const monday = (iso: string) => { const d = new Date(`${iso}T12:00:00`); return dayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7))); };
-  const start = monday(shiftDay(dayKey(new Date()), -7 * (weeks - 1)));
-  const map = new Map<string, { tasks: number; workouts: number; spending: number; habit: number[] }>();
-  for (const p of points) {
-    if (p.date < start) continue;
-    const key = monday(p.date);
-    const row = map.get(key) ?? { tasks: 0, workouts: 0, spending: 0, habit: [] };
-    row.tasks += p.tasksCompleted; row.workouts += p.workouts; row.spending += p.spending;
-    if (p.habitPct != null) row.habit.push(p.habitPct);
-    map.set(key, row);
-  }
-  return [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([week, r]) => ({ week, ...r, habitPct: r.habit.length ? r.habit.reduce((a, b) => a + b, 0) / r.habit.length : 0 }));
-}
+const TABS = [
+  { id: 'overview', label: 'Overview' }, { id: 'weekly', label: 'Weekly' }, { id: 'monthly', label: 'Monthly' }, { id: 'trends', label: 'Trends' },
+  { id: 'insights', label: 'Insights' }, { id: 'automation', label: 'Automation' }, { id: 'templates', label: 'Templates' }, { id: 'history', label: 'History' },
+] as const;
+type TabId = (typeof TABS)[number]['id'];
 
 export default function Analytics() {
-  const api = useApi();
-  const [range, setRange] = useState<'week' | 'trends'>('week');
-  const dash = useAsync(() => api.dashboard(), api);
-  const trends = useAsync(() => api.trends(120), api);
-  const w = dash.data?.week;
-  const weeks = byWeek(trends.data ?? [], 12);
+  const [tab, setTab] = useState<TabId>('overview');
   return (
-    <Screen title="Analytics" onRefresh={() => void Promise.all([dash.reload(), trends.reload()])} refreshing={dash.loading}>
-      <Seg tabs={RANGES} value={range} onChange={setRange} />
-      {dash.error && !dash.data ? <ErrorNote message={dash.error} onRetry={dash.reload} /> : null}
-      {range === 'week' ? (
-        <>
-          <Panel title={w ? `${w.from} → ${w.to}` : 'This week'}><StatGrid>
-            <Stat label="Tasks done" value={w?.tasksCompleted ?? '—'} sub={w ? `of ${w.tasksDue} due` : undefined} />
-            <Stat label="Habits" value={w?.habitConsistencyPct != null ? `${Math.round(w.habitConsistencyPct)}%` : '—'} />
-            <Stat label="Workouts" value={w?.workouts ?? '—'} sub={w ? `${w.workoutMinutes} min` : undefined} />
-            <Stat label="Spent" value={money(w?.spending)} sub={w?.previousSpending != null ? `last week ${money(w.previousSpending)}` : undefined} />
-            <Stat label="Applications" value={w?.applicationsApplied ?? '—'} sub={w ? `${w.interviews} interviews` : undefined} />
-            <Stat label="Mood" value={w?.averageMood != null ? w.averageMood.toFixed(1) : '—'} />
-          </StatGrid></Panel>
-          <Panel title="Spending by category">{w?.spendingByCategory.length ? <Bars rows={w.spendingByCategory.map((c) => ({ label: c.category, value: c.amount }))} format={(n) => money(n)} /> : <Empty>No spending recorded.</Empty>}</Panel>
-          <Panel title="Goals">{w?.goals.length ? w.goals.map((g) => <Progress key={g.name} label={g.name} pct={g.progressPct ?? 0} right={`${Math.round(g.progressPct ?? 0)}%${g.expectedPct != null ? ` / exp ${Math.round(g.expectedPct)}%` : ''}`} />) : <Empty>No active goals.</Empty>}</Panel>
-          {(dash.data?.anomalies.length ?? 0) > 0 ? <Panel title="Heads up">{dash.data!.anomalies.map((a) => <Row key={a.title}><Pill label={a.severity} color={a.severity === 'ALERT' ? C.magenta : C.gold} /><Text style={s.body}>{a.title}{'\n'}<Text style={{ color: C.muted, fontSize: 12 }}>{a.detail}</Text></Text></Row>)}</Panel> : null}
-          {(dash.data?.insights.length ?? 0) > 0 ? <Panel title="Insights">{dash.data!.insights.map((i) => <Row key={i.title}><Text style={s.body}>{i.title}{'\n'}<Text style={{ color: C.muted, fontSize: 12 }}>{i.detail}</Text></Text></Row>)}</Panel> : null}
-        </>
-      ) : (
-        <>
-          <Panel title="Tasks completed per week">{weeks.length ? <Bars rows={weeks.map((r) => ({ label: r.week, value: r.tasks }))} /> : <Empty>Not enough data yet.</Empty>}</Panel>
-          <Panel title="Habit consistency per week">{weeks.length ? <Bars rows={weeks.map((r) => ({ label: r.week, value: r.habitPct }))} format={(n) => `${Math.round(n)}%`} /> : <Empty>Not enough data yet.</Empty>}</Panel>
-          <Panel title="Workouts per week">{weeks.length ? <Bars rows={weeks.map((r) => ({ label: r.week, value: r.workouts }))} /> : <Empty>Not enough data yet.</Empty>}</Panel>
-          <Panel title="Spending per week">{weeks.length ? <Bars rows={weeks.map((r) => ({ label: r.week, value: r.spending }))} format={(n) => money(n)} /> : <Empty>Not enough data yet.</Empty>}</Panel>
-        </>
-      )}
+    <Screen title="Analytics">
+      <Seg tabs={TABS} value={tab} onChange={setTab} />
+      {tab === 'overview' ? <OverviewTab /> : tab === 'weekly' ? <PeriodTab period="WEEK" /> : tab === 'monthly' ? <PeriodTab period="MONTH" /> : tab === 'trends' ? <TrendsTab /> : tab === 'insights' ? <InsightsTab /> : tab === 'automation' ? <RulesTab /> : tab === 'templates' ? <TemplatesTab /> : <HistoryTab />}
     </Screen>
   );
 }

@@ -16,7 +16,7 @@ import { QuickCapture } from '@/quick-capture';
 import { SessionProvider, useSession } from '@/lib/session';
 import { C } from '@/theme';
 
-const SCREENS = ['index', 'quests', 'tasks', 'habits', 'calendar', 'goals', 'notes', 'workouts', 'finance', 'jobs', 'analytics', 'trophies', 'settings', 'more'] as const;
+const SCREENS = ['index', 'quests', 'tasks', 'habits', 'calendar', 'goals', 'notes', 'workouts', 'finance', 'jobs', 'analytics', 'trophies', 'settings', 'more', 'email', 'vault'] as const;
 
 function Shell() {
   const insets = useSafeAreaInsets();

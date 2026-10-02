@@ -1,7 +1,7 @@
 // The website's app shell on a phone: a sticky header (menu, ~/path, player chip, quick capture) and the
 // module sidebar as a slide-out sheet, in place of a bottom tab bar.
 import { useRouter, usePathname, type Href } from 'expo-router';
-import { Briefcase, Calendar as CalendarIcon, CalendarCheck, ChartNoAxesCombined, Dumbbell, Home as HomeIcon, ListChecks, ListTodo, LogOut, PanelLeft, Settings, StickyNote, Target, Trophy, Wallet, Zap, type LucideIcon } from 'lucide-react-native';
+import { Briefcase, Calendar as CalendarIcon, CalendarCheck, ChartNoAxesCombined, Dumbbell, Home as HomeIcon, ListChecks, ListTodo, LogOut, Mail, ShieldCheck, PanelLeft, Settings, StickyNote, Target, Trophy, Wallet, Zap, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, Dimensions, Modal, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,10 +18,12 @@ interface NavItem { label: string; href: string; icon: LucideIcon }
 export const NAV: NavItem[] = [
   { label: 'Home', href: '/', icon: HomeIcon },
   { label: 'Quests', href: '/quests', icon: CalendarCheck },
+  { label: 'Email', href: '/email', icon: Mail },
   { label: 'Tasks', href: '/tasks', icon: ListTodo },
   { label: 'Calendar', href: '/calendar', icon: CalendarIcon },
   { label: 'Job Tracker', href: '/jobs', icon: Briefcase },
   { label: 'Notes', href: '/notes', icon: StickyNote },
+  { label: 'Password Manager', href: '/vault', icon: ShieldCheck },
   { label: 'Finance', href: '/finance', icon: Wallet },
   { label: 'Habits', href: '/habits', icon: ListChecks },
   { label: 'Goals', href: '/goals', icon: Target },
