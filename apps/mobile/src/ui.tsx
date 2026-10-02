@@ -67,8 +67,8 @@ export function Xp({ value }: { value: number }) {
   );
 }
 
-export function Muted({ children, style }: { children: ReactNode; style?: object }) {
-  return <Text style={[{ color: C.muted, fontSize: 13 }, style]}>{children}</Text>;
+export function Muted({ children, style, numberOfLines }: { children: ReactNode; style?: object; numberOfLines?: number }) {
+  return <Text numberOfLines={numberOfLines} style={[{ color: C.muted, fontSize: 13 }, style]}>{children}</Text>;
 }
 
 export function ErrorNote({ message, onRetry }: { message: string; onRetry?: () => void }) {
