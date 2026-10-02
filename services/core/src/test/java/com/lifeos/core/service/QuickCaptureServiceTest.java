@@ -13,8 +13,8 @@ import com.lifeos.core.domains.record.QuickCaptureClassification.EventCapture;
 import com.lifeos.core.domains.record.QuickCaptureClassification.TaskCapture;
 import com.lifeos.core.domains.record.QuickCaptureResult;
 import com.lifeos.core.integration.QuickCaptureAiClient;
-import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -47,28 +47,29 @@ class QuickCaptureServiceTest {
   }
 
   @Test
-  void aTimedEventIsPlacedInIstAndRunsAnHourByDefault() {
-    classifiedAs(new QuickCaptureClassification("event", null, null, null, null, new EventCapture("Dentist", "2026-10-05", "17:00", null, null)));
+  void anAppointmentWithATimeIsATaskDueAtThatTime() {
+    classifiedAs(new QuickCaptureClassification("task", null, null, null, new TaskCapture("Dentist", "2026-10-05", "17:00", null), null));
 
-    service.capture(user, "dentist monday 5pm", false);
-
-    ArgumentCaptor<EmailAction> action = ArgumentCaptor.forClass(EmailAction.class);
-    verify(executor).execute(eq(user), action.capture());
-    assertThat(action.getValue().kind()).isEqualTo("EVENT");
-    assertThat(action.getValue().allDay()).isFalse();
-    assertThat(action.getValue().startAt()).isEqualTo(Instant.parse("2026-10-05T11:30:00Z"));
-    assertThat(action.getValue().endAt()).isEqualTo(Instant.parse("2026-10-05T12:30:00Z"));
-  }
-
-  @Test
-  void anEventWithoutADateIsKeptAsATaskRatherThanLost() {
-    classifiedAs(new QuickCaptureClassification("event", null, null, null, null, new EventCapture("Team dinner", null, null, null, null)));
-
-    QuickCaptureResult result = service.capture(user, "team dinner sometime", false);
+    QuickCaptureResult result = service.capture(user, "dentist monday 5pm", false);
 
     ArgumentCaptor<EmailAction> action = ArgumentCaptor.forClass(EmailAction.class);
     verify(executor).execute(eq(user), action.capture());
     assertThat(action.getValue().kind()).isEqualTo("TASK");
+    assertThat(action.getValue().dueDate()).isEqualTo(LocalDate.of(2026, 10, 5));
+    assertThat(action.getValue().dueTime()).isEqualTo(LocalTime.of(17, 0));
+    assertThat(result.module()).isEqualTo("task");
+  }
+
+  @Test
+  void aModelThatStillAnswersEventIsTreatedAsATask() {
+    classifiedAs(new QuickCaptureClassification("event", null, null, null, null, new EventCapture("Dentist", "2026-10-05", "17:00", null, null)));
+
+    QuickCaptureResult result = service.capture(user, "dentist monday 5pm", false);
+
+    ArgumentCaptor<EmailAction> action = ArgumentCaptor.forClass(EmailAction.class);
+    verify(executor).execute(eq(user), action.capture());
+    assertThat(action.getValue().kind()).isEqualTo("TASK");
+    assertThat(action.getValue().dueTime()).isEqualTo(LocalTime.of(17, 0));
     assertThat(result.module()).isEqualTo("task");
   }
 }
