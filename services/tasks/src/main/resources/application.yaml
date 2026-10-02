@@ -23,10 +23,10 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 jwt:
-  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+  secret: ${JWT_SECRET}
 
 internal:
-  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+  api-key: ${INTERNAL_API_KEY}
 
 # tasks doesn't use EncryptionService itself, but it's component-scanned in from
 # com.lifeos.common (see TasksApplication's @ComponentScan) and its constructor
@@ -53,6 +53,13 @@ habit-tracker:
 # workouts feeds a fitness goal's workout progress - see WorkoutStatsClient.
 workouts:
   internal-base-url: ${WORKOUTS_INTERNAL_BASE_URL:http://workouts:8011}
+
+# calendar and notes are told when a goal or task they reference is deleted - see CrossModuleCleanup.
+calendar:
+  internal-base-url: ${CALENDAR_INTERNAL_BASE_URL:http://calendar:8010}
+
+notes:
+  internal-base-url: ${NOTES_INTERNAL_BASE_URL:http://notes:8007}
 
 goals:
   sweep:

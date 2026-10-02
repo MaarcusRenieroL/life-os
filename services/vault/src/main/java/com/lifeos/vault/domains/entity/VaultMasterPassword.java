@@ -43,6 +43,14 @@ public class VaultMasterPassword {
   @Column(name = "strength")
   String strength;
 
+  /** PBKDF2 iterations the vault key was derived with; null on rows from before this was stored (65,536). */
+  @Column(name = "kdf_iterations")
+  Integer kdfIterations;
+
+  public int effectiveKdfIterations() {
+    return kdfIterations == null ? 65536 : kdfIterations;
+  }
+
   @CreationTimestamp
   @Column(name = "created_at")
   Instant createdAt;

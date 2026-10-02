@@ -1,5 +1,6 @@
 package com.lifeos.auth.domains.dto.request;
 
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.experimental.FieldDefaults;
@@ -8,5 +9,5 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class UpdateProfileRequest {
 
-  String name;
+  @Size(max = 100) String name;
 }

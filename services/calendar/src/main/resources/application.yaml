@@ -23,10 +23,10 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 jwt:
-  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+  secret: ${JWT_SECRET}
 
 internal:
-  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+  api-key: ${INTERNAL_API_KEY}
 
 # calendar doesn't use EncryptionService itself, but it's component-scanned in from
 # com.lifeos.common (see CalendarApplication's @ComponentScan) and its constructor

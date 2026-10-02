@@ -9,6 +9,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+  @ExceptionHandler(InvalidOAuthStateException.class)
+  public ResponseEntity<ApiResponse<Void>> handleInvalidOAuthState(InvalidOAuthStateException exception) {
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(exception.getMessage()));
+  }
+
   @ExceptionHandler(StatementParseException.class)
   public ResponseEntity<ApiResponse<Void>> handleStatementParse(StatementParseException exception) {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(exception.getMessage()));

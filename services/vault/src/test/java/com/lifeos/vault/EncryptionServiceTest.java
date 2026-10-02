@@ -124,4 +124,16 @@ class EncryptionServiceTest {
     assertThatThrownBy(() -> encryptionService.decrypt(tamperedCiphertext, encrypted.iv(), key))
         .isInstanceOf(RuntimeException.class);
   }
+
+  @Test
+  void keysDependOnTheIterationCountAndLegacyTwoArgumentDerivationMatchesTheOldCount() {
+    String salt = encryptionService.generateSalt();
+
+    SecretKey legacy = encryptionService.deriveKey("pw-for-iterations", salt);
+    SecretKey explicitLegacy = encryptionService.deriveKey("pw-for-iterations", salt, EncryptionService.LEGACY_ITERATIONS);
+    SecretKey stronger = encryptionService.deriveKey("pw-for-iterations", salt, 100_000);
+
+    assertThat(legacy.getEncoded()).isEqualTo(explicitLegacy.getEncoded());
+    assertThat(stronger.getEncoded()).isNotEqualTo(legacy.getEncoded());
+  }
 }

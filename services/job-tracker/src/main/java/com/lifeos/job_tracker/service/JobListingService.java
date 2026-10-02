@@ -140,9 +140,6 @@ public class JobListingService {
     if (hasText) {
       rawContent = "--- PAGE TEXT ---\n" + pastedText.trim();
     } else if (sourceUrl != null) {
-      if (!sourceUrl.startsWith("http://") && !sourceUrl.startsWith("https://")) {
-        throw new InvalidRequestException("Enter a full job URL starting with http:// or https://");
-      }
       rawContent = jobLinkFetcher.fetch(sourceUrl).content();
     } else {
       throw new InvalidRequestException("Provide a job link or paste the job description text");
@@ -194,6 +191,33 @@ public class JobListingService {
       return "https://www.linkedin.com/jobs/view/" + current.group(1) + "/";
     }
     return trimmed;
+  }
+
+  /**
+   * An application made outside the app (a job board's "Applied jobs" list): only what the list
+   * shows - company, title, place and date - and already APPLIED.
+   */
+  @Transactional
+  public JobListing createApplied(
+      UUID userId, String company, String title, String location, java.time.LocalDate appliedOn, String source) {
+    Company companyEntity = resolveCompany(userId, company);
+    JobListing job =
+        jobListingRepository.save(
+            JobListing.builder()
+                .userId(userId)
+                .companyId(companyEntity == null ? null : companyEntity.getId())
+                .title(title)
+                .company(company)
+                .location(location)
+                .source(source)
+                .ingestedBy(IngestSource.MANUAL)
+                .visaSponsorship(VisaSponsorship.UNKNOWN)
+                .status(JobStatus.APPLIED)
+                .appliedAt(appliedOn == null ? java.time.LocalDate.now() : appliedOn)
+                .parseStatus(ProcessingStatus.COMPLETED)
+                .build());
+    recordStatusChange(userId, job.getId(), null, job.getStatus());
+    return job;
   }
 
   /**

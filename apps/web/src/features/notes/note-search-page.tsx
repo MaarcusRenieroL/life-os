@@ -19,8 +19,10 @@ function highlight(excerpt: string, rawQuery: string): string {
   const term = rawQuery.replace(/\b(tag|folder|before|after|is):\S+/gi, '').trim();
   if (!term) return escapeHtml(excerpt);
   const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`(${escapedTerm})`, 'ig');
-  return escapeHtml(excerpt).replace(pattern, '<mark>$1</mark>');
+  // Split first, escape each piece after: matching on already-escaped text would let a search for
+  // "amp" or "lt" land inside an entity such as &amp; and break it.
+  const pieces = excerpt.split(new RegExp(`(${escapedTerm})`, 'i'));
+  return pieces.map((piece, i) => (i % 2 === 1 ? `<mark>${escapeHtml(piece)}</mark>` : escapeHtml(piece))).join('');
 }
 
 export function NoteSearchPage() {

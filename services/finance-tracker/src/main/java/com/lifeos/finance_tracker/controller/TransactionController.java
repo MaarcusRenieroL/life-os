@@ -1,5 +1,6 @@
 package com.lifeos.finance_tracker.controller;
 
+import com.lifeos.common.web.Bounds;
 import com.lifeos.common.domains.dto.response.ApiResponse;
 import com.lifeos.finance_tracker.domains.dto.request.CategorizeTransactionRequest;
 import com.lifeos.finance_tracker.domains.dto.request.CreateTransactionRequest;
@@ -48,7 +49,7 @@ public class TransactionController {
     return ResponseEntity.ok(
         ApiResponse.success(
             transactionService.getAllPaginated(
-                authentication, page, size, search, status, categoryId, sourceType),
+                authentication, Bounds.page(page), Bounds.size(size, 500), search, status, categoryId, sourceType),
             "Transactions fetched successfully"));
   }
 

@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, ExpandedState } from '@tanstack/react-table';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { calendarApi } from '@/features/calendar/calendar-api';
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TableQuest } from '@/features/player/table-quest';
 
 import { isOverdue, OverdueBadge, PriorityBadge, RecurringIcon, StatusBadge } from './task-badges';
 import { SubtaskRows } from './subtask-rows';
@@ -47,6 +48,7 @@ export function TaskList({ tasks, isLoading, emptyMessage, onEdit, invalidateKey
   const [subtaskFormOpen, setSubtaskFormOpen] = useState(false);
 
   const topLevel = useMemo(() => tasks.filter((t) => !t.parentTaskId), [tasks]);
+  const hadOpen = useRef(false);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -204,7 +206,7 @@ export function TaskList({ tasks, isLoading, emptyMessage, onEdit, invalidateKey
       },
       {
         accessorKey: 'title',
-        meta: { title: 'Task', filter: { type: 'text' } },
+        meta: { title: 'Task', filter: { type: 'text' }, edit: { type: 'text' } },
         cell: ({ row }) => {
           const task = row.original;
           return (
@@ -232,18 +234,18 @@ export function TaskList({ tasks, isLoading, emptyMessage, onEdit, invalidateKey
       {
         id: 'priority',
         accessorFn: (t) => TASK_PRIORITY_LABELS[t.priority],
-        meta: { title: 'Priority', filter: { type: 'select', options: TASK_PRIORITIES.map((p) => ({ value: TASK_PRIORITY_LABELS[p], label: TASK_PRIORITY_LABELS[p] })) } },
+        meta: { title: 'Priority', filter: { type: 'select', options: TASK_PRIORITIES.map((p) => ({ value: TASK_PRIORITY_LABELS[p], label: TASK_PRIORITY_LABELS[p] })) }, edit: { type: 'select', options: TASK_PRIORITIES.map((p) => ({ value: p, label: TASK_PRIORITY_LABELS[p] })), value: (t) => t.priority } },
         cell: ({ row }) => <PriorityBadge priority={row.original.priority} />,
       },
       {
         id: 'status',
         accessorFn: (t) => TASK_STATUS_LABELS[t.status],
-        meta: { title: 'Status', filter: { type: 'select', options: TASK_STATUSES.map((st) => ({ value: TASK_STATUS_LABELS[st], label: TASK_STATUS_LABELS[st] })) } },
+        meta: { title: 'Status', filter: { type: 'select', options: TASK_STATUSES.map((st) => ({ value: TASK_STATUS_LABELS[st], label: TASK_STATUS_LABELS[st] })) }, edit: { type: 'select', options: TASK_STATUSES.map((st) => ({ value: st, label: TASK_STATUS_LABELS[st] })), value: (t) => t.status } },
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'dueDate',
-        meta: { title: 'Due', filter: { type: 'date' } },
+        meta: { title: 'Due', filter: { type: 'date' }, edit: { type: 'date' } },
         cell: ({ row }) => (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {row.original.dueDate ?? '—'}
@@ -324,13 +326,30 @@ export function TaskList({ tasks, isLoading, emptyMessage, onEdit, invalidateKey
     );
   }
 
+  // Show the quest once there has been something open to clear, and keep it up while the last one is ticked off.
+  if (topLevel.some((t) => t.status !== 'DONE')) hadOpen.current = true;
+
   if (topLevel.length === 0) {
     return <p className="mt-6 text-sm text-muted-foreground">{emptyMessage}</p>;
   }
 
   return (
     <>
+      {hadOpen.current && (
+        <TableQuest title="Clear your quests" done={topLevel.filter((t) => t.status === 'DONE').length} total={topLevel.length} unit="tasks" doneText="All quests cleared" />
+      )}
       <DataGrid
+        drawerTitle={(t) => t.title}
+        onEditRow={async (t, changes) => {
+          await tasksApi.update(t.id, {
+            ...(changes.title ? { title: String(changes.title) } : {}),
+            ...(changes.priority ? { priority: changes.priority as TaskPriority } : {}),
+            ...(changes.status ? { status: changes.status as TaskStatus } : {}),
+            ...('dueDate' in changes ? { dueDate: changes.dueDate === null ? undefined : String(changes.dueDate) } : {}),
+          });
+          for (const key of invalidateKeys) void queryClient.invalidateQueries({ queryKey: key });
+          void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        }}
         tableId="tasks.list"
         data={topLevel}
         columns={columns}

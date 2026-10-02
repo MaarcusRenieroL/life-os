@@ -107,18 +107,24 @@ class FinanceOverviewTest {
   }
 
   @Test
-  void aSalarySizedCreditOnTheThirtiethSuggestsStartingTheCycleThere() {
-    when(settingsRepository.findById(userId)).thenReturn(Optional.of(UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).payCycleStartDay(1).build()));
-    salaryOn("2026-09-30T04:00:00Z", "125000");
+  void aSalarySizedCreditOnAFixedDaySuggestsStartingTheCycleThere() {
+    when(settingsRepository.findById(userId)).thenReturn(Optional.of(UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).payCycleStartDay(1).payCycleAuto(false).build()));
+    salaryOn("2026-09-25T04:00:00Z", "125000");
 
-    FinanceOverview o = service.getOverview(principal);
+    assertThat(service.getOverview(principal).suggestedPayCycleStartDay()).isEqualTo(25);
+  }
 
-    assertThat(o.suggestedPayCycleStartDay()).isEqualTo(28);
+  @Test
+  void aSalarySizedCreditOnTheLastWorkingDaySuggestsThatRatherThanAFixedDay() {
+    when(settingsRepository.findById(userId)).thenReturn(Optional.of(UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).payCycleStartDay(1).payCycleAuto(false).build()));
+    salaryOn("2026-09-30T04:00:00Z", "125000"); // a Wednesday, the last weekday of September
+
+    assertThat(service.getOverview(principal).suggestedPayCycleStartDay()).isZero();
   }
 
   @Test
   void aSmallCreditIsNotMistakenForSalary() {
-    when(settingsRepository.findById(userId)).thenReturn(Optional.of(UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).payCycleStartDay(1).build()));
+    when(settingsRepository.findById(userId)).thenReturn(Optional.of(UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).payCycleStartDay(1).payCycleAuto(false).build()));
     salaryOn("2026-09-30T04:00:00Z", "2500");
 
     assertThat(service.getOverview(principal).suggestedPayCycleStartDay()).isNull();
@@ -129,7 +135,7 @@ class FinanceOverviewTest {
     when(settingsRepository.findById(userId)).thenReturn(Optional.of(UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).payCycleStartDay(28).build()));
     assertThat(service.getOverview(principal).suggestedPayCycleStartDay()).isNull();
 
-    when(settingsRepository.findById(userId)).thenReturn(Optional.of(UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).payCycleStartDay(1).build()));
+    when(settingsRepository.findById(userId)).thenReturn(Optional.of(UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).payCycleStartDay(1).payCycleAuto(false).build()));
     salaryOn("2026-09-30T20:00:00Z", "125000"); // 1 Oct 01:30 IST
     assertThat(service.getOverview(principal).suggestedPayCycleStartDay()).isNull();
   }
@@ -157,5 +163,18 @@ class FinanceOverviewTest {
     when(subscriptionRepository.findAllByUserIdOrderByNextBillingDateAsc(userId)).thenReturn(List.of(due, past, later, cancelled));
 
     assertThat(service.getOverview(principal).upcomingBills()).isEqualByComparingTo("649");
+  }
+
+  @Test
+  void untilPaydayIsChosenByHandTheCycleFollowsTheSalaryAutomatically() {
+    UserFinanceSettings settings = UserFinanceSettings.builder().userId(userId).monthlyIncome(new BigDecimal("125000")).build();
+    when(settingsRepository.findById(userId)).thenReturn(Optional.of(settings));
+    salaryOn("2026-09-30T04:00:00Z", "125000"); // the last weekday of September
+
+    FinanceOverview o = service.getOverview(principal);
+
+    assertThat(settings.getPayCycleStartDay()).isZero();
+    assertThat(o.payCycleStartDay()).isZero();
+    assertThat(o.suggestedPayCycleStartDay()).isNull();
   }
 }

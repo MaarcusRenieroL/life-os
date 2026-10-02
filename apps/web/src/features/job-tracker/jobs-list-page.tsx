@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select';
 
 import { AttachLinkDialog } from './attach-link-dialog';
+import { ImportApplicationsDialog } from './import-applications-dialog';
 import { FitScoreBadge } from './fit-score-badge';
 import { jobApi } from './job-api';
 import { JOB_STATUS_LABELS, JOB_STATUSES, type JobListing, type JobStatus } from './types';
@@ -28,6 +29,7 @@ export function JobsListPage() {
 
   const { confirm, dialog } = useConfirmDialog();
   const [linkFor, setLinkFor] = useState<JobListing | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['jobs'] });
@@ -198,9 +200,12 @@ export function JobsListPage() {
         <h1 className="text-2xl font-semibold tracking-tight">
           Jobs <span className="text-muted-foreground">({jobs.length})</span>
         </h1>
-        <Button asChild>
-          <Link to="/jobs/discovery"><Plus /> Add a job</Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>Import applied jobs</Button>
+          <Button asChild>
+            <Link to="/jobs/discovery"><Plus /> Add a job</Link>
+          </Button>
+        </div>
       </div>
 
       {!isLoading && jobs.length === 0 ? (
@@ -273,6 +278,14 @@ export function JobsListPage() {
           />
         </div>
       )}
+      <ImportApplicationsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={(created) => {
+          invalidate();
+          toast.success(`Imported ${created} application${created === 1 ? '' : 's'}`);
+        }}
+      />
       <AttachLinkDialog
         job={linkFor}
         open={linkFor !== null}

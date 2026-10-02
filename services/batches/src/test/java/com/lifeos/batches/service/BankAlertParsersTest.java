@@ -120,7 +120,7 @@ class BankAlertParsersTest {
   }
 
   @Test
-  void aCanaraLoanCreditHasNoDateSoTheDayItArrivedIsUsed() {
+  void aCanaraLoanCreditIsARepaymentOutOfTheAccountWithTheDayItArrived() {
     ParsedAlert alert =
         canara.parse(
             "m8",
@@ -130,8 +130,9 @@ class BankAlertParsersTest {
             Instant.parse("2026-09-30T20:00:00Z")); // 1 Oct 01:30 IST
 
     assertThat(alert.amount()).isEqualByComparingTo("4681.00");
-    assertThat(alert.type()).isEqualTo(TransactionType.CREDIT);
-    assertThat(alert.accountSuffix()).isEqualTo("4689");
+    assertThat(alert.type()).isEqualTo(TransactionType.DEBIT);
+    assertThat(alert.accountSuffix()).isNull();
+    assertThat(alert.description()).isEqualTo("Loan repayment (loan a/c 4689)");
     assertThat(alert.transactionDate()).isEqualTo(Instant.parse("2026-09-30T18:30:00Z")); // 1 Oct midnight IST
   }
 
@@ -199,5 +200,40 @@ class BankAlertParsersTest {
   void plainTextCollapsesTagsEntitiesAndWhitespace() {
     assertThat(AlertFormat.plainText("<div>Rs.&nbsp;1,000 \u00a0 debited</div>\r\n<style>x{}</style>from A/c")).isEqualTo("Rs. 1,000 debited from A/c");
     assertThat(AlertFormat.plainText(null)).isEmpty();
+  }
+
+  @Test
+  void hdfcSuccessfullyCreditedMailWithSenderBlockIsRead() {
+    GmailAlertParsingService service = new GmailAlertParsingService(java.util.List.of(canara, card, salary));
+
+    ParsedAlert alert =
+        service.parse(
+            "m20",
+            "alerts@hdfcbank.bank.in",
+            "View: Account update for your HDFC Bank A/c",
+            "<style>@media screen { table { width: 100%; } }</style><p>Dear Customer, Greetings from HDFC Bank! We're writing to inform you that Rs.9000.00 has been successfully credited to your HDFC Bank account ending in 2277.</p>"
+                + "<p>Transaction Details: a. Date: 06-07-26 b. Sender: MAARCUS RENIERO LAZA (VPA: maarcusreniero@okaxis) c. UPI Reference No.: 618745865696 Need Help? India</p>",
+            NOW);
+
+    assertThat(alert.type().name()).isEqualTo("CREDIT");
+    assertThat(alert.amount()).isEqualByComparingTo("9000.00");
+    assertThat(alert.accountSuffix()).isEqualTo("2277");
+    assertThat(alert.description()).isEqualTo("MAARCUS RENIERO LAZA (maarcusreniero@okaxis)");
+  }
+
+  @Test
+  void hdfcDebitCardAtmWithdrawalIsADebitWithoutTheCardDigits() {
+    ParsedAlert alert =
+        salary.parse(
+            "m21",
+            "alerts@hdfcbank.bank.in",
+            "View: Account update for your HDFC Bank A/c",
+            "Dear Card Holder, Thank you for using your HDFC Bank Debit Card ending 5480 for ATM withdrawal for Rs 19600.00 in CHENGALPATTU at SEMBAKKAM BRANCH on 06-07-2026 10:18:17. After the above transaction, the total available balance on your card is Rs 3883.47.",
+            NOW);
+
+    assertThat(alert.type().name()).isEqualTo("DEBIT");
+    assertThat(alert.amount()).isEqualByComparingTo("19600.00");
+    assertThat(alert.accountSuffix()).isNull();
+    assertThat(alert.description()).isEqualTo("ATM withdrawal - CHENGALPATTU at SEMBAKKAM BRANCH");
   }
 }

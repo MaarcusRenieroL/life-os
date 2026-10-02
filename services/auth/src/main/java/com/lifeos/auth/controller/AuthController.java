@@ -4,6 +4,7 @@ import com.lifeos.auth.domains.dto.request.BiometricLoginRequest;
 import com.lifeos.auth.domains.dto.request.CreateChallengeRequest;
 import com.lifeos.auth.domains.dto.request.EnrollBiometricRequest;
 import com.lifeos.auth.domains.dto.request.LogoutRequest;
+import com.lifeos.auth.domains.dto.request.PasswordRequest;
 import com.lifeos.auth.domains.dto.request.RefreshRequest;
 import com.lifeos.auth.domains.dto.request.UpdateProfileRequest;
 import com.lifeos.auth.domains.dto.request.UserLoginRequest;
@@ -54,7 +55,7 @@ public class AuthController {
 
   @PutMapping("/me")
   public ResponseEntity<ApiResponse<UserProfileResponse>> updateMe(
-      Authentication authentication, @RequestBody UpdateProfileRequest request) {
+      Authentication authentication, @Valid @RequestBody UpdateProfileRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
 
     return ResponseEntity.ok(
@@ -62,9 +63,20 @@ public class AuthController {
             userService.updateProfile(userId, request.getName()), "Profile updated successfully"));
   }
 
+  /** Lets the client check the password before it starts deleting data in other services. */
+  @PostMapping("/me/verify-password")
+  public ResponseEntity<ApiResponse<Void>> verifyPassword(
+      Authentication authentication, @Valid @RequestBody PasswordRequest request) {
+    authService.verifyPassword((UUID) authentication.getPrincipal(), request.getPassword());
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Password confirmed"));
+  }
+
   @DeleteMapping("/me")
-  public ResponseEntity<ApiResponse<Void>> deleteAccount(Authentication authentication) {
+  public ResponseEntity<ApiResponse<Void>> deleteAccount(
+      Authentication authentication, @Valid @RequestBody PasswordRequest request) {
     UUID userId = (UUID) authentication.getPrincipal();
+    authService.verifyPassword(userId, request.getPassword());
     accountService.deleteAccount(userId);
 
     return ResponseEntity.ok(ApiResponse.success(null, "Account deleted successfully"));
@@ -152,7 +164,7 @@ public class AuthController {
 
   @PostMapping("/biometric/enroll")
   public ResponseEntity<ApiResponse<Void>> enrollBiometric(
-      Authentication authentication, @RequestBody EnrollBiometricRequest enrollBiometricRequest) {
+      Authentication authentication, @Valid @RequestBody EnrollBiometricRequest enrollBiometricRequest) {
 
     UUID userId = (UUID) authentication.getPrincipal();
 
@@ -167,7 +179,7 @@ public class AuthController {
 
   @PostMapping("/biometric/challenge")
   public ResponseEntity<ApiResponse<ChallengeResponse>> createChallenge(
-      @RequestBody CreateChallengeRequest createChallengeRequest) {
+      @Valid @RequestBody CreateChallengeRequest createChallengeRequest) {
     return ResponseEntity.ok(
         ApiResponse.success(
             authService.createChallenge(createChallengeRequest.getDeviceId()),
@@ -176,7 +188,7 @@ public class AuthController {
 
   @PostMapping("/biometric/login")
   public ResponseEntity<ApiResponse<AuthResponse>> biometricLogin(
-      @RequestBody BiometricLoginRequest biometricLoginRequest) {
+      @Valid @RequestBody BiometricLoginRequest biometricLoginRequest) {
     AuthResponse authResponse =
         authService.biometricLogin(
             biometricLoginRequest.getDeviceId(),

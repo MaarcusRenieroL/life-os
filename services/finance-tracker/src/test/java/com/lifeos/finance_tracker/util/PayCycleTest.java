@@ -46,7 +46,7 @@ class PayCycleTest {
   @Test
   void theStartDayIsClampedToSomethingEveryMonthHas() {
     assertThat(PayCycle.clamp(31)).isEqualTo(28);
-    assertThat(PayCycle.clamp(0)).isEqualTo(1);
+    assertThat(PayCycle.clamp(-3)).isEqualTo(1);
     assertThat(PayCycle.containing(LocalDate.of(2026, 2, 28), 31).firstDay()).isEqualTo(LocalDate.of(2026, 2, 28));
   }
 
@@ -60,5 +60,21 @@ class PayCycleTest {
   @Test
   void keyIsTheFirstDay() {
     assertThat(PayCycle.containing(LocalDate.of(2026, 9, 26), 25).key()).isEqualTo("2026-09-25");
+  }
+
+  @Test
+  void aCycleStartingOnTheLastWorkingDayFollowsTheWeekdayThatMonthEndsOn() {
+    // 31 Aug 2026 is a Monday and 30 Sep a Wednesday, so those are the paydays.
+    PayCycle.Window w = PayCycle.containing(LocalDate.of(2026, 9, 10), PayCycle.LAST_WORKING_DAY);
+    assertThat(w.firstDay()).isEqualTo(LocalDate.of(2026, 8, 31));
+    assertThat(w.lastDay()).isEqualTo(LocalDate.of(2026, 9, 29));
+    // payday itself belongs to the new cycle, the day before to the old one
+    assertThat(PayCycle.containing(LocalDate.of(2026, 9, 30), PayCycle.LAST_WORKING_DAY).firstDay()).isEqualTo(LocalDate.of(2026, 9, 30));
+    assertThat(PayCycle.containing(LocalDate.of(2026, 9, 29), PayCycle.LAST_WORKING_DAY).firstDay()).isEqualTo(LocalDate.of(2026, 8, 31));
+    // October ends on a Saturday (31st), so payday is Fri 30 Oct and the cycle runs to 29 Oct
+    PayCycle.Window oct = PayCycle.containing(LocalDate.of(2026, 10, 5), PayCycle.LAST_WORKING_DAY);
+    assertThat(oct.firstDay()).isEqualTo(LocalDate.of(2026, 9, 30));
+    assertThat(oct.lastDay()).isEqualTo(LocalDate.of(2026, 10, 29));
+    assertThat(PayCycle.clamp(0)).isZero();
   }
 }

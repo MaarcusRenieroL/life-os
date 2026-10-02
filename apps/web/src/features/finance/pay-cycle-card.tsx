@@ -9,6 +9,9 @@ import { analyticsApi } from './analytics-api';
 import { formatINR } from './utils';
 
 const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th'}`;
+/** 0 is stored for "the last working day of the month". */
+const LAST_WORKING_DAY = 0;
+const payday = (day: number) => (day === LAST_WORKING_DAY ? 'last working day' : `${ordinal(day)}`);
 const short = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
 /**
@@ -43,10 +46,11 @@ export function PayCycleCard() {
           </p>
         </div>
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          Month starts on the
+          I get my salary on the
           <Select value={String(overview.payCycleStartDay)} onValueChange={(v) => void setDay(Number(v))} disabled={saving}>
-            <SelectTrigger size="sm" className="w-20"><SelectValue /></SelectTrigger>
+            <SelectTrigger size="sm" className="w-44"><SelectValue>{payday(overview.payCycleStartDay)}</SelectValue></SelectTrigger>
             <SelectContent>
+              <SelectItem value={String(LAST_WORKING_DAY)}>Last working day</SelectItem>
               {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                 <SelectItem key={d} value={String(d)}>{ordinal(d)}</SelectItem>
               ))}
@@ -55,11 +59,11 @@ export function PayCycleCard() {
         </label>
       </div>
 
-      {overview.suggestedPayCycleStartDay && (
+      {overview.suggestedPayCycleStartDay != null && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-          <span>Your salary landed on the {ordinal(overview.suggestedPayCycleStartDay)}. Start each month then, so spending after payday counts toward the next cycle?</span>
+          <span>Your salary landed on the {payday(overview.suggestedPayCycleStartDay)}. Start each month then, so spending after payday counts toward the next cycle?</span>
           <Button size="sm" onClick={() => void setDay(overview.suggestedPayCycleStartDay!)} disabled={saving}>
-            Start months on the {ordinal(overview.suggestedPayCycleStartDay)}
+            Start months on the {payday(overview.suggestedPayCycleStartDay)}
           </Button>
         </div>
       )}

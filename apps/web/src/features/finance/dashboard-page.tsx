@@ -2,11 +2,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { EmptyState } from '@/components/empty-state';
 import { SectionHeading } from '@/components/section-heading';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { getErrorMessage } from '@/lib/error';
 
 import { accountApi } from './account-api';
 import { analyticsApi } from './analytics-api';
@@ -48,7 +50,8 @@ export function FinanceDashboardPage() {
 
   const comparisons = useCategoryComparisons(categories);
 
-  const [editingIncome, setEditingIncome] = useState(false);
+  // "Set salary" in the setup checklist links here with #salary, so the field is already open.
+  const [editingIncome, setEditingIncome] = useState(() => window.location.hash === '#salary');
   const [incomeInput, setIncomeInput] = useState('');
 
   const totalIncome = summary?.totalIncome ?? null;
@@ -142,11 +145,20 @@ export function FinanceDashboardPage() {
   }, [needsReviewCount, budgetRows, upcomingRenewals]);
 
   async function saveIncome() {
-    const value = Number(incomeInput);
-    if (Number.isNaN(value)) return;
-    await analyticsApi.updateMonthlyIncome(value);
+    const value = Number(incomeInput.replace(/[,\s₹]/g, ''));
+    if (incomeInput.trim() === '' || !Number.isFinite(value) || value < 0) {
+      toast.error('Enter your monthly salary as a number, for example 125000.');
+      return;
+    }
+    try {
+      await analyticsApi.updateMonthlyIncome(value);
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not save your salary. Please try again.'));
+      return;
+    }
     setEditingIncome(false);
-    queryClient.invalidateQueries({ queryKey: ['finance', 'dashboard'] });
+    toast.success('Salary saved');
+    void queryClient.invalidateQueries({ queryKey: ['finance'] });
   }
 
   if (!summary) {
@@ -193,7 +205,9 @@ export function FinanceDashboardPage() {
             <div className="mt-1 flex gap-1">
               <Input
                 autoFocus
-                type="number"
+                type="text"
+                inputMode="decimal"
+                placeholder="Monthly salary"
                 value={incomeInput}
                 onChange={(e) => setIncomeInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -204,6 +218,8 @@ export function FinanceDashboardPage() {
               />
               <Button size="sm" onClick={() => void saveIncome()}>Save</Button>
             </div>
+          ) : fixedMonthlyIncome == null ? (
+            <Button size="sm" className="mt-1" onClick={() => { setEditingIncome(true); setIncomeInput(''); }}>Set your salary</Button>
           ) : (
             <div className="text-xl font-semibold">{formatINR(effectiveIncome)}</div>
           )}

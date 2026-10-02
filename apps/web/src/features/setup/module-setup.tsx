@@ -63,13 +63,17 @@ export const MODULE_SETUP: Record<string, ModuleSetupDef> = {
       const mailbox = useMailbox('FINANCE');
       const { data: dashboard, isLoading: dashboardLoading } = useQuery({ queryKey: ['finance', 'dashboard'], queryFn: analyticsApi.getDashboardSummary, staleTime: LONG });
       const budgets = useHasAny(['finance', 'budgets'], budgetApi.getBudgets);
+      const ownerNames = useHasAny(['finance', 'owner-names'], analyticsApi.getOwnerNames);
+      const { data: overview, isLoading: overviewLoading } = useQuery({ queryKey: ['finance', 'overview'], queryFn: analyticsApi.getOverview, staleTime: LONG });
       return {
-        loading: accounts.loading || mailbox.loading || dashboardLoading || budgets.loading,
+        loading: accounts.loading || mailbox.loading || dashboardLoading || budgets.loading || ownerNames.loading || overviewLoading,
         steps: [
           { id: 'accounts', title: 'Add your accounts', detail: 'Savings, cards, wallets. Enter what each holds today as its opening balance.', done: accounts.has, to: '/finance/accounts', cta: 'Add an account' },
-          { id: 'salary', title: 'Set your salary', detail: 'It drives your savings rate and "safe to spend". Set the day it lands and each month starts then.', done: dashboard?.fixedMonthlyIncome != null, to: '/finance/dashboard', cta: 'Set salary' },
+          { id: 'salary', title: 'Set your salary', detail: 'It drives your savings rate and "safe to spend". Set the day it lands and each month starts then.', done: dashboard?.fixedMonthlyIncome != null, to: '/finance/dashboard#salary', cta: 'Set salary' },
+          { id: 'payday', title: 'Tell Life OS when you get paid', detail: 'A fixed day, or the last working day of the month. Each money month then runs from payday to the day before the next one.', done: overview != null && overview.payCycleStartDay !== 1, to: '/finance/dashboard', cta: 'Set payday', optional: true },
           { id: 'mailbox', title: 'Connect the Gmail that gets bank alerts', detail: 'Debit and credit alerts are read automatically so you never type a transaction.', done: mailbox.connected, to: '/settings#integrations', cta: 'Connect Gmail', optional: true },
           { id: 'budget', title: 'Create a budget', detail: 'Cap a category, such as food. You are alerted once when you near it.', done: budgets.has, to: '/finance/budgets', cta: 'New budget', optional: true },
+          { id: 'names', title: 'Tell Life OS your name', detail: 'Transfers between your own accounts mention your name on the statement. List the spellings so they are not counted as spending.', done: ownerNames.has, to: '/finance/accounts', cta: 'Add your name', optional: true },
         ],
       };
     },

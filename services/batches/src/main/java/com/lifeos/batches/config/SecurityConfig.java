@@ -27,7 +27,7 @@ public class SecurityConfig {
             request ->
                 request
                     .requestMatchers(
-                        "/error", "/v1/batches/gmail/connect", "/v1/batches/gmail/callback")
+                        "/error", "/v1/batches/gmail/callback")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

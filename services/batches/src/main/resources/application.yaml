@@ -28,10 +28,10 @@ spring:
       table-prefix: batches_schema.BATCH_
 
 jwt:
-  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+  secret: ${JWT_SECRET}
 
 internal:
-  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+  api-key: ${INTERNAL_API_KEY}
 
 vault:
   internal-base-url: ${VAULT_INTERNAL_BASE_URL:http://vault:8002}
@@ -62,8 +62,13 @@ gmail:
   job-search:
     # Known job-board/ATS senders, checked with OR against a subject-keyword fallback for
     # arbitrary company domains - see JobEmailSyncService for why this can't be sender-only.
-    senders: ${GMAIL_JOB_SEARCH_SENDERS:jobalerts-noreply@linkedin.com,jobs-noreply@linkedin.com,jobs-noreply@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
+    senders: ${GMAIL_JOB_SEARCH_SENDERS:jobalerts-noreply@linkedin.com,jobs-noreply@linkedin.com,jobs-noreply@naukri.com,info@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
     subject-keywords: ${GMAIL_JOB_SEARCH_KEYWORDS:application,applied,interview,offer,not moving forward,not selected,moving forward,thank you for applying,thanks for applying,update on your application}
+  # The inbox hub reads only bills, banks and bookings: subject keywords plus any named senders.
+  email-hub:
+    senders: ${GMAIL_HUB_SENDERS:}
+    subject-keywords: ${GMAIL_HUB_KEYWORDS:invoice,bill,receipt,statement,payment,booking,reservation,confirmation,order,due,renewal,subscription,ticket,appointment}
+    blocked-domains: ${GMAIL_HUB_BLOCKED_DOMAINS:successfactors.com,join.com,jobgether.com,sysvine.com,ambitionbox.com}
   poll:
     cron: ${GMAIL_POLL_CRON:0 */30 * * * *}
 

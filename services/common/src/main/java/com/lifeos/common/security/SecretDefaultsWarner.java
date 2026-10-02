@@ -29,7 +29,9 @@ public class SecretDefaultsWarner implements ApplicationRunner {
       Set.of(
           "TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=", // old shared JWT_SECRET
           "wwJvw6iKu4JYUQqc371t2ZDi0ReptRWQ7GDIc2Zs7WM=", // old shared ENCRYPTION_SECRET
-          "H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA="); // old shared INTERNAL_API_KEY
+          "H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=", // old shared INTERNAL_API_KEY
+          "zjQIMjy7Pp+dEPaXnwwFqETV64YQSQBYJYelXbSi5qc=", // old docker-compose GMAIL_ENCRYPTION_SECRET default
+          "FNhRh4Cv3lxh2B68n9ffJUW+r9R65CpKcZEpjte16UE="); // old docker-compose FINANCE_ENCRYPTION_SECRET default
 
   @Value("${spring.application.name:service}")
   private String serviceName;

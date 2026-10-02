@@ -60,7 +60,8 @@ class TransactionServiceTest {
             merchantService,
             budgetSpendService,
             accountBalanceService,
-            accountResolver);
+            accountResolver,
+            org.mockito.Mockito.mock(OwnNameService.class));
 
     lenient().when(categorizationService.categorize(any(Transaction.class))).thenReturn(Optional.empty());
     lenient()

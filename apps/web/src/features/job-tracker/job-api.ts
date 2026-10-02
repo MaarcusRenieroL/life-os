@@ -1,6 +1,8 @@
 import { api, unwrap } from '@/lib/api-client';
 
 import type {
+  ImportCandidate,
+  ImportItem,
   AiUsageSummary,
   EmailEvent,
   Interview,
@@ -36,6 +38,16 @@ export const jobApi = {
    */
   fromLink(url: string, jobDescriptionText?: string): Promise<JobListing> {
     return unwrap(api.post(`${baseUrl}/from-link`, { url, jobDescriptionText }));
+  },
+
+  /** Reads applications out of text pasted from a job board's Applied jobs page. Saves nothing. */
+  previewImport(text: string): Promise<ImportCandidate[]> {
+    return unwrap(api.post(`${baseUrl}/import/preview`, { text }));
+  },
+
+  /** Saves the confirmed rows as APPLIED jobs; rows already tracked are skipped. */
+  importApplied(source: string, items: ImportItem[]): Promise<{ created: number; skipped: number }> {
+    return unwrap(api.post(`${baseUrl}/import`, { source, items }));
   },
 
   /** Fills in a job created from an email (company + title only) from its posting link, then rescores it. */

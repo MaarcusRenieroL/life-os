@@ -99,6 +99,11 @@ public class SessionService {
         .collect(Collectors.toMap(Map.Entry::getKey, e -> new GoalWorkoutStatsResponse(e.getValue()[0], e.getValue()[1])));
   }
 
+  /** The goal was deleted elsewhere: its workouts stay in the history without a goal. */
+  public int detachGoal(UUID userId, UUID goalId) {
+    return sessionRepository.clearGoal(userId, goalId);
+  }
+
   // ---- lifecycle ----
 
   public SessionDetailResponse start(UUID userId, StartSessionRequest request) {

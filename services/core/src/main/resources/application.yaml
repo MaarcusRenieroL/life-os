@@ -29,10 +29,10 @@ spring:
       port: ${REDIS_PORT:6379}
 
 jwt:
-  secret: ${JWT_SECRET:TTdGFPf9lbnQ3J3GBU8MnwQfp3oaawcBzf9LlBJpqlE=}
+  secret: ${JWT_SECRET}
 
 internal:
-  api-key: ${INTERNAL_API_KEY:H5A1u/lQOivHU+ziG0/oEWUa2oF3uXdZVmuYZH8siFA=}
+  api-key: ${INTERNAL_API_KEY}
 
 # Fan-out targets for TodayService's cross-module aggregation - same naming
 # convention as batches' equivalent internal-base-url properties.
@@ -86,9 +86,9 @@ anthropic:
 # Email hub: classifies inbox mail (via the local model first) and turns bills, appointments,
 # deadlines and subscription receipts into tasks, calendar events and subscriptions.
 email-hub:
-  # Act on HIGH-confidence emails straight away (each stays undoable in the inbox). Off = every
-  # proposal waits for a yes.
-  auto-apply: ${EMAIL_HUB_AUTO_APPLY:true}
+  # Act on HIGH-confidence emails straight away (each stays undoable in the inbox). Off (the default) =
+  # every proposal waits for a click on Add in the inbox.
+  auto-apply: ${EMAIL_HUB_AUTO_APPLY:false}
   zone: ${EMAIL_HUB_ZONE:Asia/Kolkata}
   # Email is private and the local model is free, so Claude is only used if this is turned on.
   claude-fallback: ${EMAIL_HUB_CLAUDE_FALLBACK:false}

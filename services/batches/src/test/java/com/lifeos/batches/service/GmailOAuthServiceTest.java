@@ -29,7 +29,7 @@ class GmailOAuthServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new GmailOAuthService(repository, encryption);
+    service = new GmailOAuthService(repository, encryption, new OAuthStateStore());
     ReflectionTestUtils.setField(service, "ownerUserId", owner.toString());
     lenient().when(encryption.decrypt(any())).thenAnswer(call -> "plain-" + call.getArgument(0));
   }

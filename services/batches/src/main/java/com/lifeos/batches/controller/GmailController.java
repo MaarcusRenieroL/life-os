@@ -38,14 +38,14 @@ public class GmailController {
         ApiResponse.success(gmailOAuthService.getStatus(), "Gmail status fetched successfully"));
   }
 
-  // Visit this in a browser (not an API call) - it redirects to Google's
-  // consent screen. One-time setup step, or re-run to reconnect.
-  @GetMapping("/connect")
-  public ResponseEntity<Void> connect(
+  /**
+   * Starts a Gmail connection: returns the Google consent URL for the signed-in user to open. It needs a
+   * login because the URL carries a one-time state that the callback later requires.
+   */
+  @GetMapping("/connect-url")
+  public ResponseEntity<ApiResponse<String>> connectUrl(
       @RequestParam(value = "purpose", defaultValue = "FINANCE") GmailPurpose purpose) {
-    return ResponseEntity.status(HttpStatus.FOUND)
-        .header(HttpHeaders.LOCATION, gmailOAuthService.buildAuthorizationUrl(purpose))
-        .build();
+    return ResponseEntity.ok(ApiResponse.success(gmailOAuthService.buildAuthorizationUrl(purpose), "Open this link to connect Gmail"));
   }
 
   @GetMapping("/callback")

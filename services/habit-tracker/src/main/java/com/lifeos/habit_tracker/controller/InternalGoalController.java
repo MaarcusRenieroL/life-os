@@ -10,6 +10,8 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,6 +32,12 @@ public class InternalGoalController {
   public ResponseEntity<ApiResponse<Map<UUID, Long>>> goalHabitCounts(@RequestParam UUID userId) {
     return ResponseEntity.ok(
         ApiResponse.success(habitService.activeHabitCountsByGoal(userId), "Goal habit counts fetched successfully"));
+  }
+
+  /** The goal was deleted: habits that pointed at it keep running without one. */
+  @PostMapping("/goals/{goalId}/detach")
+  public ResponseEntity<ApiResponse<Integer>> detachGoal(@PathVariable UUID goalId, @RequestParam UUID userId) {
+    return ResponseEntity.ok(ApiResponse.success(habitService.detachGoal(userId, goalId), "Habits detached from the goal"));
   }
 
   @GetMapping("/goal-habit-stats")

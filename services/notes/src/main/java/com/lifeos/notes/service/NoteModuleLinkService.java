@@ -22,6 +22,15 @@ public class NoteModuleLinkService {
   private final NoteModuleLinkRepository noteModuleLinkRepository;
   private final NoteRepository noteRepository;
 
+  /**
+   * An item in another module (a goal, a task...) was deleted: its links disappear from the notes that had
+   * them. The detail cache holds module links, so it is cleared whole (this runs rarely).
+   */
+  @CacheEvict(value = NoteService.NOTE_DETAIL_CACHE, allEntries = true)
+  public int removeAllForModule(UUID userId, NoteModuleType moduleType, UUID moduleId) {
+    return noteModuleLinkRepository.deleteForModule(userId, moduleType, moduleId);
+  }
+
   // moduleLinks is part of the note-detail payload.
   @CacheEvict(
       value = NoteService.NOTE_DETAIL_CACHE,

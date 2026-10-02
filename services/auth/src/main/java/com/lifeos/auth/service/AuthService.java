@@ -72,6 +72,35 @@ public class AuthService {
   @Value("${auth.owner-user-id:}")
   private String ownerUserId = "";
 
+  private volatile String dummyHash;
+
+  /** A real BCrypt hash of a throwaway value, used only to keep unknown-email logins as slow as real ones. */
+  private String dummyHash() {
+    String hash = dummyHash;
+    if (hash == null) {
+      hash = passwordEncoder.encode(UUID.randomUUID().toString());
+      dummyHash = hash;
+    }
+    return hash;
+  }
+
+  /** Device labels come from the client: never null (Map.of rejects it) and never longer than the column. */
+  private static String cleanLabel(String value, String fallback, int max) {
+    String trimmed = value == null ? "" : value.trim();
+    if (trimmed.isEmpty()) {
+      return fallback;
+    }
+    return trimmed.length() > max ? trimmed.substring(0, max) : trimmed;
+  }
+
+  /** Confirms the signed-in user knows their password before something destructive happens. */
+  public void verifyPassword(UUID userId, String rawPassword) {
+    User user = userService.findById(userId);
+    if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+      throw new InvalidCredentialsException("Incorrect password");
+    }
+  }
+
   private void requireOwner(UUID userId) {
     if (!ownerUserId.isBlank() && !userId.toString().equalsIgnoreCase(ownerUserId.trim())) {
       throw new InvalidCredentialsException("Invalid credentials");
@@ -95,30 +124,29 @@ public class AuthService {
   public AuthResponse login(
       String email, String rawPassword, String deviceName, String deviceType) {
 
-    User existingUser =
-        userService
-            .findByEmail(email)
-            .orElseThrow(() -> new InvalidCredentialsException("Invalid credentials"));
+    User existingUser = userService.findByEmail(email).orElse(null);
 
-    if (!passwordEncoder.matches(rawPassword, existingUser.getPasswordHash())) {
+    // Hash-compare even when the email is unknown, so response time does not reveal which emails exist.
+    String hashToCheck = existingUser != null ? existingUser.getPasswordHash() : dummyHash();
+    boolean passwordOk = passwordEncoder.matches(rawPassword, hashToCheck);
+    if (existingUser == null || !passwordOk) {
       throw new InvalidCredentialsException("Invalid credentials");
     }
     requireOwner(existingUser.getId());
 
+    String device = cleanLabel(deviceName, "Unknown device", 255);
+    String type = cleanLabel(deviceType, "UNKNOWN", 50);
+
     DeviceSession deviceSession =
-        DeviceSession.builder()
-            .deviceName(deviceName)
-            .deviceType(deviceType)
-            .userId(existingUser.getId())
-            .build();
+        DeviceSession.builder().deviceName(device).deviceType(type).userId(existingUser.getId()).build();
 
     deviceSessionRepository.save(deviceSession);
 
     auditEventPublisher.publish(
         existingUser.getId(),
         AuditEventType.LOGIN_SUCCESS,
-        "Signed in from " + deviceName,
-        Map.of("device", deviceName, "deviceType", deviceType));
+        "Signed in from " + device,
+        Map.of("device", device, "deviceType", type));
 
     return issueTokens(deviceSession);
   }
@@ -193,11 +221,13 @@ public class AuthService {
 
   public void enrollBiometric(UUID userId, String publicKey, String deviceId, String type) {
 
-    boolean isExistingBiometric =
-        biometricEnrollmentRepository.existsByUserIdAndDeviceId(userId, deviceId);
-
-    if (isExistingBiometric) {
+    // A device id maps to one account (login finds the enrollment by it alone), so another account
+    // cannot claim an id that is already enrolled.
+    if (biometricEnrollmentRepository.existsByDeviceId(deviceId)) {
       throw new BiometricAlreadyEnrolledException(deviceId);
+    }
+    if (!isEcPublicKey(publicKey)) {
+      throw new InvalidCredentialsException("Invalid public key");
     }
 
     biometricEnrollmentRepository.save(
@@ -205,7 +235,7 @@ public class AuthService {
             .userId(userId)
             .publicKey(publicKey)
             .deviceId(deviceId)
-            .type(type)
+            .type(cleanLabel(type, "BIOMETRIC", 50))
             .build());
   }
 
@@ -248,22 +278,30 @@ public class AuthService {
     }
     requireOwner(enrollment.getUserId());
 
+    String device = cleanLabel(deviceName, "Unknown device", 255);
+    String type = cleanLabel(deviceType, "UNKNOWN", 50);
+
     DeviceSession deviceSession =
-        DeviceSession.builder()
-            .deviceName(deviceName)
-            .deviceType(deviceType)
-            .userId(enrollment.getUserId())
-            .build();
+        DeviceSession.builder().deviceName(device).deviceType(type).userId(enrollment.getUserId()).build();
 
     deviceSessionRepository.save(deviceSession);
 
     auditEventPublisher.publish(
         enrollment.getUserId(),
         AuditEventType.LOGIN_SUCCESS,
-        "Signed in from " + deviceName,
-        Map.of("device", deviceName, "deviceType", deviceType));
+        "Signed in from " + device,
+        Map.of("device", device, "deviceType", type));
 
     return issueTokens(deviceSession);
+  }
+
+  private static boolean isEcPublicKey(String publicKeyBase64) {
+    try {
+      KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyBase64)));
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
   }
 
   private boolean verifySignature(String publicKeyBase64, String challenge, String signatureBase64) {

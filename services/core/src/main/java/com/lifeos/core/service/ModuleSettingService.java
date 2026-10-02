@@ -31,6 +31,9 @@ public class ModuleSettingService {
   @CacheEvict(value = "module-settings", key = "#userId")
   @Transactional
   public ModuleSettingResponse setEnabled(UUID userId, String moduleCode, boolean enabled) {
+    if (moduleCode == null || !moduleCode.matches("[A-Za-z0-9_-]{1,20}")) {
+      throw new IllegalArgumentException("Unknown module code");
+    }
     UserModuleSetting setting =
         userModuleSettingRepository
             .findByUserIdAndModuleCode(userId, moduleCode)

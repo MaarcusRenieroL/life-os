@@ -45,7 +45,6 @@ life-os/
 │   ├── mobile/       # React Native (Expo)
 │   ├── web/          # React + Vite
 │   └── desktop/      # Tauri + React
-├── docs/             # Documentation
 └── .github/          # CI/CD pipelines
 ```
 
@@ -55,15 +54,6 @@ life-os/
 2. Make changes & commit: `git commit -m "feat(service): description"`
 3. Push & create PR to `dev`: `git push origin feat/description`
 4. Merge to `main` after approval
-
-## Documentation
-
-- [Product Vision](docs/00-PRODUCT_VISION.md) — Feature overview
-- [Architecture](docs/01-ARCHITECTURE.md) — System design
-- [Build Plan](docs/02-BUILD_PLAN.md) — Implementation phases
-- [Dev Workflow](docs/03-DEV_WORKFLOW.md) — Git & code standards
-- [Setup Guide](docs/04-SETUP_GUIDE.md) — Initial setup
-- [Build Process](docs/05-BUILD_PROCESS_GUIDE.md) — Task checklist
 
 ## Services
 

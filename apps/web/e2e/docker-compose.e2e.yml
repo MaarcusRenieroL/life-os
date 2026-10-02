@@ -1,0 +1,54 @@
+# A throwaway copy of the whole stack for the Playwright e2e suite: its own project name (so its own empty
+# database and volumes), no ports published except nginx on 8088 (so it cannot clash with the real stack),
+# and the single-owner lock off so the suite can register its test account.
+#
+#   sed 's/rate=10r\/m/rate=1000r\/m/' nginx.conf > apps/web/e2e/nginx.e2e.conf   # generated, not committed
+#   OWNER_USER_ID=00000000-0000-0000-0000-000000000001 \
+#   docker compose -p lifeos-e2e -f docker-compose.yml -f apps/web/e2e/docker-compose.e2e.yml up -d --build
+#   E2E_BASE_URL=http://localhost:8088 pnpm --filter web exec playwright test
+#   docker compose -p lifeos-e2e -f docker-compose.yml -f apps/web/e2e/docker-compose.e2e.yml down -v   # throw it away
+name: lifeos-e2e
+services:
+  postgres:
+    ports: !override []
+  redis:
+    ports: !override []
+  ollama:
+    ports: !override []
+  kafka:
+    ports: !override []
+  zookeeper:
+    ports: !override []
+  nginx:
+    ports: !override
+      - "127.0.0.1:8088:80"
+    # The suite signs in through the UI in every spec, which the real login limit (10 a minute) would refuse.
+    # nginx.e2e.conf is the real config with that limit raised; generate it first (see the header above).
+    volumes: !override
+      - ./apps/web/e2e/nginx.e2e.conf:/etc/nginx/nginx.conf:ro
+      - ./apps/web/dist:/usr/share/nginx/html:ro
+      - ./files:/usr/share/nginx/files:ro
+  auth:
+    ports: !override []
+    environment:
+      AUTH_OWNER_USER_ID: ""
+  vault:
+    ports: !override []
+  job-tracker:
+    ports: !override []
+  core:
+    ports: !override []
+  notes:
+    ports: !override []
+  batches:
+    ports: !override []
+  finance-tracker:
+    ports: !override []
+  habit-tracker:
+    ports: !override []
+  tasks:
+    ports: !override []
+  workouts:
+    ports: !override []
+  calendar:
+    ports: !override []
