@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { HistoryTab, RulesTab, TemplatesTab } from '../modules/automation';
 import { InsightsTab, OverviewTab, PeriodTab, TrendsTab } from '../modules/analytics';
+import { intentTab, useNavIntent } from '../lib/nav';
 import { Tabs } from '../ui';
 
 const TABS = [
@@ -11,7 +12,8 @@ const TABS = [
 type TabId = (typeof TABS)[number]['id'];
 
 export function AnalyticsScreen() {
-  const [tab, setTab] = useState<TabId>('overview');
+  const intent = useNavIntent('analytics');
+  const [tab, setTab] = useState<TabId>(() => intentTab(intent, TABS, 'overview'));
   return (
     <div className="stack">
       <Tabs tabs={TABS} value={tab} onChange={setTab} />

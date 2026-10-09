@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { Bell, Check, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 
 import { coreApi, type Notification } from './core-api';
+import { pathForNotification } from './notification-route';
 
 /** Unread count polls every 30s so the badge stays roughly live without needing a websocket -
  * cheap enough for a single-user app, and the notification list itself only refetches when the
@@ -17,6 +19,7 @@ import { coreApi, type Notification } from './core-api';
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: unread } = useQuery({
     queryKey: ['core', 'notifications', 'unread-count'],
@@ -141,7 +144,11 @@ export function NotificationBell() {
                 <NotificationRow
                   key={notification.id}
                   notification={notification}
-                  onMarkRead={() => void markRead(notification.id)}
+                  onOpen={() => {
+                    if (!notification.read) void markRead(notification.id);
+                    setOpen(false);
+                    navigate(pathForNotification(notification));
+                  }}
                   onDelete={() => void remove(notification.id)}
                   onAiFallback={(approved) => void setAiFallback(notification.id, approved)}
                 />
@@ -156,12 +163,12 @@ export function NotificationBell() {
 
 function NotificationRow({
   notification,
-  onMarkRead,
+  onOpen,
   onDelete,
   onAiFallback,
 }: {
   notification: Notification;
-  onMarkRead: () => void;
+  onOpen: () => void;
   onDelete: () => void;
   onAiFallback: (approved: boolean) => void;
 }) {
@@ -182,7 +189,7 @@ function NotificationRow({
     )}
     <button
       type="button"
-      onClick={() => !notification.read && !needsAiDecision && onMarkRead()}
+      onClick={() => !needsAiDecision && onOpen()}
       className={`flex w-full flex-col gap-1 px-3.5 py-3 text-left transition-colors hover:bg-foreground/5 ${
         notification.read ? 'opacity-60' : ''
       }`}

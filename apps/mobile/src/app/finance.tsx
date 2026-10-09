@@ -1,5 +1,7 @@
 import { ACCOUNT_TYPES, dayKey, type AccountType, type BillingCycle, type Budget, type CategoryComparison, type CategoryType, type FinanceAccount, type FinanceCategory, type FinanceTransaction, type Subscription, type TransactionType } from '@life-os/core';
 import { useState } from 'react';
+
+import { tabFrom, useOpenRequest } from '@/lib/open-from';
 import { Switch, View } from 'react-native';
 import { Text } from '@/text';
 
@@ -16,6 +18,7 @@ const TABS = [{ id: 'dashboard', label: 'Dashboard' }, { id: 'transactions', lab
 
 export default function Finance() {
   const [tab, setTab] = useState<TabId>('dashboard');
+  useOpenRequest((r) => { const t = tabFrom(r, TABS); if (t) setTab(t); });
   return (
     <Screen title="Finance">
       <Seg tabs={TABS} value={tab} onChange={setTab} />

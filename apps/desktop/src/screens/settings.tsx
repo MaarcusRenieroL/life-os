@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
 import { useLock } from '../lib/lock';
+import { intentTab, useNavIntent } from '../lib/nav';
 import { useSession } from '../lib/session';
 import { IntegrationsTab, ModulesTab, NotificationsTab, ProfileTab, SetupTab } from '../modules/settings-extra';
 import { Panel, Tabs } from '../ui';
@@ -9,7 +10,8 @@ const TABS = [{ id: 'general', label: 'General' }, { id: 'profile', label: 'Prof
 type TabId = (typeof TABS)[number]['id'];
 
 export function SettingsScreen() {
-  const [tab, setTab] = useState<TabId>('general');
+  const intent = useNavIntent('settings');
+  const [tab, setTab] = useState<TabId>(() => intentTab(intent, TABS, 'general'));
   const { settings, updateSettings, signOut } = useSession();
   const [draft, setDraft] = useState(settings);
   const [saved, setSaved] = useState(false);

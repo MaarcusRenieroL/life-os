@@ -35,6 +35,18 @@ mod biometric {
     }
 }
 
+/// Set once at startup so a notification click (which arrives on a callback) can reach the window.
+static APP: std::sync::OnceLock<AppHandle> = std::sync::OnceLock::new();
+
+/// A click on a system notification: bring the window forward and tell the UI which notification it was.
+fn open_from_notification(identifier: &str) {
+    let Some(app) = APP.get() else { return };
+    show_main(app);
+    if let Some(id) = identifier.strip_prefix("lifeos-notif:") {
+        let _ = app.emit("notification-open", id.to_string());
+    }
+}
+
 /// System notifications on macOS through Apple's UserNotifications framework. The generic plugin uses an API
 /// current macOS no longer shows, so on a Mac this is what actually puts a banner on screen.
 #[cfg(target_os = "macos")]
@@ -46,7 +58,7 @@ mod alerts {
     use objc2_foundation::{NSError, NSString};
     use objc2_user_notifications::{
         UNAuthorizationOptions, UNMutableNotificationContent, UNNotification, UNNotificationPresentationOptions, UNNotificationRequest,
-        UNNotificationSound, UNUserNotificationCenter, UNUserNotificationCenterDelegate,
+        UNNotificationResponse, UNNotificationSound, UNUserNotificationCenter, UNUserNotificationCenterDelegate,
     };
     use std::sync::{mpsc, Once};
 
@@ -62,6 +74,13 @@ mod alerts {
             #[unsafe(method(userNotificationCenter:willPresentNotification:withCompletionHandler:))]
             fn will_present(&self, _center: &UNUserNotificationCenter, _notification: &UNNotification, handler: &DynBlock<dyn Fn(UNNotificationPresentationOptions)>) {
                 handler.call((UNNotificationPresentationOptions::Banner | UNNotificationPresentationOptions::List | UNNotificationPresentationOptions::Sound,));
+            }
+
+            #[unsafe(method(userNotificationCenter:didReceiveNotificationResponse:withCompletionHandler:))]
+            fn did_receive(&self, _center: &UNUserNotificationCenter, response: &UNNotificationResponse, handler: &DynBlock<dyn Fn()>) {
+                let identifier = response.notification().request().identifier().to_string();
+                super::open_from_notification(&identifier);
+                handler.call(());
             }
         }
     );
@@ -88,13 +107,17 @@ mod alerts {
         rx.recv().unwrap_or(false)
     }
 
-    pub fn send(title: &str, body: &str) {
+    pub fn send(title: &str, body: &str, notification_id: Option<&str>) {
         let content = UNMutableNotificationContent::new();
         content.setTitle(&NSString::from_str(title));
         content.setBody(&NSString::from_str(body));
         let sound = UNNotificationSound::defaultSound();
         content.setSound(Some(&sound));
-        let id = NSString::from_str(&format!("lifeos-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)));
+        // The identifier carries which notification this is, so a click can open the right thing.
+        let id = NSString::from_str(&match notification_id {
+            Some(nid) => format!("lifeos-notif:{nid}"),
+            None => format!("lifeos-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)),
+        });
         let request = UNNotificationRequest::requestWithIdentifier_content_trigger(&id, &content, None);
         center().addNotificationRequest_withCompletionHandler(&request, None);
     }
@@ -114,15 +137,15 @@ async fn notify_permission() -> bool {
 
 /// Shows a system notification. Returns false where the app should fall back to the generic plugin.
 #[tauri::command]
-fn notify_os(title: String, body: String) -> bool {
+fn notify_os(title: String, body: String, id: Option<String>) -> bool {
     #[cfg(target_os = "macos")]
     {
-        alerts::send(&title, &body);
+        alerts::send(&title, &body, id.as_deref());
         true
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = (title, body);
+        let _ = (title, body, id);
         false
     }
 }
@@ -188,6 +211,7 @@ pub fn run() {
                 .build(),
         )
         .setup(move |app| {
+            let _ = APP.set(app.handle().clone());
             // Another app may already own the shortcut; the tray menu still offers quick capture.
             let _ = app.global_shortcut().register(capture_shortcut);
 

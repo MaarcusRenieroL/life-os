@@ -37,11 +37,11 @@ export async function enableOsNotifications(): Promise<boolean> {
   return false;
 }
 
-export async function show(title: string, body: string) {
+export async function show(title: string, body: string, id?: string) {
   if (isTauri()) {
     const { invoke } = await import('@tauri-apps/api/core');
     // The app's own macOS code shows it; elsewhere it answers false and the generic plugin does the job.
-    if (await invoke<boolean>('notify_os', { title, body })) return;
+    if (await invoke<boolean>('notify_os', { title, body, id })) return;
     const { isPermissionGranted, requestPermission, sendNotification } = await import('@tauri-apps/plugin-notification');
     if (!(await isPermissionGranted()) && (await requestPermission()) !== 'granted') return;
     sendNotification({ title, body });
@@ -63,5 +63,5 @@ export async function announceNew(items: AppNotification[]) {
   if (!seen) return;
   // A burst becomes one summary so a catch-up after sleep does not stack up ten pop-ups.
   if (fresh.length > 3) await show('Life OS', `${fresh.length} new notifications`);
-  else for (const n of fresh) await show(n.title, n.body ?? n.module);
+  else for (const n of fresh) await show(n.title, n.body ?? n.module, n.id);
 }

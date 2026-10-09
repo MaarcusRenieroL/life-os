@@ -19,6 +19,8 @@ export interface AppNotification {
   title: string;
   body: string | null;
   read: boolean;
+  /** Ids and numbers the module attached (e.g. `taskId`), used to open the right item. */
+  metadata?: Record<string, string> | null;
   /** An AI-fallback question; it needs a yes/no (on the web app) before it can be cleared. */
   requiresAiFallbackApproval?: boolean;
   aiFallbackApproved?: boolean | null;

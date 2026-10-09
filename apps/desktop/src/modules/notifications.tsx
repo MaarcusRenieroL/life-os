@@ -9,7 +9,7 @@ import { Empty, ErrorNote } from '../ui';
 const when = (iso: string) => iso.slice(0, 16).replace('T', ' ');
 
 /** The notifications, with everything you can do to them: read one, read all, delete one, clear read, clear all. */
-export function NotificationList({ onChanged, compact }: { onChanged?: () => void; compact?: boolean }) {
+export function NotificationList({ onChanged, onOpen, compact }: { onChanged?: () => void; /** Called when a notification is clicked, to go to what it is about. */ onOpen?: (n: AppNotification) => void; compact?: boolean }) {
   const api = useApi();
   const runner = useRunner();
   const items = useAsync(() => api.core.notifications(0, 50), [api]);
@@ -42,7 +42,7 @@ export function NotificationList({ onChanged, compact }: { onChanged?: () => voi
       {items.data && list.length === 0 ? <Empty>You are all caught up.</Empty> : (
         <ul className={`list n-list${compact ? ' compact' : ''}`}>
           {list.map((n: AppNotification) => (
-            <li key={n.id} className={n.read ? 'n-read' : 'clickable'} onClick={n.read || needsAnswer(n) ? undefined : () => void runner.run(() => api.core.markRead(n.id), after)}>
+            <li key={n.id} className={`${n.read ? 'n-read' : ''}${needsAnswer(n) ? '' : ' clickable'}`} onClick={needsAnswer(n) ? undefined : () => { if (!n.read) void runner.run(() => api.core.markRead(n.id), after); onOpen?.(n); }}>
               {!n.read && <span className="n-dot" />}
               <span className="grow">
                 <b>{n.title}</b>
@@ -66,7 +66,7 @@ export function NotificationList({ onChanged, compact }: { onChanged?: () => voi
 }
 
 /** The bell in the top bar: unread badge that refreshes every minute, and a dropdown with the list. */
-export function NotificationBell() {
+export function NotificationBell({ onOpen }: { onOpen?: (n: AppNotification) => void }) {
   const api = useApi();
   const count = useAsync(() => api.core.unreadCount(), [api]);
   const [open, setOpen] = useState(false);
@@ -116,7 +116,7 @@ export function NotificationBell() {
           <div className="n-bar-end" style={{ marginBottom: 8 }}>
             <button className="link" onClick={() => void enableOsNotifications().then((ok) => { setAlertsOk(ok); void show('Life OS', 'This is a test notification.'); })}>Send a test alert</button>
           </div>
-          <NotificationList compact onChanged={() => void count.reload()} />
+          <NotificationList compact onChanged={() => void count.reload()} onOpen={(n) => { setOpen(false); onOpen?.(n); }} />
         </div>
       )}
     </div>

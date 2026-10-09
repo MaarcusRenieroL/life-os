@@ -193,6 +193,14 @@ export function SettingsPage() {
     }
   }
 
+  // A link like /settings#integrations (from a notification) lands on that section.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const timer = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }), 150);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   function scrollTo(id: string) {
     setActiveSection(id);
     // Ignore the scroll-spy while the smooth scroll is in flight so it doesn't

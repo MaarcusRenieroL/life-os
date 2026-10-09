@@ -1,5 +1,5 @@
 import { Briefcase, Calendar as CalendarIcon, ChartNoAxesCombined, Dumbbell, Home as HomeIcon, ListChecks, ListTodo, Mail, Settings, ShieldCheck, StickyNote, Swords, Target, Trophy, Wallet, type LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnalyticsScreen } from './screens/analytics';
 import { CalendarScreen } from './screens/calendar';
 import { GoalsScreen } from './screens/goals';
@@ -16,11 +16,12 @@ import { QuestsScreen } from './screens/quests';
 import { SettingsScreen } from './screens/settings';
 import { TasksScreen } from './screens/tasks';
 import { TrophiesScreen } from './screens/trophies';
-import { NavContext } from './lib/nav';
+import { notificationTarget, type AppNotification } from '@life-os/core';
+import { IntentContext, NavContext, type NavDetail, type NavIntent } from './lib/nav';
 import { LockScreen } from './lock-screen';
 import { LockProvider, useLock } from './lib/lock';
 import { QuickCapture } from './quick-capture';
-import { SessionProvider, useSession } from './lib/session';
+import { SessionProvider, useApi, useSession } from './lib/session';
 import { NotificationBell } from './modules/notifications';
 import { PlayerBar } from './player-bar';
 
@@ -45,10 +46,32 @@ const SCREENS = [
 type ScreenId = (typeof SCREENS)[number]['id'];
 
 function Shell() {
+  const api = useApi();
   const [screen, setScreen] = useState<ScreenId>('home');
+  const [intent, setIntent] = useState<NavIntent | null>(null);
   const [capturing, setCapturing] = useState(false);
   // Bumped after a capture so every screen refetches what the capture may have created.
   const [epoch, setEpoch] = useState(0);
+
+  /** Goes to a module; with a tab or item it also reopens the screen so it picks that up. */
+  const go = (id: string, detail?: NavDetail) => {
+    if (!SCREENS.some((x) => x.id === id)) return;
+    setScreen(id as ScreenId);
+    setIntent(detail?.tab || detail?.entity ? { screen: id, ...detail } : null);
+    if (detail?.tab || detail?.entity) setEpoch((n) => n + 1);
+  };
+  const openNotification = (n: Pick<AppNotification, 'module' | 'type' | 'metadata'>) => {
+    const { screen: to, tab, entity } = notificationTarget(n);
+    go(to, { tab, entity });
+  };
+
+  // The Tauri listener below is set up once, so it reads the latest handlers through refs.
+  const apiRef = useRef(api);
+  const openRef = useRef(openNotification);
+  useEffect(() => {
+    apiRef.current = api;
+    openRef.current = openNotification;
+  });
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -65,12 +88,27 @@ function Shell() {
 
     // The tray menu and the global shortcut both emit this from the Rust side.
     let unlisten: (() => void) | undefined;
+    let unlistenOpen: (() => void) | undefined;
     if ('__TAURI_INTERNALS__' in window) {
       void import('@tauri-apps/api/event').then(({ listen }) => listen('quick-capture', () => setCapturing(true)).then((off) => (unlisten = off)));
+      // Clicking a system notification: the Rust side brings the window forward and tells us which one.
+      void import('@tauri-apps/api/event').then(({ listen }) =>
+        listen<string>('notification-open', async ({ payload }) => {
+          try {
+            const found = (await apiRef.current.core.notifications(0, 50)).content.find((n) => n.id === payload);
+            if (!found) return;
+            if (!found.read) void apiRef.current.core.markRead(found.id).catch(() => {});
+            openRef.current(found);
+          } catch {
+            /* offline: the window is already in front, which is the least it should do */
+          }
+        }).then((off) => (unlistenOpen = off)),
+      );
     }
     return () => {
       window.removeEventListener('keydown', onKey);
       unlisten?.();
+      unlistenOpen?.();
     };
   }, []);
 
@@ -82,7 +120,7 @@ function Shell() {
         <div className="brand">Life_OS</div>
         <div className="rail-group">Modules</div>
         {SCREENS.map((s, i) => (
-          <button key={s.id} className={`rail-item${s.id === screen ? ' active' : ''}`} onClick={() => setScreen(s.id)} title={`⌘${i + 1}`}>
+          <button key={s.id} className={`rail-item${s.id === screen ? ' active' : ''}`} onClick={() => go(s.id)} title={`⌘${i + 1}`}>
             <span className="glyph"><s.Icon /></span>
             {s.label}
           </button>
@@ -95,11 +133,13 @@ function Shell() {
         <header className="topbar">
           <span className="crumb"><b>~/</b>{screen === 'home' ? 'home' : screen}</span>
           <PlayerBar key={`bar-${epoch}`} />
-          <NotificationBell />
+          <NotificationBell onOpen={openNotification} />
         </header>
         <div className="content" key={`${screen}-${epoch}`}>
-          <NavContext.Provider value={(id) => SCREENS.some((x) => x.id === id) && setScreen(id as ScreenId)}>
-            <Active />
+          <NavContext.Provider value={go}>
+            <IntentContext.Provider value={{ intent, clear: () => setIntent(null) }}>
+              <Active />
+            </IntentContext.Provider>
           </NavContext.Provider>
         </div>
       </main>

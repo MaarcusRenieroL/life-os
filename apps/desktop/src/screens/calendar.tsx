@@ -1,6 +1,7 @@
 import { dayKey, EVENT_CATEGORIES, shiftDay, type CalendarEvent, type EventCategory } from '@life-os/core';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
+import { useNavIntent } from '../lib/nav';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { Empty, ErrorNote, Field, Modal, opts, Panel, Select, Tabs } from '../ui';
@@ -25,6 +26,22 @@ export function CalendarScreen() {
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [selected, setSelected] = useState(dayKey(new Date()));
   const [editing, setEditing] = useState<{ event: CalendarEvent | null; date: string } | null>(null);
+  const intent = useNavIntent('calendar');
+  // Opened from a notification about one event: find it (the events around today) and show it.
+  useEffect(() => {
+    if (intent?.entity?.kind !== 'event') return;
+    const id = intent.entity.id;
+    void api.calendar.list(shiftDay(dayKey(new Date()), -7), shiftDay(dayKey(new Date()), 60)).then((all) => {
+      const event = all.find((e) => e.id === id);
+      if (!event) return;
+      const day = eventDay(event);
+      const d = new Date(`${day}T12:00:00`);
+      setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+      setSelected(day);
+      setEditing({ event, date: day });
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Month grid starts on Monday and always shows six weeks.
   const first = new Date(cursor);

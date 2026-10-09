@@ -4,6 +4,7 @@ import { Pressable, Switch, View } from 'react-native';
 import { Text } from '@/text';
 
 import { Btn, Chips, DateInput, Empty, Field, Input, opts, Pill, Row, Screen, Seg, Sheet } from '@/kit';
+import { useOpenRequest } from '@/lib/open-from';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
@@ -21,6 +22,19 @@ export default function Calendar() {
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
   const [selected, setSelected] = useState(dayKey(new Date()));
   const [editing, setEditing] = useState<{ event: CalendarEvent | null; date: string } | null>(null);
+  // Opened from a notification about one event: find it among the events around today and show it.
+  useOpenRequest((r) => {
+    if (r.kind !== 'event' || !r.id) return;
+    void api.calendar.list(shiftDay(dayKey(new Date()), -7), shiftDay(dayKey(new Date()), 60)).then((all) => {
+      const event = all.find((e) => e.id === r.id);
+      if (!event) return;
+      const day = eventDay(event);
+      const d = new Date(`${day}T12:00:00`);
+      setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+      setSelected(day);
+      setEditing({ event, date: day });
+    }).catch(() => {});
+  });
 
   const offset = (cursor.getDay() + 6) % 7;
   const gridStart = dayKey(new Date(cursor.getFullYear(), cursor.getMonth(), 1 - offset));

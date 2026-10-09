@@ -1,4 +1,4 @@
-import { APP_MODULE_LIST } from '@life-os/core';
+import { APP_MODULE_LIST, notificationTarget } from '@life-os/core';
 import { useState } from 'react';
 
 import { useNav } from '../lib/nav';
@@ -103,7 +103,8 @@ export function IntegrationsTab() {
 }
 
 export function NotificationsTab() {
-  return <NotificationList />;
+  const go = useNav();
+  return <NotificationList onOpen={(n) => { const t = notificationTarget(n); go(t.screen, { tab: t.tab, entity: t.entity }); }} />;
 }
 
 /** What is left to set up in each module, worked out from what already exists. */

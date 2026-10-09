@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 
 import { announceNew, enableAlerts, registerBackgroundCheck } from '@/alerts';
+import { useOpenNotification } from '@/lib/open-from';
 import { Btn, Sheet } from '@/kit';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
@@ -14,7 +15,7 @@ import { ErrorNote, Muted, tap } from '@/ui';
 const when = (iso: string) => iso.slice(0, 16).replace('T', ' ');
 
 /** The notifications, with everything you can do to them: read one, read all, delete one, clear read, clear all. */
-export function NotificationList({ onChanged }: { onChanged?: () => void }) {
+export function NotificationList({ onChanged, onOpen }: { onChanged?: () => void; /** Called when a notification is tapped, to go to what it is about. */ onOpen?: (n: AppNotification) => void }) {
   const api = useApi();
   const runner = useRunner();
   const items = useAsync(() => api.core.notifications(0, 50), api);
@@ -47,7 +48,7 @@ export function NotificationList({ onChanged }: { onChanged?: () => void }) {
       {list.map((n: AppNotification) => (
         <Pressable
           key={n.id}
-          onPress={n.read || needsAnswer(n) ? undefined : () => void runner.run(() => api.core.markRead(n.id), after)}
+          onPress={needsAnswer(n) ? undefined : () => { if (!n.read) void runner.run(() => api.core.markRead(n.id), after); onOpen?.(n); }}
           style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#ffffff0f', opacity: n.read ? 0.6 : 1 }}>
           {!n.read ? <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: C.accent, marginTop: 6 }} /> : null}
           <View style={{ flex: 1, gap: 2 }}>
@@ -80,6 +81,7 @@ export function NotificationBell() {
   const api = useApi();
   const count = useAsync(() => api.core.unreadCount(), api);
   const [open, setOpen] = useState(false);
+  const openNotification = useOpenNotification();
 
   // Every 30s while the app is open: refresh the badge and tell the OS about anything new.
   useEffect(() => {
@@ -111,7 +113,7 @@ export function NotificationBell() {
       </Pressable>
       {open ? (
         <Sheet title="Notifications" onClose={() => { setOpen(false); void count.reload(); }}>
-          <NotificationList onChanged={() => void count.reload()} />
+          <NotificationList onChanged={() => void count.reload()} onOpen={(n) => { setOpen(false); openNotification(n); }} />
         </Sheet>
       ) : null}
     </>

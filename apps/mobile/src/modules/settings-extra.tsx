@@ -8,6 +8,7 @@ import { Text } from '@/text';
 import { Btn, Empty, Field, Input, Pill, Row } from '@/kit';
 import { useApi, useSession } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
+import { useOpenNotification } from '@/lib/open-from';
 import { NotificationList } from '@/notifications';
 import { C } from '@/theme';
 import { ErrorNote, Muted, Panel, s } from '@/ui';
@@ -109,7 +110,8 @@ export function IntegrationsTab() {
 }
 
 export function NotificationsTab() {
-  return <NotificationList />;
+  const openNotification = useOpenNotification();
+  return <NotificationList onOpen={openNotification} />;
 }
 
 /** What is left to set up in each module, worked out from what already exists. */

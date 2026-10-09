@@ -5,6 +5,7 @@ import { Text } from '@/text';
 
 import { DataGrid, type Col } from '@/grid/data-grid';
 import { Bars, Btn, Chips, DateInput, Empty, Field, Input, opts, pretty, Progress, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
+import { tabFrom, useOpenRequest } from '@/lib/open-from';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
@@ -38,6 +39,10 @@ export default function Tasks() {
     if (tab === 'list') return api.tasks.list({});
     return api.tasks.list({ q });
   }, `${tab}|${query}`);
+  useOpenRequest((r) => {
+    if (r.kind === 'task' && r.id) void api.tasks.get(r.id).then(setEditing).catch(() => {});
+    else { const t = tabFrom(r, TABS); if (t) setTab(t); }
+  });
   const overdue = useAsync(() => (tab === 'today' ? api.tasks.list({ view: 'OVERDUE' }) : Promise.resolve([] as Task[])), `${tab}-overdue`);
   const list = tasks.data ?? [];
   const reload = async () => { await Promise.all([tasks.reload(), overdue.reload()]); };
@@ -69,7 +74,9 @@ export default function Tasks() {
       {tab === 'analytics' ? null : tab === 'board' ? TASK_STATUSES.map((status) => {
         const lane = list.filter((t) => t.status === status).sort(byUrgency);
         return <Panel key={status} title={`${pretty(status)} · ${lane.length}`}>{lane.length === 0 ? <Muted>Empty</Muted> : lane.map(row)}</Panel>;
-      }) : tab === 'upcoming' ? (list.length === 0 && !tasks.loading ? <Panel><Empty>Nothing due in the next two weeks.</Empty></Panel> : days.map((d) => <Panel key={d} title={d}>{list.filter((t) => (t.dueDate ?? 'No date') === d).sort(byUrgency).map(row)}</Panel>)) : (
+      }) : tab === 'upcoming' ? (list.length === 0 && !tasks.loading ? <Panel><Empty>Nothing due in the next two weeks.</Empty></Panel> : days.map((d) => <Panel key={d} title={d}>{list.filter((t) => (t.dueDate ?? 'No date') === d).sort(byUrgency).map(row)}</Panel>)) : tab === 'today' ? (
+        <Panel title={`Today · ${list.length}`}>{list.length === 0 && !tasks.loading ? <Empty>Nothing here.</Empty> : [...list].sort(byUrgency).map(row)}</Panel>
+      ) : (
         <TaskGrid tableId={tab === 'done' ? 'tasks.completed' : 'tasks.list'} tasks={list} loading={tasks.loading && !tasks.data} done={tab === 'done'} onOpen={setEditing} onToggle={toggle} />
       )}
       {editing ? <TaskSheet task={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await reload(); }} /> : null}

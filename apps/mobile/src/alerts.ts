@@ -50,7 +50,8 @@ export async function announceNew(items: AppNotification[]) {
   if (!(await Notifications.getPermissionsAsync()).granted) return;
   // A burst becomes one summary so catching up after a long gap does not stack up pop-ups.
   if (fresh.length > 3) await Notifications.scheduleNotificationAsync({ content: { title: 'Life OS', body: `${fresh.length} new notifications` }, trigger: null });
-  else for (const n of fresh) await Notifications.scheduleNotificationAsync({ content: { title: n.title, body: n.body ?? n.module }, trigger: null });
+  // `data` rides along so tapping the notification can open the right module and item.
+  else for (const n of fresh) await Notifications.scheduleNotificationAsync({ content: { title: n.title, body: n.body ?? n.module, data: { id: n.id, module: n.module, type: n.type, metadata: n.metadata ?? null } }, trigger: null });
 }
 
 if (supported) {

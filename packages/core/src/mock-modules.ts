@@ -63,9 +63,9 @@ export function createModuleMock() {
   ];
 
   let inbox = [
-    { id: 'n1', module: 'tasks', type: 'task_overdue', title: 'Submit tax documents is overdue', body: 'Overdue by 2 days', read: false, occurredAt: new Date(Date.now() - 3_600_000).toISOString() },
-    { id: 'n2', module: 'finance', type: 'bill_due', title: 'HDFC Credit Card bill due tomorrow', body: '~₹12,500 expected', read: false, occurredAt: new Date(Date.now() - 7_200_000).toISOString() },
-    { id: 'n3', module: 'habit-tracker', type: 'streak', title: 'Meditate streak hit 10 days', body: null, read: true, occurredAt: new Date(Date.now() - 86_400_000).toISOString() },
+    { id: 'n1', module: 'tasks', type: 'task_overdue', title: 'Submit tax documents is overdue', body: 'Overdue by 2 days', metadata: { taskId: 't1' }, read: false, occurredAt: new Date(Date.now() - 3_600_000).toISOString() },
+    { id: 'n2', module: 'finance-tracker', type: 'SUBSCRIPTION_RENEWING', title: 'HDFC Credit Card bill due tomorrow', body: '~₹12,500 expected', read: false, occurredAt: new Date(Date.now() - 7_200_000).toISOString() },
+    { id: 'n3', module: 'habit-tracker', type: 'HABIT_STREAK_AT_RISK', title: 'Meditate streak hit 10 days', body: null, metadata: { habitId: 'h1' }, read: true, occurredAt: new Date(Date.now() - 86_400_000).toISOString() },
     { id: 'n4', module: 'core', type: 'ai_fallback', title: 'Ollama could not read an email', body: null, read: false, requiresAiFallbackApproval: true, aiFallbackApproved: null, occurredAt: new Date(Date.now() - 90_000_000).toISOString() },
   ] as Array<Record<string, unknown> & { id: string; read: boolean }>;
   const pending = (n: Record<string, unknown>) => n.requiresAiFallbackApproval === true && n.aiFallbackApproved == null;

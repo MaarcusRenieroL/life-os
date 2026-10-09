@@ -32,5 +32,5 @@ tauri-plugin-notification = "2"
 objc2 = "0.6"
 block2 = "0.6"
 objc2-foundation = { version = "0.3", features = ["NSString", "NSError", "NSObject"] }
-objc2-user-notifications = { version = "0.3", features = ["UNUserNotificationCenter", "UNNotification", "UNNotificationRequest", "UNNotificationContent", "UNNotificationSound", "UNNotificationTrigger", "block2"] }
+objc2-user-notifications = { version = "0.3", features = ["UNUserNotificationCenter", "UNNotification", "UNNotificationResponse", "UNNotificationRequest", "UNNotificationContent", "UNNotificationSound", "UNNotificationTrigger", "block2"] }
 objc2-local-authentication = { version = "0.3", features = ["LAContext", "LAError", "block2"] }

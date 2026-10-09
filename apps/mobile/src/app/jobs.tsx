@@ -6,6 +6,7 @@ import { Text } from '@/text';
 import { DataGrid, type Col } from '@/grid/data-grid';
 import { Bars, Btn, Chips, DateInput, Empty, Field, Input, opts, Pill, pretty, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
 import { DiscoveryTab, OpeningsTab, ResumeTab } from '@/modules/jobs-extra';
+import { tabFrom, useOpenRequest } from '@/lib/open-from';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
@@ -21,6 +22,10 @@ export default function Jobs() {
   const [tab, setTab] = useState<TabId>('dashboard');
   const jobs = useAsync(() => api.jobs.list(), api);
   const [open, setOpen] = useState<JobListing | null>(null);
+  useOpenRequest((r) => {
+    if (r.kind === 'job' && r.id) void api.jobs.list().then((all) => setOpen(all.find((j) => j.id === r.id) ?? null)).catch(() => {});
+    else { const t = tabFrom(r, TABS); if (t) setTab(t); }
+  });
   const list = jobs.data ?? [];
   return (
     <Screen title="Job tracker" onRefresh={() => void jobs.reload()} refreshing={jobs.loading}>

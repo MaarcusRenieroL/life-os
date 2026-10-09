@@ -5,6 +5,7 @@ import { Text, TextInput } from '@/text';
 import { Btn, Screen, Seg } from '@/kit';
 import { IntegrationsTab, ModulesTab, NotificationsTab, ProfileTab, SetupTab } from '@/modules/settings-extra';
 import { useLock } from '@/lib/lock';
+import { tabFrom, useOpenRequest } from '@/lib/open-from';
 import { useSession } from '@/lib/session';
 import { C } from '@/theme';
 import { Label, Muted, Panel, s } from '@/ui';
@@ -14,6 +15,7 @@ type TabId = (typeof TABS)[number]['id'];
 
 export default function Settings() {
   const [tab, setTab] = useState<TabId>('general');
+  useOpenRequest((r) => { const t = tabFrom(r, TABS); if (t) setTab(t); });
   const { settings, updateSettings, signOut } = useSession();
   const [draft, setDraft] = useState(settings);
   const [saved, setSaved] = useState(false);
