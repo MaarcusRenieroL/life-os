@@ -122,8 +122,12 @@ function defaultCell<T>(col: Col<T>, row: T): ReactNode {
   return text;
 }
 
+const NO_ROWS: never[] = [];
+
 export function DataGrid<T>(props: DataGridProps<T>) {
-  const { tableId, data, columns, getRowId, loading, emptyMessage, onRowClick, rowActions, selectable, bulkActions, exportName, views: builtIn = [], hidePagination } = props;
+  const { tableId, columns, getRowId, loading, emptyMessage, onRowClick, rowActions, selectable, bulkActions, exportName, views: builtIn = [], hidePagination } = props;
+  // A failed or odd response (not a list) shows as an empty table instead of crashing the screen.
+  const data = Array.isArray(props.data) ? props.data : (NO_ROWS as T[]);
   const g = useGrid(tableId, columns, { sorting: props.initialSorting, filters: props.initialFilters, pageSize: props.initialPageSize });
   const { state } = g;
   const [selected, setSelected] = useState<Set<string>>(new Set());

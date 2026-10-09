@@ -45,6 +45,27 @@ public class NotificationService {
     notificationRepository.markAllReadForUser(userId);
   }
 
+  @Transactional
+  public void delete(UUID userId, UUID id) {
+    Notification notification =
+        notificationRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() -> ResourceNotFoundException.of("Notification", id));
+
+    notificationRepository.delete(notification);
+  }
+
+  /** Deletes every notification except AI-fallback questions that still need an answer. Returns how many went. */
+  @Transactional
+  public int clearAll(UUID userId) {
+    return notificationRepository.deleteAnsweredForUser(userId);
+  }
+
+  @Transactional
+  public int clearRead(UUID userId) {
+    return notificationRepository.deleteReadForUser(userId);
+  }
+
   /** Records the user's yes/no on an AI-fallback-approval notification. Marking the
    * notification is all this does today - actually retrying the original operation with Claude
    * is each feature's own responsibility to wire up (it consumes the approval the same way it

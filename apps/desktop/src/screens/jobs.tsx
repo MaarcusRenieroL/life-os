@@ -1,8 +1,9 @@
 import { JOB_STATUSES, type JobListing, type JobStatus } from '@life-os/core';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
 import { DiscoveryTab, OpeningsTab, ResumeTab } from '../modules/jobs-extra';
 import { openExternal } from '../lib/runtime';
+import { useNavIntent } from '../lib/nav';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { DataGrid, type Col } from '../grid/data-grid';
@@ -27,6 +28,12 @@ export function JobsScreen() {
   const jobs = useAsync(() => api.jobs.list(), [api]);
   const [open, setOpen] = useState<JobListing | null>(null);
   const list = jobs.data ?? [];
+  const intent = useNavIntent('jobs');
+  // Opened from a notification about one job: show it once the list has loaded.
+  useEffect(() => {
+    if (intent?.entity?.kind === 'job' && jobs.data) setOpen(jobs.data.find((j) => j.id === intent.entity!.id) ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs.data]);
 
   if (jobs.error && !jobs.data) return <ErrorNote message={jobs.error} onRetry={jobs.reload} />;
 

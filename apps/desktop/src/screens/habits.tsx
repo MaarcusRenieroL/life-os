@@ -1,6 +1,7 @@
 import { dayKey, type Habit, type HabitFrequencyType, type HabitType } from '@life-os/core';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
+import { intentTab, useNavIntent } from '../lib/nav';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { CalendarTab, HabitDetailModal, WeeklyTab } from '../modules/habits-extra';
@@ -21,11 +22,21 @@ const FREQUENCIES: HabitFrequencyType[] = ['DAILY', 'WEEKLY_DAYS', 'X_PER_WEEK',
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 export function HabitsScreen() {
-  const [tab, setTab] = useState<TabId>('today');
+  const api = useApi();
+  const intent = useNavIntent('habits');
+  const [tab, setTab] = useState<TabId>(() => (intent?.entity?.kind === 'habit' ? 'all' : intentTab(intent, TABS, 'today')));
   const [editing, setEditing] = useState<Habit | 'new' | null>(null);
   const [detail, setDetail] = useState<Habit | null>(null);
   const reloadKey = useState(0);
   const [epoch, setEpoch] = reloadKey;
+  // Opened from a notification about one habit: show that habit.
+  useEffect(() => {
+    if (intent?.entity?.kind === 'habit') {
+      const id = intent.entity.id;
+      void api.habits.list().then((all) => setDetail(all.find((h) => h.id === id) ?? null)).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="stack">

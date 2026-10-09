@@ -1,6 +1,7 @@
 import { LIFE_AREAS, TASK_PRIORITIES, TASK_STATUSES, type Task, type TaskPriority, type TaskStatus, type LifeArea } from '@life-os/core';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
+import { useNavIntent } from '../lib/nav';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { DataGrid, type Col } from '../grid/data-grid';
@@ -25,6 +26,12 @@ export function TasksScreen() {
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<Task | 'new' | null>(null);
   const runner = useRunner();
+  const intent = useNavIntent('tasks');
+  // Opened from a notification about one task: show that task.
+  useEffect(() => {
+    if (intent?.entity?.kind === 'task') void api.tasks.get(intent.entity.id).then(setEditing).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const tasks = useAsync(() => {
     const q = query.trim() || undefined;
@@ -80,6 +87,10 @@ export function TasksScreen() {
         <Board tasks={list} onOpen={setEditing} onMove={(t, status) => runner.run(() => api.tasks.update(t.id, { status }), reloadAll)} />
       ) : tab === 'upcoming' ? (
         <Upcoming tasks={list} row={row} />
+      ) : tab === 'today' ? (
+        <Panel title={`Today · ${list.length}`}>
+          {list.length === 0 && !tasks.loading ? <Empty>Nothing here. Enjoy the quiet.</Empty> : <ul className="list">{[...list].sort(byUrgency).map(row)}</ul>}
+        </Panel>
       ) : (
         <TaskGrid tableId={tab === 'completed' ? 'tasks.completed' : 'tasks.list'} tasks={list} loading={tasks.loading && !tasks.data} onOpen={setEditing} onToggle={toggle} done={tab === 'completed'} />
       )}

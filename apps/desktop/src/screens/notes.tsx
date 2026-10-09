@@ -1,6 +1,7 @@
 import { NOTE_TYPES, type Note, type NoteFolder, type NoteSummary, type TrashedNote } from '@life-os/core';
 import { useEffect, useRef, useState } from 'react';
 
+import { useNavIntent } from '../lib/nav';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { AttachmentsTab, GraphTab, JournalTab, NoteSettingsTab, SearchTab, TemplatesTab } from '../modules/notes-extra';
@@ -189,8 +190,9 @@ const TABS = [{ id: 'notes', label: 'All notes' }, { id: 'journal', label: 'Jour
 type TabId = (typeof TABS)[number]['id'];
 
 export function NotesScreen() {
+  const intent = useNavIntent('notes');
   const [tab, setTab] = useState<TabId>('notes');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(intent?.entity?.kind === 'note' ? intent.entity.id : null);
   const open = (id: string) => { setOpenId(id); setTab('notes'); };
   return (
     <div className="stack">

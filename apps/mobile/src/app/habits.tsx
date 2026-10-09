@@ -5,6 +5,7 @@ import { Text } from '@/text';
 
 import { DataGrid, type Col } from '@/grid/data-grid';
 import { Bars, Btn, Chips, Empty, Field, Input, opts, Pill, pretty, Progress, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
+import { tabFrom, useOpenRequest } from '@/lib/open-from';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
@@ -22,6 +23,11 @@ export default function Habits() {
   const [editing, setEditing] = useState<Habit | 'new' | null>(null);
   const [epoch, setEpoch] = useState(0);
   const [detail, setDetail] = useState<Habit | null>(null);
+  const api = useApi();
+  useOpenRequest((r) => {
+    if (r.kind === 'habit' && r.id) { setTab('all'); void api.habits.list().then((all) => setDetail(all.find((h) => h.id === r.id) ?? null)).catch(() => {}); }
+    else { const t = tabFrom(r, TABS); if (t) setTab(t); }
+  });
   return (
     <Screen title="Habits" back={false} action={<Btn label="+ New" onPress={() => setEditing('new')} style={{ paddingVertical: 7 }} />}>
       <Seg tabs={TABS} value={tab} onChange={setTab} />

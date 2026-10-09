@@ -2,6 +2,7 @@ import { ACCOUNT_TYPES, dayKey, type AccountType, type BillingCycle, type Budget
 import { useState, type FormEvent } from 'react';
 
 import { FinanceAnalyticsTab, ImportTab, MerchantsTab, ReportTab, RulesTab } from '../modules/finance-extra';
+import { intentTab, useNavIntent } from '../lib/nav';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { DataGrid, type Col } from '../grid/data-grid';
@@ -24,7 +25,8 @@ const TABS = [
 ] as const;
 
 export function FinanceScreen() {
-  const [tab, setTab] = useState<TabId>('dashboard');
+  const intent = useNavIntent('finance');
+  const [tab, setTab] = useState<TabId>(() => intentTab(intent, TABS, 'dashboard'));
   return (
     <div className="stack">
       <Tabs tabs={TABS} value={tab} onChange={setTab} />
