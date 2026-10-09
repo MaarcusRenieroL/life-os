@@ -102,6 +102,15 @@ export const coreApi = {
     return unwrap(api.put(`${baseUrl}/notifications/read-all`));
   },
 
+  deleteNotification(id: string): Promise<void> {
+    return unwrap(api.delete(`${baseUrl}/notifications/${id}`));
+  },
+
+  /** Read ones only, or everything except AI questions still waiting for an answer. */
+  clearNotifications(readOnly: boolean): Promise<{ deleted: number }> {
+    return unwrap(api.delete(`${baseUrl}/notifications${readOnly ? '/read' : ''}`));
+  },
+
   setAiFallbackApproval(id: string, approved: boolean): Promise<Notification> {
     return unwrap(api.put(`${baseUrl}/notifications/${id}/ai-fallback-approval`, { approved }));
   },

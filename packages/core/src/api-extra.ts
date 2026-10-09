@@ -19,8 +19,14 @@ export interface AppNotification {
   title: string;
   body: string | null;
   read: boolean;
+  /** An AI-fallback question; it needs a yes/no (on the web app) before it can be cleared. */
+  requiresAiFallbackApproval?: boolean;
+  aiFallbackApproved?: boolean | null;
   occurredAt: string;
 }
+
+/** True while a notification is asking for an answer and so must not be deleted. */
+export const needsAnswer = (n: Pick<AppNotification, 'requiresAiFallbackApproval' | 'aiFallbackApproved'>) => !!n.requiresAiFallbackApproval && (n.aiFallbackApproved === null || n.aiFallbackApproved === undefined);
 
 /** The pages added after the first native release: analytics, automation, email, vault and the notes extras. */
 export function createExtraApis(client: Client) {
@@ -175,6 +181,9 @@ export function createExtraApis(client: Client) {
       unreadCount: async () => (await get<{ count: number }>('/v1/core/notifications/unread-count')).count,
       markRead: (id: string) => put<void>(`/v1/core/notifications/${id}/read`, {}),
       markAllRead: () => put<void>('/v1/core/notifications/read-all', {}),
+      deleteNotification: (id: string) => del<void>(`/v1/core/notifications/${id}`),
+      /** Deletes read notifications, or every one that is not waiting on an answer. Returns how many went. */
+      clearNotifications: async (readOnly: boolean) => (await del<{ deleted: number }>(readOnly ? '/v1/core/notifications/read' : '/v1/core/notifications')).deleted,
     },
   };
 }

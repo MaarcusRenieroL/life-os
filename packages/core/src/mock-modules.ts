@@ -62,8 +62,25 @@ export function createModuleMock() {
     { id: 'h2', name: 'Read 20 pages', description: null, category: 'Mind', type: 'COUNT', frequencyType: 'DAILY', frequencyConfig: {}, targetValue: 20, targetUnit: 'pages', status: 'ACTIVE', startDate: shiftDay(today, -40) },
   ];
 
+  let inbox = [
+    { id: 'n1', module: 'tasks', type: 'task_overdue', title: 'Submit tax documents is overdue', body: 'Overdue by 2 days', read: false, occurredAt: new Date(Date.now() - 3_600_000).toISOString() },
+    { id: 'n2', module: 'finance', type: 'bill_due', title: 'HDFC Credit Card bill due tomorrow', body: '~₹12,500 expected', read: false, occurredAt: new Date(Date.now() - 7_200_000).toISOString() },
+    { id: 'n3', module: 'habit-tracker', type: 'streak', title: 'Meditate streak hit 10 days', body: null, read: true, occurredAt: new Date(Date.now() - 86_400_000).toISOString() },
+    { id: 'n4', module: 'core', type: 'ai_fallback', title: 'Ollama could not read an email', body: null, read: false, requiresAiFallbackApproval: true, aiFallbackApproved: null, occurredAt: new Date(Date.now() - 90_000_000).toISOString() },
+  ] as Array<Record<string, unknown> & { id: string; read: boolean }>;
+  const pending = (n: Record<string, unknown>) => n.requiresAiFallbackApproval === true && n.aiFallbackApproved == null;
+
   return function route(path: string, method: string): unknown | undefined {
     const g = (re: RegExp) => re.exec(path);
+    if (path === '/v1/core/notifications' && method === 'GET') return page(inbox);
+    if (path === '/v1/core/notifications/unread-count') return { count: inbox.filter((n) => !n.read).length };
+    if (path === '/v1/core/notifications/read-all') { inbox = inbox.map((n) => ({ ...n, read: true })); return null; }
+    const nr = g(/^\/v1\/core\/notifications\/([^/]+)\/read$/);
+    if (nr) { inbox = inbox.map((n) => (n.id === nr[1] ? { ...n, read: true } : n)); return null; }
+    if (method === 'DELETE' && path === '/v1/core/notifications/read') { const before = inbox.length; inbox = inbox.filter((n) => !n.read || pending(n)); return { deleted: before - inbox.length }; }
+    if (method === 'DELETE' && path === '/v1/core/notifications') { const before = inbox.length; inbox = inbox.filter(pending); return { deleted: before - inbox.length }; }
+    const nd = g(/^\/v1\/core\/notifications\/([^/]+)$/);
+    if (method === 'DELETE' && nd) { inbox = inbox.filter((n) => n.id !== nd[1]); return null; }
     if (method === 'GET') {
       if (path === '/v1/tasks/projects' || path === '/v1/tasks/goals') return [{ id: 'p1', name: 'Life OS', createdAt: today }];
       if (g(/^\/v1\/tasks\/[^/]+\/subtasks$/)) return [];

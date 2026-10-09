@@ -8,6 +8,7 @@ import { Text } from '@/text';
 import { Btn, Empty, Field, Input, Pill, Row } from '@/kit';
 import { useApi, useSession } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
+import { NotificationList } from '@/notifications';
 import { C } from '@/theme';
 import { ErrorNote, Muted, Panel, s } from '@/ui';
 
@@ -108,27 +109,7 @@ export function IntegrationsTab() {
 }
 
 export function NotificationsTab() {
-  const api = useApi();
-  const runner = useRunner();
-  const items = useAsync(() => api.core.notifications(0, 40), api);
-  return (
-    <>
-      {runner.error ? <ErrorNote message={runner.error} /> : null}
-      <View style={{ marginBottom: 10 }}><Btn kind="ghost" label="Mark all read" onPress={() => void runner.run(() => api.core.markAllRead(), items.reload)} /></View>
-      <Panel title={`${items.data?.totalElements ?? 0} notifications`}>
-        {items.data?.content.length === 0 ? <Empty>You are all caught up.</Empty> : items.data?.content.map((n) => (
-          <Row key={n.id} onPress={n.read ? undefined : () => void runner.run(() => api.core.markRead(n.id), items.reload)}>
-            <View style={{ flex: 1, opacity: n.read ? 0.6 : 1 }}>
-              <Text style={[s.body, !n.read && { fontWeight: '700' }]}>{n.title}</Text>
-              {n.body ? <Muted style={{ fontSize: 12 }}>{n.body}</Muted> : null}
-              <Muted style={{ fontSize: 11 }}>{n.module} · {n.occurredAt.slice(0, 16).replace('T', ' ')}</Muted>
-            </View>
-            {!n.read ? <Pill label="New" color={C.accent} /> : null}
-          </Row>
-        ))}
-      </Panel>
-    </>
-  );
+  return <NotificationList />;
 }
 
 /** What is left to set up in each module, worked out from what already exists. */

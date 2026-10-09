@@ -21,6 +21,7 @@ import { LockScreen } from './lock-screen';
 import { LockProvider, useLock } from './lib/lock';
 import { QuickCapture } from './quick-capture';
 import { SessionProvider, useSession } from './lib/session';
+import { NotificationBell } from './modules/notifications';
 import { PlayerBar } from './player-bar';
 
 const SCREENS = [
@@ -94,6 +95,7 @@ function Shell() {
         <header className="topbar">
           <span className="crumb"><b>~/</b>{screen === 'home' ? 'home' : screen}</span>
           <PlayerBar key={`bar-${epoch}`} />
+          <NotificationBell />
         </header>
         <div className="content" key={`${screen}-${epoch}`}>
           <NavContext.Provider value={(id) => SCREENS.some((x) => x.id === id) && setScreen(id as ScreenId)}>

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, Check, X } from 'lucide-react';
+import { Bell, Check, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +40,8 @@ export function NotificationBell() {
   });
 
   const unreadCount = unread?.count ?? 0;
+  const hasAny = (page?.content.length ?? 0) > 0;
+  const hasRead = page?.content.some((n) => n.read) ?? false;
 
   async function markRead(id: string) {
     try {
@@ -57,6 +59,24 @@ export function NotificationBell() {
       void queryClient.invalidateQueries({ queryKey: ['core', 'notifications'] });
     } catch {
       // Same best-effort reasoning as markRead above.
+    }
+  }
+
+  async function remove(id: string) {
+    try {
+      await coreApi.deleteNotification(id);
+      void queryClient.invalidateQueries({ queryKey: ['core', 'notifications'] });
+    } catch {
+      // Best-effort - the row just stays if the delete fails; the user can try again.
+    }
+  }
+
+  async function clear(readOnly: boolean) {
+    try {
+      await coreApi.clearNotifications(readOnly);
+      void queryClient.invalidateQueries({ queryKey: ['core', 'notifications'] });
+    } catch {
+      // Same best-effort reasoning as above.
     }
   }
 
@@ -89,11 +109,23 @@ export function NotificationBell() {
           <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
             Notifications
           </span>
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px]" onClick={() => void markAllRead()}>
-              Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-0.5">
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px]" onClick={() => void markAllRead()}>
+                Mark all read
+              </Button>
+            )}
+            {hasRead && (
+              <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px]" onClick={() => void clear(true)}>
+                Clear read
+              </Button>
+            )}
+            {hasAny && (
+              <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px] text-destructive hover:text-destructive" onClick={() => void clear(false)}>
+                Clear all
+              </Button>
+            )}
+          </div>
         </div>
         <Separator />
         <ScrollArea className="h-96">
@@ -110,6 +142,7 @@ export function NotificationBell() {
                   key={notification.id}
                   notification={notification}
                   onMarkRead={() => void markRead(notification.id)}
+                  onDelete={() => void remove(notification.id)}
                   onAiFallback={(approved) => void setAiFallback(notification.id, approved)}
                 />
               ))}
@@ -124,23 +157,37 @@ export function NotificationBell() {
 function NotificationRow({
   notification,
   onMarkRead,
+  onDelete,
   onAiFallback,
 }: {
   notification: Notification;
   onMarkRead: () => void;
+  onDelete: () => void;
   onAiFallback: (approved: boolean) => void;
 }) {
   const needsAiDecision = notification.requiresAiFallbackApproval && notification.aiFallbackApproved === null;
 
   return (
+    <div className="group relative border-b last:border-b-0">
+    {/* A pending AI question can't be deleted from here: it needs a yes or a no first. */}
+    {!needsAiDecision && (
+      <button
+        type="button"
+        aria-label="Delete notification"
+        onClick={onDelete}
+        className="absolute top-2 right-2 z-10 rounded p-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-foreground/10 hover:text-destructive focus-visible:opacity-100"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
+    )}
     <button
       type="button"
       onClick={() => !notification.read && !needsAiDecision && onMarkRead()}
-      className={`flex w-full flex-col gap-1 border-b px-3.5 py-3 text-left transition-colors last:border-b-0 hover:bg-foreground/5 ${
+      className={`flex w-full flex-col gap-1 px-3.5 py-3 text-left transition-colors hover:bg-foreground/5 ${
         notification.read ? 'opacity-60' : ''
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-2 pr-6">
         <span className="text-sm font-medium">{notification.title}</span>
         {!notification.read && <span className="mt-1 size-1.5 shrink-0 rounded-full bg-primary" />}
       </div>
@@ -182,5 +229,6 @@ function NotificationRow({
         </div>
       )}
     </button>
+    </div>
   );
 }
