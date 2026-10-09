@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import '@/alerts';
 import { LockScreen } from '@/lock-screen';
 import { LockProvider, useLock } from '@/lib/lock';
 import { Login } from '@/login';

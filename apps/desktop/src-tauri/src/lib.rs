@@ -83,6 +83,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![biometric_available, biometric_authenticate])
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         // Requests go through Rust, so the app never needs CORS headers from the gateway.
         .plugin(tauri_plugin_http::init())
         .plugin(

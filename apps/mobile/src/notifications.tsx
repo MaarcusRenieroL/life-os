@@ -3,6 +3,7 @@ import { Bell } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 
+import { announceNew, enableAlerts, registerBackgroundCheck } from '@/alerts';
 import { Btn, Sheet } from '@/kit';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
@@ -52,7 +53,15 @@ export function NotificationList({ onChanged }: { onChanged?: () => void }) {
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={{ color: C.text, fontSize: 14, fontWeight: n.read ? '400' : '700' }}>{n.title}</Text>
             {n.body ? <Muted style={{ fontSize: 12 }}>{n.body}</Muted> : null}
-            {needsAnswer(n) ? <Text style={{ color: C.gold, fontSize: 12 }}>Needs your answer on the web app.</Text> : null}
+            {needsAnswer(n) ? (
+              <View style={{ marginTop: 6, gap: 8, padding: 10, borderWidth: 1, borderColor: '#f0bb3b59', borderRadius: 6, backgroundColor: '#f0bb3b0f' }}>
+                <Text style={{ color: C.gold, fontSize: 12 }}>Ollama couldn&apos;t process this. Use Claude instead? That costs money.</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Btn label="Use Claude" onPress={() => void runner.run(() => api.core.answerAiFallback(n.id, true), after)} style={{ paddingVertical: 6, paddingHorizontal: 12 }} />
+                  <Btn kind="ghost" label="Skip" onPress={() => void runner.run(() => api.core.answerAiFallback(n.id, false), after)} style={{ paddingVertical: 6, paddingHorizontal: 12 }} />
+                </View>
+              </View>
+            ) : null}
             <Muted style={{ fontSize: 11 }}>{n.module} · {when(n.occurredAt)}</Muted>
           </View>
           {!needsAnswer(n) ? (
@@ -72,10 +81,22 @@ export function NotificationBell() {
   const count = useAsync(() => api.core.unreadCount(), api);
   const [open, setOpen] = useState(false);
 
+  // Every 30s while the app is open: refresh the badge and tell the OS about anything new.
   useEffect(() => {
-    const timer = setInterval(() => void count.reload(), 60_000);
+    const check = async () => {
+      try {
+        await announceNew((await api.core.notifications(0, 20)).content);
+      } catch {
+        /* offline or signed out: try again next time */
+      }
+      void count.reload();
+    };
+    void enableAlerts().then(async (ok) => { if (ok) await registerBackgroundCheck(); });
+    void check();
+    const timer = setInterval(() => void check(), 30_000);
     return () => clearInterval(timer);
-  }, [count]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api]);
 
   const unread = count.data ?? 0;
   return (

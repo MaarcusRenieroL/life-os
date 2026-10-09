@@ -181,6 +181,8 @@ export function createExtraApis(client: Client) {
       unreadCount: async () => (await get<{ count: number }>('/v1/core/notifications/unread-count')).count,
       markRead: (id: string) => put<void>(`/v1/core/notifications/${id}/read`, {}),
       markAllRead: () => put<void>('/v1/core/notifications/read-all', {}),
+      /** Yes/no on an "Ollama couldn't do this - use Claude?" question. */
+      answerAiFallback: (id: string, approved: boolean) => put<AppNotification>(`/v1/core/notifications/${id}/ai-fallback-approval`, { approved }),
       deleteNotification: (id: string) => del<void>(`/v1/core/notifications/${id}`),
       /** Deletes read notifications, or every one that is not waiting on an answer. Returns how many went. */
       clearNotifications: async (readOnly: boolean) => (await del<{ deleted: number }>(readOnly ? '/v1/core/notifications/read' : '/v1/core/notifications')).deleted,

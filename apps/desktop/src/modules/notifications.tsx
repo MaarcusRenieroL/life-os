@@ -1,6 +1,7 @@
 import { needsAnswer, type AppNotification } from '@life-os/core';
 import { useEffect, useRef, useState } from 'react';
 
+import { announceNew } from '../lib/os-notify';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { Empty, ErrorNote } from '../ui';
@@ -46,7 +47,13 @@ export function NotificationList({ onChanged, compact }: { onChanged?: () => voi
               <span className="grow">
                 <b>{n.title}</b>
                 {n.body && <div className="muted">{n.body}</div>}
-                {needsAnswer(n) && <div className="warn">Needs your answer on the web app.</div>}
+                {needsAnswer(n) && (
+                  <div className="n-ask">
+                    <span>Ollama couldn&apos;t process this. Use Claude instead? That costs money.</span>
+                    <button className="primary g-btn" onClick={(e) => { e.stopPropagation(); void runner.run(() => api.core.answerAiFallback(n.id, true), after); }}>Use Claude</button>
+                    <button className="ghost g-btn" onClick={(e) => { e.stopPropagation(); void runner.run(() => api.core.answerAiFallback(n.id, false), after); }}>Skip</button>
+                  </div>
+                )}
                 <small className="muted">{n.module} · {when(n.occurredAt)}</small>
               </span>
               {!needsAnswer(n) && <button className="n-x" aria-label="Delete notification" title="Delete" onClick={(e) => { e.stopPropagation(); void runner.run(() => api.core.deleteNotification(n.id), after); }}>✕</button>}
@@ -65,10 +72,21 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  // Every 30s: refresh the badge, and tell the OS about anything new (the app keeps running in the tray).
   useEffect(() => {
-    const timer = setInterval(() => void count.reload(), 60_000);
+    const check = async () => {
+      try {
+        await announceNew((await api.core.notifications(0, 20)).content);
+      } catch {
+        /* offline or signed out: try again next time */
+      }
+      void count.reload();
+    };
+    void check();
+    const timer = setInterval(() => void check(), 30_000);
     return () => clearInterval(timer);
-  }, [count]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api]);
 
   useEffect(() => {
     if (!open) return;
