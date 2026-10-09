@@ -34,16 +34,18 @@ public class MerchantClusteringService {
             + " Descriptions: "
             + objectMapper.writeValueAsString(distinctDescriptions);
 
-    OllamaGenerateRequest request = new OllamaGenerateRequest(ollamaModel, prompt, false, "json");
-
-    OllamaGenerateResponse response =
-        ollamaRestClient
-            .post()
-            .uri("/api/generate")
-            .body(request)
-            .retrieve()
-            .body(OllamaGenerateResponse.class);
+    OllamaGenerateResponse response;
+    try {
+      response = generate(new OllamaGenerateRequest(ollamaModel, prompt, false, "json", false));
+    } catch (org.springframework.web.client.HttpServerErrorException.NotImplemented notImplemented) {
+      // This Ollama build cannot do JSON mode for the model: the prompt already asks for JSON, so retry without it.
+      response = generate(new OllamaGenerateRequest(ollamaModel, prompt, false, null, false));
+    }
 
     return objectMapper.readValue(response.response(), new TypeReference<Map<String, String>>() {});
+  }
+
+  private OllamaGenerateResponse generate(OllamaGenerateRequest request) {
+    return ollamaRestClient.post().uri("/api/generate").body(request).retrieve().body(OllamaGenerateResponse.class);
   }
 }

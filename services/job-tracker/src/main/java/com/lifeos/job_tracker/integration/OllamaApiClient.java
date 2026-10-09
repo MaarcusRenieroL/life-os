@@ -68,6 +68,7 @@ public class OllamaApiClient implements AiClient {
             Map.of(
                 "model", properties.model(),
                 "stream", false,
+                "think", false,
                 "messages",
                     List.of(
                         Map.of("role", "system", "content", systemPrompt),
@@ -77,7 +78,15 @@ public class OllamaApiClient implements AiClient {
     }
 
     try {
-      String raw = restClient.post().uri("/api/chat").body(body).retrieve().body(String.class);
+      String raw;
+      try {
+        raw = restClient.post().uri("/api/chat").body(body).retrieve().body(String.class);
+      } catch (org.springframework.web.client.HttpServerErrorException.NotImplemented notImplemented) {
+        // This Ollama build cannot do JSON mode for the model (structured-output library missing): retry without it.
+        Map<String, Object> plain = new java.util.HashMap<>(body);
+        plain.remove("format");
+        raw = restClient.post().uri("/api/chat").body(plain).retrieve().body(String.class);
+      }
 
       JsonNode response = raw == null ? null : objectMapper.readTree(raw);
       String content = response == null ? null : response.path("message").path("content").asText(null);

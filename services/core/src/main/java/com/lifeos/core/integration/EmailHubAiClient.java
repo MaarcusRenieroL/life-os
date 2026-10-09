@@ -114,11 +114,12 @@ public class EmailHubAiClient {
         Map.of(
             "model", ollamaProperties.model(),
             "stream", false,
+            "think", false, // thinking models (Qwen 3.x) would otherwise reason for a long time first
             "format", "json",
             "options", Map.of("temperature", 0.1),
             "messages", List.of(Map.of("role", "system", "content", system), Map.of("role", "user", "content", user)));
     try {
-      String raw = ollamaRestClient.post().uri("/api/chat").body(body).retrieve().body(String.class);
+      String raw = postChat(body);
       JsonNode response = raw == null ? null : objectMapper.readTree(raw);
       return parse(response == null ? null : response.path("message").path("content").asText(null), "Ollama");
     } catch (RestClientException exception) {
@@ -127,6 +128,20 @@ public class EmailHubAiClient {
       throw exception;
     } catch (Exception exception) {
       throw new AiUnavailableException("Could not read Ollama response: " + exception.getMessage(), exception);
+    }
+  }
+
+  /**
+   * Posts a chat request. Some Ollama builds cannot do JSON mode for some models (the server answers 501 when
+   * its structured-output library is missing); the prompts already demand plain JSON, so retry once without it.
+   */
+  private String postChat(Map<String, Object> body) {
+    try {
+      return ollamaRestClient.post().uri("/api/chat").body(body).retrieve().body(String.class);
+    } catch (org.springframework.web.client.HttpServerErrorException.NotImplemented notImplemented) {
+      Map<String, Object> plain = new java.util.HashMap<>(body);
+      plain.remove("format");
+      return ollamaRestClient.post().uri("/api/chat").body(plain).retrieve().body(String.class);
     }
   }
 
