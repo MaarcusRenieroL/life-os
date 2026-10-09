@@ -20,14 +20,33 @@ function saveSeen(ids: Set<string>) {
   }
 }
 
-async function show(title: string, body: string) {
+/** Asks the OS once (macOS shows its prompt the first time) and reports whether banners are allowed. */
+export async function enableOsNotifications(): Promise<boolean> {
+  try {
+    if (isTauri()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      return await invoke<boolean>('notify_permission');
+    }
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') await Notification.requestPermission();
+      return Notification.permission === 'granted';
+    }
+  } catch {
+    /* fall through: treated as not allowed */
+  }
+  return false;
+}
+
+export async function show(title: string, body: string) {
   if (isTauri()) {
+    const { invoke } = await import('@tauri-apps/api/core');
+    // The app's own macOS code shows it; elsewhere it answers false and the generic plugin does the job.
+    if (await invoke<boolean>('notify_os', { title, body })) return;
     const { isPermissionGranted, requestPermission, sendNotification } = await import('@tauri-apps/plugin-notification');
     if (!(await isPermissionGranted()) && (await requestPermission()) !== 'granted') return;
     sendNotification({ title, body });
-  } else if ('Notification' in window) {
-    if (Notification.permission === 'default') await Notification.requestPermission();
-    if (Notification.permission === 'granted') new Notification(title, { body });
+  } else if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, { body });
   }
 }
 

@@ -35,6 +35,98 @@ mod biometric {
     }
 }
 
+/// System notifications on macOS through Apple's UserNotifications framework. The generic plugin uses an API
+/// current macOS no longer shows, so on a Mac this is what actually puts a banner on screen.
+#[cfg(target_os = "macos")]
+mod alerts {
+    use block2::{DynBlock, RcBlock};
+    use objc2::rc::Retained;
+    use objc2::runtime::{Bool, NSObject, NSObjectProtocol};
+    use objc2::{define_class, msg_send, AnyThread};
+    use objc2_foundation::{NSError, NSString};
+    use objc2_user_notifications::{
+        UNAuthorizationOptions, UNMutableNotificationContent, UNNotification, UNNotificationPresentationOptions, UNNotificationRequest,
+        UNNotificationSound, UNUserNotificationCenter, UNUserNotificationCenterDelegate,
+    };
+    use std::sync::{mpsc, Once};
+
+    define_class!(
+        // Without this macOS hides the banner while the app is in front.
+        #[unsafe(super(NSObject))]
+        #[name = "LifeOSNotificationDelegate"]
+        struct Delegate;
+
+        unsafe impl NSObjectProtocol for Delegate {}
+
+        unsafe impl UNUserNotificationCenterDelegate for Delegate {
+            #[unsafe(method(userNotificationCenter:willPresentNotification:withCompletionHandler:))]
+            fn will_present(&self, _center: &UNUserNotificationCenter, _notification: &UNNotification, handler: &DynBlock<dyn Fn(UNNotificationPresentationOptions)>) {
+                handler.call((UNNotificationPresentationOptions::Banner | UNNotificationPresentationOptions::List | UNNotificationPresentationOptions::Sound,));
+            }
+        }
+    );
+
+    fn center() -> Retained<UNUserNotificationCenter> {
+        static SET_DELEGATE: Once = Once::new();
+        let center = UNUserNotificationCenter::currentNotificationCenter();
+        SET_DELEGATE.call_once(|| {
+            let delegate: Retained<Delegate> = unsafe { msg_send![Delegate::alloc(), init] };
+            // The centre only keeps a weak reference, so the delegate is leaked on purpose to live as long as the app.
+            center.setDelegate(Some(objc2::runtime::ProtocolObject::from_ref(&*delegate)));
+            std::mem::forget(delegate);
+        });
+        center
+    }
+
+    /// Asks macOS for permission (it prompts the first time) and reports whether banners are allowed.
+    pub fn request_permission() -> bool {
+        let (tx, rx) = mpsc::channel::<bool>();
+        let reply = RcBlock::new(move |granted: Bool, _error: *mut NSError| {
+            let _ = tx.send(granted.as_bool());
+        });
+        center().requestAuthorizationWithOptions_completionHandler(UNAuthorizationOptions::Alert | UNAuthorizationOptions::Sound, &reply);
+        rx.recv().unwrap_or(false)
+    }
+
+    pub fn send(title: &str, body: &str) {
+        let content = UNMutableNotificationContent::new();
+        content.setTitle(&NSString::from_str(title));
+        content.setBody(&NSString::from_str(body));
+        let sound = UNNotificationSound::defaultSound();
+        content.setSound(Some(&sound));
+        let id = NSString::from_str(&format!("lifeos-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0)));
+        let request = UNNotificationRequest::requestWithIdentifier_content_trigger(&id, &content, None);
+        center().addNotificationRequest_withCompletionHandler(&request, None);
+    }
+}
+
+#[tauri::command]
+async fn notify_permission() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        tauri::async_runtime::spawn_blocking(alerts::request_permission).await.unwrap_or(false)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        true
+    }
+}
+
+/// Shows a system notification. Returns false where the app should fall back to the generic plugin.
+#[tauri::command]
+fn notify_os(title: String, body: String) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        alerts::send(&title, &body);
+        true
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (title, body);
+        false
+    }
+}
+
 #[tauri::command]
 fn biometric_available() -> bool {
     #[cfg(target_os = "macos")]
@@ -81,7 +173,7 @@ pub fn run() {
     let capture_shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::Space);
 
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![biometric_available, biometric_authenticate])
+        .invoke_handler(tauri::generate_handler![biometric_available, biometric_authenticate, notify_permission, notify_os])
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         // Requests go through Rust, so the app never needs CORS headers from the gateway.

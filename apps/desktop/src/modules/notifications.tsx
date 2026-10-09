@@ -1,7 +1,7 @@
 import { needsAnswer, type AppNotification } from '@life-os/core';
 import { useEffect, useRef, useState } from 'react';
 
-import { announceNew } from '../lib/os-notify';
+import { announceNew, enableOsNotifications, show } from '../lib/os-notify';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { Empty, ErrorNote } from '../ui';
@@ -70,6 +70,7 @@ export function NotificationBell() {
   const api = useApi();
   const count = useAsync(() => api.core.unreadCount(), [api]);
   const [open, setOpen] = useState(false);
+  const [alertsOk, setAlertsOk] = useState<boolean | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   // Every 30s: refresh the badge, and tell the OS about anything new (the app keeps running in the tray).
@@ -82,6 +83,7 @@ export function NotificationBell() {
       }
       void count.reload();
     };
+    void enableOsNotifications().then(setAlertsOk);
     void check();
     const timer = setInterval(() => void check(), 30_000);
     return () => clearInterval(timer);
@@ -110,6 +112,10 @@ export function NotificationBell() {
       {open && (
         <div className="panel n-pop">
           <div className="panel-head"><span className="label">Notifications</span></div>
+          {alertsOk === false && <p className="warn n-alert">System notifications are blocked. Turn them on in System Settings → Notifications → Life OS.</p>}
+          <div className="n-bar-end" style={{ marginBottom: 8 }}>
+            <button className="link" onClick={() => void enableOsNotifications().then((ok) => { setAlertsOk(ok); void show('Life OS', 'This is a test notification.'); })}>Send a test alert</button>
+          </div>
           <NotificationList compact onChanged={() => void count.reload()} />
         </div>
       )}
