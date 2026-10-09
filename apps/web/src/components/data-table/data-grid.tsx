@@ -33,7 +33,7 @@ import { DataGridSort } from './data-grid-sort';
 import { DataGridRowDrawer } from './data-grid-row-drawer';
 import { useSavedViews, type GridView } from './data-grid-views';
 import { selectionColumn } from './selection-column';
-import { usePersistedGrid } from './use-persisted-grid';
+import { usePersistedFilters, usePersistedGrid } from './use-persisted-grid';
 
 export interface DataGridProps<TData> {
   /** Stable id, e.g. `finance.accounts` - the key the layout is saved under. */
@@ -46,7 +46,7 @@ export interface DataGridProps<TData> {
   loading?: boolean;
   emptyMessage?: ReactNode;
   initialSorting?: SortingState;
-  /** Filters applied on first load (not saved), e.g. a default date window. */
+  /** Filters applied on a first visit in a browser session (later ones are remembered), e.g. a default date window. */
   initialFilters?: ColumnFiltersState;
   /** Columns that start hidden, e.g. `{ notes: false }`. */
   initialVisibility?: VisibilityState;
@@ -150,12 +150,17 @@ export function DataGrid<TData>({
     pageSize: PAGE_SIZES.includes(initialPageSize) ? initialPageSize : 20,
     density: 'comfortable',
   });
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(initialFilters);
-  const [globalFilter, setGlobalFilter] = useState('');
+  const {
+    filters: columnFilters,
+    search: globalFilter,
+    view: activeView,
+    setFilters: setColumnFilters,
+    setSearch: setGlobalFilter,
+    setView: setActiveView,
+  } = usePersistedFilters(tableId, { filters: initialFilters, search: '', view: 'all' });
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: layout.pageSize });
   const saved = useSavedViews(tableId);
-  const [activeView, setActiveView] = useState('all');
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const narrow = useNarrow(gridRef, CARD_BELOW);

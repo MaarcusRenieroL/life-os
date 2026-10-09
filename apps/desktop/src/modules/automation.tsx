@@ -1,9 +1,10 @@
-import { ACTION_TYPES, describeAction, describeTrigger, ENTITY_TYPES, RULE_EVENT_CATEGORIES, ruleFormFrom, ruleRequestFrom, THRESHOLD_METRICS, TRIGGER_TYPES, WEEK_DAYS, type AutomationRule } from '@life-os/core';
+import { ACTION_TYPES, describeAction, describeTrigger, ENTITY_TYPES, RULE_EVENT_CATEGORIES, ruleFormFrom, ruleRequestFrom, THRESHOLD_METRICS, TRIGGER_TYPES, WEEK_DAYS, type AutomationExecution, type AutomationRule } from '@life-os/core';
 import { useState, type FormEvent } from 'react';
 
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
-import { Empty, ErrorNote, Field, Modal, opts, Panel, Select } from '../ui';
+import { DataGrid, type Col } from '../grid/data-grid';
+import { ErrorNote, Field, Modal, opts, Panel, Select } from '../ui';
 
 const plain = (values: readonly string[]) => values.map((v) => ({ value: v, label: v.replace('_', ' ').toLowerCase() }));
 const TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'DONE', 'BLOCKED'];
@@ -16,29 +17,41 @@ export function RulesTab() {
   const rules = useAsync(() => api.automation.rules(), [api]);
   const [editing, setEditing] = useState<AutomationRule | 'new' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const columns: Col<AutomationRule>[] = [
+    { id: 'name', title: 'Rule', value: (r) => r.name, filter: { type: 'text' }, cell: (r) => <b>{r.name}</b> },
+    { id: 'trigger', title: 'When', value: (r) => describeTrigger(r.triggerType, r.triggerConfig), filter: { type: 'text' } },
+    { id: 'action', title: 'Then', value: (r) => describeAction(r.actionType, r.actionConfig), filter: { type: 'text' } },
+    { id: 'status', title: 'Status', value: (r) => (r.enabled ? 'On' : 'Off'), filter: { type: 'select' } },
+    { id: 'runs', title: 'Runs', value: (r) => r.runCount, align: 'right', aggregate: 'sum', filter: { type: 'number' } },
+    { id: 'last', title: 'Last run', value: (r) => (r.lastRunAt ?? '').slice(0, 16).replace('T', ' '), filter: { type: 'date' } },
+    { id: 'created', title: 'Created', value: (r) => r.createdAt.slice(0, 10), filter: { type: 'date' }, hidden: true },
+  ];
   return (
     <>
-      <div className="row"><span className="grow" /><button className="primary" onClick={() => setEditing('new')}>+ New rule</button></div>
       {rules.error && !rules.data && <ErrorNote message={rules.error} onRetry={rules.reload} />}
       {runner.error && <ErrorNote message={runner.error} />}
       {message && <p className="muted">{message}</p>}
-      <Panel title={`${rules.data?.length ?? 0} rules`}>
-        {rules.data?.length === 0 ? <Empty>No rules yet. Start from a template.</Empty> : (
-          <ul className="list">
-            {rules.data?.map((r) => (
-              <li key={r.id} style={{ opacity: r.enabled ? 1 : 0.55 }}>
-                <span className="grow clickable" onClick={() => setEditing(r)}>
-                  <b>{r.name}</b>
-                  <div className="muted">{describeTrigger(r.triggerType, r.triggerConfig)} → {describeAction(r.actionType, r.actionConfig)}</div>
-                  <small className="muted">{r.runCount === 0 ? 'Never run' : `Ran ${r.runCount}×${r.lastRunAt ? ` · last ${r.lastRunAt.slice(0, 16).replace('T', ' ')}` : ''}`}</small>
-                </span>
-                <label className="muted"><input type="checkbox" checked={r.enabled} onChange={(e) => void runner.run(() => api.automation.setEnabled(r.id, e.target.checked), rules.reload)} /> On</label>
-                <button className="ghost" title="Run once now" onClick={() => void runner.run(async () => { const run = await api.automation.testRule(r.id); setMessage(run.message ?? (run.status === 'SUCCESS' ? 'Test run succeeded' : 'Test run failed')); }, rules.reload)}>Test</button>
-              </li>
-            ))}
-          </ul>
+      <DataGrid
+        tableId="automation.rules"
+        data={rules.data ?? []}
+        columns={columns}
+        getRowId={(r) => r.id}
+        loading={rules.loading && !rules.data}
+        initialSorting={[{ id: 'name', desc: false }]}
+        emptyMessage="No rules yet. Start from a template."
+        searchPlaceholder="Search rules…"
+        exportName="automation-rules"
+        onRowClick={setEditing}
+        drawer={false}
+        views={[{ id: 'on', name: 'On', filters: { status: ['On'] } }, { id: 'off', name: 'Off', filters: { status: ['Off'] } }]}
+        toolbarEnd={<button className="primary g-btn" onClick={() => setEditing('new')}>+ New rule</button>}
+        rowActions={(r) => (
+          <>
+            <label className="muted"><input type="checkbox" checked={r.enabled} onChange={(e) => void runner.run(() => api.automation.setEnabled(r.id, e.target.checked), rules.reload)} /> On</label>
+            <button className="ghost g-btn" title="Run once now" onClick={() => void runner.run(async () => { const run = await api.automation.testRule(r.id); setMessage(run.message ?? (run.status === 'SUCCESS' ? 'Test run succeeded' : 'Test run failed')); }, rules.reload)}>Test</button>
+          </>
         )}
-      </Panel>
+      />
       {editing && <RuleModal rule={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await rules.reload(); }} />}
     </>
   );
@@ -159,23 +172,29 @@ export function HistoryTab() {
   const rules = useAsync(() => api.automation.rules(), [api]);
   const runs = useAsync(() => api.automation.executions(ruleId || undefined, 80), [api, ruleId]);
   const names = new Map((rules.data ?? []).map((r) => [r.id, r.name]));
+  const columns: Col<AutomationExecution>[] = [
+    { id: 'when', title: 'When', value: (r) => r.executedAt.slice(0, 16).replace('T', ' '), filter: { type: 'date' } },
+    { id: 'rule', title: 'Rule', value: (r) => names.get(r.ruleId) ?? 'Deleted rule', filter: { type: 'select' }, cell: (r) => <b>{names.get(r.ruleId) ?? 'Deleted rule'}</b> },
+    { id: 'result', title: 'Result', value: (r) => (r.status === 'SUCCESS' ? 'Succeeded' : 'Failed'), filter: { type: 'select' } },
+    { id: 'message', title: 'Message', value: (r) => r.message ?? '' },
+    { id: 'trigger', title: 'Trigger', value: (r) => r.triggerSummary ?? '' },
+  ];
   return (
     <>
       <div className="row"><Select value={ruleId} onChange={setRuleId} options={(rules.data ?? []).map((r) => ({ value: r.id, label: r.name }))} placeholder="All rules" /></div>
       {runs.error && !runs.data && <ErrorNote message={runs.error} onRetry={runs.reload} />}
-      <Panel title={`${runs.data?.length ?? 0} runs`}>
-        {runs.data?.length === 0 ? <Empty>Nothing has run yet.</Empty> : (
-          <ul className="list">
-            {runs.data?.map((run) => (
-              <li key={run.id}>
-                <span className={`pill ${run.status === 'SUCCESS' ? 'good' : 'bad'}`}>{run.status === 'SUCCESS' ? 'ok' : 'failed'}</span>
-                <span className="grow"><b>{names.get(run.ruleId) ?? 'Deleted rule'}</b>{run.message && <div className="muted">{run.message}</div>}{run.triggerSummary && <small className="muted">Trigger: {run.triggerSummary}</small>}</span>
-                <small className="muted">{run.executedAt.slice(5, 16).replace('T', ' ')}</small>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
+      <DataGrid
+        tableId="automation.history"
+        data={runs.data ?? []}
+        columns={columns}
+        getRowId={(r) => r.id}
+        loading={runs.loading && !runs.data}
+        initialSorting={[{ id: 'when', desc: true }]}
+        emptyMessage="Nothing has run yet."
+        searchPlaceholder="Search runs…"
+        exportName="automation-history"
+        views={[{ id: 'failed', name: 'Failed', filters: { result: ['Failed'] } }]}
+      />
     </>
   );
 }

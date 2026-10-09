@@ -1,9 +1,10 @@
-import { CARD_NETWORKS, DEFAULT_GENERATOR, entryStrengthMap, generatePassword, maskCard, parseCsv, type ApiCardNetwork, type VaultEntryDetail, type VaultEntryType, type VaultEntryWriteRequest } from '@life-os/core';
+import { CARD_NETWORKS, DEFAULT_GENERATOR, entryStrengthMap, generatePassword, maskCard, parseCsv, type ApiCardNetwork, type AuditEvent, type VaultEntryDetail, type VaultEntrySummary, type VaultEntryType, type VaultEntryWriteRequest } from '@life-os/core';
 import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
-import { Bars, Empty, ErrorNote, Field, Modal, opts, Panel, ProgressRow, Select, Stat } from '../ui';
+import { DataGrid, type Col } from '../grid/data-grid';
+import { Bars, Empty, ErrorNote, Field, Modal, opts, Panel, pretty, ProgressRow, Select, Stat } from '../ui';
 
 /** A uniformly random integer in [0, max) from the browser's secure random source. */
 function randomInt(max: number): number {
@@ -74,36 +75,37 @@ export function EntriesTab() {
   const entries = useAsync(() => api.vault.entries(), [api]);
   const categories = useAsync(() => api.vault.categories(), [api]);
   const health = useAsync(() => api.vault.health(), [api]);
-  const [search, setSearch] = useState('');
-  const [chip, setChip] = useState('');
   const [open, setOpen] = useState<string | 'new' | null>(null);
   const strength = entryStrengthMap(health.data?.actionRequired ?? []);
-  const term = search.trim().toLowerCase();
-  const list = (entries.data ?? []).filter((e) => (!term || [e.title, e.username, e.email, e.url].filter(Boolean).join(' ').toLowerCase().includes(term)) && (!chip || (chip === 'favorites' ? e.favorite : e.categoryId === chip)));
-  const catName = (id: string | null) => categories.data?.find((c) => c.id === id)?.name;
+  const catName = (id: string | null) => categories.data?.find((c) => c.id === id)?.name ?? '';
+  const columns: Col<VaultEntrySummary>[] = [
+    { id: 'title', title: 'Title', value: (e) => e.title, filter: { type: 'text' }, cell: (e) => <b>{e.title}{e.favorite ? ' ★' : ''}</b> },
+    { id: 'login', title: 'Login', value: (e) => e.username || e.email || '', filter: { type: 'text' } },
+    { id: 'url', title: 'Website', value: (e) => e.url ?? '' },
+    { id: 'folder', title: 'Folder', value: (e) => catName(e.categoryId) || 'None', filter: { type: 'select' } },
+    { id: 'type', title: 'Type', value: (e) => pretty(e.type), filter: { type: 'select' } },
+    { id: 'strength', title: 'Strength', value: (e) => strength.get(e.id) ?? 'Strong', filter: { type: 'select' }, cell: (e) => { const l = strength.get(e.id) ?? 'Strong'; return <span className={`g-chip ${l === 'Strong' ? 'success' : 'danger'}`}>{l}</span>; } },
+    { id: 'favorite', title: 'Favourite', value: (e) => e.favorite, filter: { type: 'boolean' }, hidden: true },
+    { id: 'expires', title: 'Expires', value: (e) => (e.expiresAt ?? '').slice(0, 10), filter: { type: 'date' }, hidden: true },
+    { id: 'updated', title: 'Updated', value: (e) => e.updatedAt.slice(0, 10), filter: { type: 'date' } },
+  ];
   return (
     <>
-      <div className="row" style={{ gap: 8 }}>
-        <input className="grow" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search entries…" />
-        <Select value={chip} onChange={setChip} placeholder="All folders" options={[{ value: 'favorites', label: '★ Favorites' }, ...(categories.data ?? []).map((c) => ({ value: c.id, label: c.name }))]} />
-        <button className="primary" onClick={() => setOpen('new')}>+ Add entry</button>
-      </div>
       {entries.error && !entries.data && <ErrorNote message={entries.error} onRetry={entries.reload} />}
-      <Panel title={`${list.length} entries`}>
-        {list.length === 0 && !entries.loading ? <Empty>No entries found.</Empty> : (
-          <ul className="list">
-            {list.map((e) => {
-              const label = strength.get(e.id) ?? 'Strong';
-              return (
-                <li key={e.id} className="clickable" onClick={() => setOpen(e.id)}>
-                  <span className="grow"><b>{e.title}{e.favorite ? ' ★' : ''}</b><div className="muted">{e.username || e.email || e.url || '—'}{catName(e.categoryId) ? ` · ${catName(e.categoryId)}` : ''}</div></span>
-                  <span className={`pill ${label === 'Strong' ? 'good' : 'bad'}`}>{label}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Panel>
+      <DataGrid
+        tableId="vault.entries"
+        data={entries.data ?? []}
+        columns={columns}
+        getRowId={(e) => e.id}
+        loading={entries.loading && !entries.data}
+        initialSorting={[{ id: 'title', desc: false }]}
+        emptyMessage="No entries found."
+        searchPlaceholder="Search entries…"
+        onRowClick={(e) => setOpen(e.id)}
+        drawer={false}
+        views={[{ id: 'fav', name: 'Favourites', filters: { favorite: ['true'] } }, { id: 'weak', name: 'Needs attention', filters: { strength: ['Weak', 'Reused', 'Compromised', 'Old'] } }]}
+        toolbarEnd={<button className="primary g-btn" onClick={() => setOpen('new')}>+ Add entry</button>}
+      />
       {open && <EntryModal id={open === 'new' ? null : open} categories={categories.data ?? []} onClose={() => setOpen(null)} onChanged={async () => { setOpen(null); await Promise.all([entries.reload(), health.reload()]); }} />}
     </>
   );
@@ -299,24 +301,37 @@ export function SecurityTab() {
 // ------------------------------------------------------------------ audit log
 export function AuditTab() {
   const api = useApi();
-  const [page, setPage] = useState(0);
-  const events = useAsync(() => api.audit.events(page, 50), [api, page]);
-  const r = events.data;
+  // Everything is loaded and handled here so search, filters and sorting cover every event.
+  const events = useAsync(async () => {
+    const all: AuditEvent[] = [];
+    for (let page = 0; page < 10; page++) {
+      const result = await api.audit.events(page, 200);
+      all.push(...result.content);
+      if (result.last || result.content.length === 0) break;
+    }
+    return all;
+  }, [api]);
+  const columns: Col<AuditEvent>[] = [
+    { id: 'when', title: 'When', value: (e) => e.occurredAt.slice(0, 16).replace('T', ' '), filter: { type: 'date' } },
+    { id: 'description', title: 'What happened', value: (e) => e.description, filter: { type: 'text' } },
+    { id: 'type', title: 'Event', value: (e) => e.eventType.replace(/_/g, ' ').toLowerCase(), filter: { type: 'select' } },
+    { id: 'service', title: 'Service', value: (e) => e.service, filter: { type: 'select' } },
+  ];
   return (
     <>
-      {events.error && !r && <ErrorNote message={events.error} onRetry={events.reload} />}
-      <Panel title={`${r?.totalElements ?? 0} events`}>
-        {r?.content.length === 0 ? <Empty>Nothing recorded yet.</Empty> : (
-          <ul className="list">
-            {r?.content.map((e) => <li key={e.eventId}><span className="grow">{e.description}<div className="muted">{e.eventType.replace(/_/g, ' ').toLowerCase()} · {e.service}</div></span><small className="muted">{e.occurredAt.slice(0, 16).replace('T', ' ')}</small></li>)}
-          </ul>
-        )}
-        <div className="row" style={{ gap: 8, marginTop: 10 }}>
-          <button className="ghost" disabled={page === 0} onClick={() => setPage(page - 1)}>‹ Newer</button>
-          <span className="grow muted">Page {page + 1} of {Math.max(1, r?.totalPages ?? 1)}</span>
-          <button className="ghost" disabled={!r || r.last} onClick={() => setPage(page + 1)}>Older ›</button>
-        </div>
-      </Panel>
+      {events.error && !events.data && <ErrorNote message={events.error} onRetry={events.reload} />}
+      <DataGrid
+        tableId="vault.audit-log"
+        data={events.data ?? []}
+        columns={columns}
+        getRowId={(e) => e.eventId}
+        loading={events.loading && !events.data}
+        initialSorting={[{ id: 'when', desc: true }]}
+        emptyMessage="Nothing recorded yet."
+        searchPlaceholder="Search the log…"
+        exportName="audit-log"
+        initialPageSize={50}
+      />
     </>
   );
 }

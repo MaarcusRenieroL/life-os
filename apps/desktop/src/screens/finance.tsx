@@ -1,9 +1,11 @@
-import { ACCOUNT_TYPES, dayKey, type AccountType, type BillingCycle, type FinanceAccount, type CategoryType, type FinanceCategory, type TransactionType } from '@life-os/core';
+import { ACCOUNT_TYPES, dayKey, type AccountType, type BillingCycle, type Budget, type CategoryComparison, type FinanceAccount, type CategoryType, type FinanceCategory, type FinanceTransaction, type Subscription, type TransactionType } from '@life-os/core';
 import { useState, type FormEvent } from 'react';
 
 import { FinanceAnalyticsTab, ImportTab, MerchantsTab, ReportTab, RulesTab } from '../modules/finance-extra';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
+import { DataGrid, type Col } from '../grid/data-grid';
+import { MerchantsTable, RulesTable } from '../modules/finance-extra';
 import { Bars, Empty, ErrorNote, Field, Modal, money, opts, Panel, pretty, ProgressRow, Select, Stat, Tabs } from '../ui';
 
 type TabId = 'dashboard' | 'transactions' | 'subscriptions' | 'budgets' | 'analytics' | 'report' | 'import' | 'rules' | 'accounts' | 'categories' | 'merchants';
@@ -81,41 +83,68 @@ function DashboardTab() {
 function TransactionsTab() {
   const api = useApi();
   const runner = useRunner();
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<'' | 'NEEDS_REVIEW' | 'CATEGORIZED' | 'DUPLICATE'>('');
-  const [page, setPage] = useState(0);
   const [adding, setAdding] = useState(false);
   const accounts = useAsync(() => api.finance.accounts(), [api]);
   const categories = useAsync(() => api.finance.categories(), [api]);
-  const txns = useAsync(() => api.finance.transactions(page, 25, { search: search.trim() || undefined, status: status || undefined }), [api, page, search, status]);
+  // Everything is loaded and handled here, so filters, sorting and totals cover every row, not one page.
+  const txns = useAsync(() => api.finance.allTransactions(), [api]);
   const accountName = (id: string) => accounts.data?.find((a) => a.id === id)?.accountName ?? '';
-  const result = txns.data;
+  const categoryName = (id: string | null) => categories.data?.find((c) => c.id === id)?.name ?? '';
+  const kind = (t: FinanceTransaction) => (t.type === 'CREDIT' ? 'Money in' : t.type === 'DEBIT' ? 'Money out' : 'Transfer');
+
+  const columns: Col<FinanceTransaction>[] = [
+    { id: 'date', title: 'Date', value: (t) => t.transactionDate, filter: { type: 'date' } },
+    {
+      id: 'description', title: 'Description', value: (t) => t.description, filter: { type: 'text' },
+      cell: (t) => <div><div>{t.description}</div>{(t.isTransfer || t.isDuplicate) && <small className="muted">{t.isTransfer ? 'transfer' : ''}{t.isTransfer && t.isDuplicate ? ' · ' : ''}{t.isDuplicate ? 'duplicate' : ''}</small>}</div>,
+    },
+    { id: 'account', title: 'Account', value: (t) => accountName(t.accountId), filter: { type: 'select' } },
+    {
+      id: 'category', title: 'Category', value: (t) => categoryName(t.categoryId) || 'Uncategorized', filter: { type: 'select' },
+      cell: (t) => (
+        <div style={{ minWidth: 150 }}>
+          <Select value={t.categoryId ?? ''} onChange={(v) => void runner.run(() => api.finance.setCategories(t.id, v ? [v] : []), txns.reload)} options={(categories.data ?? []).filter((c) => c.isActive).map((c) => ({ value: c.id, label: c.name }))} placeholder="Uncategorized" />
+        </div>
+      ),
+    },
+    { id: 'type', title: 'Type', value: kind, filter: { type: 'select' } },
+    { id: 'status', title: 'Status', value: (t) => pretty(t.status), filter: { type: 'select' } },
+    {
+      id: 'amount', title: 'Amount', value: (t) => (t.type === 'DEBIT' ? -t.amount : t.type === 'CREDIT' ? t.amount : 0), filter: { type: 'number' }, align: 'right', aggregate: 'sum',
+      format: (v) => money(Number(v)),
+      cell: (t) => <b className={t.type === 'CREDIT' ? 'good' : t.type === 'TRANSFER' ? 'muted' : ''}>{t.type === 'CREDIT' ? '+' : t.type === 'DEBIT' ? '−' : ''}{money(t.amount)}</b>,
+      exportValue: (t) => (t.type === 'DEBIT' ? -t.amount : t.amount),
+    },
+    { id: 'notes', title: 'Notes', value: (t) => t.notes ?? '', hidden: true },
+  ];
 
   return (
     <div className="stack">
-      <div className="add">
-        <input placeholder="Search transactions…" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
-        <div style={{ minWidth: 180 }}><Select value={status} onChange={(v) => { setStatus(v); setPage(0); }} options={[{ value: 'NEEDS_REVIEW', label: 'Needs review' }, { value: 'CATEGORIZED', label: 'Categorized' }, { value: 'DUPLICATE', label: 'Duplicates' }]} placeholder="All" /></div>
-        <button className="primary" onClick={() => setAdding(true)}>+ Add</button>
-      </div>
       {runner.error && <ErrorNote message={runner.error} />}
-      {txns.error && !result && <ErrorNote message={txns.error} onRetry={txns.reload} />}
-      <Panel title={`${result?.totalElements ?? 0} transactions`}>
-        {(result?.content.length ?? 0) === 0 && !txns.loading ? <Empty>No transactions match.</Empty> : (
-          <ul className="list">{result?.content.map((t) => (
-            <li key={t.id}>
-              <small className="muted" style={{ width: 82 }}>{t.transactionDate}</small>
-              <div className="grow"><div>{t.description}</div><small className="muted">{accountName(t.accountId)}{t.isTransfer ? ' · transfer' : ''}{t.isDuplicate ? ' · duplicate' : ''}</small></div>
-              <div style={{ width: 180 }}>
-                <Select value={t.categoryId ?? ''} onChange={(v) => void runner.run(() => api.finance.setCategories(t.id, v ? [v] : []), txns.reload)} options={(categories.data ?? []).filter((c) => c.isActive).map((c) => ({ value: c.id, label: c.name }))} placeholder="Uncategorized" />
-              </div>
-              <b className={t.type === 'CREDIT' ? 'good' : t.type === 'TRANSFER' ? 'muted' : ''} style={{ width: 100, textAlign: 'right' }}>{t.type === 'CREDIT' ? '+' : t.type === 'DEBIT' ? '−' : ''}{money(t.amount)}</b>
-              <button className="link" onClick={() => void runner.run(() => api.finance.deleteTransaction(t.id), txns.reload)}>×</button>
-            </li>
-          ))}</ul>
+      {txns.error && !txns.data && <ErrorNote message={txns.error} onRetry={txns.reload} />}
+      <DataGrid
+        tableId="finance.transactions"
+        data={txns.data ?? []}
+        columns={columns}
+        getRowId={(t) => t.id}
+        loading={txns.loading && !txns.data}
+        initialSorting={[{ id: 'date', desc: true }]}
+        searchPlaceholder="Search transactions…"
+        emptyMessage="No transactions found."
+        exportName="transactions"
+        selectable
+        views={[
+          { id: 'review', name: 'Needs review', filters: { status: ['Needs review'] } },
+          { id: 'duplicates', name: 'Duplicates', filters: { status: ['Duplicate'] } },
+          { id: 'out', name: 'Money out', filters: { type: ['Money out'] } },
+          { id: 'in', name: 'Money in', filters: { type: ['Money in'] } },
+        ]}
+        bulkActions={(rows, clear) => (
+          <button className="link" onClick={() => { if (confirm(`Delete ${rows.length} transactions?`)) void runner.run(async () => { for (const t of rows) await api.finance.deleteTransaction(t.id); clear(); }, txns.reload); }}>Delete</button>
         )}
-        <div className="row"><button className="ghost" disabled={page === 0} onClick={() => setPage(page - 1)}>‹ Prev</button><small className="muted">Page {page + 1} of {Math.max(1, result?.totalPages ?? 1)}</small><button className="ghost" disabled={result?.last ?? true} onClick={() => setPage(page + 1)}>Next ›</button></div>
-      </Panel>
+        rowActions={(t) => <button className="link" onClick={() => void runner.run(() => api.finance.deleteTransaction(t.id), txns.reload)}>Delete</button>}
+        toolbarEnd={<button className="primary g-btn" onClick={() => setAdding(true)}>+ Add</button>}
+      />
       {adding && <TransactionForm accounts={accounts.data ?? []} onClose={() => setAdding(false)} onSaved={async () => { setAdding(false); await txns.reload(); }} />}
     </div>
   );
@@ -159,6 +188,18 @@ function SubscriptionsTab() {
   const [adding, setAdding] = useState(false);
   const reload = async () => { await Promise.all([subs.reload(), summary.reload()]); };
   const s = summary.data;
+  const act = (x: Subscription, action: 'pause' | 'resume' | 'cancel' | 'log-use') => void runner.run(() => api.finance.subscriptionAction(x.id, action), reload);
+
+  const columns: Col<Subscription>[] = [
+    { id: 'name', title: 'Name', value: (x) => x.name, filter: { type: 'text' }, cell: (x) => <span><b>{x.name}</b> {x.wasteful && <span className="g-chip danger">wasteful</span>}</span> },
+    { id: 'amount', title: 'Amount', value: (x) => x.amount, filter: { type: 'number' }, align: 'right', format: (v) => money(Number(v)) },
+    { id: 'cycle', title: 'Cycle', value: (x) => pretty(x.billingCycle), filter: { type: 'select' } },
+    { id: 'monthly', title: 'Per month', value: (x) => x.monthlyCost, align: 'right', aggregate: 'sum', filter: { type: 'number' }, format: (v) => money(Number(v)) },
+    { id: 'next', title: 'Next billing', value: (x) => x.nextBillingDate, filter: { type: 'date' }, cell: (x) => <span>{x.nextBillingDate}{x.daysUntilRenewal != null && x.daysUntilRenewal <= 7 ? <small className="warn"> in {x.daysUntilRenewal}d</small> : null}</span> },
+    { id: 'status', title: 'Status', value: (x) => pretty(x.status), filter: { type: 'select' } },
+    { id: 'wasteful', title: 'Wasteful', value: (x) => x.wasteful, filter: { type: 'boolean' }, hidden: true },
+  ];
+
   return (
     <div className="stack">
       <Panel title="Recurring spend">
@@ -169,23 +210,29 @@ function SubscriptionsTab() {
           <Stat label="Renewing soon" value={money(s?.renewingSoonTotal)} sub={`${s?.renewingSoonCount ?? 0} subs`} />
         </div>
       </Panel>
-      <div className="row"><span /><button className="primary" onClick={() => setAdding(true)}>+ Subscription</button></div>
       {runner.error && <ErrorNote message={runner.error} />}
-      <Panel title="Subscriptions">
-        {(subs.data ?? []).length === 0 && !subs.loading ? <Empty>No subscriptions tracked.</Empty> : (
-          <ul className="list">{(subs.data ?? []).map((x) => (
-            <li key={x.id}>
-              <div className="grow"><b>{x.name}</b> {x.wasteful && <span className="pill bad">wasteful</span>}<div className="muted">{money(x.amount)} / {x.billingCycle.toLowerCase()} · next {x.nextBillingDate}{x.daysUntilRenewal != null && x.daysUntilRenewal <= 7 ? ` (in ${x.daysUntilRenewal}d)` : ''}</div></div>
-              <span className={`pill ${x.status === 'ACTIVE' ? 'good' : ''}`}>{pretty(x.status)}</span>
-              {x.status === 'ACTIVE' && <button className="link" onClick={() => void runner.run(() => api.finance.subscriptionAction(x.id, 'log-use'), reload)}>Used it</button>}
-              {x.status === 'ACTIVE' && <button className="link" onClick={() => void runner.run(() => api.finance.subscriptionAction(x.id, 'pause'), reload)}>Pause</button>}
-              {x.status === 'PAUSED' && <button className="link" onClick={() => void runner.run(() => api.finance.subscriptionAction(x.id, 'resume'), reload)}>Resume</button>}
-              {x.status !== 'CANCELLED' && <button className="link" onClick={() => void runner.run(() => api.finance.subscriptionAction(x.id, 'cancel'), reload)}>Cancel</button>}
-              <button className="link" onClick={() => void runner.run(() => api.finance.deleteSubscription(x.id), reload)}>Delete</button>
-            </li>
-          ))}</ul>
+      <DataGrid
+        tableId="finance.subscriptions"
+        data={subs.data ?? []}
+        columns={columns}
+        getRowId={(x) => x.id}
+        loading={subs.loading && !subs.data}
+        initialSorting={[{ id: 'next', desc: false }]}
+        emptyMessage="No subscriptions tracked."
+        searchPlaceholder="Search subscriptions…"
+        exportName="subscriptions"
+        views={[{ id: 'active', name: 'Active', filters: { status: ['Active'] } }, { id: 'wasteful', name: 'Wasteful', filters: { wasteful: ['true'] } }]}
+        rowActions={(x) => (
+          <>
+            {x.status === 'ACTIVE' && <button className="link" onClick={() => act(x, 'log-use')}>Used it</button>}
+            {x.status === 'ACTIVE' && <button className="link" onClick={() => act(x, 'pause')}>Pause</button>}
+            {x.status === 'PAUSED' && <button className="link" onClick={() => act(x, 'resume')}>Resume</button>}
+            {x.status !== 'CANCELLED' && <button className="link" onClick={() => act(x, 'cancel')}>Cancel</button>}
+            <button className="link" onClick={() => void runner.run(() => api.finance.deleteSubscription(x.id), reload)}>Delete</button>
+          </>
         )}
-      </Panel>
+        toolbarEnd={<button className="primary g-btn" onClick={() => setAdding(true)}>+ Subscription</button>}
+      />
       {adding && <SubscriptionForm onClose={() => setAdding(false)} onSaved={async () => { setAdding(false); await reload(); }} />}
     </div>
   );
@@ -223,29 +270,41 @@ function BudgetsTab() {
   const runner = useRunner();
   const budgets = useAsync(() => api.finance.budgets(), [api]);
   const categories = useAsync(() => api.finance.categories(), [api]);
-  const spend = useAsync(() => (budgets.data?.length ? api.finance.comparisons(budgets.data.map((b) => b.categoryId)) : Promise.resolve([])), [api, budgets.data]);
+  const spend = useAsync(() => (budgets.data?.length ? api.finance.comparisons(budgets.data.map((b) => b.categoryId)) : Promise.resolve([] as CategoryComparison[])), [api, budgets.data]);
   const [adding, setAdding] = useState(false);
   const catName = (id: string) => categories.data?.find((c) => c.id === id)?.name ?? 'Category';
+  const used = (b: Budget) => spend.data?.find((c) => c.categoryId === b.categoryId)?.currentMonthSpend ?? 0;
   const total = (budgets.data ?? []).reduce((n, b) => n + b.budgetAmount, 0);
   const spent = (spend.data ?? []).reduce((n, c) => n + c.currentMonthSpend, 0);
+  const pctOf = (b: Budget) => (b.budgetAmount ? (used(b) / b.budgetAmount) * 100 : 0);
+
+  const columns: Col<Budget>[] = [
+    { id: 'category', title: 'Category', value: (b) => catName(b.categoryId), filter: { type: 'select' } },
+    { id: 'budget', title: 'Budget', value: (b) => b.budgetAmount, filter: { type: 'number' }, align: 'right', aggregate: 'sum', format: (v) => money(Number(v)) },
+    { id: 'spent', title: 'Spent', value: used, filter: { type: 'number' }, align: 'right', aggregate: 'sum', format: (v) => money(Number(v)) },
+    { id: 'used', title: 'Used', value: (b) => Math.round(pctOf(b)), filter: { type: 'number' }, cell: (b) => <div style={{ minWidth: 160 }}><ProgressRow label="" pct={pctOf(b)} right={`${Math.round(pctOf(b))}%${pctOf(b) > 100 ? ' · over' : ''}`} /></div> },
+    { id: 'period', title: 'Period', value: (b) => pretty(b.period), filter: { type: 'select' } },
+    { id: 'alert', title: 'Alert at', value: (b) => b.alertThreshold, format: (v) => `${v}%`, hidden: true },
+  ];
 
   return (
     <div className="stack">
       <Panel title="Budgets this month"><ProgressRow label="Total" pct={total ? (spent / total) * 100 : 0} right={`${money(spent)} of ${money(total)}`} /></Panel>
-      <div className="row"><span /><button className="primary" onClick={() => setAdding(true)}>+ Budget</button></div>
       {runner.error && <ErrorNote message={runner.error} />}
-      <Panel title="By category">
-        {(budgets.data ?? []).length === 0 && !budgets.loading ? <Empty>No budgets yet.</Empty> : (budgets.data ?? []).map((b) => {
-          const used = spend.data?.find((c) => c.categoryId === b.categoryId)?.currentMonthSpend ?? 0;
-          const pct = b.budgetAmount ? (used / b.budgetAmount) * 100 : 0;
-          return (
-            <div key={b.id} className="row">
-              <div className="grow"><ProgressRow label={catName(b.categoryId)} pct={pct} right={`${money(used)} / ${money(b.budgetAmount)}${pct > 100 ? ' · over' : ''}`} /></div>
-              <button className="link" onClick={() => void runner.run(() => api.finance.deleteBudget(b.id), budgets.reload)}>Delete</button>
-            </div>
-          );
-        })}
-      </Panel>
+      <DataGrid
+        tableId="finance.budgets"
+        data={budgets.data ?? []}
+        columns={columns}
+        getRowId={(b) => b.id}
+        loading={budgets.loading && !budgets.data}
+        initialSorting={[{ id: 'used', desc: true }]}
+        emptyMessage="No budgets yet."
+        searchPlaceholder="Search budgets…"
+        exportName="budgets"
+        views={[{ id: 'over', name: 'Over 80%', filters: { used: ['80', ''] } }]}
+        rowActions={(b) => <button className="link" onClick={() => void runner.run(() => api.finance.deleteBudget(b.id), budgets.reload)}>Delete</button>}
+        toolbarEnd={<button className="primary g-btn" onClick={() => setAdding(true)}>+ Budget</button>}
+      />
       {adding && <BudgetForm categories={(categories.data ?? []).filter((c) => c.type === 'EXPENSE' && c.isActive)} onClose={() => setAdding(false)} onSaved={async () => { setAdding(false); await budgets.reload(); }} />}
     </div>
   );
@@ -279,18 +338,35 @@ function AccountsTab() {
   const accounts = useAsync(() => api.finance.accounts(), [api]);
   const [adding, setAdding] = useState(false);
   const list = accounts.data ?? [];
+
+  const columns: Col<FinanceAccount>[] = [
+    { id: 'name', title: 'Name', value: (a) => a.accountName, filter: { type: 'text' }, cell: (a) => <span><b>{a.accountName}</b> {a.isPrimary && <span className="g-chip success">primary</span>}</span> },
+    { id: 'type', title: 'Type', value: (a) => pretty(a.accountType), filter: { type: 'select' } },
+    { id: 'bank', title: 'Bank', value: (a) => a.bankName ?? '', filter: { type: 'select' } },
+    { id: 'number', title: 'Account', value: (a) => `••${a.accountNumberLastFour}`, noSearch: true },
+    { id: 'balance', title: 'Balance', value: (a) => a.currentBalance, filter: { type: 'number' }, align: 'right', cell: (a) => <b>{money(a.currentBalance, a.currencyCode)}</b>, format: (v) => money(Number(v)) },
+    { id: 'txns', title: 'Transactions', value: (a) => a.transactionCount, align: 'right', filter: { type: 'number' } },
+    { id: 'primary', title: 'Primary', value: (a) => a.isPrimary, filter: { type: 'boolean' }, hidden: true },
+    { id: 'active', title: 'Active', value: (a) => a.isActive, filter: { type: 'boolean' }, hidden: true },
+  ];
+
   return (
     <div className="stack">
-      <div className="row"><span className="muted">Net balance {money(list.reduce((n, a) => n + (a.accountType === 'CREDIT_CARD' ? -Math.abs(a.currentBalance) : a.currentBalance), 0))}</span><button className="primary" onClick={() => setAdding(true)}>+ Account</button></div>
+      <div className="row"><span className="muted">Net balance {money(list.reduce((n, a) => n + (a.accountType === 'CREDIT_CARD' ? -Math.abs(a.currentBalance) : a.currentBalance), 0))}</span></div>
       {runner.error && <ErrorNote message={runner.error} />}
-      <Panel title={`Accounts · ${list.length}`}>
-        {list.length === 0 && !accounts.loading ? <Empty>No accounts yet.</Empty> : (
-          <ul className="list">{list.map((a) => (
-            <li key={a.id}><div className="grow"><b>{a.accountName}</b> {a.isPrimary && <span className="pill good">primary</span>}<div className="muted">{[a.bankName, pretty(a.accountType), `••${a.accountNumberLastFour}`, `${a.transactionCount} txns`].filter(Boolean).join(' · ')}</div></div><b>{money(a.currentBalance, a.currencyCode)}</b>
-              <button className="link" onClick={() => void runner.run(() => api.finance.deleteAccount(a.id), accounts.reload)}>Delete</button></li>
-          ))}</ul>
-        )}
-      </Panel>
+      <DataGrid
+        tableId="finance.accounts"
+        data={list}
+        columns={columns}
+        getRowId={(a) => a.id}
+        loading={accounts.loading && !accounts.data}
+        initialSorting={[{ id: 'balance', desc: true }]}
+        emptyMessage="No accounts yet."
+        searchPlaceholder="Search accounts…"
+        exportName="accounts"
+        rowActions={(a) => <button className="link" onClick={() => void runner.run(() => api.finance.deleteAccount(a.id), accounts.reload)}>Delete</button>}
+        toolbarEnd={<button className="primary g-btn" onClick={() => setAdding(true)}>+ Account</button>}
+      />
       {adding && <AccountForm onClose={() => setAdding(false)} onSaved={async () => { setAdding(false); await accounts.reload(); }} />}
     </div>
   );
@@ -338,9 +414,13 @@ function CategoriesTab() {
   const [ruleValue, setRuleValue] = useState('');
   const [ruleCategory, setRuleCategory] = useState('');
   const cats = categories.data ?? [];
-  const catName = (id: string | null) => cats.find((c) => c.id === id)?.name ?? '—';
-  const groups = (['EXPENSE', 'INCOME', 'TRANSFER', 'INVESTMENT'] as const).map((t) => ({ type: t, items: cats.filter((c) => c.type === t) })).filter((g) => g.items.length);
   if (categories.error && !categories.data) return <ErrorNote message={categories.error} onRetry={categories.reload} />;
+
+  const columns: Col<FinanceCategory>[] = [
+    { id: 'name', title: 'Name', value: (c) => c.name, filter: { type: 'text' }, cell: (c) => <span>{c.icon} {c.name}</span> },
+    { id: 'type', title: 'Type', value: (c) => pretty(c.type), filter: { type: 'select' } },
+    { id: 'active', title: 'Visible', value: (c) => c.isActive, filter: { type: 'boolean', labels: ['Visible', 'Hidden'] }, cell: (c) => (c.isActive ? 'Yes' : <span className="muted">Hidden</span>) },
+  ];
 
   return (
     <div className="stack">
@@ -352,31 +432,34 @@ function CategoriesTab() {
           <button className="primary" disabled={!name.trim()}>Add</button>
         </form>
       </Panel>
-      {groups.map((g) => (
-        <Panel key={g.type} title={`${pretty(g.type)} · ${g.items.length}`}>
-          <ul className="list">{g.items.map((c) => (
-            <li key={c.id}><span className="grow">{c.icon} {c.name}{!c.isActive && <small className="muted"> (hidden)</small>}</span>
-              <button className="link" onClick={() => void runner.run(() => api.finance.updateCategory(c.id, { isActive: !c.isActive }), categories.reload)}>{c.isActive ? 'Hide' : 'Show'}</button>
-              <button className="link" onClick={() => void runner.run(() => api.finance.deleteCategory(c.id), categories.reload)}>Delete</button></li>
-          ))}</ul>
-        </Panel>
-      ))}
+      <DataGrid
+        tableId="finance.categories"
+        data={cats}
+        columns={columns}
+        getRowId={(c) => c.id}
+        loading={categories.loading && !categories.data}
+        initialSorting={[{ id: 'type', desc: false }, { id: 'name', desc: false }]}
+        emptyMessage="No categories yet."
+        searchPlaceholder="Search categories…"
+        exportName="categories"
+        views={[{ id: 'expense', name: 'Expense', filters: { type: ['Expense'] } }, { id: 'income', name: 'Income', filters: { type: ['Income'] } }, { id: 'hidden', name: 'Hidden', filters: { active: ['false'] } }]}
+        rowActions={(c) => (
+          <>
+            <button className="link" onClick={() => void runner.run(() => api.finance.updateCategory(c.id, { isActive: !c.isActive }), categories.reload)}>{c.isActive ? 'Hide' : 'Show'}</button>
+            <button className="link" onClick={() => void runner.run(() => api.finance.deleteCategory(c.id), categories.reload)}>Delete</button>
+          </>
+        )}
+      />
       <Panel title={`Auto-categorise rules · ${(rules.data ?? []).length}`}>
         <form className="add" onSubmit={(e) => { e.preventDefault(); const v = ruleValue.trim(); if (v && ruleCategory) { setRuleValue(''); void runner.run(() => api.finance.createRule({ categoryId: ruleCategory, matchType: 'CONTAINS', matchField: 'DESCRIPTION', matchValue: v, priority: 100 }), rules.reload); } }}>
           <input placeholder="When the description contains…" value={ruleValue} onChange={(e) => setRuleValue(e.target.value)} />
           <div style={{ minWidth: 200 }}><Select value={ruleCategory} onChange={setRuleCategory} options={cats.filter((c) => c.isActive).map((c) => ({ value: c.id, label: c.name }))} placeholder="Category…" /></div>
           <button className="primary" disabled={!ruleValue.trim() || !ruleCategory}>Add rule</button>
         </form>
-        <ul className="list">{(rules.data ?? []).map((r) => (
-          <li key={r.id} className={r.isActive ? '' : 'done'}><span className="grow">{pretty(r.matchField)} {pretty(r.matchType)} “{r.matchValue}” → <b>{catName(r.categoryId)}</b></span><small className="muted">{r.hitCount} hits{r.autoLearned ? ' · learned' : ''}</small>
-            <button className="link" onClick={() => void runner.run(() => api.finance.updateRule(r.id, { isActive: !r.isActive }), rules.reload)}>{r.isActive ? 'Disable' : 'Enable'}</button>
-            <button className="link" onClick={() => void runner.run(() => api.finance.deleteRule(r.id), rules.reload)}>Delete</button></li>
-        ))}</ul>
+        <RulesTable tableId="finance.rules.categories" rules={rules.data ?? []} categories={cats} runner={runner} reload={rules.reload} loading={rules.loading && !rules.data} />
       </Panel>
       <Panel title={`Merchants · ${(merchants.data ?? []).length}`}>
-        {(merchants.data ?? []).length === 0 ? <Empty>Merchants appear as transactions are imported.</Empty> : <ul className="list">{(merchants.data ?? []).map((m) => (
-          <li key={m.id}><span className="grow">{m.name}</span><span className="pill">{catName(m.categoryId)}</span><small className="muted">{m.transactionCount} txns · avg {money(m.averageTransactionAmount)}</small><button className="link" onClick={() => void runner.run(() => api.finance.deleteMerchant(m.id), merchants.reload)}>Delete</button></li>
-        ))}</ul>}
+        <MerchantsTable tableId="finance.merchants.categories" merchants={merchants.data ?? []} categories={cats} loading={merchants.loading && !merchants.data} onOpen={undefined} onDelete={(m) => void runner.run(() => api.finance.deleteMerchant(m.id), merchants.reload)} />
       </Panel>
     </div>
   );

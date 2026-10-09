@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
+import { DataGrid, type Col } from '../grid/data-grid';
 import { Bars, Empty, ErrorNote, Field, Modal, opts, Panel, pretty, ProgressRow, Select, Stat, Tabs } from '../ui';
 
 type TabId = 'today' | 'upcoming' | 'list' | 'board' | 'completed' | 'analytics';
@@ -32,6 +33,7 @@ export function TasksScreen() {
       case 'upcoming': return api.tasks.list({ view: 'UPCOMING', upcomingDays: 14, q });
       case 'completed': return api.tasks.list({ view: 'COMPLETED', q });
       case 'analytics': return api.tasks.list({});
+      case 'list': return api.tasks.list({});
       default: return api.tasks.list({ q });
     }
   }, [api, tab, query]);
@@ -64,7 +66,7 @@ export function TasksScreen() {
         <Tabs tabs={TABS} value={tab} onChange={setTab} />
         <button className="primary" onClick={() => setEditing('new')}>+ New task</button>
       </div>
-      <input placeholder="Search tasks…" value={query} onChange={(e) => setQuery(e.target.value)} />
+      {tab !== 'list' && tab !== 'completed' && <input placeholder="Search tasks…" value={query} onChange={(e) => setQuery(e.target.value)} />}
       {runner.error && <ErrorNote message={runner.error} />}
       {tasks.error && !tasks.data && <ErrorNote message={tasks.error} onRetry={tasks.reload} />}
 
@@ -79,13 +81,47 @@ export function TasksScreen() {
       ) : tab === 'upcoming' ? (
         <Upcoming tasks={list} row={row} />
       ) : (
-        <Panel title={`${TABS.find((t) => t.id === tab)!.label} · ${list.length}`}>
-          {list.length === 0 && !tasks.loading ? <Empty>{tab === 'completed' ? 'Nothing completed yet.' : 'Nothing here. Enjoy the quiet.'}</Empty> : <ul className="list">{[...list].sort(tab === 'completed' ? (a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? '') : byUrgency).map(row)}</ul>}
-        </Panel>
+        <TaskGrid tableId={tab === 'completed' ? 'tasks.completed' : 'tasks.list'} tasks={list} loading={tasks.loading && !tasks.data} onOpen={setEditing} onToggle={toggle} done={tab === 'completed'} />
       )}
 
       {editing && <TaskEditor task={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await reloadAll(); }} />}
     </div>
+  );
+}
+
+function TaskGrid({ tableId, tasks, loading, onOpen, onToggle, done }: { tableId: string; tasks: Task[]; loading: boolean; onOpen: (t: Task) => void; onToggle: (t: Task) => Promise<void>; done: boolean }) {
+  const columns: Col<Task>[] = [
+    { id: 'done', title: 'Done', value: (t) => t.status === 'DONE', sortable: true, filter: { type: 'boolean', labels: ['Done', 'Open'] }, noSearch: true, width: 60, cell: (t) => <button className={`check${t.status === 'DONE' ? ' on' : ''}`} onClick={() => void onToggle(t)} aria-label="Toggle">{t.status === 'DONE' ? '✓' : ''}</button> },
+    { id: 'title', title: 'Task', value: (t) => t.title, filter: { type: 'text' }, cell: (t) => <span className={t.status === 'DONE' ? 'muted' : ''}>{t.title}{t.recurrencePattern && <small className="muted"> ↻</small>}</span> },
+    { id: 'status', title: 'Status', value: (t) => pretty(t.status), filter: { type: 'select' } },
+    { id: 'priority', title: 'Priority', value: (t) => pretty(t.priority), filter: { type: 'select', options: TASK_PRIORITIES.map((p) => ({ value: pretty(p), label: pretty(p) })) }, cell: (t) => <span className={`g-chip ${t.priority === 'URGENT' ? 'danger' : t.priority === 'HIGH' ? 'warn' : ''}`}>{pretty(t.priority)}</span> },
+    { id: 'due', title: 'Due', value: (t) => t.dueDate ?? '', filter: { type: 'date' } },
+    { id: 'area', title: 'Area', value: (t) => (t.area ? pretty(t.area) : ''), filter: { type: 'select' } },
+    { id: 'tags', title: 'Tags', value: (t) => t.tags ?? [], filter: { type: 'select' } },
+    { id: 'estimate', title: 'Estimate', value: (t) => t.estimateMinutes ?? null, align: 'right', aggregate: 'sum', filter: { type: 'number' }, format: (v) => `${v} min`, hidden: true },
+    { id: 'completed', title: 'Completed', value: (t) => (t.completedAt ?? '').slice(0, 10), filter: { type: 'date' }, hidden: !done },
+    { id: 'recurring', title: 'Repeats', value: (t) => !!t.recurrencePattern, filter: { type: 'boolean' }, hidden: true },
+  ];
+  const today = new Date().toISOString().slice(0, 10);
+  return (
+    <DataGrid
+      tableId={tableId}
+      data={tasks}
+      columns={columns}
+      getRowId={(t) => t.id}
+      loading={loading}
+      initialSorting={done ? [{ id: 'completed', desc: true }] : [{ id: 'due', desc: false }]}
+      emptyMessage={done ? 'Nothing completed yet.' : 'Nothing here. Enjoy the quiet.'}
+      searchPlaceholder="Search tasks…"
+      exportName="tasks"
+      onRowClick={onOpen}
+      drawer={false}
+      views={done ? [] : [
+        { id: 'open', name: 'Open', filters: { done: ['false'] } },
+        { id: 'overdue', name: 'Overdue', filters: { done: ['false'], due: ['', new Date(Date.parse(today) - 86400000).toISOString().slice(0, 10)] } },
+        { id: 'urgent', name: 'Urgent', filters: { done: ['false'], priority: ['Urgent', 'High'] } },
+      ]}
+    />
   );
 }
 

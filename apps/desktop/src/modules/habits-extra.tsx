@@ -3,7 +3,8 @@ import { useState } from 'react';
 
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
-import { Empty, ErrorNote, Field, Modal, Panel, ProgressRow, Select, Stat } from '../ui';
+import { DataGrid, type Col } from '../grid/data-grid';
+import { Empty, ErrorNote, Field, Modal, Panel, pretty, ProgressRow, Select, Stat } from '../ui';
 
 const monday = (iso: string) => { const d = new Date(`${iso}T12:00:00`); return dayKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7))); };
 const DAY_LETTERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -108,6 +109,12 @@ export function HabitDetailModal({ habit, onClose }: { habit: Habit; onClose: ()
   const month = useAsync(() => api.habitTools.consistency(habit.id, 'month'), [api, habit.id]);
   const logs = useAsync(() => api.habits.logs(habit.id, shiftDay(dayKey(new Date()), -29), dayKey(new Date())), [api, habit.id]);
   const reminders = useAsync(() => api.habitTools.reminders(habit.id), [api, habit.id]);
+  const logColumns: Col<HabitLog>[] = [
+    { id: 'date', title: 'Date', value: (l) => l.logDate.slice(0, 10), filter: { type: 'date' } },
+    { id: 'status', title: 'Status', value: (l) => pretty(String(l.status)), filter: { type: 'select' } },
+    { id: 'value', title: 'Value', value: (l) => l.value ?? null, align: 'right', filter: { type: 'number' } },
+    { id: 'note', title: 'Note', value: (l) => l.note ?? '' },
+  ];
   const [time, setTime] = useState('08:00');
   const [days, setDays] = useState<string[]>([]);
   return (
@@ -121,13 +128,19 @@ export function HabitDetailModal({ habit, onClose }: { habit: Habit; onClose: ()
         </div>
         {month.data && <ProgressRow label="Month consistency" pct={month.data.score} />}
         <Panel title="Last 30 days">
-          {logs.data?.length === 0 ? <Empty>No logs yet.</Empty> : (
-            <ul className="list">
-              {[...(logs.data ?? [])].sort((a, b) => b.logDate.localeCompare(a.logDate)).map((l) => (
-                <li key={l.id}><span className="grow">{l.logDate.slice(0, 10)} · {String(l.status).toLowerCase()}{l.value != null ? ` · ${l.value}` : ''}</span><button className="link" onClick={() => void runner.run(() => api.habits.deleteLog(habit.id, l.id), logs.reload)}>Remove</button></li>
-              ))}
-            </ul>
-          )}
+          <DataGrid
+            tableId="habits.logs"
+            data={logs.data ?? []}
+            columns={logColumns}
+            getRowId={(l) => l.id}
+            loading={logs.loading && !logs.data}
+            initialSorting={[{ id: 'date', desc: true }]}
+            emptyMessage="No logs yet."
+            searchPlaceholder="Search logs…"
+            exportName={`${habit.name}-logs`}
+            initialPageSize={10}
+            rowActions={(l) => <button className="link" onClick={() => void runner.run(() => api.habits.deleteLog(habit.id, l.id), logs.reload)}>Remove</button>}
+          />
         </Panel>
         <Panel title="Reminders">
           {reminders.data?.length === 0 ? <Empty>No reminders.</Empty> : (

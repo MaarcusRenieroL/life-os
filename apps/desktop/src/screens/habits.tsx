@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { CalendarTab, HabitDetailModal, WeeklyTab } from '../modules/habits-extra';
+import { DataGrid, type Col } from '../grid/data-grid';
 import { Bars, Empty, ErrorNote, Field, Modal, opts, Panel, pretty, ProgressRow, Select, Stat, Tabs } from '../ui';
 
 type TabId = 'today' | 'all' | 'weekly' | 'calendar' | 'analytics';
@@ -84,36 +85,47 @@ function TodayTab() {
 function AllTab({ onEdit, onOpen }: { onEdit: (h: Habit) => void; onOpen: (h: Habit) => void }) {
   const api = useApi();
   const habits = useAsync(() => api.habits.list(), [api]);
+  const streaks = useAsync(async () => Object.fromEntries(await Promise.all((habits.data ?? []).map(async (h) => [h.id, await api.habits.streak(h.id).catch(() => null)] as const))), [api, habits.data]);
   const runner = useRunner();
-  const groups = ['ACTIVE', 'PAUSED', 'ARCHIVED'].map((status) => ({ status, items: (habits.data ?? []).filter((h) => (h.status ?? 'ACTIVE') === status) })).filter((g) => g.items.length);
-
   if (habits.error && !habits.data) return <ErrorNote message={habits.error} onRetry={habits.reload} />;
-  return (
-    <>
-      {runner.error && <ErrorNote message={runner.error} />}
-      {groups.length === 0 && !habits.loading && <Panel><Empty>No habits yet.</Empty></Panel>}
-      {groups.map((g) => (
-        <Panel key={g.status} title={`${pretty(g.status)} · ${g.items.length}`}>
-          <ul className="list">
-            {g.items.map((h) => <HabitRow key={h.id} habit={h} onOpen={() => onOpen(h)} onEdit={() => onEdit(h)} onPause={() => runner.run(() => (h.status === 'PAUSED' ? api.habits.resume(h.id) : api.habits.pause(h.id)), habits.reload)} />)}
-          </ul>
-        </Panel>
-      ))}
-    </>
-  );
-}
 
-function HabitRow({ habit, onEdit, onOpen, onPause }: { habit: Habit; onEdit: () => void; onOpen: () => void; onPause: () => void }) {
-  const api = useApi();
-  const streak = useAsync(() => api.habits.streak(habit.id), [api, habit.id]);
+  const columns: Col<Habit>[] = [
+    { id: 'name', title: 'Habit', value: (h) => h.name, filter: { type: 'text' }, cell: (h) => <b>{h.icon} {h.name}</b> },
+    { id: 'status', title: 'Status', value: (h) => pretty(h.status ?? 'ACTIVE'), filter: { type: 'select' } },
+    { id: 'frequency', title: 'Frequency', value: (h) => pretty(h.frequencyType), filter: { type: 'select' } },
+    { id: 'type', title: 'Type', value: (h) => pretty(h.type), filter: { type: 'select' } },
+    { id: 'category', title: 'Category', value: (h) => h.category ?? '', filter: { type: 'select' } },
+    { id: 'streak', title: 'Streak', value: (h) => streaks.data?.[h.id]?.currentStreak ?? 0, align: 'right', filter: { type: 'number' }, cell: (h) => <span className="g-chip success">🔥 {streaks.data?.[h.id]?.currentStreak ?? 0}</span> },
+    { id: 'best', title: 'Best', value: (h) => streaks.data?.[h.id]?.longestStreak ?? 0, align: 'right', filter: { type: 'number' } },
+    { id: 'target', title: 'Target', value: (h) => (h.targetValue != null ? `${h.targetValue} ${h.targetUnit ?? ''}`.trim() : ''), hidden: true },
+    { id: 'started', title: 'Started', value: (h) => h.startDate ?? '', filter: { type: 'date' }, hidden: true },
+  ];
+
   return (
-    <li className="clickable" onClick={onOpen}>
-      <span className="grow"><b>{habit.icon} {habit.name}</b> <small className="muted">{pretty(habit.frequencyType)}</small></span>
-      <span className="pill good">🔥 {streak.data?.currentStreak ?? 0}</span>
-      <small className="muted">best {streak.data?.longestStreak ?? 0}</small>
-      <button className="link" onClick={(e) => { e.stopPropagation(); onEdit(); }}>Edit</button>
-      {habit.status !== 'ARCHIVED' && <button className="link" onClick={(e) => { e.stopPropagation(); onPause(); }}>{habit.status === 'PAUSED' ? 'Resume' : 'Pause'}</button>}
-    </li>
+    <div className="stack">
+      {runner.error && <ErrorNote message={runner.error} />}
+      <DataGrid
+        tableId="habits.list"
+        data={habits.data ?? []}
+        columns={columns}
+        getRowId={(h) => h.id}
+        loading={habits.loading && !habits.data}
+        initialSorting={[{ id: 'streak', desc: true }]}
+        emptyMessage="No habits yet."
+        searchPlaceholder="Search habits…"
+        exportName="habits"
+        onRowClick={onOpen}
+        drawer={false}
+        views={[{ id: 'active', name: 'Active', filters: { status: ['Active'] } }, { id: 'paused', name: 'Paused', filters: { status: ['Paused'] } }, { id: 'archived', name: 'Archived', filters: { status: ['Archived'] } }]}
+        initialFilters={{ status: ['Active', 'Paused'] }}
+        rowActions={(h) => (
+          <>
+            <button className="link" onClick={() => onEdit(h)}>Edit</button>
+            {h.status !== 'ARCHIVED' && <button className="link" onClick={() => void runner.run(() => (h.status === 'PAUSED' ? api.habits.resume(h.id) : api.habits.pause(h.id)), habits.reload)}>{h.status === 'PAUSED' ? 'Resume' : 'Pause'}</button>}
+          </>
+        )}
+      />
+    </div>
   );
 }
 

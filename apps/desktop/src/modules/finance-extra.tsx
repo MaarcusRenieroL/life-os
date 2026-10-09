@@ -1,8 +1,9 @@
-import { dayKey, shiftDay, type CategorizationRule, type FinanceTransaction, type MatchField, type MatchType } from '@life-os/core';
+import { dayKey, shiftDay, type CategorizationRule, type FinanceCategory, type FinanceTransaction, type MatchField, type MatchType, type Merchant } from '@life-os/core';
 import { useState, type FormEvent } from 'react';
 
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
+import { DataGrid, type Col } from '../grid/data-grid';
 import { Bars, Empty, ErrorNote, Field, Modal, money, opts, Panel, ProgressRow, Select, Stat } from '../ui';
 
 // ------------------------------------------------------------------ analytics
@@ -150,33 +151,56 @@ export function ImportTab() {
 }
 
 // ------------------------------------------------------------------ rules
-export function RulesTab() {
+export function RulesTable({ tableId, rules, categories, runner, reload, loading, onNew }: { tableId: string; rules: CategorizationRule[]; categories: { id: string; name: string }[]; runner: ReturnType<typeof useRunner>; reload: () => unknown; loading?: boolean; onNew?: () => void }) {
   const api = useApi();
+  const name = (id: string) => categories.find((c) => c.id === id)?.name ?? 'Category';
+  const columns: Col<CategorizationRule>[] = [
+    { id: 'field', title: 'Match on', value: (r) => (r.matchField === 'MERCHANT_NAME' ? 'Merchant' : 'Description'), filter: { type: 'select' } },
+    { id: 'how', title: 'How', value: (r) => r.matchType.toLowerCase(), filter: { type: 'select' } },
+    { id: 'text', title: 'Text', value: (r) => r.matchValue, filter: { type: 'text' }, cell: (r) => <span>“{r.matchValue}”</span> },
+    { id: 'category', title: 'Category', value: (r) => name(r.categoryId), filter: { type: 'select' }, cell: (r) => <b>{name(r.categoryId)}</b> },
+    { id: 'priority', title: 'Priority', value: (r) => r.priority, align: 'right', filter: { type: 'number' } },
+    { id: 'hits', title: 'Used', value: (r) => r.hitCount, align: 'right', aggregate: 'sum', filter: { type: 'number' } },
+    { id: 'learned', title: 'Learned', value: (r) => r.autoLearned, filter: { type: 'boolean' }, hidden: true },
+    { id: 'active', title: 'Status', value: (r) => (r.isActive ? 'Active' : 'Paused'), filter: { type: 'select' } },
+  ];
+  return (
+    <DataGrid
+      tableId={tableId}
+      data={rules}
+      columns={columns}
+      getRowId={(r) => r.id}
+      loading={loading}
+      initialSorting={[{ id: 'priority', desc: true }]}
+      emptyMessage="No rules yet. A rule files matching transactions under a category automatically."
+      searchPlaceholder="Search rules…"
+      exportName="rules"
+      rowClassName={(r) => (r.isActive ? undefined : 'done')}
+      views={[{ id: 'active', name: 'Active', filters: { active: ['Active'] } }, { id: 'paused', name: 'Paused', filters: { active: ['Paused'] } }]}
+      rowActions={(r) => (
+        <>
+          <button className="link" onClick={() => void runner.run(() => api.finance.updateRule(r.id, { isActive: !r.isActive }), reload)}>{r.isActive ? 'Pause' : 'Resume'}</button>
+          <button className="link" onClick={() => void runner.run(() => api.finance.deleteRule(r.id), reload)}>Delete</button>
+        </>
+      )}
+      toolbarEnd={onNew && <button className="primary g-btn" onClick={onNew}>+ New rule</button>}
+    />
+  );
+}
+
+export function RulesTab() {
   const runner = useRunner();
+  const api = useApi();
   const rules = useAsync(() => api.finance.rules(), [api]);
   const categories = useAsync(() => api.finance.categories(), [api]);
   const [adding, setAdding] = useState(false);
-  const name = (id: string) => categories.data?.find((c) => c.id === id)?.name ?? 'Category';
   return (
-    <>
-      <div className="row"><span className="grow" /><button className="primary" onClick={() => setAdding(true)}>+ New rule</button></div>
+    <div className="stack">
       {rules.error && !rules.data && <ErrorNote message={rules.error} onRetry={rules.reload} />}
       {runner.error && <ErrorNote message={runner.error} />}
-      <Panel title={`${rules.data?.length ?? 0} rules`}>
-        {rules.data?.length === 0 ? <Empty>No rules yet. A rule files matching transactions under a category automatically.</Empty> : (
-          <ul className="list">
-            {rules.data?.map((r: CategorizationRule) => (
-              <li key={r.id} style={{ opacity: r.isActive ? 1 : 0.5 }}>
-                <span className="grow">{r.matchField === 'MERCHANT_NAME' ? 'Merchant' : 'Description'} {r.matchType.toLowerCase()} “{r.matchValue}” → <b>{name(r.categoryId)}</b><div className="muted">priority {r.priority} · used {r.hitCount}×{r.autoLearned ? ' · learned' : ''}</div></span>
-                <button className="ghost" onClick={() => void runner.run(() => api.finance.updateRule(r.id, { isActive: !r.isActive }), rules.reload)}>{r.isActive ? 'Pause' : 'Resume'}</button>
-                <button className="danger" onClick={() => void runner.run(() => api.finance.deleteRule(r.id), rules.reload)}>Delete</button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
+      <RulesTable tableId="finance.rules.all" rules={rules.data ?? []} categories={categories.data ?? []} runner={runner} reload={rules.reload} loading={rules.loading && !rules.data} onNew={() => setAdding(true)} />
       {adding && <RuleModal categories={categories.data ?? []} onClose={() => setAdding(false)} onSaved={async () => { setAdding(false); await rules.reload(); }} />}
-    </>
+    </div>
   );
 }
 
@@ -206,32 +230,46 @@ function RuleModal({ categories, onClose, onSaved }: { categories: { id: string;
 }
 
 // ------------------------------------------------------------------ merchants
+export function MerchantsTable({ tableId, merchants, categories, loading, onOpen, onDelete }: { tableId: string; merchants: Merchant[]; categories: FinanceCategory[]; loading?: boolean; onOpen?: (m: Merchant) => void; onDelete?: (m: Merchant) => void }) {
+  const cat = (id: string | null) => categories.find((c) => c.id === id)?.name ?? '';
+  const columns: Col<Merchant>[] = [
+    { id: 'name', title: 'Merchant', value: (m) => m.name, filter: { type: 'text' }, cell: (m) => <span><b>{m.name}</b> {!m.isRecognized && <span className="g-chip warn">new</span>}</span> },
+    { id: 'category', title: 'Category', value: (m) => cat(m.categoryId) || 'Uncategorized', filter: { type: 'select' } },
+    { id: 'txns', title: 'Transactions', value: (m) => m.transactionCount, align: 'right', aggregate: 'sum', filter: { type: 'number' } },
+    { id: 'avg', title: 'Average', value: (m) => m.averageTransactionAmount, align: 'right', filter: { type: 'number' }, format: (v) => (v == null || v === '' ? '—' : money(Number(v))) },
+    { id: 'last', title: 'Last seen', value: (m) => m.lastTransactionDate ?? '', filter: { type: 'date' } },
+    { id: 'recognized', title: 'Recognised', value: (m) => m.isRecognized, filter: { type: 'boolean' }, hidden: true },
+  ];
+  return (
+    <DataGrid
+      tableId={tableId}
+      data={merchants}
+      columns={columns}
+      getRowId={(m) => m.id}
+      loading={loading}
+      initialSorting={[{ id: 'txns', desc: true }]}
+      emptyMessage="Merchants appear as transactions are imported."
+      searchPlaceholder="Search merchants…"
+      exportName="merchants"
+      onRowClick={onOpen}
+      drawer={!onOpen}
+      views={[{ id: 'new', name: 'New', filters: { recognized: ['false'] } }]}
+      rowActions={onDelete ? (m) => <button className="link" onClick={() => onDelete(m)}>Delete</button> : undefined}
+    />
+  );
+}
+
 export function MerchantsTab() {
   const api = useApi();
   const runner = useRunner();
   const merchants = useAsync(() => api.finance.merchants(), [api]);
   const categories = useAsync(() => api.finance.categories(), [api]);
-  const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
-  const list = (merchants.data ?? []).filter((m) => !search.trim() || m.name.toLowerCase().includes(search.trim().toLowerCase()));
-  const cat = (id: string | null) => categories.data?.find((c) => c.id === id)?.name;
   return (
-    <>
-      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search merchants…" />
+    <div className="stack">
       {merchants.error && !merchants.data && <ErrorNote message={merchants.error} onRetry={merchants.reload} />}
       {runner.error && <ErrorNote message={runner.error} />}
-      <Panel title={`${list.length} merchants`}>
-        {list.length === 0 ? <Empty>No merchants yet.</Empty> : (
-          <ul className="list">
-            {list.map((m) => (
-              <li key={m.id} className="clickable" onClick={() => setEditing({ id: m.id, name: m.name })}>
-                <span className="grow"><b>{m.name}</b><div className="muted">{m.transactionCount} transactions{cat(m.categoryId) ? ` · ${cat(m.categoryId)}` : ''}{m.averageTransactionAmount != null ? ` · avg ${money(m.averageTransactionAmount)}` : ''}</div></span>
-                {!m.isRecognized && <span className="pill warn">new</span>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
+      <MerchantsTable tableId="finance.merchants.all" merchants={merchants.data ?? []} categories={categories.data ?? []} loading={merchants.loading && !merchants.data} onOpen={(m) => setEditing({ id: m.id, name: m.name })} />
       {editing && (
         <Modal title="Merchant" onClose={() => setEditing(null)}>
           <form className="stack" onSubmit={(e) => { e.preventDefault(); void runner.run(() => api.financeTools.renameMerchant(editing.id, editing.name.trim()), async () => { setEditing(null); await merchants.reload(); }); }}>
@@ -243,6 +281,6 @@ export function MerchantsTab() {
           </form>
         </Modal>
       )}
-    </>
+    </div>
   );
 }

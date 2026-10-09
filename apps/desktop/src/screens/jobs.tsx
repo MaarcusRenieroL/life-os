@@ -5,6 +5,7 @@ import { DiscoveryTab, OpeningsTab, ResumeTab } from '../modules/jobs-extra';
 import { openExternal } from '../lib/runtime';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
+import { DataGrid, type Col } from '../grid/data-grid';
 import { Bars, Empty, ErrorNote, Field, Modal, opts, Panel, pretty, Select, Stat, Tabs } from '../ui';
 
 type TabId = 'dashboard' | 'list' | 'openings' | 'discovery' | 'resumes' | 'add' | 'analytics';
@@ -65,21 +66,38 @@ function Dashboard({ jobs, onOpen }: { jobs: JobListing[]; onOpen: (j: JobListin
 }
 
 function JobList({ jobs, onOpen }: { jobs: JobListing[]; onOpen: (j: JobListing) => void }) {
-  const [q, setQ] = useState('');
-  const [status, setStatus] = useState<JobStatus | ''>('');
-  const shown = jobs.filter((j) => (!status || j.status === status) && `${j.title} ${j.company} ${j.location ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const columns: Col<JobListing>[] = [
+    { id: 'title', title: 'Role', value: (j) => j.title, filter: { type: 'text' }, cell: (j) => <b>{j.title}</b> },
+    { id: 'company', title: 'Company', value: (j) => j.company, filter: { type: 'select' } },
+    { id: 'status', title: 'Status', value: (j) => pretty(j.status ?? 'INTERESTED'), filter: { type: 'select' } },
+    { id: 'fit', title: 'Fit', value: (j) => j.fitScore, align: 'right', filter: { type: 'number' }, cell: (j) => fit(j.fitScore) ?? <span className="muted">—</span>, format: (v) => (v == null ? '—' : `${v}%`) },
+    { id: 'location', title: 'Location', value: (j) => j.location ?? '', filter: { type: 'select' } },
+    { id: 'model', title: 'Work model', value: (j) => (j.workModel ? pretty(j.workModel) : ''), filter: { type: 'select' } },
+    { id: 'salary', title: 'Salary', value: (j) => j.salaryMax ?? j.salaryMin, align: 'right', filter: { type: 'number' }, cell: (j) => (j.salaryMin || j.salaryMax ? `${j.currency ?? ''} ${[j.salaryMin, j.salaryMax].filter(Boolean).join('–')}`.trim() : '—'), hidden: true },
+    { id: 'skills', title: 'Skills', value: (j) => j.requiredSkills ?? [], filter: { type: 'select' }, hidden: true },
+    { id: 'applied', title: 'Applied', value: (j) => (j.appliedAt ?? '').slice(0, 10), filter: { type: 'date' } },
+    { id: 'followUp', title: 'Follow up', value: (j) => (j.followUpAt ?? '').slice(0, 10), filter: { type: 'date' } },
+    { id: 'deadline', title: 'Deadline', value: (j) => (j.deadline ?? '').slice(0, 10), filter: { type: 'date' }, hidden: true },
+    { id: 'added', title: 'Added', value: (j) => j.createdAt.slice(0, 10), filter: { type: 'date' }, hidden: true },
+  ];
   return (
-    <div className="stack">
-      <div className="add"><input placeholder="Search title, company, location…" value={q} onChange={(e) => setQ(e.target.value)} /><div style={{ minWidth: 220 }}><Select value={status} onChange={setStatus} options={opts(JOB_STATUSES)} placeholder="Any status" /></div></div>
-      <Panel title={`Jobs · ${shown.length}`}>
-        {shown.length === 0 ? <Empty>No jobs match.</Empty> : <ul className="list">{shown.map((j) => (
-          <li key={j.id} className="clickable" onClick={() => onOpen(j)}>
-            <div className="grow"><b>{j.title}</b> <span className="muted">at {j.company}</span><div className="muted">{[j.location, j.workModel && pretty(j.workModel)].filter(Boolean).join(' · ')}</div></div>
-            {fit(j.fitScore)}<span className="pill">{pretty(j.status ?? 'INTERESTED')}</span>
-          </li>
-        ))}</ul>}
-      </Panel>
-    </div>
+    <DataGrid
+      tableId="jobs.list"
+      data={jobs}
+      columns={columns}
+      getRowId={(j) => j.id}
+      initialSorting={[{ id: 'added', desc: true }]}
+      emptyMessage="No jobs match."
+      searchPlaceholder="Search title, company, location…"
+      exportName="jobs"
+      onRowClick={onOpen}
+      drawer={false}
+      views={[
+        { id: 'applied', name: 'Applied', filters: { status: ['Applied'] } },
+        { id: 'interview', name: 'Interviewing', filters: { status: ['Interviewing', 'Waiting for hr'] } },
+        { id: 'followup', name: 'Needs follow-up', filters: { followUp: ['1970-01-01', new Date().toISOString().slice(0, 10)] } },
+      ]}
+    />
   );
 }
 
