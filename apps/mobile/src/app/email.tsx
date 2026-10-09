@@ -3,11 +3,12 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { Text } from '@/text';
 
-import { Btn, Empty, Pill, Progress, Row, Screen, Seg } from '@/kit';
+import { DataGrid, type Col } from '@/grid/data-grid';
+import { Btn, Progress, Screen, Seg } from '@/kit';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
-import { ErrorNote, Muted, Panel, s } from '@/ui';
+import { ErrorNote, Muted, Panel } from '@/ui';
 
 const WAITING: EmailHubStatus[] = ['NEEDS_REVIEW', 'FAILED'];
 const DONE: EmailHubStatus[] = ['APPLIED', 'UNDONE'];
@@ -55,6 +56,17 @@ export default function Email() {
     await items.reload();
   }
 
+  const columns: Col<EmailHubItem>[] = [
+    { id: 'summary', title: 'What it is', value: (i) => i.summary || i.subject || '(no subject)', filter: { type: 'text' }, cell: (i) => <Text style={{ color: C.text, fontSize: 15, fontWeight: '700', flexShrink: 1 }}>{i.summary || i.subject || '(no subject)'}</Text> },
+    { id: 'category', title: 'Kind', value: (i) => CATEGORY[i.category], filter: { type: 'select' } },
+    { id: 'from', title: 'From', value: (i) => sender(i.fromAddress), filter: { type: 'select' } },
+    { id: 'received', title: 'Received', value: (i) => (i.receivedAt ?? i.createdAt).slice(0, 10), filter: { type: 'date' } },
+    { id: 'proposal', title: 'Proposal', value: (i) => describe(i.proposal) ?? '' },
+    { id: 'confidence', title: 'Confidence', value: (i) => (i.confidence ? i.confidence.toLowerCase() : ''), filter: { type: 'select' }, hidden: true },
+    { id: 'status', title: 'Status', value: (i) => i.status.replace('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase()), filter: { type: 'select' }, hidden: true },
+    { id: 'subject', title: 'Subject', value: (i) => i.subject ?? '', hidden: true },
+  ];
+
   return (
     <Screen title="Email" onRefresh={() => void items.reload()} refreshing={items.loading} action={<Btn kind="ghost" label="Check now" onPress={() => void runner.run(() => api.emailHub.syncNow(), async () => { setNote('Reading new mail - results appear in a moment.'); setTimeout(() => void items.reload(), 8000); })} style={{ paddingVertical: 7 }} />}>
       <Muted style={{ marginBottom: 10 }}>Bills, appointments, deadlines and receipts wait here as proposals until you tap Do it. Nothing is created without your OK.</Muted>
@@ -63,28 +75,30 @@ export default function Email() {
       {items.error && !items.data ? <ErrorNote message={items.error} onRetry={items.reload} /> : null}
       {runner.error ? <ErrorNote message={runner.error} /> : null}
       {note ? <Muted style={{ marginBottom: 8 }}>{note}</Muted> : null}
-      <Panel title={`${shown.length} ${tab === 'waiting' ? 'waiting' : tab === 'done' ? 'handled' : 'skipped'}`}>
-        {shown.length === 0 ? <Empty>{tab === 'waiting' ? 'Nothing is waiting on you.' : tab === 'done' ? 'Nothing has been added from your email yet.' : 'Nothing skipped yet.'}</Empty> : shown.map((item) => (
-          <Row key={item.id}>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', marginBottom: 2 }}><Pill label={CATEGORY[item.category]} color={C.cyan} />{item.confidence && item.status === 'NEEDS_REVIEW' ? <Pill label={`${item.confidence.toLowerCase()} confidence`} /> : null}</View>
-              <Text style={[s.body, { fontWeight: '700' }]}>{item.summary || item.subject || '(no subject)'}</Text>
-              {describe(item.proposal) ? <Text style={s.body}>{describe(item.proposal)}</Text> : null}
-              <Muted style={{ fontSize: 11 }}>{sender(item.fromAddress)}{item.subject ? ` · ${item.subject}` : ''}</Muted>
-              {item.note ? <Text style={{ color: item.status === 'FAILED' ? C.destructive : C.muted, fontSize: 11 }}>{item.note}</Text> : null}
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                {(item.status === 'NEEDS_REVIEW' || item.status === 'FAILED') ? (
-                  <>
-                    {item.proposal ? <Btn label={item.status === 'FAILED' ? 'Try again' : 'Do it'} disabled={runner.busy} onPress={() => void act(item, 'approve')} style={{ paddingVertical: 6, paddingHorizontal: 12 }} /> : null}
-                    <Btn kind="ghost" label="Dismiss" disabled={runner.busy} onPress={() => void act(item, 'dismiss')} style={{ paddingVertical: 6, paddingHorizontal: 12 }} />
-                  </>
-                ) : null}
-                {item.status === 'APPLIED' ? <Btn kind="ghost" label="Undo" disabled={runner.busy} onPress={() => void act(item, 'undo')} style={{ paddingVertical: 6, paddingHorizontal: 12 }} /> : null}
-              </View>
-            </View>
-          </Row>
-        ))}
-      </Panel>
+      <DataGrid
+        tableId="email.inbox"
+        data={shown}
+        columns={columns}
+        getRowId={(i) => i.id}
+        loading={items.loading && !items.data}
+        initialSorting={[{ id: 'received', desc: true }]}
+        emptyMessage={tab === 'waiting' ? 'Nothing is waiting on you.' : tab === 'done' ? 'Nothing has been added from your email yet.' : 'Nothing skipped yet.'}
+        searchPlaceholder="Search email…"
+        exportName="email-proposals"
+        trailing={(item) => (item.status === 'NEEDS_REVIEW' || item.status === 'FAILED') && item.proposal ? <Btn label={item.status === 'FAILED' ? 'Retry' : 'Do it'} disabled={runner.busy} onPress={() => void act(item, 'approve')} style={{ paddingVertical: 6, paddingHorizontal: 12 }} /> : null}
+        rowActions={(item, close) => (
+          <>
+            {(item.status === 'NEEDS_REVIEW' || item.status === 'FAILED') ? (
+              <>
+                {item.proposal ? <Btn label={item.status === 'FAILED' ? 'Try again' : 'Do it'} disabled={runner.busy} onPress={() => { close(); void act(item, 'approve'); }} /> : null}
+                <Btn kind="ghost" label="Dismiss" disabled={runner.busy} onPress={() => { close(); void act(item, 'dismiss'); }} />
+              </>
+            ) : null}
+            {item.status === 'APPLIED' ? <Btn kind="ghost" label="Undo" disabled={runner.busy} onPress={() => { close(); void act(item, 'undo'); }} /> : null}
+          </>
+        )}
+        drawerExtra={(item) => (describe(item.proposal) || item.note ? <View style={{ marginTop: 10, gap: 4 }}>{describe(item.proposal) ? <Text style={{ color: C.text }}>{describe(item.proposal)}</Text> : null}{item.note ? <Text style={{ color: item.status === 'FAILED' ? C.destructive : C.muted, fontSize: 12 }}>{item.note}</Text> : null}</View> : null)}
+      />
     </Screen>
   );
 }

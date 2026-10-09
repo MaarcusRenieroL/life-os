@@ -1,8 +1,9 @@
-import { EQUIPMENT, EXERCISE_CATEGORIES, dayKey, type Equipment, type ExerciseCategory, type Routine, type SessionDetail, type SessionSet } from '@life-os/core';
+import { EQUIPMENT, EXERCISE_CATEGORIES, dayKey, type Equipment, type ExerciseCategory, type Measurement, type Routine, type SessionDetail, type SessionSummary, type SessionSet } from '@life-os/core';
 import { useState, type FormEvent } from 'react';
 
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
+import { DataGrid, type Col } from '../grid/data-grid';
 import { Bars, Empty, ErrorNote, Field, Modal, opts, Panel, pretty, Select, Stat, Tabs } from '../ui';
 
 type TabId = 'today' | 'routines' | 'exercises' | 'history' | 'records' | 'body' | 'analytics';
@@ -217,15 +218,31 @@ function HistoryTab() {
   const api = useApi();
   const runner = useRunner();
   const sessions = useAsync(() => api.workouts.sessions({ status: 'COMPLETED' }), [api]);
+  const columns: Col<SessionSummary>[] = [
+    { id: 'date', title: 'Date', value: (s) => (s.completedAt ?? '').slice(0, 10), filter: { type: 'date' } },
+    { id: 'name', title: 'Workout', value: (s) => s.name, filter: { type: 'text' }, cell: (s) => <b>{s.name}</b> },
+    { id: 'duration', title: 'Duration', value: (s) => s.durationSeconds, align: 'right', filter: { type: 'number' }, aggregate: 'sum', cell: (s) => duration(s.durationSeconds), format: (v) => duration(Number(v)) },
+    { id: 'sets', title: 'Sets', value: (s) => s.completedSets, align: 'right', aggregate: 'sum', filter: { type: 'number' } },
+    { id: 'volume', title: 'Volume', value: (s) => Math.round(s.volume), align: 'right', aggregate: 'sum', filter: { type: 'number' }, format: (v) => `${Number(v).toLocaleString()} kg` },
+    { id: 'prs', title: 'Records', value: (s) => s.prCount, align: 'right', aggregate: 'sum', filter: { type: 'number' }, cell: (s) => (s.prCount > 0 ? <span className="g-chip warn">🏆 {s.prCount}</span> : <span className="muted">—</span>) },
+  ];
   return (
-    <Panel title="Completed workouts">
+    <div className="stack">
       {runner.error && <ErrorNote message={runner.error} />}
-      {(sessions.data ?? []).length === 0 && !sessions.loading ? <Empty>No workouts logged yet.</Empty> : (
-        <ul className="list">{(sessions.data ?? []).map((s) => (
-          <li key={s.id}><div className="grow"><b>{s.name}</b><div className="muted">{(s.completedAt ?? '').slice(0, 10)} · {duration(s.durationSeconds)} · {s.completedSets} sets · {Math.round(s.volume)} kg</div></div>{s.prCount > 0 && <span className="pill warn">🏆 {s.prCount}</span>}<button className="link" onClick={() => void runner.run(() => api.workouts.deleteSession(s.id), sessions.reload)}>Delete</button></li>
-        ))}</ul>
-      )}
-    </Panel>
+      <DataGrid
+        tableId="workouts.history"
+        data={sessions.data ?? []}
+        columns={columns}
+        getRowId={(s) => s.id}
+        loading={sessions.loading && !sessions.data}
+        initialSorting={[{ id: 'date', desc: true }]}
+        emptyMessage="No workouts logged yet."
+        searchPlaceholder="Search workouts…"
+        exportName="workouts"
+        views={[{ id: 'prs', name: 'With records', filters: { prs: ['1', ''] } }]}
+        rowActions={(s) => <button className="link" onClick={() => void runner.run(() => api.workouts.deleteSession(s.id), sessions.reload)}>Delete</button>}
+      />
+    </div>
   );
 }
 
@@ -254,6 +271,15 @@ function BodyTab() {
     const ok = await runner.run(() => api.workouts.createMeasurement({ measuredOn: dayKey(new Date()), weightKg: n(form.weightKg), chestCm: n(form.chestCm), waistCm: n(form.waistCm), armsCm: n(form.armsCm), legsCm: n(form.legsCm), bodyFatPct: n(form.bodyFatPct) }), rows.reload);
     if (ok) setForm({ weightKg: '', chestCm: '', waistCm: '', armsCm: '', legsCm: '', bodyFatPct: '' });
   }
+  const bodyColumns: Col<Measurement>[] = [
+    { id: 'date', title: 'Date', value: (m) => m.measuredOn, filter: { type: 'date' } },
+    { id: 'weight', title: 'Weight (kg)', value: (m) => m.weightKg, align: 'right', filter: { type: 'number' }, aggregate: 'avg', format: (v) => (v == null ? '—' : Number(v).toFixed(1)) },
+    { id: 'fat', title: 'Body fat %', value: (m) => m.bodyFatPct, align: 'right', filter: { type: 'number' }, aggregate: 'avg', format: (v) => (v == null ? '—' : Number(v).toFixed(1)) },
+    { id: 'chest', title: 'Chest (cm)', value: (m) => m.chestCm, align: 'right', filter: { type: 'number' } },
+    { id: 'waist', title: 'Waist (cm)', value: (m) => m.waistCm, align: 'right', filter: { type: 'number' } },
+    { id: 'arms', title: 'Arms (cm)', value: (m) => m.armsCm, align: 'right', filter: { type: 'number' }, hidden: true },
+    { id: 'legs', title: 'Legs (cm)', value: (m) => m.legsCm, align: 'right', filter: { type: 'number' }, hidden: true },
+  ];
   const weights = [...list].reverse().filter((m) => m.weightKg != null).slice(-12);
 
   return (
@@ -270,9 +296,18 @@ function BodyTab() {
         </form>
       </Panel>
       {weights.length > 1 && <Panel title="Weight trend"><Bars rows={weights.map((m) => ({ label: m.measuredOn, value: m.weightKg! }))} format={(v) => `${v.toFixed(1)} kg`} /></Panel>}
-      <Panel title="History">
-        {list.length === 0 ? <Empty>No measurements yet.</Empty> : <ul className="list">{list.map((m) => <li key={m.id}><small className="muted" style={{ width: 90 }}>{m.measuredOn}</small><span className="grow">{[m.weightKg != null && `${m.weightKg} kg`, m.bodyFatPct != null && `${m.bodyFatPct}% fat`, m.waistCm != null && `waist ${m.waistCm}`, m.chestCm != null && `chest ${m.chestCm}`].filter(Boolean).join(' · ')}</span><button className="link" onClick={() => void runner.run(() => api.workouts.deleteMeasurement(m.id), rows.reload)}>Delete</button></li>)}</ul>}
-      </Panel>
+      <DataGrid
+        tableId="workouts.body"
+        data={list}
+        columns={bodyColumns}
+        getRowId={(m) => m.id}
+        loading={rows.loading && !rows.data}
+        initialSorting={[{ id: 'date', desc: true }]}
+        emptyMessage="No measurements yet."
+        searchPlaceholder="Search measurements…"
+        exportName="body-measurements"
+        rowActions={(m) => <button className="link" onClick={() => void runner.run(() => api.workouts.deleteMeasurement(m.id), rows.reload)}>Delete</button>}
+      />
     </div>
   );
 }

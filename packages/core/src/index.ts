@@ -8,3 +8,4 @@ export * from './models-extra';
 export * from './api-extra';
 export * from './automation';
 export * from './vault-utils';
+export * from './grid';

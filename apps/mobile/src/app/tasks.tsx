@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from '@/text';
 
+import { DataGrid, type Col } from '@/grid/data-grid';
 import { Bars, Btn, Chips, DateInput, Empty, Field, Input, opts, pretty, Progress, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
@@ -34,6 +35,7 @@ export default function Tasks() {
     if (tab === 'upcoming') return api.tasks.list({ view: 'UPCOMING', upcomingDays: 14, q });
     if (tab === 'done') return api.tasks.list({ view: 'COMPLETED', q });
     if (tab === 'analytics') return api.tasks.list({});
+    if (tab === 'list') return api.tasks.list({});
     return api.tasks.list({ q });
   }, `${tab}|${query}`);
   const overdue = useAsync(() => (tab === 'today' ? api.tasks.list({ view: 'OVERDUE' }) : Promise.resolve([] as Task[])), `${tab}-overdue`);
@@ -59,7 +61,7 @@ export default function Tasks() {
   return (
     <Screen title="Tasks" back={false} onRefresh={() => void reload()} refreshing={tasks.loading} action={<Btn label="+ New" onPress={() => setEditing('new')} style={{ paddingVertical: 7 }} />}>
       <Seg tabs={TABS} value={tab} onChange={setTab} />
-      <Input value={query} onChangeText={setQuery} placeholder="Search tasks…" style={{ marginBottom: 12 }} />
+      {tab !== 'list' && tab !== 'done' ? <Input value={query} onChangeText={setQuery} placeholder="Search tasks…" style={{ marginBottom: 12 }} /> : null}
       {runner.error ? <ErrorNote message={runner.error} /> : null}
       {tasks.error && !tasks.data ? <ErrorNote message={tasks.error} onRetry={tasks.reload} /> : null}
       {tab === 'today' && (overdue.data?.length ?? 0) > 0 ? <Panel title={`Overdue · ${overdue.data!.length}`} accent={C.magenta}>{[...overdue.data!].sort(byUrgency).map(row)}</Panel> : null}
@@ -68,10 +70,47 @@ export default function Tasks() {
         const lane = list.filter((t) => t.status === status).sort(byUrgency);
         return <Panel key={status} title={`${pretty(status)} · ${lane.length}`}>{lane.length === 0 ? <Muted>Empty</Muted> : lane.map(row)}</Panel>;
       }) : tab === 'upcoming' ? (list.length === 0 && !tasks.loading ? <Panel><Empty>Nothing due in the next two weeks.</Empty></Panel> : days.map((d) => <Panel key={d} title={d}>{list.filter((t) => (t.dueDate ?? 'No date') === d).sort(byUrgency).map(row)}</Panel>)) : (
-        <Panel title={`${TABS.find((t) => t.id === tab)!.label} · ${list.length}`}>{list.length === 0 && !tasks.loading ? <Empty>{tab === 'done' ? 'Nothing completed yet.' : 'Nothing here.'}</Empty> : [...list].sort(byUrgency).map(row)}</Panel>
+        <TaskGrid tableId={tab === 'done' ? 'tasks.completed' : 'tasks.list'} tasks={list} loading={tasks.loading && !tasks.data} done={tab === 'done'} onOpen={setEditing} onToggle={toggle} />
       )}
       {editing ? <TaskSheet task={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={async () => { setEditing(null); await reload(); }} /> : null}
     </Screen>
+  );
+}
+
+function TaskGrid({ tableId, tasks, loading, done, onOpen, onToggle }: { tableId: string; tasks: Task[]; loading: boolean; done: boolean; onOpen: (t: Task) => void; onToggle: (t: Task) => Promise<unknown> }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.parse(today) - 86400000).toISOString().slice(0, 10);
+  const columns: Col<Task>[] = [
+    { id: 'title', title: 'Task', value: (t) => t.title, filter: { type: 'text' }, cell: (t) => <Text style={[{ color: C.text, fontSize: 15, fontWeight: '700', flexShrink: 1 }, t.status === 'DONE' && { textDecorationLine: 'line-through', color: C.muted }]}>{t.title}{t.recurrencePattern ? ' ↻' : ''}</Text> },
+    { id: 'priority', title: 'Priority', value: (t) => pretty(t.priority), filter: { type: 'select', options: TASK_PRIORITIES.map((p) => ({ value: pretty(p), label: pretty(p) })) }, cell: (t) => <Text style={{ color: PRIORITY_COLOR[t.priority], fontSize: 13 }}>{pretty(t.priority)}</Text> },
+    { id: 'due', title: 'Due', value: (t) => t.dueDate ?? '', filter: { type: 'date' } },
+    { id: 'status', title: 'Status', value: (t) => pretty(t.status), filter: { type: 'select' } },
+    { id: 'tags', title: 'Tags', value: (t) => t.tags ?? [], filter: { type: 'select' } },
+    { id: 'done', title: 'Done', value: (t) => t.status === 'DONE', filter: { type: 'boolean', labels: ['Done', 'Open'] }, hidden: true, noSearch: true },
+    { id: 'area', title: 'Area', value: (t) => (t.area ? pretty(t.area) : ''), filter: { type: 'select' }, hidden: true },
+    { id: 'estimate', title: 'Estimate', value: (t) => t.estimateMinutes ?? null, align: 'right', aggregate: 'sum', filter: { type: 'number' }, format: (v) => `${v} min`, hidden: true },
+    { id: 'completed', title: 'Completed', value: (t) => (t.completedAt ?? '').slice(0, 10), filter: { type: 'date' }, hidden: !done },
+  ];
+  return (
+    <DataGrid
+      tableId={tableId}
+      data={tasks}
+      columns={columns}
+      getRowId={(t) => t.id}
+      loading={loading}
+      initialSorting={done ? [{ id: 'completed', desc: true }] : [{ id: 'due', desc: false }]}
+      emptyMessage={done ? 'Nothing completed yet.' : 'Nothing here.'}
+      searchPlaceholder="Search tasks…"
+      exportName="tasks"
+      onRowClick={onOpen}
+      drawer={false}
+      trailing={(t) => (t.status === 'DONE' ? <Pressable onPress={() => void onToggle(t)} hitSlop={10} style={[s.check, { backgroundColor: C.accent, borderColor: C.accent }]}><Text style={{ fontWeight: '800', color: C.accentFg }}>✓</Text></Pressable> : <Check on={false} onPress={() => void onToggle(t)} />)}
+      views={done ? [] : [
+        { id: 'open', name: 'Open', filters: { done: ['false'] } },
+        { id: 'overdue', name: 'Overdue', filters: { done: ['false'], due: ['', yesterday] } },
+        { id: 'urgent', name: 'Urgent', filters: { done: ['false'], priority: ['Urgent', 'High'] } },
+      ]}
+    />
   );
 }
 

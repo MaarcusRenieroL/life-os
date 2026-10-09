@@ -1,11 +1,12 @@
-import { CARD_NETWORKS, DEFAULT_GENERATOR, entryStrengthMap, generatePassword, maskCard, parseCsv, type ApiCardNetwork, type VaultCard, type VaultEntryDetail, type VaultEntrySummary, type VaultEntryType, type VaultEntryWriteRequest } from '@life-os/core';
+import { CARD_NETWORKS, DEFAULT_GENERATOR, entryStrengthMap, generatePassword, maskCard, parseCsv, type ApiCardNetwork, type AuditEvent, type VaultCard, type VaultEntryDetail, type VaultEntrySummary, type VaultEntryType, type VaultEntryWriteRequest } from '@life-os/core';
 import * as Clipboard from 'expo-clipboard';
 import * as Crypto from 'expo-crypto';
 import { useRef, useState, type ReactNode } from 'react';
 import { Share, Switch, View } from 'react-native';
 import { Text } from '@/text';
 
-import { Bars, Btn, Chips, DateInput, Empty, Field, Input, opts, Pill, Progress, Row, Sheet, Stat, StatGrid } from '@/kit';
+import { DataGrid, type Col } from '@/grid/data-grid';
+import { Bars, Btn, Chips, DateInput, Empty, Field, Input, opts, Pill, pretty, Progress, Row, Sheet, Stat, StatGrid } from '@/kit';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
@@ -71,33 +72,37 @@ export function EntriesTab() {
   const entries = useAsync(() => api.vault.entries(), api);
   const categories = useAsync(() => api.vault.categories(), api);
   const health = useAsync(() => api.vault.health(), api);
-  const [search, setSearch] = useState('');
-  const [chip, setChip] = useState('');
   const [open, setOpen] = useState<string | 'new' | null>(null);
   const strength = entryStrengthMap(health.data?.actionRequired ?? []);
-  const term = search.trim().toLowerCase();
-  const list = (entries.data ?? []).filter((e) => (!term || [e.title, e.username, e.email, e.url].filter(Boolean).join(' ').toLowerCase().includes(term)) && (!chip || (chip === 'favorites' ? e.favorite : e.categoryId === chip)));
-  const catName = (id: string | null) => categories.data?.find((c) => c.id === id)?.name;
+  const catName = (id: string | null) => categories.data?.find((c) => c.id === id)?.name ?? '';
+  const columns: Col<VaultEntrySummary>[] = [
+    { id: 'title', title: 'Title', value: (e) => e.title, filter: { type: 'text' }, cell: (e) => <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{e.title}{e.favorite ? ' ★' : ''}</Text> },
+    { id: 'login', title: 'Login', value: (e) => e.username || e.email || '', filter: { type: 'text' } },
+    { id: 'folder', title: 'Folder', value: (e) => catName(e.categoryId) || 'None', filter: { type: 'select' } },
+    { id: 'strength', title: 'Strength', value: (e) => strength.get(e.id) ?? 'Strong', filter: { type: 'select' }, cell: (e) => { const l = strength.get(e.id) ?? 'Strong'; return <Pill label={l} color={l === 'Strong' ? C.accent : C.destructive} />; } },
+    { id: 'url', title: 'Website', value: (e) => e.url ?? '', hidden: true },
+    { id: 'type', title: 'Type', value: (e) => pretty(e.type), filter: { type: 'select' }, hidden: true },
+    { id: 'favorite', title: 'Favourite', value: (e) => e.favorite, filter: { type: 'boolean' }, hidden: true },
+    { id: 'expires', title: 'Expires', value: (e) => (e.expiresAt ?? '').slice(0, 10), filter: { type: 'date' }, hidden: true },
+    { id: 'updated', title: 'Updated', value: (e) => e.updatedAt.slice(0, 10), filter: { type: 'date' }, hidden: true },
+  ];
   return (
     <>
-      <Input value={search} onChangeText={setSearch} placeholder="Search entries…" style={{ marginBottom: 10 }} />
-      <View style={{ marginBottom: 10 }}><Chips value={chip} onChange={setChip} clearable options={[{ value: 'favorites', label: '★ Favorites' }, ...(categories.data ?? []).map((c) => ({ value: c.id, label: c.name }))]} /></View>
       <Btn label="+ Add entry" onPress={() => setOpen('new')} style={{ marginBottom: 12 }} />
       {entries.error && !entries.data ? <ErrorNote message={entries.error} onRetry={entries.reload} /> : null}
-      <Panel title={`${list.length} entries`}>
-        {list.length === 0 && !entries.loading ? <Empty>No entries found.</Empty> : list.map((e) => {
-          const label = strength.get(e.id) ?? 'Strong';
-          return (
-            <Row key={e.id} onPress={() => setOpen(e.id)}>
-              <View style={{ flex: 1 }}>
-                <Text style={[s.body, { fontWeight: '700' }]}>{e.title}{e.favorite ? ' ★' : ''}</Text>
-                <Muted style={{ fontSize: 12 }}>{e.username || e.email || e.url || '—'}{catName(e.categoryId) ? ` · ${catName(e.categoryId)}` : ''}</Muted>
-              </View>
-              <Pill label={label} color={label === 'Strong' ? C.accent : C.destructive} />
-            </Row>
-          );
-        })}
-      </Panel>
+      <DataGrid
+        tableId="vault.entries"
+        data={entries.data ?? []}
+        columns={columns}
+        getRowId={(e) => e.id}
+        loading={entries.loading && !entries.data}
+        initialSorting={[{ id: 'title', desc: false }]}
+        emptyMessage="No entries found."
+        searchPlaceholder="Search entries…"
+        onRowClick={(e) => setOpen(e.id)}
+        drawer={false}
+        views={[{ id: 'fav', name: 'Favourites', filters: { favorite: ['true'] } }, { id: 'weak', name: 'Needs attention', filters: { strength: ['Weak', 'Reused', 'Compromised', 'Old'] } }]}
+      />
       {open ? <EntrySheet id={open === 'new' ? null : open} categories={categories.data ?? []} onClose={() => setOpen(null)} onChanged={async () => { setOpen(null); await Promise.all([entries.reload(), health.reload()]); }} /> : null}
     </>
   );
@@ -282,25 +287,37 @@ export function SecurityTab() {
 // ------------------------------------------------------------------ audit log
 export function AuditTab() {
   const api = useApi();
-  const [page, setPage] = useState(0);
-  const events = useAsync(() => api.audit.events(page, 50), page);
-  const r = events.data;
+  // Everything is loaded and handled here so search, filters and sorting cover every event.
+  const events = useAsync(async () => {
+    const all: AuditEvent[] = [];
+    for (let page = 0; page < 10; page++) {
+      const result = await api.audit.events(page, 200);
+      all.push(...result.content);
+      if (result.last || result.content.length === 0) break;
+    }
+    return all;
+  }, api);
+  const columns: Col<AuditEvent>[] = [
+    { id: 'description', title: 'What happened', value: (e) => e.description, filter: { type: 'text' } },
+    { id: 'when', title: 'When', value: (e) => e.occurredAt.slice(0, 16).replace('T', ' '), filter: { type: 'date' } },
+    { id: 'type', title: 'Event', value: (e) => e.eventType.replace(/_/g, ' ').toLowerCase(), filter: { type: 'select' } },
+    { id: 'service', title: 'Service', value: (e) => e.service, filter: { type: 'select' } },
+  ];
   return (
     <>
-      {events.error && !r ? <ErrorNote message={events.error} onRetry={events.reload} /> : null}
-      <Panel title={`${r?.totalElements ?? 0} events`}>
-        {r?.content.length === 0 ? <Empty>Nothing recorded yet.</Empty> : r?.content.map((e) => (
-          <Row key={e.eventId}>
-            <View style={{ flex: 1 }}><Text style={s.body}>{e.description}</Text><Muted style={{ fontSize: 11 }}>{e.eventType.replace(/_/g, ' ').toLowerCase()} · {e.service}</Muted></View>
-            <Muted style={{ fontSize: 11 }}>{e.occurredAt.slice(5, 16).replace('T', ' ')}</Muted>
-          </Row>
-        ))}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-          <Btn kind="ghost" label="‹ Newer" disabled={page === 0} onPress={() => setPage(page - 1)} style={{ paddingVertical: 7 }} />
-          <Muted>Page {page + 1} of {Math.max(1, r?.totalPages ?? 1)}</Muted>
-          <Btn kind="ghost" label="Older ›" disabled={!r || r.last} onPress={() => setPage(page + 1)} style={{ paddingVertical: 7 }} />
-        </View>
-      </Panel>
+      {events.error && !events.data ? <ErrorNote message={events.error} onRetry={events.reload} /> : null}
+      <DataGrid
+        tableId="vault.audit-log"
+        data={events.data ?? []}
+        columns={columns}
+        getRowId={(e) => e.eventId}
+        loading={events.loading && !events.data}
+        initialSorting={[{ id: 'when', desc: true }]}
+        emptyMessage="Nothing recorded yet."
+        searchPlaceholder="Search the log…"
+        exportName="audit-log"
+        initialPageSize={30}
+      />
     </>
   );
 }

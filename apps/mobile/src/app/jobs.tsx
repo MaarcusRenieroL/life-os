@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Linking, View } from 'react-native';
 import { Text } from '@/text';
 
+import { DataGrid, type Col } from '@/grid/data-grid';
 import { Bars, Btn, Chips, DateInput, Empty, Field, Input, opts, Pill, pretty, Row, Screen, Seg, Sheet, Stat, StatGrid } from '@/kit';
 import { DiscoveryTab, OpeningsTab, ResumeTab } from '@/modules/jobs-extra';
 import { useApi } from '@/lib/session';
@@ -53,22 +54,38 @@ function Dashboard({ jobs, onOpen }: { jobs: JobListing[]; onOpen: (j: JobListin
 }
 
 function List({ jobs, onOpen }: { jobs: JobListing[]; onOpen: (j: JobListing) => void }) {
-  const [q, setQ] = useState('');
-  const [status, setStatus] = useState<JobStatus | ''>('');
-  const shown = jobs.filter((j) => (!status || j.status === status) && `${j.title} ${j.company} ${j.location ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const columns: Col<JobListing>[] = [
+    { id: 'title', title: 'Role', value: (j) => j.title, filter: { type: 'text' }, cell: (j) => <Text style={{ color: C.text, fontSize: 15, fontWeight: '700', flexShrink: 1 }}>{j.title}</Text> },
+    { id: 'company', title: 'Company', value: (j) => j.company, filter: { type: 'select' } },
+    { id: 'status', title: 'Status', value: (j) => pretty(j.status ?? 'INTERESTED'), filter: { type: 'select' } },
+    { id: 'fit', title: 'Fit', value: (j) => j.fitScore, align: 'right', filter: { type: 'number' }, cell: (j) => fit(j.fitScore) ?? <Muted>—</Muted>, format: (v) => (v == null ? '—' : `${v}%`) },
+    { id: 'location', title: 'Location', value: (j) => j.location ?? '', filter: { type: 'select' } },
+    { id: 'model', title: 'Work model', value: (j) => (j.workModel ? pretty(j.workModel) : ''), filter: { type: 'select' }, hidden: true },
+    { id: 'salary', title: 'Salary', value: (j) => j.salaryMax ?? j.salaryMin, align: 'right', filter: { type: 'number' }, cell: (j) => <Text style={{ color: C.text, fontSize: 13 }}>{j.salaryMin || j.salaryMax ? `${j.currency ?? ''} ${[j.salaryMin, j.salaryMax].filter(Boolean).join('–')}`.trim() : '—'}</Text>, hidden: true },
+    { id: 'skills', title: 'Skills', value: (j) => j.requiredSkills ?? [], filter: { type: 'select' }, hidden: true },
+    { id: 'applied', title: 'Applied', value: (j) => (j.appliedAt ?? '').slice(0, 10), filter: { type: 'date' }, hidden: true },
+    { id: 'followUp', title: 'Follow up', value: (j) => (j.followUpAt ?? '').slice(0, 10), filter: { type: 'date' }, hidden: true },
+    { id: 'deadline', title: 'Deadline', value: (j) => (j.deadline ?? '').slice(0, 10), filter: { type: 'date' }, hidden: true },
+    { id: 'added', title: 'Added', value: (j) => j.createdAt.slice(0, 10), filter: { type: 'date' }, hidden: true },
+  ];
   return (
-    <>
-      <Input value={q} onChangeText={setQ} placeholder="Search title, company, location…" style={{ marginBottom: 10 }} />
-      <View style={{ marginBottom: 12 }}><Chips value={status} onChange={setStatus} options={opts(JOB_STATUSES)} clearable /></View>
-      <Panel title={`Jobs · ${shown.length}`}>
-        {shown.length === 0 ? <Empty>No jobs match.</Empty> : shown.map((j) => (
-          <Row key={j.id} onPress={() => onOpen(j)}>
-            <View style={{ flex: 1 }}><Text style={{ color: C.text, fontWeight: '700' }}>{j.title}</Text><Muted>{j.company}{j.location ? ` · ${j.location}` : ''}</Muted><Muted style={{ fontSize: 11 }}>{pretty(j.status ?? 'INTERESTED')}</Muted></View>
-            {fit(j.fitScore)}
-          </Row>
-        ))}
-      </Panel>
-    </>
+    <DataGrid
+      tableId="jobs.list"
+      data={jobs}
+      columns={columns}
+      getRowId={(j) => j.id}
+      initialSorting={[{ id: 'added', desc: true }]}
+      emptyMessage="No jobs match."
+      searchPlaceholder="Search title, company, location…"
+      exportName="jobs"
+      onRowClick={onOpen}
+      drawer={false}
+      views={[
+        { id: 'applied', name: 'Applied', filters: { status: ['Applied'] } },
+        { id: 'interview', name: 'Interviewing', filters: { status: ['Interviewing', 'Waiting for hr'] } },
+        { id: 'followup', name: 'Needs follow-up', filters: { followUp: ['1970-01-01', new Date().toISOString().slice(0, 10)] } },
+      ]}
+    />
   );
 }
 

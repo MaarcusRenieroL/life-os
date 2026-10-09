@@ -3,7 +3,8 @@ import { useState } from 'react';
 
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
-import { Empty, ErrorNote, Panel, ProgressRow, Tabs } from '../ui';
+import { DataGrid, type Col } from '../grid/data-grid';
+import { ErrorNote, Panel, ProgressRow, Tabs } from '../ui';
 
 const WAITING: EmailHubStatus[] = ['NEEDS_REVIEW', 'FAILED'];
 const DONE: EmailHubStatus[] = ['APPLIED', 'UNDONE'];
@@ -49,6 +50,25 @@ export function EmailScreen() {
     await items.reload();
   }
 
+  const columns: Col<EmailHubItem>[] = [
+    { id: 'category', title: 'Kind', value: (i) => CATEGORY[i.category], filter: { type: 'select' } },
+    {
+      id: 'summary', title: 'What it is', value: (i) => i.summary || i.subject || '(no subject)', filter: { type: 'text' },
+      cell: (i) => (
+        <div>
+          <b>{i.summary || i.subject || '(no subject)'}</b>
+          {describe(i.proposal) && <div>{describe(i.proposal)}</div>}
+          {i.note && <div className={i.status === 'FAILED' ? 'error' : 'muted'}>{i.note}</div>}
+        </div>
+      ),
+    },
+    { id: 'from', title: 'From', value: (i) => sender(i.fromAddress), filter: { type: 'select' } },
+    { id: 'subject', title: 'Subject', value: (i) => i.subject ?? '', hidden: true },
+    { id: 'confidence', title: 'Confidence', value: (i) => (i.confidence ? i.confidence.toLowerCase() : ''), filter: { type: 'select' } },
+    { id: 'status', title: 'Status', value: (i) => i.status.replace('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase()), filter: { type: 'select' } },
+    { id: 'received', title: 'Received', value: (i) => (i.receivedAt ?? i.createdAt).slice(0, 10), filter: { type: 'date' } },
+  ];
+
   return (
     <div className="stack">
       <div className="row">
@@ -60,30 +80,28 @@ export function EmailScreen() {
       {items.error && !items.data && <ErrorNote message={items.error} onRetry={items.reload} />}
       {runner.error && <ErrorNote message={runner.error} />}
       {note && <p className="muted">{note}</p>}
-      <Panel title={`${shown.length} ${tab === 'waiting' ? 'waiting' : tab === 'done' ? 'handled' : 'skipped'}`}>
-        {shown.length === 0 ? <Empty>{tab === 'waiting' ? 'Nothing is waiting on you.' : tab === 'done' ? 'Nothing has been added from your email yet.' : 'Nothing skipped yet.'}</Empty> : (
-          <ul className="list">
-            {shown.map((item) => (
-              <li key={item.id}>
-                <span className="grow">
-                  <span className="pill">{CATEGORY[item.category]}</span>{item.confidence && item.status === 'NEEDS_REVIEW' && <span className="pill"> {item.confidence.toLowerCase()} confidence</span>}
-                  <div><b>{item.summary || item.subject || '(no subject)'}</b></div>
-                  {describe(item.proposal) && <div>{describe(item.proposal)}</div>}
-                  <small className="muted">{sender(item.fromAddress)}{item.subject ? ` · ${item.subject}` : ''}</small>
-                  {item.note && <div className={item.status === 'FAILED' ? 'error' : 'muted'}>{item.note}</div>}
-                </span>
-                {(item.status === 'NEEDS_REVIEW' || item.status === 'FAILED') && (
-                  <>
-                    {item.proposal && <button className="primary" disabled={runner.busy} onClick={() => void act(item, 'approve')}>{item.status === 'FAILED' ? 'Try again' : 'Do it'}</button>}
-                    <button className="ghost" disabled={runner.busy} onClick={() => void act(item, 'dismiss')}>Dismiss</button>
-                  </>
-                )}
-                {item.status === 'APPLIED' && <button className="ghost" disabled={runner.busy} onClick={() => void act(item, 'undo')}>Undo</button>}
-              </li>
-            ))}
-          </ul>
+      <DataGrid
+        tableId="email.inbox"
+        data={shown}
+        columns={columns}
+        getRowId={(i) => i.id}
+        loading={items.loading && !items.data}
+        initialSorting={[{ id: 'received', desc: true }]}
+        emptyMessage={tab === 'waiting' ? 'Nothing is waiting on you.' : tab === 'done' ? 'Nothing has been added from your email yet.' : 'Nothing skipped yet.'}
+        searchPlaceholder="Search email…"
+        exportName="email-proposals"
+        rowActions={(item) => (
+          <>
+            {(item.status === 'NEEDS_REVIEW' || item.status === 'FAILED') && (
+              <>
+                {item.proposal && <button className="primary g-btn" disabled={runner.busy} onClick={() => void act(item, 'approve')}>{item.status === 'FAILED' ? 'Try again' : 'Do it'}</button>}
+                <button className="ghost g-btn" disabled={runner.busy} onClick={() => void act(item, 'dismiss')}>Dismiss</button>
+              </>
+            )}
+            {item.status === 'APPLIED' && <button className="ghost g-btn" disabled={runner.busy} onClick={() => void act(item, 'undo')}>Undo</button>}
+          </>
         )}
-      </Panel>
+      />
     </div>
   );
 }
