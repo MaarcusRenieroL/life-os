@@ -11,13 +11,14 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.kafka.annotation.KafkaListener;
+import com.lifeos.common.events.AfterCommit;
+import com.lifeos.common.events.SerialEventQueue;
 import org.springframework.stereotype.Component;
 
 /** Consumes what batches' Gmail bank-alert poller publishes to {@code bank-alert-events} (see
  * GmailSyncService in batches, which replaced a synchronous per-email REST call with this topic -
  * same N-sequential-calls fix as job-tracker's email pipeline). createFromEmailAlert already
- * dedupes on sourceReference, so a redelivered event is a safe no-op; an unmatched account (no
+ * dedupes on sourceReference, so a replayed event is a safe no-op; an unmatched account (no
  * account row for the parsed bank/account-type combo) or a corrupt enum value is caught and
  * logged here rather than crashing the consumer, matching the previous per-email try/catch
  * behavior in GmailSyncService.processEmails. */
@@ -30,11 +31,14 @@ public class BankAlertEventConsumer {
   private final TransactionService transactionService;
   private final ImportFailureService importFailureService;
 
-  @KafkaListener(
-      topics = "bank-alert-events",
-      groupId = "finance-tracker-service",
-      containerFactory = "bankAlertEventListenerContainerFactory")
+  private final SerialEventQueue queue = new SerialEventQueue("bank-alert");
+
+  @AfterCommit
   public void listen(BankAlertEventRecord event) {
+    queue.submit(() -> process(event));
+  }
+
+  private void process(BankAlertEventRecord event) {
     try {
       CreateEmailAlertTransactionRequest request =
           CreateEmailAlertTransactionRequest.builder()

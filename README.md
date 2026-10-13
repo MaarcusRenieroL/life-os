@@ -16,7 +16,7 @@ A personal operating system built with a modular Spring Boot backend (one proces
 # Install dependencies
 pnpm install
 
-# Start everything (PostgreSQL, Redis, Kafka, Ollama, the backend app, Nginx)
+# Start everything (PostgreSQL, the backend app, Nginx)
 docker-compose up -d
 
 # Verify services
@@ -41,7 +41,7 @@ life-os/
 │   ├── workouts/         # Routines, sessions, records, measurements
 │   ├── batches/          # Scheduled jobs (Gmail sync, backups)
 │   ├── core/             # Per-user module settings, notifications, automation, email hub
-│   └── common/           # Shared library (auth, Kafka, JWT)
+│   └── common/           # Shared library (JWT, in-process events)
 ├── apps/             # Frontend applications
 │   ├── mobile/       # React Native (Expo)
 │   ├── web/          # React + Vite
@@ -84,8 +84,8 @@ module (own Postgres schema and history table). Build and test everything with
 
 - **Backend:** Spring Boot 4, Java 21
 - **Database:** PostgreSQL
-- **Cache:** Redis
-- **Messaging:** Kafka
+- **Cache:** in-process (Caffeine)
+- **Events:** in-process (Spring events)
 - **Web:** React + Vite
 - **Mobile:** React Native + Expo
 - **Desktop:** Tauri + React

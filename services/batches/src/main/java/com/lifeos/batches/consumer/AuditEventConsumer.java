@@ -4,7 +4,8 @@ import com.lifeos.batches.domains.entity.AuditEvent;
 import com.lifeos.batches.repository.AuditEventRepository;
 import com.lifeos.common.events.AuditEventRecord;
 import lombok.RequiredArgsConstructor;
-import org.springframework.kafka.annotation.KafkaListener;
+import com.lifeos.common.events.AfterCommit;
+import com.lifeos.common.events.SerialEventQueue;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -13,9 +14,14 @@ public class AuditEventConsumer {
 
   private final AuditEventRepository auditEventRepository;
 
-  @KafkaListener(topics = "activity-events", groupId = "batches-service")
-  public void listener(AuditEventRecord event) {
+  private final SerialEventQueue queue = new SerialEventQueue("audit");
 
+  @AfterCommit
+  public void listener(AuditEventRecord event) {
+    queue.submit(() -> save(event));
+  }
+
+  private void save(AuditEventRecord event) {
     if (auditEventRepository.existsById(event.eventId())) {
       return;
     }

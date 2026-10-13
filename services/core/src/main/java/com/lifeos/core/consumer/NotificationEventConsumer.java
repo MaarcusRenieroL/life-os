@@ -4,23 +4,27 @@ import com.lifeos.common.events.NotificationEventRecord;
 import com.lifeos.core.domains.entity.Notification;
 import com.lifeos.core.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.kafka.annotation.KafkaListener;
+import com.lifeos.common.events.AfterCommit;
+import com.lifeos.common.events.SerialEventQueue;
 import org.springframework.stereotype.Component;
 
 /** Consumes every module's published notifications into one table. Dedupes on the
- * publisher-assigned eventId (same pattern as batches' AuditEventConsumer), so a redelivered
- * Kafka message never creates a duplicate notification. */
+ * publisher-assigned eventId (same pattern as batches' AuditEventConsumer), so a replayed
+ * event never creates a duplicate notification. */
 @Component
 @RequiredArgsConstructor
 public class NotificationEventConsumer {
 
   private final NotificationRepository notificationRepository;
 
-  @KafkaListener(
-      topics = "notification-events",
-      groupId = "core-service",
-      containerFactory = "notificationEventListenerContainerFactory")
+  private final SerialEventQueue queue = new SerialEventQueue("notification");
+
+  @AfterCommit
   public void listen(NotificationEventRecord event) {
+    queue.submit(() -> save(event));
+  }
+
+  private void save(NotificationEventRecord event) {
     if (notificationRepository.existsById(event.eventId())) {
       return;
     }

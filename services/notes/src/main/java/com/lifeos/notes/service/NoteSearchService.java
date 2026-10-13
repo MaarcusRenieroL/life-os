@@ -24,7 +24,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import java.time.Duration;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -45,16 +48,14 @@ public class NoteSearchService {
   private final NoteTagRepository noteTagRepository;
   private final TagRepository tagRepository;
   private final NoteFolderRepository noteFolderRepository;
-  private final StringRedisTemplate redisTemplate;
 
-  // Not Spring-managed: spring-boot-starter-webmvc (the modular Boot 4
-  // starter this service uses) doesn't pull in Jackson's autoconfiguration
-  // the way spring-boot-starter-web does, so there's no ObjectMapper bean to
-  // inject here. A plain instance is all recent-searches JSON needs.
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  // Recent searches are a convenience, so they live in memory (a day after the last search, the
+  // list is dropped) rather than in a database or cache server.
+  private final Cache<UUID, List<RecentSearchResponse>> recentSearches =
+      Caffeine.newBuilder().expireAfterWrite(Duration.ofDays(1)).maximumSize(1_000).build();
 
   // readOnly like suggestions()/recentSearches() below - the only write this
-  // does is the recent-search list in Redis, which a JPA read-only
+  // does is the in-memory recent-search list, which a JPA read-only
   // transaction doesn't affect.
   @Transactional(readOnly = true)
   public Page<SearchResultResponse> search(UUID userId, String rawQuery, int page, int size) {
@@ -191,24 +192,8 @@ public class NoteSearchService {
 
   @Transactional(readOnly = true)
   public List<RecentSearchResponse> recentSearches(UUID userId) {
-    List<String> raw =
-        redisTemplate.opsForList().range(recentSearchesKey(userId), 0, RECENT_SEARCHES_LIMIT - 1);
-
-    if (raw == null) {
-      return List.of();
-    }
-
-    return raw.stream()
-        .map(
-            json -> {
-              try {
-                return objectMapper.readValue(json, RecentSearchResponse.class);
-              } catch (Exception e) {
-                return null;
-              }
-            })
-        .filter(java.util.Objects::nonNull)
-        .toList();
+    List<RecentSearchResponse> entries = recentSearches.getIfPresent(userId);
+    return entries == null ? List.of() : entries;
   }
 
   private void recordRecentSearch(UUID userId, String query, long resultCount) {
@@ -224,18 +209,17 @@ public class NoteSearchService {
               .resultCount((int) resultCount)
               .build();
 
-      String key = recentSearchesKey(userId);
-      redisTemplate.opsForList().leftPush(key, objectMapper.writeValueAsString(entry));
-      redisTemplate.opsForList().trim(key, 0, RECENT_SEARCHES_LIMIT - 1);
-      redisTemplate.expire(key, java.time.Duration.ofDays(1));
+      recentSearches
+          .asMap()
+          .merge(
+              userId,
+              List.of(entry),
+              (existing, added) ->
+                  Stream.concat(added.stream(), existing.stream()).limit(RECENT_SEARCHES_LIMIT).toList());
     } catch (Exception ignored) {
       // Recent-search history is a convenience feature, not the search
-      // result itself - never fail the actual search over a Redis hiccup.
+      // result itself - never fail the actual search over it.
     }
-  }
-
-  private String recentSearchesKey(UUID userId) {
-    return "user:" + userId + ":recent-searches";
   }
 
   private ParsedQuery parse(String rawQuery) {

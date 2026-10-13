@@ -3,19 +3,19 @@ package com.lifeos.common.events;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-/** Publishes an {@link AuditEventRecord} to the shared `activity-events` Kafka topic, tagged with
+/** Publishes an {@link AuditEventRecord} to the audit consumer in batches, tagged with
  * the calling module's name (see {@link ModuleNames}). */
 @Component
 public class AuditEventPublisher {
 
-  private final KafkaTemplate<String, AuditEventRecord> kafkaTemplate;
+  private final ApplicationEventPublisher events;
 
   public AuditEventPublisher(
-      KafkaTemplate<String, AuditEventRecord> kafkaTemplate) {
-    this.kafkaTemplate = kafkaTemplate;
+      ApplicationEventPublisher events) {
+    this.events = events;
   }
 
   public void publish(
@@ -24,6 +24,6 @@ public class AuditEventPublisher {
         new AuditEventRecord(
             UUID.randomUUID(), ModuleNames.caller(), userId, eventType, description, metadata, Instant.now());
 
-    kafkaTemplate.send("activity-events", userId.toString(), record);
+    events.publishEvent(record);
   }
 }

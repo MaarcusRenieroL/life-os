@@ -6,14 +6,14 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class HabitEventPublisher {
 
-  private final KafkaTemplate<String, AuditEventRecord> kafkaTemplate;
+  private final ApplicationEventPublisher events;
 
   public void publish(
       UUID userId, AuditEventType eventType, String description, Map<String, String> metadata) {
@@ -27,6 +27,6 @@ public class HabitEventPublisher {
             metadata,
             Instant.now());
 
-    kafkaTemplate.send("activity-events", userId.toString(), record);
+    events.publishEvent(record);
   }
 }

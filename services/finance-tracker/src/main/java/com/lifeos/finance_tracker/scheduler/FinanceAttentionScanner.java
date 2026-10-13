@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -50,7 +49,7 @@ public class FinanceAttentionScanner {
   private final BudgetRepository budgetRepository;
   private final BudgetSpendService budgetSpendService;
   private final NotificationEventPublisher notificationEventPublisher;
-  private final StringRedisTemplate stringRedisTemplate;
+  private final AttentionClaimStore claims;
 
   @Scheduled(cron = "${finance.attention-scan.cron:0 0 8 * * *}")
   public void scan() {
@@ -135,13 +134,10 @@ public class FinanceAttentionScanner {
     }
   }
 
-  /** Redis SETNX-based at-most-once claim: true the first time this key is claimed, false on
-   * every call after that until the TTL expires. */
+  /** At-most-once claim: true the first time this key is claimed, false on every call after that
+   * until the TTL expires. */
   private boolean claim(String suffix, Duration ttl) {
-    Boolean firstClaim =
-        stringRedisTemplate.opsForValue().setIfAbsent("finance:attention-notified:" + suffix, "1", ttl);
-
-    return Boolean.TRUE.equals(firstClaim);
+    return claims.claim("finance:attention-notified:" + suffix, ttl);
   }
 
   public static BigDecimal percentOf(BigDecimal value, BigDecimal of) {
