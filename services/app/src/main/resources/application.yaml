@@ -33,17 +33,6 @@ spring:
       # The largest of the modules' limits (notes attachments); the upload endpoints enforce their own caps.
       max-file-size: 50MB
       max-request-size: 55MB
-  kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-    consumer:
-      group-id: core_service
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
   batch:
     job:
       enabled: false

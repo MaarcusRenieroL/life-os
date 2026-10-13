@@ -11,12 +11,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 /**
@@ -61,7 +60,7 @@ public class EmailHubSyncService {
 
   private final GmailMessageService gmailMessageService;
   private final GmailOAuthService gmailOAuthService;
-  private final KafkaTemplate<String, EmailHubEventRecord> emailHubEventKafkaTemplate;
+  private final ApplicationEventPublisher eventPublisher;
   private final NotificationEventPublisher notificationEventPublisher;
 
   public int syncRecent() throws IOException {
@@ -118,7 +117,7 @@ public class EmailHubSyncService {
                 email.subject(),
                 truncate(email.body()),
                 email.receivedAt());
-        emailHubEventKafkaTemplate.send("email-hub-events", userId.toString(), event).get(10, TimeUnit.SECONDS);
+        eventPublisher.publishEvent(event);
         sent++;
       } catch (Exception exception) {
         log.error("Failed to publish inbox email {}: {}", email.messageId(), exception.getMessage());

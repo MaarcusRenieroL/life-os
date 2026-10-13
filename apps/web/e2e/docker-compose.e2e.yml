@@ -11,13 +11,7 @@ name: lifeos-e2e
 services:
   postgres:
     ports: !override []
-  redis:
-    ports: !override []
   ollama:
-    ports: !override []
-  kafka:
-    ports: !override []
-  zookeeper:
     ports: !override []
   nginx:
     ports: !override

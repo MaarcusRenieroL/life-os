@@ -9,19 +9,17 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 /**
  * Forwards Gmail messages that look job-related (known job-board/ATS senders, or common
- * application-status subject phrasing) to job-tracker via the {@code job-email-events} Kafka
- * topic, which does the actual Claude classification and decides what to do with each one. This
+ * application-status subject phrasing) to job-tracker via an in-process event, which does the actual Claude classification and decides what to do with each one. This
  * service is a dumb pipe, same as {@link GmailSyncService} is for bank alerts - it doesn't try to
  * understand the email itself, since job-status emails come from arbitrary company domains with
  * no fixed format.
@@ -49,13 +47,12 @@ public class JobEmailSyncService {
   private String subjectKeywordsConfig;
 
   private final GmailMessageService gmailMessageService;
-  private final KafkaTemplate<String, JobEmailEventRecord> jobEmailEventKafkaTemplate;
+  private final ApplicationEventPublisher eventPublisher;
   private final NotificationEventPublisher notificationEventPublisher;
 
   /**
    * Looks back a week rather than two days. Re-sending is free - job-tracker dedupes on the Gmail
-   * message id before doing any AI work - and a wider window means a stretch of downtime (or Kafka
-   * being unreachable) no longer loses the emails that arrived during it.
+   * message id before doing any AI work - and a wider window means a stretch of downtime (or   * being unreachable) no longer loses the emails that arrived during it.
    */
   public int syncRecent() throws IOException {
     return processEmails(gmailMessageService.fetchByQuery(searchClause(), "newer_than:7d", GmailPurpose.JOBS));
@@ -86,9 +83,7 @@ public class JobEmailSyncService {
             new JobEmailEventRecord(
                 userId, email.messageId(), email.fromAddress(), email.subject(), email.body(), email.receivedAt());
 
-        // Wait for the broker's acknowledgement. Fire-and-forget hid the case where Kafka was
-        // unreachable: the email looked "processed" here and was silently dropped.
-        jobEmailEventKafkaTemplate.send("job-email-events", userId.toString(), event).get(10, TimeUnit.SECONDS);
+        eventPublisher.publishEvent(event);
         processed++;
       } catch (Exception e) {
         log.error("Failed to publish job email {}: {}", email.messageId(), e.getMessage(), e);

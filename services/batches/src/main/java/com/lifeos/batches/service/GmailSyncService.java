@@ -8,12 +8,11 @@ import com.lifeos.common.events.NotificationEventType;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 /**
@@ -21,7 +20,7 @@ import org.springframework.stereotype.Service;
  * backfill endpoint (GmailController) - both need the same "fetch alerts, parse each, publish to
  * finance-tracker" pipeline, just with a different email set.
  *
- * <p>Published to Kafka instead of the previous synchronous per-email REST call to
+ * <p>Published as an in-process event instead of the previous synchronous per-email REST call to
  * finance-tracker, matching {@link JobEmailSyncService}'s pipeline - same N-sequential-calls
  * shape, so the same fix applies even though this path has no AI call blocking it.
  * {@code TransactionService.createFromEmailAlert} already dedupes on {@code sourceReference}, so
@@ -38,7 +37,7 @@ public class GmailSyncService {
 
   private final GmailMessageService gmailMessageService;
   private final GmailAlertParsingService gmailAlertParsingService;
-  private final KafkaTemplate<String, BankAlertEventRecord> bankAlertEventKafkaTemplate;
+  private final ApplicationEventPublisher eventPublisher;
   private final NotificationEventPublisher notificationEventPublisher;
   private final com.lifeos.batches.config.FinanceTrackerClient financeTrackerClient;
 
@@ -76,9 +75,7 @@ public class GmailSyncService {
                 alert.sourceReference(),
                 alert.accountSuffix());
 
-        // Wait for the broker's acknowledgement: fire-and-forget counted an alert as processed even
-        // when Kafka was unreachable, and it was then lost.
-        bankAlertEventKafkaTemplate.send("bank-alert-events", userId.toString(), event).get(10, TimeUnit.SECONDS);
+        eventPublisher.publishEvent(event);
         processed++;
       } catch (Exception e) {
         log.error("Failed to process Gmail alert {}: {}", email.messageId(), e.getMessage(), e);

@@ -1,65 +1,59 @@
 package com.lifeos.app;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import java.time.Duration;
+import java.util.Map;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.caffeine.CaffeineCache;
+import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.cache.RedisCacheConfiguration;
-import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisSerializationContext;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
- * One Redis cache manager for every module's caches (core, notes, habit-tracker and finance each
- * declared their own {@code cacheManager}). Core, notes and habits cache with a Jackson 2 mapper
- * that knows java.time; finance caches with the app's own Jackson 3 mapper, as before. Cache names
- * are prefixed per module, so the TTLs below are each module's original ones.
+ * In-memory caches for every module. Core, notes, habit-tracker and finance each used to declare
+ * their own Redis cache manager; with everything in one process a plain local cache does the same
+ * job. Cache names are prefixed per module, and each keeps its original TTL.
  */
 @Configuration
 @EnableCaching
 public class CacheConfig {
 
-  @Bean
-  public RedisCacheManager cacheManager(
-      RedisConnectionFactory connectionFactory, tools.jackson.databind.ObjectMapper jackson3Mapper) {
-    ObjectMapper redisObjectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
-    RedisCacheConfiguration standard =
-        RedisCacheConfiguration.defaultCacheConfig()
-            .entryTtl(Duration.ofMinutes(5))
-            .serializeKeysWith(
-                RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-            .serializeValuesWith(
-                RedisSerializationContext.SerializationPair.fromSerializer(
-                    new GenericJackson2JsonRedisSerializer(redisObjectMapper)));
-    RedisCacheConfiguration finance =
-        standard.serializeValuesWith(
-            RedisSerializationContext.SerializationPair.fromSerializer(
-                new GenericJacksonJsonRedisSerializer(jackson3Mapper)));
+  private static final int MAX_ENTRIES = 10_000;
 
-    return RedisCacheManager.builder(connectionFactory)
-        .cacheDefaults(standard)
-        // core
-        .withCacheConfiguration("module-settings", standard.entryTtl(Duration.ofMinutes(5)))
-        .withCacheConfiguration("user-settings", standard.entryTtl(Duration.ofMinutes(5)))
-        // notes
-        .withCacheConfiguration("user-tags", standard.entryTtl(Duration.ofMinutes(5)))
-        .withCacheConfiguration("user-folders", standard.entryTtl(Duration.ofMinutes(5)))
-        .withCacheConfiguration("note-detail", standard.entryTtl(Duration.ofMinutes(10)))
-        // habit-tracker: no write-path eviction, so a short TTL bounds the staleness
-        .withCacheConfiguration("habit-analytics", standard.entryTtl(Duration.ofMinutes(3)))
-        .withCacheConfiguration("habit-weekly-summary", standard.entryTtl(Duration.ofMinutes(3)))
-        // finance: merchants are mutated by several implicit write paths, hence the short TTL
-        .withCacheConfiguration("finance-categories", finance.entryTtl(Duration.ofMinutes(5)))
-        .withCacheConfiguration("finance-merchants", finance.entryTtl(Duration.ofMinutes(2)))
-        .withCacheConfiguration("finance-analytics-dashboard", finance.entryTtl(Duration.ofMinutes(5)))
-        .withCacheConfiguration("finance-analytics-category", finance.entryTtl(Duration.ofMinutes(5)))
-        .withCacheConfiguration("finance-analytics-trends", finance.entryTtl(Duration.ofMinutes(5)))
-        .withCacheConfiguration("finance-analytics-merchants", finance.entryTtl(Duration.ofMinutes(5)))
-        .build();
+  @Bean
+  public CacheManager cacheManager() {
+    SimpleCacheManager manager = new SimpleCacheManager();
+    manager.setCaches(
+        Map.ofEntries(
+                // core
+                Map.entry("module-settings", Duration.ofMinutes(5)),
+                Map.entry("user-settings", Duration.ofMinutes(5)),
+                // notes
+                Map.entry("user-tags", Duration.ofMinutes(5)),
+                Map.entry("user-folders", Duration.ofMinutes(5)),
+                Map.entry("note-detail", Duration.ofMinutes(10)),
+                // habit-tracker: no write-path eviction, so a short TTL bounds the staleness
+                Map.entry("habit-analytics", Duration.ofMinutes(3)),
+                Map.entry("habit-weekly-summary", Duration.ofMinutes(3)),
+                // finance: merchants are mutated by several implicit write paths, hence the short TTL
+                Map.entry("finance-categories", Duration.ofMinutes(5)),
+                Map.entry("finance-merchants", Duration.ofMinutes(2)),
+                Map.entry("finance-analytics-dashboard", Duration.ofMinutes(5)),
+                Map.entry("finance-analytics-category", Duration.ofMinutes(5)),
+                Map.entry("finance-analytics-trends", Duration.ofMinutes(5)),
+                Map.entry("finance-analytics-merchants", Duration.ofMinutes(5)))
+            .entrySet()
+            .stream()
+            .map(
+                entry ->
+                    new CaffeineCache(
+                        entry.getKey(),
+                        Caffeine.newBuilder()
+                            .expireAfterWrite(entry.getValue())
+                            .maximumSize(MAX_ENTRIES)
+                            .build()))
+            .toList());
+    return manager;
   }
 }

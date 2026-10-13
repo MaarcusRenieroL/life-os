@@ -22,8 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
       "gmail.client-id=unused",
       "gmail.client-secret=unused",
       "encryption.gmail-secret=ZXZlcnktbW9kdWxlLW5lZWRzLTMyLWJ5dGVzLWtleSE=",
-      "encryption.finance-secret=YW5vdGhlci0zMi1ieXRlLXRlc3Qta2V5LXNlY3JldCE=",
-      "spring.kafka.listener.auto-startup=false"
+      "encryption.finance-secret=YW5vdGhlci0zMi1ieXRlLXRlc3Qta2V5LXNlY3JldCE="
     })
 class LifeOsApplicationBootTest {
 

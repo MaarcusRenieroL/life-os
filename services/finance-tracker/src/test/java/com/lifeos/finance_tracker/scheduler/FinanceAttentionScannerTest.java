@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,8 +27,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,8 +36,7 @@ class FinanceAttentionScannerTest {
   @Mock private BudgetRepository budgetRepository;
   @Mock private BudgetSpendService budgetSpendService;
   @Mock private NotificationEventPublisher notificationEventPublisher;
-  @Mock private StringRedisTemplate stringRedisTemplate;
-  @Mock private ValueOperations<String, String> valueOperations;
+  @Mock private AttentionClaimStore claims;
 
   @InjectMocks private FinanceAttentionScanner scanner;
 
@@ -49,7 +45,6 @@ class FinanceAttentionScannerTest {
   @BeforeEach
   void setUp() {
     ReflectionTestUtils.setField(scanner, "ownerUserId", ownerUserId.toString());
-    lenient().when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
   }
 
   @Test
@@ -66,7 +61,7 @@ class FinanceAttentionScannerTest {
 
     when(recurringPatternRepository.findAllByUserId(ownerUserId)).thenReturn(List.of(pattern));
     when(budgetRepository.findAllByUserId(ownerUserId)).thenReturn(List.of());
-    when(valueOperations.setIfAbsent(anyString(), eq("1"), any(Duration.class))).thenReturn(true);
+    when(claims.claim(anyString(), any(Duration.class))).thenReturn(true);
 
     scanner.scan();
 
@@ -92,7 +87,7 @@ class FinanceAttentionScannerTest {
 
     when(recurringPatternRepository.findAllByUserId(ownerUserId)).thenReturn(List.of(pattern));
     when(budgetRepository.findAllByUserId(ownerUserId)).thenReturn(List.of());
-    when(valueOperations.setIfAbsent(anyString(), eq("1"), any(Duration.class))).thenReturn(false);
+    when(claims.claim(anyString(), any(Duration.class))).thenReturn(false);
 
     scanner.scan();
 
@@ -134,7 +129,7 @@ class FinanceAttentionScannerTest {
     when(recurringPatternRepository.findAllByUserId(ownerUserId)).thenReturn(List.of());
     when(budgetRepository.findAllByUserId(ownerUserId)).thenReturn(List.of(budget));
     when(budgetSpendService.getCurrentSpend(ownerUserId, categoryId)).thenReturn(new BigDecimal("600.00"));
-    when(valueOperations.setIfAbsent(anyString(), eq("1"), any(Duration.class))).thenReturn(true);
+    when(claims.claim(anyString(), any(Duration.class))).thenReturn(true);
 
     scanner.scan();
 
@@ -182,7 +177,7 @@ class FinanceAttentionScannerTest {
     when(recurringPatternRepository.findAllByUserId(ownerUserId)).thenReturn(List.of());
     when(budgetRepository.findAllByUserId(ownerUserId)).thenReturn(List.of(budget));
     when(budgetSpendService.getCurrentSpend(ownerUserId, categoryId)).thenReturn(new BigDecimal("600.00"));
-    when(valueOperations.setIfAbsent(anyString(), eq("1"), any(Duration.class))).thenReturn(false);
+    when(claims.claim(anyString(), any(Duration.class))).thenReturn(false);
 
     scanner.scan();
 

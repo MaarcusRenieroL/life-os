@@ -15,19 +15,11 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    restart: unless-stopped
-    image: redis:8-alpine
-    ports:
-      - "127.0.0.1:6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Local model server. Models live in a volume so they're pulled once (see OLLAMA_MODEL).
+  # Optional local model server: docker compose --profile ollama up -d. On a Mac, run Ollama natively instead
+  # (see .env.example): inside Docker it has no GPU and is several times slower. Models live in a volume so
+  # they're pulled once (see OLLAMA_MODEL).
   ollama:
+    profiles: [ollama]
     image: ollama/ollama:latest
     restart: unless-stopped
     ports:
@@ -39,30 +31,6 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
-
-  kafka:
-    restart: unless-stopped
-    image: confluentinc/cp-kafka:7.5.0
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT, PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    ports:
-      - "127.0.0.1:9092:9092"
-    depends_on:
-      - zookeeper
-
-  zookeeper:
-    restart: unless-stopped
-    image: confluentinc/cp-zookeeper:7.5.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "127.0.0.1:2181:2181"
 
   nginx:
     restart: unless-stopped
@@ -94,12 +62,9 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:?set INTERNAL_API_KEY in .env, see .env.example}
       OWNER_USER_ID: ${OWNER_USER_ID:?set OWNER_USER_ID in .env to your account id}
       AUTH_OWNER_USER_ID: ${OWNER_USER_ID}
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
       AVATAR_STORAGE_DIR: /data/avatars
       RESUME_STORAGE_DIR: /data/resumes
-      # Ollama runs as the "ollama" service below; pull the model once: docker compose exec ollama ollama pull qwen2.5:3b
+      # Point OLLAMA_URL at a native Ollama, or start the "ollama" profile below and pull the model once: docker compose exec ollama ollama pull qwen2.5:3b
       OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
@@ -131,10 +96,6 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_started
-      redis:
         condition: service_healthy
 
 volumes:

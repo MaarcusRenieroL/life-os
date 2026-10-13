@@ -3,7 +3,8 @@ package com.lifeos.job_tracker.consumer;
 import com.lifeos.common.events.JobEmailEventRecord;
 import com.lifeos.job_tracker.service.EmailEventService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.kafka.annotation.KafkaListener;
+import com.lifeos.common.events.AfterCommit;
+import com.lifeos.common.events.SerialEventQueue;
 import org.springframework.stereotype.Component;
 
 /** Consumes what batches' Gmail job-search poller publishes to {@code job-email-events} (see
@@ -16,17 +17,18 @@ public class JobEmailEventConsumer {
 
   private final EmailEventService emailEventService;
 
-  @KafkaListener(
-      topics = "job-email-events",
-      groupId = "job-tracker-service",
-      containerFactory = "jobEmailEventListenerContainerFactory")
+  private final SerialEventQueue queue = new SerialEventQueue("job-email");
+
+  @AfterCommit
   public void listen(JobEmailEventRecord event) {
-    emailEventService.ingest(
-        event.userId(),
-        event.gmailMessageId(),
-        event.fromAddress(),
-        event.subject(),
-        event.body(),
-        event.receivedAt());
+    queue.submit(
+        () ->
+            emailEventService.ingest(
+                event.userId(),
+                event.gmailMessageId(),
+                event.fromAddress(),
+                event.subject(),
+                event.body(),
+                event.receivedAt()));
   }
 }
