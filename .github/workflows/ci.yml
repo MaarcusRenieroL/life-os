@@ -38,38 +38,14 @@ jobs:
           distribution: "temurin"
           cache: maven
 
-      - name: Install shared common module
-        run: cd services/common && mvn clean install -DskipTests
-
-      - name: Run Auth Tests
-        run: cd services/auth && mvn clean test
-
-      - name: Run Vault Tests
-        run: cd services/vault && mvn clean test
-
-      - name: Run Batches Tests
-        run: cd services/batches && mvn clean test
-
-      - name: Run Job Tracker Tests
-        run: cd services/job-tracker && mvn clean test
-
-      - name: Run Core Tests
-        run: cd services/core && mvn clean test
-
-      - name: Run Notes Tests
-        run: cd services/notes && mvn clean test
-
-      - name: Run Finance Tracker Tests
-        run: cd services/finance-tracker && mvn clean test
-
-      - name: Run Habit Tracker Tests
-        run: cd services/habit-tracker && mvn clean test
-
-      - name: Run Tasks Tests
-        run: cd services/tasks && mvn clean test
-
-      - name: Run Workouts Tests
-        run: cd services/workouts && mvn clean test
+      # Every module is a library jar assembled by services/app, so one reactor build tests them all.
+      - name: Run backend tests
+        run: cd services && mvn -B clean test
+        env:
+          # Lets the app module's boot test start every module against the Postgres service above.
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/lifeos
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: postgres
 
   lint-and-build:
     runs-on: ubuntu-latest

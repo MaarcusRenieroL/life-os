@@ -54,27 +54,9 @@ export default defineConfig({
     },
   },
   server: {
-    // Same backend port map as apps/web/proxy.conf.json - one gateway per service,
-    // routed by path prefix. Keep these two files in sync.
+    // The whole backend is one process on 8005.
     proxy: {
-      '/v1/auth': { target: 'http://localhost:8001', changeOrigin: true },
-      '/v1/vault': { target: 'http://localhost:8002', changeOrigin: true },
-      '/v1/jobs': { target: 'http://localhost:8003', changeOrigin: true },
-      '/v1/resumes': { target: 'http://localhost:8003', changeOrigin: true },
-      '/v1/skills': { target: 'http://localhost:8003', changeOrigin: true },
-      '/v1/career-profile': { target: 'http://localhost:8003', changeOrigin: true },
-      '/v1/core': { target: 'http://localhost:8004', changeOrigin: true },
-      '/v1/batches': { target: 'http://localhost:8005', changeOrigin: true },
-      '/v1/finance': { target: 'http://localhost:8006', changeOrigin: true },
-      '/v1/notes': { target: 'http://localhost:8007', changeOrigin: true },
-      '/v1/folders': { target: 'http://localhost:8007', changeOrigin: true },
-      '/v1/tags': { target: 'http://localhost:8007', changeOrigin: true },
-      '/v1/templates': { target: 'http://localhost:8007', changeOrigin: true },
-      '/v1/habits': { target: 'http://localhost:8008', changeOrigin: true },
-      '/v1/tasks': { target: 'http://localhost:8009', changeOrigin: true },
-      '/v1/goals': { target: 'http://localhost:8009', changeOrigin: true },
-      '/v1/workouts': { target: 'http://localhost:8011', changeOrigin: true },
-      '/v1/calendar': { target: 'http://localhost:8010', changeOrigin: true },
+      '/v1': { target: 'http://localhost:8005', changeOrigin: true },
     },
   },
 });

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LevelBadge } from '@/hud';
 import { usePlayer } from '@/lib/player';
+import { NotificationBell } from '@/notifications';
 import { useSession } from '@/lib/session';
 import { Text } from '@/text';
 import { C, F } from '@/theme';
@@ -50,6 +51,7 @@ export function Header({ onMenu, onCapture }: { onMenu: () => void; onCapture: (
           <LevelBadge level={player.progress.level} rank={player.rank} size={34} />
         </Pressable>
       ) : null}
+      <NotificationBell />
       <Pressable hitSlop={8} onPress={onCapture} accessibilityLabel="Quick capture" style={{ width: 34, height: 34, borderRadius: 6, borderWidth: 1, borderColor: C.input, backgroundColor: '#ffffff0d', alignItems: 'center', justifyContent: 'center' }}>
         <Zap size={16} color={C.accent} />
       </Pressable>

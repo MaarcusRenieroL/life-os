@@ -24,4 +24,13 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
   @Modifying
   @Query("update Notification n set n.read = true where n.userId = :userId and n.read = false")
   void markAllReadForUser(@Param("userId") UUID userId);
+
+  /** Clearing never throws away an AI-fallback question that is still waiting for a yes/no. */
+  @Modifying
+  @Query("delete from Notification n where n.userId = :userId and (n.requiresAiFallbackApproval = false or n.aiFallbackApproved is not null)")
+  int deleteAnsweredForUser(@Param("userId") UUID userId);
+
+  @Modifying
+  @Query("delete from Notification n where n.userId = :userId and n.read = true and (n.requiresAiFallbackApproval = false or n.aiFallbackApproved is not null)")
+  int deleteReadForUser(@Param("userId") UUID userId);
 }

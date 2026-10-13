@@ -50,6 +50,14 @@
         {
           "faceIDPermission": "Life OS uses Face ID to unlock the app."
         }
+      ],
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "color": "#4fcb6f",
+          "defaultChannel": "default"
+        }
       ]
     ],
     "experiments": {

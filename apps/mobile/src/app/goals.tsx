@@ -4,6 +4,7 @@ import { Pressable, View } from 'react-native';
 import { Text } from '@/text';
 
 import { Btn, Chips, DateInput, Empty, Field, Input, opts, Pill, pretty, Progress, Row, Screen, Seg, Sheet } from '@/kit';
+import { tabFrom, useOpenRequest } from '@/lib/open-from';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
@@ -18,6 +19,10 @@ export default function Goals() {
   const [tab, setTab] = useState<TabId>('goals');
   const [status, setStatus] = useState<GoalStatus | ''>('');
   const [open, setOpen] = useState<string | 'new' | null>(null);
+  useOpenRequest((r) => {
+    if (r.kind === 'goal' && r.id) setOpen(r.id);
+    else { const t = tabFrom(r, TABS); if (t) setTab(t); }
+  });
   const goals = useAsync(() => api.goals.list({ status: status || undefined, includeArchived: status === 'ARCHIVED' }), status);
   const list = goals.data ?? [];
 

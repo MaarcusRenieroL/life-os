@@ -66,6 +66,9 @@ export function createMockFetch(): typeof fetch {
     }
     if (path === '/v1/core/quick-capture') return reply({ routed: 'task' });
     if (path === '/v1/tasks' && method === 'GET') return reply(tasks);
+    const taskOne = /^\/v1\/tasks\/([^/]+)$/.exec(path);
+    const oneTask = taskOne && tasks.find((t) => t.id === taskOne[1]);
+    if (oneTask && method === 'GET') return reply(oneTask);
     if (path === '/v1/tasks' && method === 'POST') {
       const body = JSON.parse(String(init?.body ?? '{}')) as { title: string };
       const created: Task = { id: `t${tasks.length + 10}`, title: body.title, description: null, status: 'TODO', priority: 'MEDIUM', dueDate: null, dueTime: null, completedAt: null };

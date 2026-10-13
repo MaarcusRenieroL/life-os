@@ -163,6 +163,16 @@ export function createApis(client: Client) {
       merchants: () => get<Merchant[]>('/v1/finance/merchants'),
       deleteMerchant: (id: string) => del<void>(`/v1/finance/merchants/${id}`),
       transactions: (page = 0, size = 50, filters: TransactionFilters = {}) => get<Page<FinanceTransaction>>('/v1/finance/transactions', { page, size, ...filters }),
+      /** Every transaction matching the filters, page by page (capped), so a table can sort, filter and total across all of them. */
+      allTransactions: async (filters: TransactionFilters = {}) => {
+        const all: FinanceTransaction[] = [];
+        for (let page = 0; page < 20; page++) {
+          const result = await get<Page<FinanceTransaction>>('/v1/finance/transactions', { page, size: 500, ...filters });
+          all.push(...result.content);
+          if (result.last || result.content.length === 0) break;
+        }
+        return all;
+      },
       needsReviewCount: () => get<number>('/v1/finance/transactions/needs-review-count'),
       createTransaction: (body: TransactionInput) => post<FinanceTransaction>('/v1/finance/transactions', body),
       setCategories: (id: string, categoryIds: string[]) => put<FinanceTransaction>(`/v1/finance/transactions/${id}/categories`, { categoryIds }),

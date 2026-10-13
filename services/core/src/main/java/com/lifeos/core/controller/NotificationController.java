@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -67,6 +68,31 @@ public class NotificationController {
     notificationService.markAllRead(userId);
 
     return ResponseEntity.ok(ApiResponse.success(null, "All notifications marked as read"));
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<ApiResponse<Void>> delete(Authentication authentication, @PathVariable UUID id) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    notificationService.delete(userId, id);
+
+    return ResponseEntity.ok(ApiResponse.success(null, "Notification deleted"));
+  }
+
+  @DeleteMapping("/read")
+  public ResponseEntity<ApiResponse<Map<String, Integer>>> clearRead(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return ResponseEntity.ok(
+        ApiResponse.success(Map.of("deleted", notificationService.clearRead(userId)), "Read notifications cleared"));
+  }
+
+  @DeleteMapping
+  public ResponseEntity<ApiResponse<Map<String, Integer>>> clearAll(Authentication authentication) {
+    UUID userId = (UUID) authentication.getPrincipal();
+
+    return ResponseEntity.ok(
+        ApiResponse.success(Map.of("deleted", notificationService.clearAll(userId)), "Notifications cleared"));
   }
 
   @PutMapping("/{id}/ai-fallback-approval")

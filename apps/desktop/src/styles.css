@@ -220,3 +220,19 @@ button { cursor: pointer; }
 .link-label { background: none; border: 0; padding: 0; cursor: pointer; } .link-label:hover { text-decoration: underline; }
 .heat-cell { width: 14px; height: 14px; border-radius: 2px; border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent); display: block; }
 .dashed-ok { border: 1px dashed color-mix(in oklab, var(--primary) 40%, transparent); background: color-mix(in oklab, var(--primary) 5%, transparent); padding: 16px; text-align: center; color: var(--primary); font-family: var(--font-sans); }
+
+/* Notifications: bell, dropdown and list actions */
+.n-bell { position: relative; flex-shrink: 0; }
+.n-bell-btn { position: relative; width: 34px; height: 34px !important; padding: 0 !important; justify-content: center; } .n-bell-btn.on { border-color: var(--primary); }
+.n-badge { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--destructive); color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; }
+.n-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: min(420px, 92vw); max-height: min(70vh, 560px); overflow-y: auto; background: linear-gradient(180deg, oklch(0.225 0.006 285), oklch(0.19 0.005 285)); box-shadow: 0 16px 40px oklch(0 0 0 / 55%); }
+.n-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; } .n-bar-end { display: flex; gap: 14px; }
+.n-danger { color: var(--destructive); }
+.n-list li { align-items: flex-start; } .n-list.compact li { padding: 8px 4px; }
+.n-read { opacity: 0.6; }
+.n-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--primary); flex-shrink: 0; margin-top: 6px; box-shadow: 0 0 8px var(--primary); }
+.n-x { background: none; border: 0; color: var(--muted-foreground); padding: 2px 6px; border-radius: 4px; } .n-x:hover { color: var(--destructive); background: color-mix(in oklab, var(--destructive) 15%, transparent); }
+.topbar { position: relative; z-index: 40; }
+.n-list small { display: block; }
+.n-ask { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; padding: 8px; border: 1px solid color-mix(in oklab, var(--hud-gold) 35%, transparent); border-radius: var(--radius); background: color-mix(in oklab, var(--hud-gold) 6%, transparent); font-size: 12px; } .n-ask span { flex: 1 1 100%; color: var(--hud-gold); }
+.n-alert { font-size: 12px; margin: 0 0 8px; }

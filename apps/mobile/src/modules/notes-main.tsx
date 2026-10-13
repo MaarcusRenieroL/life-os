@@ -1,13 +1,14 @@
-import { NOTE_TYPES, type Note, type NoteSummary, type NoteType } from '@life-os/core';
+import { NOTE_TYPES, type Note, type NoteSummary, type TrashedNote } from '@life-os/core';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Text } from '@/text';
 
-import { Btn, Chips, Empty, Input, opts, pretty, Row, Seg, Sheet } from '@/kit';
+import { DataGrid, type Col } from '@/grid/data-grid';
+import { Btn, Chips, Input, opts, pretty, Seg, Sheet } from '@/kit';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
-import { ErrorNote, Muted, Panel, s } from '@/ui';
+import { ErrorNote, Muted, Panel } from '@/ui';
 
 type Scope = 'all' | 'pinned' | 'favorites' | 'archived' | 'trash';
 const SCOPES = [{ id: 'all', label: 'All' }, { id: 'pinned', label: 'Pinned' }, { id: 'favorites', label: 'Favorites' }, { id: 'archived', label: 'Archived' }, { id: 'trash', label: 'Trash' }] as const;
@@ -16,19 +17,29 @@ export function NotesTab({ initialOpenId = null }: { initialOpenId?: string | nu
   const api = useApi();
   const runner = useRunner();
   const [scope, setScope] = useState<Scope>('all');
-  const [noteType, setNoteType] = useState<NoteType | ''>('');
-  const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState<string | null>(initialOpenId);
   const notes = useAsync(async () => {
     if (scope === 'trash') return [] as NoteSummary[];
-    return (await api.notes.list({ sort: 'modified', order: 'desc', size: 100, pinned: scope === 'pinned' || undefined, favorite: scope === 'favorites' || undefined, archived: scope === 'archived' || undefined, noteType: noteType || undefined })).content;
-  }, `${scope}|${noteType}`);
+    return (await api.notes.list({ sort: 'modified', order: 'desc', size: 500, pinned: scope === 'pinned' || undefined, favorite: scope === 'favorites' || undefined, archived: scope === 'archived' || undefined })).content;
+  }, scope);
   const trash = useAsync(() => (scope === 'trash' ? api.notes.trash() : Promise.resolve([])), scope);
-  const visible = (notes.data ?? []).filter((n) => !query.trim() || `${n.title} ${n.description ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()));
+  const columns: Col<NoteSummary>[] = [
+    { id: 'title', title: 'Title', value: (n) => n.title || 'Untitled', filter: { type: 'text' }, cell: (n) => <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{n.isPinned ? '📌 ' : ''}{n.isFavorite ? '★ ' : ''}{n.title || 'Untitled'}</Text> },
+    { id: 'type', title: 'Type', value: (n) => pretty(n.noteType), filter: { type: 'select' } },
+    { id: 'tags', title: 'Tags', value: (n) => n.tags.map((t) => t.name), filter: { type: 'select' } },
+    { id: 'updated', title: 'Updated', value: (n) => n.updatedAt.slice(0, 10), filter: { type: 'date' } },
+    { id: 'description', title: 'Summary', value: (n) => n.description ?? '', hidden: true },
+    { id: 'pinned', title: 'Pinned', value: (n) => n.isPinned, filter: { type: 'boolean' }, hidden: true },
+    { id: 'favorite', title: 'Favourite', value: (n) => n.isFavorite, filter: { type: 'boolean' }, hidden: true },
+  ];
+  const trashColumns: Col<TrashedNote>[] = [
+    { id: 'title', title: 'Title', value: (n) => n.title, filter: { type: 'text' } },
+    { id: 'purges', title: 'Purges on', value: (n) => n.purgesAt.slice(0, 10), filter: { type: 'date' } },
+  ];
   const refresh = async () => { await Promise.all([notes.reload(), trash.reload()]); };
 
   async function create() {
-    const note = await runner.run(() => api.notes.create('Untitled note', '', noteType || 'GENERAL'), refresh);
+    const note = await runner.run(() => api.notes.create('Untitled note', '', 'GENERAL'), refresh);
     if (note) setOpenId(note.id);
   }
 
@@ -36,29 +47,42 @@ export function NotesTab({ initialOpenId = null }: { initialOpenId?: string | nu
     <>
       <Btn label="+ New note" onPress={() => void create()} style={{ marginBottom: 12 }} />
       <Seg tabs={SCOPES} value={scope} onChange={setScope} />
-      <Input value={query} onChangeText={setQuery} placeholder="Search notes…" style={{ marginBottom: 10 }} />
-      <View style={{ marginBottom: 12 }}><Chips value={noteType} onChange={setNoteType} options={opts(NOTE_TYPES)} clearable /></View>
       {runner.error ? <ErrorNote message={runner.error} /> : null}
       {notes.error && !notes.data ? <ErrorNote message={notes.error} onRetry={notes.reload} /> : null}
       {scope === 'trash' ? (
         <Panel title="Trash · purged after 30 days">
-          {(trash.data ?? []).length === 0 ? <Empty>Trash is empty.</Empty> : (trash.data ?? []).map((n) => (
-            <Row key={n.id}><View style={{ flex: 1 }}><Text style={s.body}>{n.title}</Text><Muted style={{ fontSize: 11 }}>purges {n.purgesAt.slice(0, 10)}</Muted></View>
-              <Pressable onPress={() => void runner.run(() => api.notes.restore(n.id), refresh)}><Text style={{ color: C.accent }}>Restore</Text></Pressable>
-              <Pressable onPress={() => void runner.run(() => api.notes.purge(n.id), refresh)}><Text style={{ color: C.magenta }}>Delete</Text></Pressable></Row>
-          ))}
+          <DataGrid
+            tableId="notes.trash"
+            data={trash.data ?? []}
+            columns={trashColumns}
+            getRowId={(n) => n.id}
+            loading={trash.loading && !trash.data}
+            emptyMessage="Trash is empty."
+            searchPlaceholder="Search trash…"
+            rowActions={(n, close) => (
+              <>
+                <Btn kind="ghost" label="Restore" onPress={() => { close(); void runner.run(() => api.notes.restore(n.id), refresh); }} />
+                <Btn kind="danger" label="Delete forever" onPress={() => { close(); void runner.run(() => api.notes.purge(n.id), refresh); }} />
+              </>
+            )}
+          />
         </Panel>
       ) : (
-        <Panel title={`${visible.length} notes`}>
-          {visible.length === 0 && !notes.loading ? <Empty>No notes here yet.</Empty> : visible.map((n) => (
-            <Row key={n.id} onPress={() => setOpenId(n.id)}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: C.text, fontWeight: '700' }}>{n.isPinned ? '📌 ' : ''}{n.isFavorite ? '★ ' : ''}{n.title || 'Untitled'}</Text>
-                {n.description ? <Text numberOfLines={1} style={{ color: C.muted, fontSize: 13 }}>{n.description}</Text> : null}
-                <Muted style={{ fontSize: 11 }}>{pretty(n.noteType)} · {n.updatedAt.slice(0, 10)}{n.tags.length ? ` · ${n.tags.map((t) => t.name).join(', ')}` : ''}</Muted>
-              </View>
-            </Row>
-          ))}
+        <Panel title={`${notes.data?.length ?? 0} notes`}>
+          <DataGrid
+            tableId="notes.list"
+            data={notes.data ?? []}
+            columns={columns}
+            getRowId={(n) => n.id}
+            loading={notes.loading && !notes.data}
+            initialSorting={[{ id: 'updated', desc: true }]}
+            emptyMessage="No notes here yet."
+            searchPlaceholder="Search notes…"
+            exportName="notes"
+            onRowClick={(n) => setOpenId(n.id)}
+            drawer={false}
+            views={[{ id: 'pinned', name: 'Pinned', filters: { pinned: ['true'] } }, { id: 'fav', name: 'Favourites', filters: { favorite: ['true'] } }]}
+          />
         </Panel>
       )}
       {openId ? <NoteSheet id={openId} onClose={() => setOpenId(null)} onChanged={refresh} /> : null}

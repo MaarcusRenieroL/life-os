@@ -2,11 +2,14 @@ import { ChakraPetch_600SemiBold, ChakraPetch_700Bold } from '@expo-google-fonts
 import { GeistMono_400Regular, GeistMono_500Medium, GeistMono_600SemiBold, GeistMono_700Bold } from '@expo-google-fonts/geist-mono';
 import { useFonts } from 'expo-font';
 import { Tabs } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import '@/alerts';
+import { useOpenNotification } from '@/lib/open-from';
 import { LockScreen } from '@/lock-screen';
 import { LockProvider, useLock } from '@/lib/lock';
 import { Login } from '@/login';
@@ -17,6 +20,18 @@ import { SessionProvider, useSession } from '@/lib/session';
 import { C } from '@/theme';
 
 const SCREENS = ['index', 'quests', 'tasks', 'habits', 'calendar', 'goals', 'notes', 'workouts', 'finance', 'jobs', 'analytics', 'trophies', 'settings', 'more', 'email', 'vault'] as const;
+
+/** Tapping a system notification opens the module and item it is about (also when it launched the app). */
+function NotificationLinks() {
+  const response = Notifications.useLastNotificationResponse();
+  const open = useOpenNotification();
+  useEffect(() => {
+    if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
+    const data = response.notification.request.content.data as { module?: string; type?: string; metadata?: Record<string, string> | null } | undefined;
+    if (data?.module && data.type) open({ module: data.module, type: data.type, metadata: data.metadata });
+  }, [response, open]);
+  return null;
+}
 
 function Shell() {
   const insets = useSafeAreaInsets();
@@ -35,6 +50,7 @@ function Shell() {
       </Tabs>
       <HudBackdrop />
       </View>
+      {Platform.OS === 'web' ? null : <NotificationLinks />}
       <Drawer open={menu} onClose={() => setMenu(false)} />
       {capturing ? (
         <QuickCapture

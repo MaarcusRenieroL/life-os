@@ -2,7 +2,7 @@ package com.lifeos.core.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "anthropic")
+@ConfigurationProperties(prefix = "core-ai.anthropic")
 public record AnthropicProperties(
     String baseUrl, String apiKey, String model, String version, Integer maxTokens) {
 

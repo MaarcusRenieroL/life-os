@@ -1,3 +1,4 @@
+import { describeFilter, humanize, type ColumnFilterMeta } from '@life-os/core';
 import type { Column, FilterFn, Row } from '@tanstack/react-table';
 
 declare module '@tanstack/react-table' {
@@ -27,22 +28,9 @@ export type ColumnEditMeta<TData> =
   | { type: 'text' | 'textarea' | 'number' | 'date'; value?: (row: TData) => string | number | null }
   | { type: 'select'; options: { label: string; value: string }[]; value?: (row: TData) => string | null };
 
-export type ColumnFilterMeta =
-  | { type: 'text' }
-  | { type: 'select'; options?: { label: string; value: string }[] }
-  | { type: 'number' }
-  | { type: 'date' }
-  | { type: 'boolean'; labels?: [string, string] };
+export type { ColumnFilterMeta };
 
-/** `currentBalance` -> `Current balance`; the fallback when a column has no explicit title. */
-export function humanize(id: string): string {
-  const spaced = id
-    .replace(/[_.-]+/g, ' ')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .trim()
-    .toLowerCase();
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-}
+export { describeFilter, humanize };
 
 export function columnTitle<TData, TValue>(column: Column<TData, TValue>): string {
   const explicit = column.columnDef.meta?.title;
@@ -106,25 +94,4 @@ export function filterFnFor(meta: ColumnFilterMeta): keyof typeof FILTER_FNS {
     default:
       return 'contains';
   }
-}
-
-/** A short human summary of an active filter, for the chips. */
-export function describeFilter(meta: ColumnFilterMeta, value: unknown, format?: (v: unknown) => string): string {
-  const show = (v: unknown) => (format ? format(v) : String(v));
-  if (meta.type === 'select' || meta.type === 'boolean') {
-    const chosen = (value as string[]) ?? [];
-    const labelOf = (v: string) =>
-      meta.type === 'boolean'
-        ? v === 'true'
-          ? (meta.labels?.[0] ?? 'Yes')
-          : (meta.labels?.[1] ?? 'No')
-        : (meta.options?.find((o) => o.value === v)?.label ?? v);
-    return chosen.length > 2 ? `${chosen.length} selected` : chosen.map(labelOf).join(', ');
-  }
-  if (meta.type === 'number' || meta.type === 'date') {
-    const [a, b] = (value as [string, string]) ?? ['', ''];
-    if (a && b) return `${show(a)} - ${show(b)}`;
-    return a ? `from ${show(a)}` : `up to ${show(b)}`;
-  }
-  return `contains "${String(value)}"`;
 }

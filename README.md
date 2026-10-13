@@ -1,6 +1,6 @@
 # Life OS
 
-A personal operating system built with Spring Boot microservices, React, React Native, and Tauri.
+A personal operating system built with a modular Spring Boot backend (one process), React, React Native, and Tauri.
 
 ## Quick Start
 
@@ -16,7 +16,7 @@ A personal operating system built with Spring Boot microservices, React, React N
 # Install dependencies
 pnpm install
 
-# Start all services (PostgreSQL, Redis, Kafka, Nginx, APIs)
+# Start everything (PostgreSQL, Redis, Kafka, Ollama, the backend app, Nginx)
 docker-compose up -d
 
 # Verify services
@@ -28,7 +28,8 @@ curl http://localhost/health
 
 ```
 life-os/
-├── services/          # Spring Boot microservices
+├── services/          # Backend: one Spring Boot app assembled from module libraries
+│   ├── app/              # The runnable app (LifeOsApplication, security, caches, Flyway per module)
 │   ├── auth/             # Authentication & sessions
 │   ├── vault/            # Password management
 │   ├── finance-tracker/  # Budgets, transactions, analytics
@@ -39,8 +40,8 @@ life-os/
 │   ├── calendar/         # Events, reminders, recurrence
 │   ├── workouts/         # Routines, sessions, records, measurements
 │   ├── batches/          # Scheduled jobs (Gmail sync, backups)
-│   ├── core/             # Per-user module settings
-│   └── common/           # Shared library (auth, Kafka, caching config)
+│   ├── core/             # Per-user module settings, notifications, automation, email hub
+│   └── common/           # Shared library (auth, Kafka, JWT)
 ├── apps/             # Frontend applications
 │   ├── mobile/       # React Native (Expo)
 │   ├── web/          # React + Vite
@@ -55,22 +56,29 @@ life-os/
 3. Push & create PR to `dev`: `git push origin feat/description`
 4. Merge to `main` after approval
 
-## Services
+## Backend
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| Auth | 8001 | User identity & sessions |
-| Vault | 8002 | Password manager |
-| Job Tracker | 8003 | Job search & interviews |
-| Core | 8004 | Per-user module settings |
-| Batches | 8005 | Scheduled jobs (Gmail sync, backups) |
-| Finance Tracker | 8006 | Budgets, transactions, analytics |
-| Notes | 8007 | Notes, folders, attachments |
-| Habit Tracker | 8008 | Habits, streaks, reminders |
-| Tasks | 8009 | Tasks, projects, and goals (`/v1/goals`) |
-| Calendar | 8010 | Events, reminders, recurrence |
-| Workouts | 8011 | Routines, sessions, PRs, body measurements |
-| Nginx | 80 | API Gateway |
+All modules run in one JVM (`services/app`, port 8005). Each module under `services/` is a plain
+library jar; `services/pom.xml` builds them together and `services/Dockerfile` produces the single
+image. Routes are still grouped by prefix, and Nginx (port 80) is the gateway:
+
+| Module | Routes | Purpose |
+|--------|--------|---------|
+| Auth | `/v1/auth` | User identity & sessions |
+| Vault | `/v1/vault` | Password manager |
+| Job Tracker | `/v1/jobs`, `/v1/resumes`, `/v1/skills`, `/v1/career-profile` | Job search & interviews |
+| Core | `/v1/core` | Module settings, notifications, automation, email hub |
+| Batches | `/v1/batches` | Scheduled jobs (Gmail sync, backups) |
+| Finance Tracker | `/v1/finance` | Budgets, transactions, analytics |
+| Notes | `/v1/notes`, `/v1/folders`, `/v1/tags`, `/v1/templates` | Notes, folders, attachments |
+| Habit Tracker | `/v1/habits` | Habits, streaks, reminders |
+| Tasks | `/v1/tasks`, `/v1/goals` | Tasks, projects, and goals |
+| Calendar | `/v1/calendar` | Events, reminders, recurrence |
+| Workouts | `/v1/workouts` | Routines, sessions, PRs, body measurements |
+
+Database migrations live in each module's `src/main/resources/db/migration/<module>/` and run per
+module (own Postgres schema and history table). Build and test everything with
+`cd services && mvn test`; run the app with `docker compose up -d --build app`.
 
 ## Tech Stack
 
@@ -86,7 +94,7 @@ life-os/
 ## CI/CD
 
 - GitHub Actions on push/PR to `main`/`dev`/`feature/**`
-- Backend: per-service `mvn test` for every service with a test suite
+- Backend: `cd services && mvn test` (runs every module; set `SPRING_DATASOURCE_URL` to also run the full-context boot test)
 - Frontend: lint + typecheck + build for web and mobile
 
 See `.github/workflows/ci.yml` for the current pipeline. There is no automated deploy or

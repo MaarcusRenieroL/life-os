@@ -1,10 +1,11 @@
-import { APP_MODULE_LIST } from '@life-os/core';
+import { APP_MODULE_LIST, notificationTarget } from '@life-os/core';
 import { useState } from 'react';
 
 import { useNav } from '../lib/nav';
 import { openExternal } from '../lib/runtime';
 import { useApi, useSession } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
+import { NotificationList } from './notifications';
 import { Empty, ErrorNote, Field, Panel } from '../ui';
 
 export function ProfileTab() {
@@ -102,27 +103,8 @@ export function IntegrationsTab() {
 }
 
 export function NotificationsTab() {
-  const api = useApi();
-  const runner = useRunner();
-  const items = useAsync(() => api.core.notifications(0, 40), [api]);
-  return (
-    <div className="stack">
-      {runner.error && <ErrorNote message={runner.error} />}
-      <div className="row"><span className="grow" /><button className="ghost" onClick={() => void runner.run(() => api.core.markAllRead(), items.reload)}>Mark all read</button></div>
-      <Panel title={`${items.data?.totalElements ?? 0} notifications`}>
-        {items.data?.content.length === 0 ? <Empty>You are all caught up.</Empty> : (
-          <ul className="list">
-            {items.data?.content.map((n) => (
-              <li key={n.id} className={n.read ? '' : 'clickable'} style={{ opacity: n.read ? 0.6 : 1 }} onClick={n.read ? undefined : () => void runner.run(() => api.core.markRead(n.id), items.reload)}>
-                <span className="grow"><b>{n.title}</b>{n.body && <div className="muted">{n.body}</div>}<small className="muted">{n.module} · {n.occurredAt.slice(0, 16).replace('T', ' ')}</small></span>
-                {!n.read && <span className="pill good">new</span>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
-    </div>
-  );
+  const go = useNav();
+  return <NotificationList onOpen={(n) => { const t = notificationTarget(n); go(t.screen, { tab: t.tab, entity: t.entity }); }} />;
 }
 
 /** What is left to set up in each module, worked out from what already exists. */

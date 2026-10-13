@@ -3,7 +3,6 @@ package com.lifeos.common.events;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
@@ -15,13 +14,10 @@ import org.springframework.stereotype.Component;
 public class NotificationEventPublisher {
 
   private final KafkaTemplate<String, NotificationEventRecord> kafkaTemplate;
-  private final String serviceName;
 
   public NotificationEventPublisher(
-      KafkaTemplate<String, NotificationEventRecord> notificationEventKafkaTemplate,
-      @Value("${spring.application.name}") String serviceName) {
+      KafkaTemplate<String, NotificationEventRecord> notificationEventKafkaTemplate) {
     this.kafkaTemplate = notificationEventKafkaTemplate;
-    this.serviceName = serviceName;
   }
 
   public void publish(UUID userId, NotificationEventType type, String title, String body) {
@@ -48,7 +44,7 @@ public class NotificationEventPublisher {
         new NotificationEventRecord(
             UUID.randomUUID(),
             userId,
-            serviceName,
+            ModuleNames.caller(),
             type,
             title,
             body,

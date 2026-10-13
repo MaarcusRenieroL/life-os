@@ -22,7 +22,7 @@ rotate gmail_refresh batches_schema.gmail_oauth_tokens refresh_token_encrypted "
 rotate accounts finance_schema.accounts account_number_encrypted "$OLD_FINANCE_ENCRYPTION_SECRET" "$NEW_FINANCE"
 
 echo "→ stopping services, writing re-encrypted values"
-docker compose stop batches finance-tracker >/dev/null
+docker compose stop app >/dev/null
 {
   echo "begin;"
   while IFS=$'\t' read -r id v; do echo "update batches_schema.gmail_oauth_tokens set access_token_encrypted='$v' where id='$id';"; done < "$TMP/gmail_access.out"
@@ -36,5 +36,5 @@ for kv in "GMAIL_ENCRYPTION_SECRET=$NEW_GMAIL" "FINANCE_ENCRYPTION_SECRET=$NEW_F
   k=${kv%%=*}
   if grep -q "^$k=" .env; then sed -i.bak "s|^$k=.*|$kv|" .env; else echo "$kv" >> .env; fi
 done; rm -f .env.bak
-docker compose up -d batches finance-tracker >/dev/null
+docker compose up -d app >/dev/null
 echo "done. Back up .env: losing these secrets makes the encrypted values unreadable."

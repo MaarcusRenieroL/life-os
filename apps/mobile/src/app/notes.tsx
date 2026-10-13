@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { Screen, Seg } from '@/kit';
+import { tabFrom, useOpenRequest } from '@/lib/open-from';
 import { NotesTab } from '@/modules/notes-main';
 import { AttachmentsTab, GraphTab, JournalTab, NoteSettingsTab, SearchTab, TemplatesTab } from '@/modules/notes-extra';
 
@@ -10,6 +11,10 @@ type TabId = (typeof TABS)[number]['id'];
 export default function Notes() {
   const [tab, setTab] = useState<TabId>('notes');
   const [openId, setOpenId] = useState<string | null>(null);
+  useOpenRequest((r) => {
+    if (r.kind === 'note' && r.id) { setOpenId(r.id); setTab('notes'); }
+    else { const t = tabFrom(r, TABS); if (t) setTab(t); }
+  });
   const open = (id: string) => { setOpenId(id); setTab('notes'); };
   return (
     <Screen title="Notes">

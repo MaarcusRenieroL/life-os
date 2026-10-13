@@ -1,9 +1,10 @@
-import { dayKey, shiftDay, type CategorizationRule, type FinanceTransaction, type MatchField, type MatchType } from '@life-os/core';
+import { dayKey, shiftDay, type CategorizationRule, type FinanceCategory, type FinanceTransaction, type MatchField, type MatchType, type Merchant } from '@life-os/core';
 import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
 import { Share, View } from 'react-native';
 import { Text } from '@/text';
 
+import { DataGrid, type Col } from '@/grid/data-grid';
 import { Bars, Btn, Chips, DateInput, Empty, Field, Input, money, opts, Pill, Progress, Row, Sheet, Stat, StatGrid } from '@/kit';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
@@ -152,30 +153,54 @@ export function ImportTab() {
 }
 
 // ------------------------------------------------------------------ rules
+export function RulesTable({ tableId, rules, categories, runner, reload, loading }: { tableId: string; rules: CategorizationRule[]; categories: { id: string; name: string }[]; runner: ReturnType<typeof useRunner>; reload: () => unknown; loading?: boolean }) {
+  const api = useApi();
+  const name = (id: string) => categories.find((c) => c.id === id)?.name ?? 'Category';
+  const columns: Col<CategorizationRule>[] = [
+    { id: 'text', title: 'Text', value: (r) => r.matchValue, filter: { type: 'text' }, cell: (r) => <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>“{r.matchValue}”</Text> },
+    { id: 'category', title: 'Category', value: (r) => name(r.categoryId), filter: { type: 'select' } },
+    { id: 'active', title: 'Status', value: (r) => (r.isActive ? 'Active' : 'Paused'), filter: { type: 'select' } },
+    { id: 'field', title: 'Match on', value: (r) => (r.matchField === 'MERCHANT_NAME' ? 'Merchant' : 'Description'), filter: { type: 'select' } },
+    { id: 'how', title: 'How', value: (r) => r.matchType.toLowerCase(), filter: { type: 'select' }, hidden: true },
+    { id: 'priority', title: 'Priority', value: (r) => r.priority, align: 'right', filter: { type: 'number' }, hidden: true },
+    { id: 'hits', title: 'Used', value: (r) => r.hitCount, align: 'right', aggregate: 'sum', filter: { type: 'number' }, hidden: true },
+    { id: 'learned', title: 'Learned', value: (r) => r.autoLearned, filter: { type: 'boolean' }, hidden: true },
+  ];
+  return (
+    <DataGrid
+      tableId={tableId}
+      data={rules}
+      columns={columns}
+      getRowId={(r) => r.id}
+      loading={loading}
+      initialSorting={[{ id: 'priority', desc: true }]}
+      emptyMessage="No rules yet. A rule files matching transactions under a category automatically."
+      searchPlaceholder="Search rules…"
+      exportName="rules"
+      dim={(r) => !r.isActive}
+      views={[{ id: 'active', name: 'Active', filters: { active: ['Active'] } }, { id: 'paused', name: 'Paused', filters: { active: ['Paused'] } }]}
+      rowActions={(r, close) => (
+        <>
+          <Btn kind="ghost" label={r.isActive ? 'Pause' : 'Resume'} onPress={() => { close(); void runner.run(() => api.finance.updateRule(r.id, { isActive: !r.isActive }), reload); }} />
+          <Btn kind="danger" label="Delete" onPress={() => { close(); void runner.run(() => api.finance.deleteRule(r.id), reload); }} />
+        </>
+      )}
+    />
+  );
+}
+
 export function RulesTab() {
   const api = useApi();
   const runner = useRunner();
   const rules = useAsync(() => api.finance.rules(), api);
   const categories = useAsync(() => api.finance.categories(), api);
   const [adding, setAdding] = useState(false);
-  const name = (id: string) => categories.data?.find((c) => c.id === id)?.name ?? 'Category';
   return (
     <>
       <Btn label="+ New rule" onPress={() => setAdding(true)} style={{ marginBottom: 12 }} />
       {rules.error && !rules.data ? <ErrorNote message={rules.error} onRetry={rules.reload} /> : null}
       {runner.error ? <ErrorNote message={runner.error} /> : null}
-      <Panel title={`${rules.data?.length ?? 0} rules`}>
-        {rules.data?.length === 0 ? <Empty>No rules yet. A rule files matching transactions under a category automatically.</Empty> : rules.data?.map((r: CategorizationRule) => (
-          <Row key={r.id}>
-            <View style={{ flex: 1, opacity: r.isActive ? 1 : 0.5 }}>
-              <Text style={s.body}>{r.matchField === 'MERCHANT_NAME' ? 'Merchant' : 'Description'} {r.matchType.toLowerCase()} “{r.matchValue}” → {name(r.categoryId)}</Text>
-              <Muted style={{ fontSize: 11 }}>priority {r.priority} · used {r.hitCount}×{r.autoLearned ? ' · learned' : ''}</Muted>
-            </View>
-            <Btn kind="ghost" label={r.isActive ? 'Pause' : 'Resume'} onPress={() => void runner.run(() => api.finance.updateRule(r.id, { isActive: !r.isActive }), rules.reload)} style={{ paddingVertical: 4, paddingHorizontal: 8 }} />
-            <Btn kind="danger" label="Delete" onPress={() => void runner.run(() => api.finance.deleteRule(r.id), rules.reload)} style={{ paddingVertical: 4, paddingHorizontal: 8 }} />
-          </Row>
-        ))}
-      </Panel>
+      <RulesTable tableId="finance.rules.all" rules={rules.data ?? []} categories={categories.data ?? []} runner={runner} reload={rules.reload} loading={rules.loading && !rules.data} />
       {adding ? <RuleSheet categories={categories.data ?? []} onClose={() => setAdding(false)} onSaved={async () => { setAdding(false); await rules.reload(); }} /> : null}
     </>
   );
@@ -203,28 +228,46 @@ function RuleSheet({ categories, onClose, onSaved }: { categories: { id: string;
 }
 
 // ------------------------------------------------------------------ merchants
+export function MerchantsTable({ tableId, merchants, categories, loading, onOpen, onDelete }: { tableId: string; merchants: Merchant[]; categories: FinanceCategory[]; loading?: boolean; onOpen?: (m: Merchant) => void; onDelete?: (m: Merchant, close: () => void) => void }) {
+  const cat = (id: string | null) => categories.find((c) => c.id === id)?.name ?? '';
+  const columns: Col<Merchant>[] = [
+    { id: 'name', title: 'Merchant', value: (m) => m.name, filter: { type: 'text' }, cell: (m) => <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}><Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{m.name}</Text>{!m.isRecognized ? <Pill label="New" color={C.gold} /> : null}</View> },
+    { id: 'category', title: 'Category', value: (m) => cat(m.categoryId) || 'Uncategorized', filter: { type: 'select' } },
+    { id: 'txns', title: 'Transactions', value: (m) => m.transactionCount, align: 'right', aggregate: 'sum', filter: { type: 'number' } },
+    { id: 'avg', title: 'Average', value: (m) => m.averageTransactionAmount, align: 'right', filter: { type: 'number' }, format: (v) => (v == null || v === '' ? '—' : money(Number(v))) },
+    { id: 'last', title: 'Last seen', value: (m) => m.lastTransactionDate ?? '', filter: { type: 'date' }, hidden: true },
+    { id: 'recognized', title: 'Recognised', value: (m) => m.isRecognized, filter: { type: 'boolean' }, hidden: true },
+  ];
+  return (
+    <DataGrid
+      tableId={tableId}
+      data={merchants}
+      columns={columns}
+      getRowId={(m) => m.id}
+      loading={loading}
+      initialSorting={[{ id: 'txns', desc: true }]}
+      emptyMessage="Merchants appear as transactions are imported."
+      searchPlaceholder="Search merchants…"
+      exportName="merchants"
+      onRowClick={onOpen}
+      drawer={!onOpen}
+      views={[{ id: 'new', name: 'New', filters: { recognized: ['false'] } }]}
+      rowActions={onDelete ? (m, close) => <Btn kind="danger" label="Delete merchant" onPress={() => onDelete(m, close)} /> : undefined}
+    />
+  );
+}
+
 export function MerchantsTab() {
   const api = useApi();
   const runner = useRunner();
   const merchants = useAsync(() => api.finance.merchants(), api);
   const categories = useAsync(() => api.finance.categories(), api);
-  const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
-  const list = (merchants.data ?? []).filter((m) => !search.trim() || m.name.toLowerCase().includes(search.trim().toLowerCase()));
-  const cat = (id: string | null) => categories.data?.find((c) => c.id === id)?.name;
   return (
     <>
-      <Input value={search} onChangeText={setSearch} placeholder="Search merchants…" style={{ marginBottom: 10 }} />
       {merchants.error && !merchants.data ? <ErrorNote message={merchants.error} onRetry={merchants.reload} /> : null}
       {runner.error ? <ErrorNote message={runner.error} /> : null}
-      <Panel title={`${list.length} merchants`}>
-        {list.length === 0 ? <Empty>No merchants yet.</Empty> : list.map((m) => (
-          <Row key={m.id} onPress={() => setEditing({ id: m.id, name: m.name })}>
-            <View style={{ flex: 1 }}><Text style={s.body}>{m.name}</Text><Muted style={{ fontSize: 11 }}>{m.transactionCount} transactions{cat(m.categoryId) ? ` · ${cat(m.categoryId)}` : ''}{m.averageTransactionAmount != null ? ` · avg ${money(m.averageTransactionAmount)}` : ''}</Muted></View>
-            {!m.isRecognized ? <Pill label="New" color={C.gold} /> : null}
-          </Row>
-        ))}
-      </Panel>
+      <MerchantsTable tableId="finance.merchants.all" merchants={merchants.data ?? []} categories={categories.data ?? []} loading={merchants.loading && !merchants.data} onOpen={(m) => setEditing({ id: m.id, name: m.name })} />
       {editing ? (
         <Sheet title="Merchant" onClose={() => setEditing(null)}>
           <Field label="Name"><Input value={editing.name} onChangeText={(v) => setEditing({ ...editing, name: v })} /></Field>

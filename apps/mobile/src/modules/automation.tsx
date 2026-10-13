@@ -1,9 +1,10 @@
-import { ACTION_TYPES, describeAction, describeTrigger, ENTITY_TYPES, RULE_EVENT_CATEGORIES, ruleFormFrom, ruleRequestFrom, THRESHOLD_METRICS, TRIGGER_TYPES, WEEK_DAYS, type AutomationRule } from '@life-os/core';
+import { ACTION_TYPES, describeAction, describeTrigger, ENTITY_TYPES, RULE_EVENT_CATEGORIES, ruleFormFrom, ruleRequestFrom, THRESHOLD_METRICS, TRIGGER_TYPES, WEEK_DAYS, type AutomationExecution, type AutomationRule } from '@life-os/core';
 import { useState } from 'react';
 import { Switch, View } from 'react-native';
 import { Text } from '@/text';
 
-import { Btn, Chips, Empty, Field, Input, opts, Pill, Row, Sheet } from '@/kit';
+import { DataGrid, type Col } from '@/grid/data-grid';
+import { Btn, Chips, Field, Input, opts, Pill, Row, Sheet } from '@/kit';
 import { useApi } from '@/lib/session';
 import { useAsync, useRunner } from '@/lib/use-async';
 import { C } from '@/theme';
@@ -21,6 +22,15 @@ export function RulesTab() {
   const rules = useAsync(() => api.automation.rules(), api);
   const [editing, setEditing] = useState<AutomationRule | 'new' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const columns: Col<AutomationRule>[] = [
+    { id: 'name', title: 'Rule', value: (r) => r.name, filter: { type: 'text' }, cell: (r) => <Text style={{ color: C.text, fontSize: 15, fontWeight: '700', flexShrink: 1 }}>{r.name}</Text> },
+    { id: 'trigger', title: 'When', value: (r) => describeTrigger(r.triggerType, r.triggerConfig), filter: { type: 'text' } },
+    { id: 'action', title: 'Then', value: (r) => describeAction(r.actionType, r.actionConfig), filter: { type: 'text' } },
+    { id: 'status', title: 'Status', value: (r) => (r.enabled ? 'On' : 'Off'), filter: { type: 'select' } },
+    { id: 'runs', title: 'Runs', value: (r) => r.runCount, align: 'right', aggregate: 'sum', filter: { type: 'number' } },
+    { id: 'last', title: 'Last run', value: (r) => (r.lastRunAt ?? '').slice(0, 16).replace('T', ' '), filter: { type: 'date' } },
+    { id: 'created', title: 'Created', value: (r) => r.createdAt.slice(0, 10), filter: { type: 'date' }, hidden: true },
+  ];
 
   return (
     <>
@@ -28,18 +38,22 @@ export function RulesTab() {
       {rules.error && !rules.data ? <ErrorNote message={rules.error} onRetry={rules.reload} /> : null}
       {runner.error ? <ErrorNote message={runner.error} /> : null}
       {message ? <Muted style={{ marginBottom: 8 }}>{message}</Muted> : null}
-      <Panel title={`${rules.data?.length ?? 0} rules`}>
-        {rules.data?.length === 0 ? <Empty>No rules yet. Start from a template.</Empty> : rules.data?.map((r) => (
-          <Row key={r.id} onPress={() => setEditing(r)}>
-            <View style={{ flex: 1, opacity: r.enabled ? 1 : 0.55 }}>
-              <Text style={[s.body, { fontWeight: '700' }]}>{r.name}</Text>
-              <Muted style={{ fontSize: 12 }}>{describeTrigger(r.triggerType, r.triggerConfig)} → {describeAction(r.actionType, r.actionConfig)}</Muted>
-              <Muted style={{ fontSize: 11 }}>{r.runCount === 0 ? 'Never run' : `Ran ${r.runCount}×${r.lastRunAt ? ` · last ${r.lastRunAt.slice(0, 16).replace('T', ' ')}` : ''}`}</Muted>
-            </View>
-            <Switch value={r.enabled} onValueChange={(v) => void runner.run(() => api.automation.setEnabled(r.id, v), rules.reload)} trackColor={{ true: C.accent }} />
-          </Row>
-        ))}
-      </Panel>
+      <DataGrid
+        tableId="automation.rules"
+        data={rules.data ?? []}
+        columns={columns}
+        getRowId={(r) => r.id}
+        loading={rules.loading && !rules.data}
+        initialSorting={[{ id: 'name', desc: false }]}
+        emptyMessage="No rules yet. Start from a template."
+        searchPlaceholder="Search rules…"
+        exportName="automation-rules"
+        onRowClick={setEditing}
+        drawer={false}
+        dim={(r) => !r.enabled}
+        views={[{ id: 'on', name: 'On', filters: { status: ['On'] } }, { id: 'off', name: 'Off', filters: { status: ['Off'] } }]}
+        trailing={(r) => <Switch value={r.enabled} onValueChange={(v) => void runner.run(() => api.automation.setEnabled(r.id, v), rules.reload)} trackColor={{ true: C.accent }} />}
+      />
       {editing ? (
         <RuleSheet
           rule={editing === 'new' ? null : editing}
@@ -169,23 +183,29 @@ export function HistoryTab() {
   const rules = useAsync(() => api.automation.rules(), api);
   const runs = useAsync(() => api.automation.executions(ruleId || undefined, 60), `${ruleId}`);
   const names = new Map((rules.data ?? []).map((r) => [r.id, r.name]));
+  const columns: Col<AutomationExecution>[] = [
+    { id: 'rule', title: 'Rule', value: (r) => names.get(r.ruleId) ?? 'Deleted rule', filter: { type: 'select' }, cell: (r) => <Text style={{ color: C.text, fontSize: 15, fontWeight: '700' }}>{names.get(r.ruleId) ?? 'Deleted rule'}</Text> },
+    { id: 'result', title: 'Result', value: (r) => (r.status === 'SUCCESS' ? 'Succeeded' : 'Failed'), filter: { type: 'select' } },
+    { id: 'when', title: 'When', value: (r) => r.executedAt.slice(0, 16).replace('T', ' '), filter: { type: 'date' } },
+    { id: 'message', title: 'Message', value: (r) => r.message ?? '' },
+    { id: 'trigger', title: 'Trigger', value: (r) => r.triggerSummary ?? '' },
+  ];
   return (
     <>
       <View style={{ marginBottom: 10 }}><Chips value={ruleId} onChange={setRuleId} options={(rules.data ?? []).map((r) => ({ value: r.id, label: r.name }))} clearable /></View>
       {runs.error && !runs.data ? <ErrorNote message={runs.error} onRetry={runs.reload} /> : null}
-      <Panel title={`${runs.data?.length ?? 0} runs`}>
-        {runs.data?.length === 0 ? <Empty>Nothing has run yet.</Empty> : runs.data?.map((run) => (
-          <Row key={run.id}>
-            <Pill label={run.status === 'SUCCESS' ? 'OK' : 'Failed'} color={run.status === 'SUCCESS' ? C.accent : C.destructive} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.body}>{names.get(run.ruleId) ?? 'Deleted rule'}</Text>
-              {run.message ? <Muted style={{ fontSize: 12 }}>{run.message}</Muted> : null}
-              {run.triggerSummary ? <Muted style={{ fontSize: 11 }}>Trigger: {run.triggerSummary}</Muted> : null}
-            </View>
-            <Muted style={{ fontSize: 11 }}>{run.executedAt.slice(5, 16).replace('T', ' ')}</Muted>
-          </Row>
-        ))}
-      </Panel>
+      <DataGrid
+        tableId="automation.history"
+        data={runs.data ?? []}
+        columns={columns}
+        getRowId={(r) => r.id}
+        loading={runs.loading && !runs.data}
+        initialSorting={[{ id: 'when', desc: true }]}
+        emptyMessage="Nothing has run yet."
+        searchPlaceholder="Search runs…"
+        exportName="automation-history"
+        views={[{ id: 'failed', name: 'Failed', filters: { result: ['Failed'] } }]}
+      />
     </>
   );
 }

@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 /**
@@ -30,6 +31,7 @@ public class AccountResolver {
   private static final Set<String> NOISE = Set.of("bank", "banks", "ltd", "limited", "pvt", "private", "of", "the");
 
   private final AccountRepository accountRepository;
+  @Qualifier("financeEncryptionService")
   private final EncryptionService encryptionService;
 
   public Optional<Account> resolve(UUID userId, String bankName, AccountType type, String suffix) {

@@ -1,0 +1,224 @@
+server:
+  port: 8005
+
+spring:
+  application:
+    name: life-os
+  datasource:
+    hikari:
+      # One pool for every module (each used to hold its own pool of 6).
+      maximum-pool-size: 20
+      minimum-idle: 4
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          # A bank-statement import saves a whole statement in one saveAll (see
+          # TransactionService#createFromCsvImportBatch) - 100-400 rows, which without batching is
+          # one INSERT round-trip per row. Transaction/entity ids use GenerationType.UUID
+          # (assigned app-side before insert), not IDENTITY, so Hibernate can actually batch these.
+          batch_size: 30
+        order_inserts: true
+        order_updates: true
+  # Migrations run per module (see FlywayModules); this only keeps Boot's own run from looking for
+  # a root-level db/migration.
+  flyway:
+    locations: classpath:db/migration/none
+  servlet:
+    multipart:
+      # The largest of the modules' limits (notes attachments); the upload endpoints enforce their own caps.
+      max-file-size: 50MB
+      max-request-size: 55MB
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: core_service
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+      table-prefix: batches_schema.BATCH_
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}
+  refresh-token-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:2592000000}
+
+internal:
+  api-key: ${INTERNAL_API_KEY}
+
+owner:
+  user-id: ${OWNER_USER_ID}
+
+# Module-to-module calls go over loopback to this same process.
+habit-tracker:
+  internal-base-url: ${HABIT_TRACKER_INTERNAL_BASE_URL:http://localhost:8005}
+job-tracker:
+  internal-base-url: ${JOB_TRACKER_INTERNAL_BASE_URL:http://localhost:8005}
+  storage:
+    resume-dir: ${RESUME_STORAGE_DIR:/data/resumes}
+  attention:
+    # Once a day is enough for "interview coming up" nudges. Runs at 08:00 UTC.
+    scan:
+      cron: ${JOB_ATTENTION_SCAN_CRON:0 0 8 * * *}
+  discovery:
+    # Re-reads every watched company's career board once a day (06:30 UTC) and raises one
+    # "new openings" notification per user for anything that clears their alert threshold.
+    scan:
+      cron: ${JOB_DISCOVERY_SCAN_CRON:0 30 6 * * *}
+finance:
+  internal-base-url: ${FINANCE_INTERNAL_BASE_URL:http://localhost:8005}
+  attention-scan:
+    cron: ${FINANCE_ATTENTION_SCAN_CRON:0 0 8 * * *}
+notes:
+  internal-base-url: ${NOTES_INTERNAL_BASE_URL:http://localhost:8005}
+  attachments:
+    storage-path: ${NOTE_ATTACHMENTS_PATH:./data/note-attachments}
+  follow-up:
+    scan:
+      cron: ${NOTE_FOLLOWUP_SCAN_CRON:0 0 8 * * *}
+tasks:
+  internal-base-url: ${TASKS_INTERNAL_BASE_URL:http://localhost:8005}
+  upcoming:
+    default-window-days: ${TASKS_UPCOMING_WINDOW_DAYS:7}
+  recurrence:
+    generate-cron: ${TASKS_RECURRENCE_GENERATE_CRON:0 5 0 * * *}
+  reminder:
+    dispatch:
+      cron: ${TASKS_REMINDER_DISPATCH_CRON:0 */5 * * * *}
+  overdue:
+    sweep:
+      cron: ${TASKS_OVERDUE_SWEEP_CRON:0 15 0 * * *}
+calendar:
+  internal-base-url: ${CALENDAR_INTERNAL_BASE_URL:http://localhost:8005}
+  recurrence:
+    generate-cron: ${CALENDAR_RECURRENCE_GENERATE_CRON:0 10 0 * * *}
+  reminder:
+    dispatch:
+      cron: ${CALENDAR_REMINDER_DISPATCH_CRON:0 */5 * * * *}
+workouts:
+  internal-base-url: ${WORKOUTS_INTERNAL_BASE_URL:http://localhost:8005}
+vault:
+  internal-base-url: ${VAULT_INTERNAL_BASE_URL:http://localhost:8005}
+
+goals:
+  sweep:
+    cron: ${GOALS_SWEEP_CRON:0 30 8 * * *}
+
+habit:
+  missed-log:
+    cron: ${HABIT_MISSED_LOG_CRON:0 5 0 * * *}
+  reminder:
+    dispatch:
+      cron: ${HABIT_REMINDER_DISPATCH_CRON:0 */5 * * * *}
+  attention-scanner:
+    cron: ${HABIT_ATTENTION_SCANNER_CRON:0 0 8 * * *}
+
+# The zone analytics and automation schedules bucket days in (finance's own jobs use the same).
+analytics:
+  zone: ${ANALYTICS_ZONE:Asia/Kolkata}
+
+# Two secrets, one per module that encrypts at rest (see EncryptionConfig), so existing ciphertext still decrypts.
+encryption:
+  gmail-secret: ${GMAIL_ENCRYPTION_SECRET}
+  finance-secret: ${FINANCE_ENCRYPTION_SECRET}
+
+avatar:
+  storage-dir: ${AVATAR_STORAGE_DIR:/data/avatars}
+
+# Single-owner app: once the first account exists, further signups are refused. Flip this to add a
+# second person on purpose.
+auth:
+  registration:
+    allow-additional: ${AUTH_ALLOW_REGISTRATION:false}
+  # Only this user id can sign in (see AuthService.requireOwner). Blank = anyone with valid credentials.
+  owner-user-id: ${AUTH_OWNER_USER_ID:}
+
+anthropic:
+  base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-sonnet-5}
+  version: "2023-06-01"
+  # tailor-resume's reply (full LaTeX plus improvement points in one JSON response) can burn through
+  # smaller limits before any text block is emitted.
+  max-tokens: ${ANTHROPIC_MAX_TOKENS:16384}
+
+# Core's quick-capture and email-hub classifiers read their own Anthropic settings: short replies,
+# so a much smaller token budget than job-tracker's.
+core-ai:
+  anthropic:
+    base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${ANTHROPIC_MODEL:claude-sonnet-5}
+    version: "2023-06-01"
+    max-tokens: 512
+
+# Local, zero-cost alternative to Claude for the routine/high-volume prompts. Disabled by default so
+# a fresh checkout with no local Ollama server still just uses Claude.
+ollama:
+  base-url: ${OLLAMA_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:qwen2.5:3b}
+  enabled: ${OLLAMA_ENABLED:false}
+
+# Which provider ("ollama" or "claude") handles each AI task - flip any one without a redeploy.
+# Each falls back to Claude automatically if Ollama is routed but unreachable.
+ai:
+  routing:
+    resume-parse: ${AI_ROUTE_RESUME_PARSE:ollama}
+    job-parse: ${AI_ROUTE_JOB_PARSE:ollama}
+    email-classify: ${AI_ROUTE_EMAIL_CLASSIFY:ollama}
+    ats-suggestions: ${AI_ROUTE_ATS_SUGGESTIONS:ollama}
+    cover-letter: ${AI_ROUTE_COVER_LETTER:claude}
+    interview-prep: ${AI_ROUTE_INTERVIEW_PREP:ollama}
+    skill-match: ${AI_ROUTE_SKILL_MATCH:ollama}
+
+# Email hub: classifies inbox mail (via the local model first) and turns bills, appointments,
+# deadlines and subscription receipts into tasks, calendar events and subscriptions.
+email-hub:
+  # Act on HIGH-confidence emails straight away (each stays undoable in the inbox). Off = every
+  # proposal waits for a click on Add in the inbox.
+  auto-apply: ${EMAIL_HUB_AUTO_APPLY:false}
+  zone: ${EMAIL_HUB_ZONE:Asia/Kolkata}
+  # Email is private and the local model is free, so Claude is only used if this is turned on.
+  claude-fallback: ${EMAIL_HUB_CLAUDE_FALLBACK:false}
+
+backup:
+  cron: ${BACKUP_CRON:0 0 3 * * *}
+
+audit:
+  # audit_events grows without bound (every module publishes to it), so old rows are purged on a schedule.
+  retention-days: ${AUDIT_RETENTION_DAYS:180}
+  retention:
+    cron: ${AUDIT_RETENTION_CRON:0 30 3 * * *}
+
+gmail:
+  client-id: ${GMAIL_CLIENT_ID}
+  client-secret: ${GMAIL_CLIENT_SECRET}
+  redirect-uri: ${GMAIL_REDIRECT_URI:http://localhost:8005/v1/batches/gmail/callback}
+  # Where the browser lands after Google's consent screen (the web app's Settings page).
+  post-connect-url: ${GMAIL_POST_CONNECT_URL:http://localhost/settings#integrations}
+  alert-senders: ${GMAIL_ALERT_SENDERS:canarabank@canarabank.com,alerts@hdfcbank.net,alerts@hdfcbank.bank.in}
+  job-search:
+    # Known job-board/ATS senders, checked with OR against a subject-keyword fallback for
+    # arbitrary company domains - see JobEmailSyncService.
+    senders: ${GMAIL_JOB_SEARCH_SENDERS:jobalerts-noreply@linkedin.com,jobs-noreply@linkedin.com,jobs-noreply@naukri.com,info@naukri.com,noreply@greenhouse.io,no-reply@greenhouse.io,noreply@lever.co,notifications@smartrecruiters.com,noreply@myworkday.com,noreply@ashbyhq.com,no-reply@icims.com}
+    subject-keywords: ${GMAIL_JOB_SEARCH_KEYWORDS:application,applied,interview,offer,not moving forward,not selected,moving forward,thank you for applying,thanks for applying,update on your application}
+  # The inbox hub reads only bills, banks and bookings: subject keywords plus any named senders.
+  email-hub:
+    senders: ${GMAIL_HUB_SENDERS:}
+    subject-keywords: ${GMAIL_HUB_KEYWORDS:invoice,bill,receipt,statement,payment,booking,reservation,confirmation,order,due,renewal,subscription,ticket,appointment}
+    blocked-domains: ${GMAIL_HUB_BLOCKED_DOMAINS:successfactors.com,join.com,jobgether.com,sysvine.com,ambitionbox.com}
+  poll:
+    cron: ${GMAIL_POLL_CRON:0 */30 * * * *}

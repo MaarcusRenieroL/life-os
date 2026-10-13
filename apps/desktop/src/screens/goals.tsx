@@ -1,6 +1,7 @@
 import { GOAL_STATUSES, LIFE_AREAS, type GoalDetail, type GoalStatus, type GoalSummary, type LifeArea } from '@life-os/core';
 import { useState, type FormEvent } from 'react';
 
+import { useNavIntent } from '../lib/nav';
 import { useApi } from '../lib/session';
 import { useAsync, useRunner } from '../lib/use-async';
 import { Empty, ErrorNote, Field, Modal, opts, Panel, pretty, ProgressRow, Select, Tabs } from '../ui';
@@ -18,7 +19,8 @@ export function GoalsScreen() {
   const api = useApi();
   const [tab, setTab] = useState<TabId>('goals');
   const [status, setStatus] = useState<GoalStatus | ''>('');
-  const [open, setOpen] = useState<string | 'new' | null>(null);
+  const intent = useNavIntent('goals');
+  const [open, setOpen] = useState<string | 'new' | null>(intent?.entity?.kind === 'goal' ? intent.entity.id : null);
   const goals = useAsync(() => api.goals.list({ status: status || undefined, includeArchived: status === 'ARCHIVED' }), [api, status]);
   const list = goals.data ?? [];
 

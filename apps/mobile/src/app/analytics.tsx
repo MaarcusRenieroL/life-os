@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { tabFrom, useOpenRequest } from '@/lib/open-from';
+
 import { Screen, Seg } from '@/kit';
 import { HistoryTab, RulesTab, TemplatesTab } from '@/modules/automation';
 import { InsightsTab, OverviewTab, PeriodTab, TrendsTab } from '@/modules/analytics';
@@ -12,6 +14,7 @@ type TabId = (typeof TABS)[number]['id'];
 
 export default function Analytics() {
   const [tab, setTab] = useState<TabId>('overview');
+  useOpenRequest((r) => { const t = tabFrom(r, TABS); if (t) setTab(t); });
   return (
     <Screen title="Analytics">
       <Seg tabs={TABS} value={tab} onChange={setTab} />

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Plus, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -148,6 +149,21 @@ export function TasksListPage() {
     setEditing(task);
     setFormOpen(true);
   }
+
+  // A notification links here with ?task=<id>: open that task once the list has loaded, then drop the param.
+  const [params, setParams] = useSearchParams();
+  const wanted = params.get('task');
+  useEffect(() => {
+    if (!wanted || isLoading) return;
+    const task = tasks.find((t) => t.id === wanted);
+    if (task) {
+      setEditing(task);
+      setFormOpen(true);
+    }
+    const next = new URLSearchParams(params);
+    next.delete('task');
+    setParams(next, { replace: true });
+  }, [wanted, isLoading, tasks, params, setParams]);
 
   return (
     <div>

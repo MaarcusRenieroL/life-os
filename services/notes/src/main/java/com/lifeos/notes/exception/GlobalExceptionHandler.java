@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.lifeos.notes")
 public class GlobalExceptionHandler {
 
   @ExceptionHandler(NoteNotFoundException.class)
