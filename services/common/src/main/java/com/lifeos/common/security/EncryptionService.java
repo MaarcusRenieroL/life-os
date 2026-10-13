@@ -7,18 +7,14 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 // Single server-side secret, no per-user unlock concept (unlike vault's
 // EncryptionService, which derives a key from an unlocked master password).
 // Shared across services that need to encrypt a value at rest without a
-// master-password model - each service just binds its own env var to the
-// generic "encryption.secret" property in its application.yaml. IV is stored
+// master-password model - the app builds one instance per secret (see its EncryptionConfig). IV is stored
 // alongside the ciphertext in one string ("iv:ciphertext", both base64),
 // since callers here typically have a single encrypted column, not a
 // separate IV column.
-@Service
 public class EncryptionService {
 
   private static final int GCM_IV_LENGTH_BYTES = 12;
@@ -26,7 +22,7 @@ public class EncryptionService {
 
   private final SecretKey key;
 
-  public EncryptionService(@Value("${encryption.secret}") String secretBase64) {
+  public EncryptionService(String secretBase64) {
     this.key = new SecretKeySpec(Base64.getDecoder().decode(secretBase64), "AES");
   }
 

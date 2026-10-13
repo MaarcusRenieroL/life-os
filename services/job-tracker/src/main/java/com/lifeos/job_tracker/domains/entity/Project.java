@@ -26,7 +26,7 @@ import org.hibernate.type.SqlTypes;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Entity
+@Entity(name = "CareerProject")
 @Table(name = "projects", schema = "job_tracker_schema")
 public class Project {
 

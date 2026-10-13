@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import org.springframework.util.StringUtils;
 public class AccountService {
 
   private final AccountRepository accountRepository;
+  @Qualifier("financeEncryptionService")
   private final EncryptionService encryptionService;
   private final AccountBalanceService accountBalanceService;
   private final ImportFailureService importFailureService;

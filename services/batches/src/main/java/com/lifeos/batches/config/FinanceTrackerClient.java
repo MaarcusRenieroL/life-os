@@ -14,13 +14,13 @@ import tools.jackson.databind.JsonNode;
 @RequiredArgsConstructor
 public class FinanceTrackerClient {
 
-  private final RestClient financeTrackerRestClient;
+  private final RestClient financeImportRestClient;
 
   @Value("${internal.api-key}")
   private String internalApiKey;
 
   public void createCsvImportTransaction(CreateCsvImportTransactionRequest request) {
-    financeTrackerRestClient
+    financeImportRestClient
         .post()
         .uri("/v1/finance/internal/transactions/csv-import")
         .header("X-Internal-Api-Key", internalApiKey)
@@ -34,7 +34,7 @@ public class FinanceTrackerClient {
   public StatementImportResult createCsvImportTransactionsBatch(
       List<CreateCsvImportTransactionRequest> transactions) {
     JsonNode response =
-        financeTrackerRestClient
+        financeImportRestClient
             .post()
             .uri("/v1/finance/internal/transactions/csv-import/batch")
             .header("X-Internal-Api-Key", internalApiKey)
@@ -61,7 +61,7 @@ public class FinanceTrackerClient {
       body.put("subject", subject);
       body.put("snippet", snippet);
       body.put("detail", detail);
-      financeTrackerRestClient
+      financeImportRestClient
           .post()
           .uri("/v1/finance/internal/import-failures")
           .header("X-Internal-Api-Key", internalApiKey)

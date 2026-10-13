@@ -42,14 +42,18 @@ public class SecretDefaultsWarner implements ApplicationRunner {
   @Value("${internal.api-key:}")
   private String internalApiKey;
 
-  @Value("${encryption.secret:}")
-  private String encryptionSecret;
+  @Value("${encryption.gmail-secret:}")
+  private String gmailEncryptionSecret;
+
+  @Value("${encryption.finance-secret:}")
+  private String financeEncryptionSecret;
 
   @Override
   public void run(ApplicationArguments args) {
     warnIfLeakedDefault("jwt.secret / JWT_SECRET", jwtSecret);
     warnIfLeakedDefault("internal.api-key / INTERNAL_API_KEY", internalApiKey);
-    warnIfLeakedDefault("encryption.secret / *_ENCRYPTION_SECRET", encryptionSecret);
+    warnIfLeakedDefault("encryption.gmail-secret / GMAIL_ENCRYPTION_SECRET", gmailEncryptionSecret);
+    warnIfLeakedDefault("encryption.finance-secret / FINANCE_ENCRYPTION_SECRET", financeEncryptionSecret);
   }
 
   private void warnIfLeakedDefault(String label, String value) {

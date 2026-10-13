@@ -28,27 +28,7 @@ services:
       - ./apps/web/e2e/nginx.e2e.conf:/etc/nginx/nginx.conf:ro
       - ./apps/web/dist:/usr/share/nginx/html:ro
       - ./files:/usr/share/nginx/files:ro
-  auth:
+  app:
     ports: !override []
     environment:
       AUTH_OWNER_USER_ID: ""
-  vault:
-    ports: !override []
-  job-tracker:
-    ports: !override []
-  core:
-    ports: !override []
-  notes:
-    ports: !override []
-  batches:
-    ports: !override []
-  finance-tracker:
-    ports: !override []
-  habit-tracker:
-    ports: !override []
-  tasks:
-    ports: !override []
-  workouts:
-    ports: !override []
-  calendar:
-    ports: !override []
