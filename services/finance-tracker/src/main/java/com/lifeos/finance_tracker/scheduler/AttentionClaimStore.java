@@ -24,12 +24,12 @@ public class AttentionClaimStore {
     Instant now = Instant.now();
     int changed =
         jdbc.update(
-            "insert into finance_schema.attention_claims (claim_key, claimed_at) values (?, ?)"
-                + " on conflict (claim_key) do update set claimed_at = excluded.claimed_at"
-                + " where finance_schema.attention_claims.claimed_at < ?",
+            "insert into finance_schema.attention_claims (claim_key, expires_at) values (?, ?)"
+                + " on conflict (claim_key) do update set expires_at = excluded.expires_at"
+                + " where finance_schema.attention_claims.expires_at < ?",
             key,
-            Timestamp.from(now),
-            Timestamp.from(now.minus(ttl)));
+            Timestamp.from(now.plus(ttl)),
+            Timestamp.from(now));
     return changed > 0;
   }
 }
